@@ -1,0 +1,76 @@
+import { describe, it, expect } from "vitest";
+import { runAssessment } from "@/lib/scoring/engine";
+import type { StudentProfile } from "@/lib/scoring/types";
+
+const baseProfile: StudentProfile = {
+  homeCountry: "Nepal",
+  educationLevel: "bachelors",
+  gradeSystem: "percentage-nepal",
+  grade: 72,
+  fieldOfStudy: "computer-science",
+  graduationYear: 2025,
+  gapReasons: [],
+  englishStatus: "taken",
+  englishScore: 7.0,
+  destination: "australia",
+  budget: 4500000,
+  budgetCurrency: "NPR",
+  fundingSource: "education-loan",
+  goal: "permanent-residency",
+};
+
+describe("runAssessment", () => {
+  it("returns a complete assessment with verdict and four dimensions", () => {
+    const result = runAssessment(baseProfile);
+    expect(["strong", "possible", "reach"]).toContain(result.verdict);
+    expect(result.weighted).toBeGreaterThanOrEqual(0);
+    expect(result.weighted).toBeLessThanOrEqual(100);
+    expect(result.dimensions.academic.value).toBeGreaterThanOrEqual(0);
+    expect(result.dimensions.financial.value).toBeGreaterThanOrEqual(0);
+    expect(result.dimensions.visa.value).toBeGreaterThanOrEqual(0);
+    expect(result.dimensions.profileStrength.value).toBeGreaterThanOrEqual(0);
+  });
+
+  it("uses the documented weights (academic 30, financial 25, visa 25, profileStrength 20)", () => {
+    const result = runAssessment(baseProfile);
+    const manual =
+      result.dimensions.academic.value * 0.3 +
+      result.dimensions.financial.value * 0.25 +
+      result.dimensions.visa.value * 0.25 +
+      result.dimensions.profileStrength.value * 0.2;
+    expect(Math.abs(result.weighted - Math.round(manual))).toBeLessThanOrEqual(1);
+  });
+
+  it("includes a rule version and timestamp", () => {
+    const result = runAssessment(baseProfile);
+    expect(result.ruleVersion).toMatch(/^v\d+\.\d+\.\d+$/);
+    expect(() => new Date(result.computedAt)).not.toThrow();
+  });
+
+  it("returns 'strong' for a clearly qualified profile", () => {
+    const strong = runAssessment({
+      ...baseProfile,
+      grade: 85,
+      englishScore: 7.5,
+      budget: 6500000,
+      fundingSource: "self-funded",
+      educationLevel: "masters",
+      graduationYear: new Date().getFullYear(),
+    });
+    expect(strong.verdict).toBe("strong");
+  });
+
+  it("returns 'reach' for a clearly under-qualified profile", () => {
+    const reach = runAssessment({
+      ...baseProfile,
+      grade: 48,
+      englishStatus: "not-taken",
+      englishScore: undefined,
+      budget: 1200000,
+      fundingSource: "scholarship-dependent",
+      graduationYear: 2018,
+      gapReasons: ["health-family"],
+    });
+    expect(reach.verdict).toBe("reach");
+  });
+});
