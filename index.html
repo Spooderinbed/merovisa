@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyVisa — an honest reality check before you apply</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet" />
+
+  <style>
+/* ============================================================
+   MyVisa — design tokens + base
+   Calm authority: warm paper, deep teal, flat surfaces, thin borders.
+   ============================================================ */
+
+:root {
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --maxw: 1120px;
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+
+:root,
+[data-theme="light"] {
+  --bg:        #f6f5f1;
+  --bg-tint:   #efeee8;
+  --surface:   #fffefb;
+  --surface-2: #faf9f5;
+  --ink:       #1d1c19;
+  --ink-soft:  #56544d;
+  --ink-faint: #8a877d;
+  --line:      #1d1c190f;
+  --line-2:    #1d1c191a;
+  --primary:        #0f5e54;
+  --primary-ink:    #0c4a42;
+  --primary-tint:   #0f5e5414;
+  --primary-tint-2: #0f5e5424;
+  --on-primary:     #fcfdfb;
+  --accent:      #b07d22;
+  --accent-tint: #b07d2218;
+  --strong:      #1f6d4a;
+  --strong-tint: #1f6d4a16;
+  --possible:      #b07d22;
+  --possible-tint: #b07d2216;
+  --reach:      #b1503a;
+  --reach-tint: #b1503a16;
+  --shadow: none;
+}
+
+[data-theme="dark"] {
+  --bg:        #111210;
+  --bg-tint:   #181915;
+  --surface:   #1a1b17;
+  --surface-2: #201f1b;
+  --ink:       #ece9e0;
+  --ink-soft:  #a8a59b;
+  --ink-faint: #76736a;
+  --line:      #ffffff12;
+  --line-2:    #ffffff20;
+  --primary:        #4eb39f;
+  --primary-ink:    #6fc4b2;
+  --primary-tint:   #4eb39f1f;
+  --primary-tint-2: #4eb39f30;
+  --on-primary:     #08231f;
+  --accent:      #d6a24a;
+  --accent-tint: #d6a24a22;
+  --strong:      #5bbd8c;
+  --strong-tint: #5bbd8c20;
+  --possible:      #d6a24a;
+  --possible-tint: #d6a24a20;
+  --reach:      #d8775f;
+  --reach-tint: #d8775f20;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg);
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root { min-height: 100vh; }
+
+h1, h2, h3, h4 {
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.012em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+p { margin: 0; text-wrap: pretty; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+::selection { background: var(--primary-tint-2); }
+
+.display { font-size: clamp(38px, 5.4vw, 62px); line-height: 1.06; letter-spacing: -0.025em; }
+.h1 { font-size: clamp(30px, 3.6vw, 42px); }
+.h2 { font-size: clamp(24px, 2.4vw, 30px); }
+.h3 { font-size: 21px; }
+.lead { font-size: clamp(18px, 1.5vw, 21px); color: var(--ink-soft); line-height: 1.55; }
+.body { font-size: 17px; color: var(--ink-soft); }
+.small { font-size: 15px; color: var(--ink-soft); }
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+}
+.mono-up { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11.5px; }
+.measure { max-width: 60ch; }
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+.wrap-narrow { max-width: 720px; margin: 0 auto; padding: 0 28px; }
+
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.gap-1 { gap: 6px; } .gap-2 { gap: 10px; } .gap-3 { gap: 16px; }
+.gap-4 { gap: 24px; } .gap-5 { gap: 36px; }
+.between { justify-content: space-between; }
+.center { justify-content: center; }
+.middle { align-items: center; }
+.wgrow { flex: 1; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.card-pad { padding: 24px; }
+.hairline { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  font-size: 16px; font-weight: 500;
+  padding: 12px 22px;
+  transition: background .18s var(--ease), border-color .18s var(--ease),
+              color .18s var(--ease), transform .18s var(--ease), opacity .18s var(--ease);
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { background: var(--primary-ink); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-2); }
+.btn-ghost:hover { background: var(--bg-tint); border-color: var(--ink-faint); }
+.btn-quiet { background: transparent; color: var(--ink-soft); padding: 10px 14px; }
+.btn-quiet:hover { color: var(--ink); background: var(--bg-tint); }
+.btn-lg { font-size: 17px; padding: 15px 28px; }
+.btn-sm { font-size: 14px; padding: 8px 15px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-full { width: 100%; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13.5px; font-weight: 500;
+  padding: 5px 12px; border-radius: var(--r-pill);
+  border: 1px solid var(--line-2); color: var(--ink-soft);
+  background: var(--surface);
+}
+.chip-mono { font-family: var(--font-mono); font-size: 12px; font-weight: 400; letter-spacing: .01em; }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+.tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 500; padding: 4px 11px; border-radius: var(--r-pill);
+}
+.tag-strong   { background: var(--strong-tint);   color: var(--strong); }
+.tag-possible { background: var(--possible-tint); color: var(--possible); }
+.tag-reach    { background: var(--reach-tint);    color: var(--reach); }
+.tag-primary  { background: var(--primary-tint);  color: var(--primary); }
+.tag-neutral  { background: var(--bg-tint);       color: var(--ink-soft); }
+
+.bar-track {
+  height: 8px; border-radius: var(--r-pill);
+  background: var(--bg-tint); overflow: hidden; width: 100%;
+}
+.bar-fill { height: 100%; border-radius: var(--r-pill); transition: width .9s var(--ease); }
+
+.field {
+  width: 100%; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line-2); border-radius: var(--r-sm);
+  padding: 13px 15px; font-family: inherit; font-size: 16px;
+  transition: border-color .15s var(--ease), background .15s var(--ease);
+}
+.field:focus { outline: none; border-color: var(--primary); }
+.field::placeholder { color: var(--ink-faint); }
+
+.opt {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; text-align: left;
+  background: var(--surface); border: 1px solid var(--line-2);
+  border-radius: var(--r-md); padding: 17px 19px;
+  transition: border-color .15s var(--ease), background .15s var(--ease), transform .15s var(--ease);
+}
+.opt:hover { border-color: var(--ink-faint); }
+.opt[data-sel="true"] {
+  border-color: var(--primary); background: var(--primary-tint);
+}
+.opt-mark {
+  width: 22px; height: 22px; border-radius: 50%; flex: none;
+  border: 1.5px solid var(--line-2);
+  display: grid; place-items: center;
+  transition: border-color .15s var(--ease), background .15s var(--ease);
+}
+.opt[data-sel="true"] .opt-mark { border-color: var(--primary); background: var(--primary); }
+
+input[type="range"].slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 8px; border-radius: var(--r-pill);
+  background: var(--bg-tint); outline: none;
+}
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface); border: 1.5px solid var(--primary);
+  cursor: pointer; transition: transform .12s var(--ease);
+}
+input[type="range"].slider::-webkit-slider-thumb:active { transform: scale(1.08); }
+input[type="range"].slider::-moz-range-thumb {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface); border: 1.5px solid var(--primary); cursor: pointer;
+}
+
+.ph {
+  position: relative; overflow: hidden;
+  background-color: var(--bg-tint);
+  background-image: repeating-linear-gradient(-45deg, transparent 0 9px, var(--line) 9px 10px);
+  display: grid; place-items: center;
+}
+.ph span {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em;
+  color: var(--ink-faint); background: var(--surface);
+  padding: 3px 8px; border-radius: var(--r-pill); border: 1px solid var(--line);
+}
+
+.flag {
+  width: 30px; height: 22px; border-radius: 4px; flex: none;
+  border: 1px solid var(--line-2); overflow: hidden;
+  display: grid; place-items: center; font-size: 14px;
+  background: var(--bg-tint);
+}
+
+.appbar {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.navlink {
+  font-size: 15px; color: var(--ink-soft); padding: 8px 4px;
+  position: relative; transition: color .15s var(--ease);
+}
+.navlink:hover { color: var(--ink); }
+.navlink[data-active="true"] { color: var(--ink); font-weight: 500; }
+.navlink[data-active="true"]::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; background: var(--primary); border-radius: 2px;
+}
+
+.logo-mark {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: var(--primary); color: var(--on-primary);
+  display: grid; place-items: center; flex: none;
+}
+
+.fade-in { animation: fade .5s var(--ease) both; }
+.rise-in { animation: rise .55s var(--ease) both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.icon { display: inline-flex; flex: none; }
+.icon svg { display: block; }
+
+.divider-soft { border-top: 1px solid var(--line); }
+
+.seg { display: inline-flex; background: var(--bg-tint); border-radius: var(--r-pill); padding: 4px; gap: 4px; }
+.seg button {
+  border: 0; background: transparent; color: var(--ink-soft);
+  font-size: 14px; font-weight: 500; padding: 7px 16px; border-radius: var(--r-pill);
+  transition: all .15s var(--ease);
+}
+.seg button[data-on="true"] { background: var(--surface); color: var(--ink); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex: none;
+  background: var(--primary-tint); color: var(--primary);
+  display: grid; place-items: center; font-weight: 500; font-size: 15px;
+  border: 1px solid var(--line);
+}
+
+@media (max-width: 860px) {
+  body { font-size: 16px; }
+  .wrap, .wrap-narrow { padding: 0 20px; }
+  .hide-mobile { display: none !important; }
+  .cc-top { grid-template-columns: 1fr !important; }
+  .cc-standing { grid-template-columns: 1fr !important; }
+  .cc-traj { grid-auto-flow: row; grid-template-columns: 1fr 1fr !important; gap: 18px !important; }
+  .cc-traj > div > span[style*="position: absolute"] { display: none; }
+}
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- ============================================================
+       DATA LAYER
+       ============================================================ -->
+  <script>
+/* seed data (window.DB) — persona: Nepal -> Australia, six destinations */
+window.DB = (function () {
+  const student = {
+    name: "Aarav Sharma", initials: "AS", homeCountry: "Nepal", homeFlag: "🇳🇵",
+    level: "Bachelor's degree", field: "Computer science",
+    gradeSystem: "Percentage (Nepal)", grade: 72, gradeLabel: "72% — first division",
+    tests: { ielts: 7.0 },
+    gap: { has: true, years: 1, reason: "Worked as a junior developer" },
+    budgetUSD: 38000, destination: "Australia",
+  };
+
+  const gradeConversion = {
+    "Australia": { "Percentage (Nepal)": { 72: "Credit (≈ 65–74%) · WAM ~68" } },
+  };
+
+  const countries = [
+    { id: "au", name: "Australia", flag: "🇦🇺", tagline: "Strong post-study work rights, clear financial rules.", currency: "AUD",
+      tuitionRange: "A$33k–48k / yr", livingRange: "A$29,710 / yr (proof required)",
+      financialProof: "A$29,710 for living + first-year tuition + travel",
+      workRights: "48 hrs / fortnight during term, unlimited in breaks",
+      postStudy: "Temporary Graduate visa (485): 2–4 yrs",
+      risk: { level: "caution", title: "Genuine Student (GS) requirement replaced GTE",
+        body: "Since 2024 the Genuine Student requirement and higher savings thresholds apply. A clearly explained study gap strengthens your case." },
+      updated: "2026-05-28", source: "immi.gov.au",
+      docs: ["Valid passport", "Offer letter (CoE)", "Genuine Student statement", "Proof of funds (A$29,710+)", "IELTS/PTE results", "OSHC health cover", "Academic transcripts"],
+      match: "strong" },
+    { id: "ca", name: "Canada", flag: "🇨🇦", tagline: "Provincial caps in effect — apply early.", currency: "CAD",
+      tuitionRange: "C$25k–38k / yr", livingRange: "C$20,635 / yr (proof required)",
+      financialProof: "C$20,635 living + tuition (outside Quebec)",
+      workRights: "Up to 24 hrs / week off-campus during term",
+      postStudy: "PGWP: up to 3 yrs (field-of-study rules apply)",
+      risk: { level: "warning", title: "Study permit cap + PAL/TAL letter required",
+        body: "A federal cap on new permits is in place for 2025–26 and most applicants need a Provincial Attestation Letter. Approval is tighter than before." },
+      updated: "2026-05-30", source: "canada.ca/ircc",
+      docs: ["Valid passport", "Letter of acceptance", "Provincial Attestation Letter (PAL)", "Proof of funds (C$20,635+)", "Language test", "Statement of purpose", "Academic transcripts"],
+      match: "possible" },
+    { id: "uk", name: "United Kingdom", flag: "🇬🇧", tagline: "Fast visa decisions; dependant rules tightened.", currency: "GBP",
+      tuitionRange: "£16k–32k / yr", livingRange: "£12,006 / yr (outside London)",
+      financialProof: "£12,006–£13,348 living + tuition for 1 yr",
+      workRights: "20 hrs / week during term",
+      postStudy: "Graduate Route: 18 months (under review)",
+      risk: { level: "warning", title: "Graduate Route under review; dependants restricted",
+        body: "Most taught-master's students can no longer bring dependants, and the post-study Graduate Route length is under government review for 2026." },
+      updated: "2026-05-26", source: "gov.uk",
+      docs: ["Valid passport", "CAS from university", "Proof of funds (28-day rule)", "IELTS for UKVI", "TB test certificate", "Academic transcripts", "ATAS (if applicable)"],
+      match: "possible" },
+    { id: "de", name: "Germany", flag: "🇩🇪", tagline: "Low/no tuition at public universities.", currency: "EUR",
+      tuitionRange: "€0–3k / yr (public)", livingRange: "€11,904 / yr (blocked account)",
+      financialProof: "€11,904 in a blocked account",
+      workRights: "140 full / 280 half days per year",
+      postStudy: "18-month residence permit to seek work",
+      risk: { level: "info", title: "Blocked-account minimum raised for 2026",
+        body: "The required blocked-account amount rose to €11,904. APS certificate is mandatory for applicants from Nepal and India." },
+      updated: "2026-05-22", source: "auswaertiges-amt.de",
+      docs: ["Valid passport", "Admission letter (Zulassung)", "APS certificate", "Blocked account (€11,904)", "Proof of German/English level", "Health insurance", "Academic transcripts"],
+      match: "reach" },
+    { id: "us", name: "United States", flag: "🇺🇸", tagline: "Largest choice; interview-based visa.", currency: "USD",
+      tuitionRange: "$28k–60k / yr", livingRange: "$18k–26k / yr",
+      financialProof: "Full first-year cost on Form I-20",
+      workRights: "On-campus only in year 1; CPT/OPT later",
+      postStudy: "OPT 12 mos (+24 mos STEM extension)",
+      risk: { level: "warning", title: "Visa interview wait times remain long",
+        body: "F-1 interview slots are limited in several posts and officers weigh ties to home country heavily. A funded, specific study plan helps." },
+      updated: "2026-05-29", source: "travel.state.gov",
+      docs: ["Valid passport", "Form I-20", "SEVIS fee receipt", "DS-160 confirmation", "Proof of funds (full I-20 cost)", "Visa interview appointment", "Academic transcripts"],
+      match: "reach" },
+    { id: "ie", name: "Ireland", flag: "🇮🇪", tagline: "English-speaking EU; growing tech sector.", currency: "EUR",
+      tuitionRange: "€10k–25k / yr", livingRange: "€10,000 / yr (proof required)",
+      financialProof: "€10,000 for living + tuition paid",
+      workRights: "20 hrs / week during term",
+      postStudy: "Third Level Graduate Programme: up to 2 yrs",
+      risk: { level: "info", title: "Proof-of-funds threshold confirmed at €10,000",
+        body: "Ireland confirmed the €10,000 annual maintenance figure and continues to process most student visas within 4–8 weeks." },
+      updated: "2026-05-20", source: "irishimmigration.ie",
+      docs: ["Valid passport", "Letter of acceptance", "Tuition payment proof", "Proof of funds (€10,000)", "English test (if required)", "Private medical insurance", "Academic transcripts"],
+      match: "possible" },
+  ];
+
+  const programs = [
+    { id: "p1", uni: "University of Melbourne", country: "au", flag: "🇦🇺", program: "Master of Information Technology", city: "Melbourne", tuition: "A$49,344 / yr", deadline: "31 Oct 2026", match: "possible", note: "Your IELTS clears the 6.5 band; WAM is just under their usual cutoff." },
+    { id: "p2", uni: "Monash University", country: "au", flag: "🇦🇺", program: "Master of IT (Professional)", city: "Melbourne", tuition: "A$47,200 / yr", deadline: "30 Nov 2026", match: "strong", note: "Profile sits comfortably above admission thresholds." },
+    { id: "p3", uni: "University of Technology Sydney", country: "au", flag: "🇦🇺", program: "Master of Information Technology", city: "Sydney", tuition: "A$46,800 / yr", deadline: "15 Dec 2026", match: "strong", note: "Strong academic + budget fit; gap is well explained." },
+    { id: "p4", uni: "RMIT University", country: "au", flag: "🇦🇺", program: "Master of IT", city: "Melbourne", tuition: "A$43,200 / yr", deadline: "ongoing", match: "strong", note: "Below your budget ceiling, rolling intake." },
+  ];
+
+  const feed = [
+    { id: "f0", kind: "next-action", priority: true, title: "Your next best step", body: "Add your IELTS test report number to unlock 3 more matches and sharpen your Australia verdict.", cta: "Add test details", icon: "spark" },
+    { id: "f1", kind: "visa-update", country: "au", flag: "🇦🇺", title: "Australia: Genuine Student rules — what it means for you", body: "Your 1-year work gap is an asset here, not a liability, if you explain it clearly. I've drafted a note you can reuse.", meta: "Visa update · sourced from immi.gov.au", updated: "2 days ago", icon: "shield" },
+    { id: "f2", kind: "match", programId: "p2", title: "New strong match: Monash University", body: "Master of IT (Professional) — your profile is above their thresholds and A$47k fits your budget.", meta: "Program match", updated: "today", icon: "match" },
+    { id: "f3", kind: "deadline", country: "au", flag: "🇦🇺", title: "Deadline in 21 weeks: University of Melbourne", body: "Master of Information Technology closes 31 Oct 2026. You have 3 of 7 checklist items ready.", meta: "Deadline", updated: "tracked", icon: "clock" },
+    { id: "f4", kind: "scholarship", country: "au", flag: "🇦🇺", title: "Scholarship you may qualify for", body: "Melbourne Graduate Scholarship covers up to 25% tuition for high-performing international students.", meta: "Scholarship · check eligibility", updated: "new", icon: "award" },
+    { id: "f5", kind: "guide", title: "A note from your guide", body: "You're in good shape for Australia. The single highest-impact thing right now is documenting your work gap — want to do that together?", meta: "From your guide", updated: "today", icon: "guide" },
+  ];
+
+  const checklist = {
+    target: "University of Melbourne · Master of IT", deadline: "31 Oct 2026", weeksLeft: 21,
+    groups: [
+      { name: "Identity", items: [
+        { id: "c1", label: "Valid passport (6+ months)", done: true },
+        { id: "c2", label: "Passport-style photo", done: true },
+      ]},
+      { name: "Academic", items: [
+        { id: "c3", label: "Bachelor's transcripts (attested)", done: true },
+        { id: "c4", label: "Degree certificate", done: false },
+        { id: "c5", label: "IELTS / PTE result", done: false, note: "You have IELTS 7.0 — just upload the report" },
+      ]},
+      { name: "Financial", items: [
+        { id: "c6", label: "Proof of funds — A$29,710+ living", done: false, note: "Bank statement or loan sanction letter" },
+        { id: "c7", label: "First-year tuition evidence", done: false },
+      ]},
+      { name: "Visa & statements", items: [
+        { id: "c8", label: "Confirmation of Enrolment (CoE)", done: false, note: "Issued after you accept an offer" },
+        { id: "c9", label: "Genuine Student statement", done: false, note: "Where your work gap is explained" },
+        { id: "c10", label: "OSHC health cover", done: false },
+      ]},
+    ],
+  };
+
+  const guideIntro = "Hi Aarav — I'm your guide. I've read your profile: a bachelor's in CS from Nepal, 72%, IELTS 7.0, one year of work, looking at Australia on a ~$38k budget. Ask me anything, or tap a prompt below.";
+  const guidePrompts = [
+    "Is my study gap a problem for Australia?",
+    "How much money do I need to show?",
+    "Which of my matches is the safest bet?",
+    "What should I do this week?",
+  ];
+  const guideReplies = {
+    "Is my study gap a problem for Australia?":
+      "Honestly — for Australia, a one-year gap is fine, and yours is easy to explain because you were working as a junior developer. What matters is that your Genuine Student statement connects the dots: what you did, what you learned, and why a master's in IT is the logical next step. I can help you draft that. The risk is leaving it vague, not the gap itself.",
+    "How much money do I need to show?":
+      "For Australia you currently need to show A$29,710 for living costs, plus your first year of tuition and travel. For Melbourne's Master of IT (≈A$49,344/yr) that's roughly A$80k of evidenced funds. This can be savings, an education loan sanction letter, or a sponsor's funds — sourced from immi.gov.au, checked 2 days ago. Want me to break down what counts as acceptable proof?",
+    "Which of my matches is the safest bet?":
+      "Right now your strongest, safest matches are Monash and UTS — both sit above their admission thresholds for your profile and fit your budget. Melbourne is a 'possible': your IELTS clears it, but your WAM is just under their typical cutoff, so treat it as an aspirational pick alongside a safer one. A good shortlist is one reach, two strong.",
+    "What should I do this week?":
+      "One thing: upload your IELTS report and bachelor's degree certificate. That unlocks three more matches and lets me sharpen your Australia verdict from 'strong' to a specific shortlist. Everything else — funds, CoE, the Genuine Student statement — comes after you've accepted an offer, so it's not urgent yet.",
+  };
+
+  return {
+    student, gradeConversion, countries, programs, feed, checklist,
+    guideIntro, guidePrompts, guideReplies,
+    countryById: id => countries.find(c => c.id === id),
+    programById: id => programs.find(p => p.id === id),
+    trustLine: "Visa rules sourced from official government sites · checked daily",
+  };
+})();
+  </script>
+
+  <script>
+/* extended data — profile, universities, scholarships, costs, timeline, action plan */
+(function () {
+  const profile = {
+    personal:   { age: 23, citizenship: "Nepal", residence: "Nepal", intake: "July 2027" },
+    destinations: { first: "au", second: "ca", third: null },
+    academic:   { institution: "Tribhuvan University", field: "Computer Science", gradYear: 2024, backlogs: 0, distinctions: false, research: false, publications: 0 },
+    intended:   { level: "Master's", area: "Information Technology", specialization: "Artificial Intelligence" },
+    english:    { status: "Taken", type: "IELTS", overall: 7.0, reportUploaded: false, R: 7.0, W: 6.5, S: 7.0, L: 7.5 },
+    gap:        { has: true, years: 1, reasons: ["Full-time employment"], evidence: [] },
+    work:       { title: "Junior Developer", industry: "Software", employer: "Leapfrog Technology", duration: "1 year", relevance: "Directly related", docs: false },
+    finance:    { sponsor: "Education loan + parents", income: null, liquid: null, savings: null, fixedDeposit: null, loan: "Applied", proofUploaded: false, maxTuition: 34000, maxLiving: 14000, total: 38000, property: true },
+    visaHistory:{ refusals: "None", travelled: false, countries: [], currentVisa: null },
+    family:     { dependents: "Travelling alone", count: 0 },
+    goals:      { primary: "Permanent residency", longTerm: "AI Engineer" },
+    location:   { pref: "Major cities", cities: ["Melbourne", "Sydney"] },
+    scholarshipProfile: [],
+    dealBreakers: ["PR-friendly destination", "Work opportunities"],
+  };
+
+  const profileSections = [
+    { key: "personal", title: "Personal information", icon: "user", status: "done", summary: "23 · Nepal · July 2027 intake", fields: [["Age", "23"], ["Citizenship", "Nepal"], ["Residence", "Nepal"], ["Intake", "July 2027"]] },
+    { key: "destinations", title: "Destination preferences", icon: "map", status: "partial", summary: "Australia, then Canada", fields: [["First choice", "Australia"], ["Second choice", "Canada"], ["Third choice", "—"]] },
+    { key: "academic", title: "Academic background", icon: "cap", status: "done", summary: "BSc CSIT · 72% · Tribhuvan University", fields: [["Qualification", "Bachelor's"], ["Institution", "Tribhuvan University"], ["Field", "Computer Science"], ["Result", "72% (first division)"], ["Graduated", "2024"], ["Backlogs", "0"]] },
+    { key: "intended", title: "Intended study", icon: "spark", status: "done", summary: "Master's · IT · Artificial Intelligence", fields: [["Level", "Master's"], ["Area", "Information Technology"], ["Specialization", "Artificial Intelligence"]] },
+    { key: "english", title: "English proficiency", icon: "doc", status: "partial", summary: "IELTS 7.0 — report not uploaded", fields: [["Status", "Taken"], ["Test", "IELTS"], ["Overall", "7.0"], ["R / W / S / L", "7.0 / 6.5 / 7.0 / 7.5"], ["Report uploaded", "No"]] },
+    { key: "gap", title: "Study gap", icon: "clock", status: "partial", summary: "1 year · employment · evidence missing", fields: [["Gap", "1 year"], ["Reason", "Full-time employment"], ["Evidence", "Not uploaded"]] },
+    { key: "work", title: "Work experience", icon: "briefcase", status: "partial", summary: "Junior Developer · 1 yr · docs missing", fields: [["Title", "Junior Developer"], ["Employer", "Leapfrog Technology"], ["Duration", "1 year"], ["Relevance", "Directly related"], ["Documents", "Not provided"]] },
+    { key: "finance", title: "Financial capacity", icon: "coins", status: "partial", summary: "Loan + parents · proof not uploaded", fields: [["Sponsor", "Education loan + parents"], ["Loan status", "Applied"], ["Liquid funds", "Not stated"], ["Proof of funds", "Not uploaded"], ["Total budget", "$38,000 / yr"]] },
+    { key: "visaHistory", title: "Immigration & visa history", icon: "shield", status: "partial", summary: "No refusals · travel history unknown", fields: [["Previous refusals", "None"], ["Travelled abroad", "Not stated"], ["Current visa", "—"]] },
+    { key: "family", title: "Family information", icon: "user", status: "done", summary: "Travelling alone", fields: [["Dependents", "Travelling alone"], ["Number", "0"]] },
+    { key: "goals", title: "Career goals", icon: "match", status: "done", summary: "PR · AI Engineer", fields: [["Primary goal", "Permanent residency"], ["Long-term", "AI Engineer"]] },
+    { key: "scholarshipProfile", title: "Scholarship profile", icon: "award", status: "empty", summary: "Nothing added yet", fields: [["Academic excellence", "—"], ["Leadership", "—"], ["Volunteering", "—"], ["Achievements", "—"]] },
+    { key: "dealBreakers", title: "Deal-breakers", icon: "pin", status: "done", summary: "PR-friendly · work rights", fields: [["Must have", "PR-friendly destination"], ["Must have", "Work opportunities"]] },
+  ];
+
+  const universities = [
+    { id: "u_monash", name: "Monash University", city: "Melbourne", flag: "🇦🇺", country: "au", rank: "#37 QS", program: "Master of IT (Professional)", tuition: "A$47,200 / yr", deadline: "30 Nov 2026", reqGrade: "Credit (65%+)", reqIELTS: "6.5", group: "strong", why: "Your 72% and IELTS 7.0 clear their thresholds comfortably; strong IT employability." },
+    { id: "u_uts", name: "University of Technology Sydney", city: "Sydney", flag: "🇦🇺", country: "au", rank: "#88 QS", program: "Master of Information Technology", tuition: "A$46,800 / yr", deadline: "15 Dec 2026", reqGrade: "Credit (65%+)", reqIELTS: "6.5", group: "strong", why: "Industry-focused, above-threshold profile, well within reach." },
+    { id: "u_rmit", name: "RMIT University", city: "Melbourne", flag: "🇦🇺", country: "au", rank: "#125 QS", program: "Master of IT", tuition: "A$43,200 / yr", deadline: "rolling", reqGrade: "Pass (60%+)", reqIELTS: "6.5", group: "strong", why: "Below your budget ceiling, rolling intake — a reliable anchor choice." },
+    { id: "u_deakin", name: "Deakin University", city: "Melbourne", flag: "🇦🇺", country: "au", rank: "#197 QS", program: "Master of Information Technology", tuition: "A$42,400 / yr", deadline: "12 Jan 2027", reqGrade: "Pass (60%+)", reqIELTS: "6.0", group: "strong", why: "Generous scholarships for international students; comfortable fit." },
+    { id: "u_melb", name: "University of Melbourne", city: "Melbourne", flag: "🇦🇺", country: "au", rank: "#13 QS", program: "Master of Information Technology", tuition: "A$49,344 / yr", deadline: "31 Oct 2026", reqGrade: "Distinction (74%+)", reqIELTS: "6.5", group: "possible", why: "IELTS clears it, but your WAM sits just under their usual cutoff — aspirational." },
+    { id: "u_unsw", name: "UNSW Sydney", city: "Sydney", flag: "🇦🇺", country: "au", rank: "#19 QS", program: "Master of IT", tuition: "A$50,600 / yr", deadline: "30 Nov 2026", reqGrade: "Credit (72%+)", reqIELTS: "6.5", group: "possible", why: "Right at the edge of their academic band; tuition stretches your budget." },
+    { id: "u_anu", name: "Australian National University", city: "Canberra", flag: "🇦🇺", country: "au", rank: "#30 QS", program: "Master of Computing", tuition: "A$51,300 / yr", deadline: "15 Dec 2026", reqGrade: "Distinction (74%+)", reqIELTS: "6.5", group: "reach", why: "Higher academic bar and cost than your current profile supports — a stretch." },
+    { id: "u_syd", name: "University of Sydney", city: "Sydney", flag: "🇦🇺", country: "au", rank: "#18 QS", program: "Master of IT", tuition: "A$55,000 / yr", deadline: "31 Jan 2027", reqGrade: "Distinction (75%+)", reqIELTS: "7.0", group: "reach", why: "Top-tier cutoffs and the highest tuition here — keep as an ambition." },
+  ];
+
+  const scholarships = [
+    { id: "s1", name: "Deakin Vice-Chancellor's International Scholarship", uni: "Deakin University", flag: "🇦🇺", amount: "Up to 50% tuition", basis: "Academic merit", match: "possible", note: "Your 72% is within range; strengthened by a clear SOP." },
+    { id: "s2", name: "Monash International Merit Scholarship", uni: "Monash University", flag: "🇦🇺", amount: "A$10,000", basis: "Academic merit", match: "possible", note: "Awarded to high-performing international applicants — you're eligible to apply." },
+    { id: "s3", name: "Melbourne Graduate Scholarship", uni: "University of Melbourne", flag: "🇦🇺", amount: "Up to 25% tuition", basis: "Academic merit", match: "reach", note: "Competitive — tied to a Distinction-level average." },
+    { id: "s4", name: "Australia Awards Scholarship", uni: "Government of Australia", flag: "🇦🇺", amount: "Full tuition + living", basis: "Merit + leadership + development impact", match: "reach", note: "Highly competitive; needs strong leadership and community evidence — add these to your profile." },
+  ];
+
+  const costEstimate = {
+    country: "au", basis: "Master of IT in Melbourne · per year, illustrative", fxNote: "A$1 ≈ US$0.66",
+    items: [
+      { label: "Tuition", icon: "cap", aud: 47200, note: "average of your strong matches" },
+      { label: "Living costs", icon: "pin", aud: 29710, note: "government minimum for proof" },
+      { label: "Student visa (subclass 500)", icon: "doc", aud: 1600, note: "one-time, 2026 fee" },
+      { label: "Health cover (OSHC)", icon: "shield", aud: 2500, note: "per year, single" },
+    ],
+    oneTime: 1600,
+  };
+
+  const timeline = [
+    { date: "Now – Jun 2026", title: "Shortlist & prep", status: "active", desc: "Lock a shortlist (1 reach, 2 strong), upload your IELTS report, gather transcripts." },
+    { date: "Jul – Aug 2026", title: "Apply", status: "upcoming", desc: "Submit applications to Monash, UTS and one reach. Most have no application fee." },
+    { date: "Sep – Oct 2026", title: "Offers & accept", status: "upcoming", desc: "Compare offers and scholarships, accept one, pay deposit to trigger your CoE." },
+    { date: "Oct – Nov 2026", title: "Visa application", status: "upcoming", desc: "Lodge subclass 500 with proof of funds, OSHC and your Genuine Student statement." },
+    { date: "Jan – Feb 2027", title: "Pre-departure", status: "upcoming", desc: "Visa grant, flights, accommodation, and arrival for the July 2027 intake." },
+  ];
+
+  const actionPlan = [
+    { id: "a1", title: "Upload your IELTS report", impact: "high", score: "academic", effort: "5 min", desc: "You already scored 7.0 — uploading the report confirms it and unlocks 3 more matches.", done: false },
+    { id: "a2", title: "Add proof of funds (A$29,710+)", impact: "high", score: "financial", effort: "this week", desc: "A bank statement or loan sanction letter is the single biggest lift to your visa case and financial score.", done: false },
+    { id: "a3", title: "Get an employment reference letter", impact: "high", score: "visa", effort: "1–2 weeks", desc: "Turns your work gap from a question mark into documented, relevant experience.", done: false },
+    { id: "a4", title: "Document your study-gap reasons", impact: "med", score: "visa", effort: "30 min", desc: "Draft the Genuine Student note explaining your year of work — your guide can help.", done: false },
+    { id: "a5", title: "Add leadership & volunteering", impact: "med", score: "profile", effort: "15 min", desc: "Fills your scholarship profile and opens merit awards like Australia Awards.", done: false },
+    { id: "a6", title: "Confirm liquid funds & savings", impact: "low", score: "financial", effort: "10 min", desc: "Sharpens your cost-vs-budget picture and scholarship eligibility.", done: false },
+  ];
+
+  const scoreMeta = {
+    academic: { label: "Academic fit", icon: "cap" },
+    financial: { label: "Financial readiness", icon: "coins" },
+    visa: { label: "Visa case strength", icon: "shield" },
+    profile: { label: "Profile strength", icon: "spark" },
+  };
+
+  Object.assign(window.DB, {
+    profile, profileSections, universities, scholarships, costEstimate, timeline, actionPlan, scoreMeta,
+    universitiesFor: (cid) => universities.filter(u => u.country === cid),
+    uniById: (id) => universities.find(u => u.id === id),
+  });
+})();
+  </script>
+
+  <script>
+/* scoring engine (window.Engine) — rule-based for MVP */
+window.Engine = (function () {
+  const clamp = (n, lo = 4, hi = 98) => Math.max(lo, Math.min(hi, Math.round(n)));
+  const TYPICAL = { au: 60000, ca: 48000, uk: 42000, de: 16000, us: 70000, ie: 32000 };
+
+  function bandOf(x) { return x >= 72 ? "strong" : x >= 50 ? "possible" : "reach"; }
+
+  function merged(data) {
+    const p = (window.DB && DB.profile) || {};
+    return { p, d: data || {} };
+  }
+
+  function gradePercent(d) {
+    return typeof d.grade === "number" ? d.grade : 70;
+  }
+
+  function computeScores(data) {
+    const { p, d } = merged(data);
+    const dest = d.destination || "au";
+    const grade = gradePercent(d);
+    const ielts = p.english?.overall ?? d.ielts ?? 0;
+    const englishNorm = ielts ? (ielts / 9) * 100 : 45;
+    let academic = grade * 0.7 + englishNorm * 0.3 - (p.academic?.backlogs || 0) * 3 + (p.academic?.distinctions ? 5 : 0);
+
+    const typical = TYPICAL[dest] || 45000;
+    const budget = d.budget ?? p.finance?.total ?? 30000;
+    const sponsor = (d.sponsor || p.finance?.sponsor || "").toLowerCase();
+    let sponsorBonus = 0;
+    if (sponsor.includes("loan")) sponsorBonus += 5;
+    if (sponsor.includes("parent") || sponsor.includes("family")) sponsorBonus += 4;
+    if (sponsor.includes("self")) sponsorBonus += 6;
+    let financial = (budget / typical) * 78 + sponsorBonus + (p.finance?.proofUploaded ? 7 : -4);
+
+    let visa = 64;
+    if (d.hasGap ?? p.gap?.has) {
+      const reasons = d.gapReasons || p.gap?.reasons || [];
+      visa += reasons.length ? 12 : -10;
+      const evidence = p.gap?.evidence || [];
+      visa += evidence.length ? 6 : -8;
+    } else { visa += 8; }
+    visa += (p.visaHistory?.refusals === "None") ? 12 : -14;
+    visa += p.visaHistory?.travelled ? 6 : -2;
+    visa += p.work?.docs ? 5 : -5;
+
+    let profile = 35;
+    if (p.work?.title) profile += p.work.relevance === "Directly related" ? 18 : 10;
+    if (p.academic?.research) profile += 10;
+    if ((p.scholarshipProfile || []).length) profile += (p.scholarshipProfile.length) * 5;
+    if (p.academic?.publications) profile += 8;
+
+    const s = {
+      academic: clamp(academic), financial: clamp(financial),
+      visa: clamp(visa), profile: clamp(profile),
+    };
+
+    const overall = s.academic * 0.3 + s.financial * 0.25 + s.visa * 0.3 + s.profile * 0.15;
+    let band = bandOf(overall);
+    const curated = window.DB && DB.countryById(dest)?.match;
+    if (curated === "strong" && band === "possible") band = "strong";
+    if (curated === "reach" && band !== "reach") band = "possible";
+
+    return {
+      scores: s,
+      bands: { academic: bandOf(s.academic), financial: bandOf(s.financial), visa: bandOf(s.visa), profile: bandOf(s.profile) },
+      band, overall: Math.round(overall),
+      country: window.DB ? DB.countryById(dest) : null,
+    };
+  }
+
+  function visaAnalysis(data) {
+    const { p, d } = merged(data);
+    const strengths = [], concerns = [], missing = [];
+    if ((p.visaHistory?.refusals || "None") === "None") strengths.push("No previous visa refusals on record");
+    else concerns.push("Previous refusal (" + p.visaHistory.refusals + ") must be addressed directly");
+    const hasGap = d.hasGap ?? p.gap?.has;
+    if (hasGap) {
+      const reasons = d.gapReasons || p.gap?.reasons || [];
+      if (reasons.length) strengths.push("Study gap is explainable — " + reasons.join(", ").toLowerCase());
+      else concerns.push("Study gap has no stated reason yet");
+      if (!(p.gap?.evidence || []).length) missing.push("Evidence for your study gap (employment letter, etc.)");
+    } else { strengths.push("No study gap to explain"); }
+    if (p.work?.title && !p.work?.docs) missing.push("Employment reference / experience letter");
+    if (!p.finance?.proofUploaded) missing.push("Proof of funds document");
+    if (!p.english?.reportUploaded) missing.push("Official English test report");
+    if (p.visaHistory?.travelled === false || p.visaHistory?.travelled == null) concerns.push("No international travel history to show ties");
+    const budget = d.budget ?? p.finance?.total ?? 0;
+    const c = window.DB && DB.countryById(d.destination || "au");
+    if (c && budget) {
+      const typical = TYPICAL[c.id] || 45000;
+      if (budget < typical * 0.7) concerns.push("Budget is below the typical cost for " + c.name);
+      else strengths.push("Budget is in a workable range for your destination");
+    }
+    return { strengths, concerns, missing };
+  }
+
+  function completeness() {
+    const secs = (window.DB && DB.profileSections) || [];
+    const w = { done: 1, partial: 0.5, empty: 0 };
+    const sum = secs.reduce((a, s) => a + (w[s.status] ?? 0), 0);
+    const pct = secs.length ? Math.round((sum / secs.length) * 100) : 0;
+    const done = secs.filter(s => s.status === "done").length;
+    const partial = secs.filter(s => s.status === "partial").length;
+    const empty = secs.filter(s => s.status === "empty").length;
+    return { pct, done, partial, empty, total: secs.length };
+  }
+
+  return { computeScores, visaAnalysis, completeness, bandOf };
+})();
+  </script>
+
+  <!-- ============================================================
+       REACT COMPONENTS (JSX via Babel)
+       ============================================================ -->
+  <script type="text/babel">
+/* icons.jsx */
+function Icon({ name, size = 20, stroke = 1.6, style }) {
+  const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: stroke, strokeLinecap: "round", strokeLinejoin: "round" };
+  const paths = {
+    arrowRight: <><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></>,
+    arrowLeft: <><path d="M19 12H5" /><path d="M11 18l-6-6 6-6" /></>,
+    check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+    chevron: <path d="M9 6l6 6-6 6" />,
+    chevronDown: <path d="M6 9l6 6 6-6" />,
+    shield: <><path d="M12 3l7 3v6c0 4.2-2.9 7.4-7 9-4.1-1.6-7-4.8-7-9V6z" /><path d="M9 12l2 2 4-4" /></>,
+    clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
+    spark: <><path d="M12 3v4" /><path d="M12 17v4" /><path d="M3 12h4" /><path d="M17 12h4" /><path d="M6.5 6.5l2.5 2.5" /><path d="M15 15l2.5 2.5" /><path d="M17.5 6.5L15 9" /><path d="M9 15l-2.5 2.5" /></>,
+    award: <><circle cx="12" cy="9" r="5" /><path d="M9 13.5L7.5 21l4.5-2.5L16.5 21 15 13.5" /></>,
+    match: <><path d="M12 21s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.4-7 10-7 10z" /></>,
+    guide: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3" /></>,
+    doc: <><path d="M7 3h7l4 4v14H7z" /><path d="M14 3v4h4" /><path d="M9.5 13h5M9.5 16.5h5" /></>,
+    map: <><path d="M9 4L4 6v14l5-2 6 2 5-2V4l-5 2-6-2z" /><path d="M9 4v14M15 6v14" /></>,
+    moon: <path d="M20 14.5A8 8 0 0 1 9.5 4 7 7 0 1 0 20 14.5z" />,
+    sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" /></>,
+    user: <><circle cx="12" cy="8" r="4" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" /></>,
+    lock: <><rect x="5" y="10.5" width="14" height="10" rx="2" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" /></>,
+    pin: <><path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2" /></>,
+    coins: <><ellipse cx="9" cy="7" rx="5" ry="2.5" /><path d="M4 7v5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V7" /><ellipse cx="15" cy="14" rx="5" ry="2.5" /><path d="M10 15v3c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4" /></>,
+    briefcase: <><rect x="3" y="7.5" width="18" height="12" rx="2" /><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5" /><path d="M3 12.5h18" /></>,
+    send: <path d="M4 12l16-7-7 16-2.5-6.5L4 12z" />,
+    external: <><path d="M14 5h5v5" /><path d="M19 5l-8 8" /><path d="M18 13.5V19H5V6h5.5" /></>,
+    bell: <><path d="M6 9a6 6 0 1 1 12 0c0 4 1.5 6 1.5 6H4.5S6 13 6 9z" /><path d="M10 19a2 2 0 0 0 4 0" /></>,
+    menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
+    x: <path d="M6 6l12 12M18 6L6 18" />,
+    refresh: <><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8" /><path d="M20 4v4h-4" /><path d="M20 12a8 8 0 0 1-13.7 5.6L4 16" /><path d="M4 20v-4h4" /></>,
+    cap: <><path d="M3 9l9-4 9 4-9 4-9-4z" /><path d="M7 11v4c0 1.1 2.2 2 5 2s5-.9 5-2v-4" /><path d="M21 9v5" /></>,
+  };
+  return <span className="icon" style={style}><svg {...p}>{paths[name] || null}</svg></span>;
+}
+
+/* ---------- shared primitives ---------- */
+const { useState, useEffect, useRef, useCallback } = React;
+
+function Logo({ onClick }) {
+  return (
+    <button onClick={onClick} className="row gap-2 middle" style={{ background: "none", border: 0, padding: 0 }}>
+      <span className="logo-mark"><Icon name="cap" size={17} /></span>
+      <span style={{ fontWeight: 500, fontSize: 18, letterSpacing: "-0.02em", color: "var(--ink)" }}>MyVisa</span>
+    </button>
+  );
+}
+
+const VERDICT = {
+  strong:   { label: "Strong match",  cls: "tag-strong",   color: "var(--strong)",   tint: "var(--strong-tint)",   blurb: "Your profile fits well." },
+  possible: { label: "Possible",      cls: "tag-possible", color: "var(--possible)", tint: "var(--possible-tint)", blurb: "Achievable with care." },
+  reach:    { label: "Reach",         cls: "tag-reach",    color: "var(--reach)",    tint: "var(--reach-tint)",    blurb: "Ambitious for now." },
+};
+
+function Verdict({ level, size = "md" }) {
+  const v = VERDICT[level] || VERDICT.possible;
+  return <span className={"tag " + v.cls} style={size === "lg" ? { fontSize: 15, padding: "7px 15px" } : null}><span className="dot" style={{ background: v.color }} />{v.label}</span>;
+}
+
+function FactorBar({ label, value, level = "strong", note }) {
+  const color = VERDICT[level]?.color || "var(--primary)";
+  return (
+    <div className="col gap-2">
+      <div className="row between" style={{ alignItems: "baseline" }}>
+        <span style={{ fontSize: 15.5, fontWeight: 500 }}>{label}</span>
+        {note && <span className="small" style={{ color: "var(--ink-faint)" }}>{note}</span>}
+      </div>
+      <div className="bar-track"><div className="bar-fill" style={{ width: value + "%", background: color }} /></div>
+    </div>
+  );
+}
+
+function Flag({ emoji }) { return <span className="flag">{emoji}</span>; }
+
+function ThemeToggle({ dark, onToggle }) {
+  return (
+    <button className="btn-quiet" onClick={onToggle} aria-label="Toggle theme"
+      style={{ borderRadius: "var(--r-pill)", width: 40, height: 40, padding: 0, display: "grid", placeItems: "center" }}>
+      <Icon name={dark ? "sun" : "moon"} size={19} />
+    </button>
+  );
+}
+
+function Eyebrow({ children, icon }) {
+  return <span className="row gap-2 middle mono-up mono" style={{ color: "var(--primary)" }}>{icon && <Icon name={icon} size={14} />}{children}</span>;
+}
+
+function SourceTag({ source, updated }) {
+  return (
+    <span className="row gap-2 middle mono" style={{ flexWrap: "wrap" }}>
+      <Icon name="refresh" size={13} /><span>updated {updated}</span><span style={{ opacity: .5 }}>·</span>
+      <a href="#" className="row gap-1 middle" style={{ color: "var(--primary)" }}>{source}<Icon name="external" size={12} /></a>
+    </span>
+  );
+}
+
+function AppBar({ view, go, loggedIn, dark, onToggleTheme }) {
+  const navItems = loggedIn
+    ? [["dashboard", "Home"], ["matches", "Matches"], ["plan", "My plan"], ["profile", "Profile"], ["guide", "Guide"], ["destinations", "Destinations"]]
+    : [["how", "How it works"], ["destinations", "Destinations"], ["trust", "Why trust us"]];
+  return (
+    <header className="appbar">
+      <div className="wrap row between" style={{ height: 66 }}>
+        <div className="row gap-4 middle">
+          <Logo onClick={() => go(loggedIn ? "dashboard" : "home")} />
+          <nav className="row gap-4 middle hide-mobile" style={{ marginLeft: 8 }}>
+            {navItems.map(([k, label]) => (
+              <button key={k} className="navlink" data-active={String(view === k)} style={{ background: "none", border: 0 }}
+                onClick={() => go(loggedIn && (k === "how" || k === "trust") ? "home" : k)}>{label}</button>
+            ))}
+          </nav>
+        </div>
+        <div className="row gap-2 middle">
+          <ThemeToggle dark={dark} onToggle={onToggleTheme} />
+          {loggedIn ? (
+            <>
+              <button className="btn-quiet hide-mobile" style={{ borderRadius: "var(--r-pill)", width: 40, height: 40, padding: 0, display: "grid", placeItems: "center" }}><Icon name="bell" size={19} /></button>
+              <div className="avatar" title={DB.student.name}>{DB.student.initials}</div>
+            </>
+          ) : (
+            <>
+              <button className="btn btn-quiet hide-mobile" onClick={() => go("auth")}>Sign in</button>
+              <button className="btn btn-primary btn-sm" onClick={() => go("wizard")}>Check eligibility</button>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Footer({ go }) {
+  return (
+    <footer style={{ borderTop: "1px solid var(--line)", marginTop: 80, background: "var(--surface)" }}>
+      <div className="wrap" style={{ padding: "40px 28px 48px" }}>
+        <div className="row between" style={{ flexWrap: "wrap", gap: 24 }}>
+          <div className="col gap-3" style={{ maxWidth: 340 }}>
+            <Logo onClick={() => go("home")} />
+            <p className="small">An honest reality check before you pay anyone. No agents, no hidden commissions.</p>
+          </div>
+          <div className="row gap-5" style={{ flexWrap: "wrap" }}>
+            <FootCol title="Product" links={["Eligibility", "Destinations", "AI guide", "SOP coach"]} />
+            <FootCol title="Trust" links={["How we score", "Our data sources", "Why no agents", "Privacy"]} />
+            <FootCol title="Company" links={["About", "Contact", "Careers"]} />
+          </div>
+        </div>
+        <hr className="hairline" style={{ margin: "32px 0 20px" }} />
+        <div className="row between" style={{ flexWrap: "wrap", gap: 12 }}>
+          <span className="mono row gap-2 middle"><Icon name="shield" size={14} style={{ color: "var(--primary)" }} />{DB.trustLine}</span>
+          <span className="mono">© 2026 MyVisa</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+function FootCol({ title, links }) {
+  return (
+    <div className="col gap-2">
+      <span className="mono-up mono" style={{ marginBottom: 4 }}>{title}</span>
+      {links.map(l => <a key={l} className="small" style={{ color: "var(--ink-soft)" }} href="#">{l}</a>)}
+    </div>
+  );
+}
+
+function FocusBar({ go, dark, onToggleTheme }) {
+  return (
+    <header className="appbar">
+      <div className="wrap row between" style={{ height: 60 }}>
+        <Logo onClick={() => go("home")} />
+        <div className="row gap-3 middle">
+          <span className="mono row gap-2 middle hide-mobile"><Icon name="shield" size={13} style={{ color: "var(--primary)" }} /> no sign-up to start</span>
+          <ThemeToggle dark={dark} onToggle={onToggleTheme} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- home.jsx ---------- */
+function Home({ go }) {
+  return (
+    <div className="fade-in">
+      <div style={{ borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
+        <div className="wrap row center middle gap-2" style={{ height: 38 }}>
+          <Icon name="shield" size={14} style={{ color: "var(--primary)" }} />
+          <span className="mono">No agents · no hidden commissions · we never steer you toward whoever pays us</span>
+        </div>
+      </div>
+      <section className="wrap" style={{ paddingTop: 72, paddingBottom: 24 }}>
+        <div style={{ maxWidth: 760 }}>
+          <Eyebrow>For students applying abroad</Eyebrow>
+          <h1 className="display" style={{ marginTop: 20 }}>An honest answer before<br />you pay anyone.</h1>
+          <p className="lead measure" style={{ marginTop: 22 }}>Can I get in? What will it really cost? What's my visa risk? See where you stand in about two minutes — free, and no sign-up to start.</p>
+          <div className="row gap-3 middle" style={{ marginTop: 32, flexWrap: "wrap" }}>
+            <button className="btn btn-primary btn-lg" onClick={() => go("wizard")}>Check your eligibility <Icon name="arrowRight" size={18} /></button>
+            <span className="small row gap-2 middle"><Icon name="clock" size={16} style={{ color: "var(--ink-faint)" }} />About 2 minutes · no account needed</span>
+          </div>
+        </div>
+        <div style={{ marginTop: 64 }}>
+          <div className="card rise-in" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="row between middle" style={{ padding: "14px 20px", borderBottom: "1px solid var(--line)", background: "var(--surface-2)" }}>
+              <span className="row gap-2 middle small" style={{ fontWeight: 500, color: "var(--ink)" }}><Icon name="guide" size={16} style={{ color: "var(--primary)" }} /> Your feed, once you're in</span>
+              <span className="mono">preview</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr" }}>
+              <div className="col gap-3" style={{ padding: 22, borderRight: "1px solid var(--line)" }}>
+                <div className="card card-pad col gap-2" style={{ background: "var(--primary-tint)", borderColor: "transparent" }}>
+                  <span className="row gap-2 middle" style={{ color: "var(--primary)", fontWeight: 500 }}><Icon name="spark" size={17} /> Your next best step</span>
+                  <p className="small" style={{ color: "var(--ink)" }}>Add your IELTS report to unlock 3 more matches and sharpen your Australia verdict.</p>
+                </div>
+                <div className="card card-pad col gap-2">
+                  <div className="row between middle">
+                    <span className="row gap-2 middle small" style={{ fontWeight: 500, color: "var(--ink)" }}><Flag emoji="🇦🇺" /> Visa update</span>
+                    <Verdict level="strong" />
+                  </div>
+                  <p className="small">Australia's Genuine Student rules — your work gap is an asset here, not a liability.</p>
+                </div>
+              </div>
+              <div className="col gap-3" style={{ padding: 22, background: "var(--surface-2)" }}>
+                <span className="mono-up mono">Your guide</span>
+                <div className="card card-pad" style={{ background: "var(--surface)" }}>
+                  <p className="small" style={{ color: "var(--ink)" }}>You're in good shape for Australia. The highest-impact thing right now is documenting your work gap — want to do it together?</p>
+                </div>
+                <div className="col gap-2">
+                  {["Is my gap a problem?", "How much must I show?"].map(q => <div key={q} className="chip" style={{ justifyContent: "flex-start" }}>{q}</div>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="wrap" style={{ marginTop: 80 }}>
+        <Eyebrow>What you get</Eyebrow>
+        <h2 className="h1" style={{ marginTop: 14, maxWidth: 600 }}>Three quiet tools, no clutter.</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 18, marginTop: 36 }}>
+          <Tile icon="shield" title="Eligibility & checklist" body="A banded verdict — strong, possible, or reach — built from official thresholds, plus a document checklist with real deadlines." />
+          <Tile icon="guide" title="An AI guide that remembers you" body="Not a popup bot. A calm companion that powers a feed of matches, visa updates for your country, and your next best step." />
+          <Tile icon="doc" title="SOP coach" body="Coaching on your own draft — structure, clarity, how you explain a study gap. A coach, never a ghostwriter." badge="Soon" />
+        </div>
+      </section>
+      <section className="wrap" style={{ marginTop: 88 }}>
+        <div className="card" style={{ overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+            {[["1", "Tell us about you", "Where you're from, your grades in your own grade system, your budget. One question at a time."],
+              ["2", "See where you stand", "A banded verdict with the factors that drove it — academic fit, budget, and how your gap reads."],
+              ["3", "Build your case", "Track applications, work the checklist, and let your guide keep your visa info fresh."]
+            ].map(([n, t, b], i) => (
+              <div key={n} style={{ padding: 30, borderRight: i < 2 ? "1px solid var(--line)" : "none" }}>
+                <span className="mono" style={{ color: "var(--primary)", fontSize: 22, fontWeight: 500 }}>{n}</span>
+                <h3 className="h3" style={{ marginTop: 14 }}>{t}</h3>
+                <p className="body" style={{ marginTop: 8 }}>{b}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="wrap-narrow" style={{ marginTop: 96, textAlign: "center" }}>
+        <Eyebrow icon="shield">Trust is the product</Eyebrow>
+        <h2 className="h1" style={{ marginTop: 16 }}>We sit before the consultancy, not in place of one.</h2>
+        <p className="lead" style={{ marginTop: 18 }}>Every recommendation shows the factors behind it. Every visa rule shows where it came from and when we last checked. If we ever earn referral revenue, you'll see it said plainly — right where it's relevant.</p>
+        <div className="row center gap-3 middle" style={{ marginTop: 30, flexWrap: "wrap" }}>
+          <button className="btn btn-primary btn-lg" onClick={() => go("wizard")}>Check your eligibility</button>
+          <button className="btn btn-ghost btn-lg" onClick={() => go("destinations")}>Browse destinations</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+function Tile({ icon, title, body, badge }) {
+  return (
+    <div className="card card-pad col gap-3" style={{ minHeight: 200 }}>
+      <div className="row between middle">
+        <span style={{ width: 44, height: 44, borderRadius: 12, background: "var(--primary-tint)", color: "var(--primary)", display: "grid", placeItems: "center" }}><Icon name={icon} size={22} /></span>
+        {badge && <span className="chip chip-mono">{badge}</span>}
+      </div>
+      <h3 className="h3" style={{ marginTop: 4 }}>{title}</h3>
+      <p className="body">{body}</p>
+    </div>
+  );
+}
+
+/* ---------- wizard.jsx ---------- */
+const HOME_COUNTRIES = [{ v: "Nepal", flag: "🇳🇵" }, { v: "India", flag: "🇮🇳" }, { v: "Nigeria", flag: "🇳🇬" }, { v: "Pakistan", flag: "🇵🇰" }, { v: "Bangladesh", flag: "🇧🇩" }, { v: "Other", flag: "🌐" }];
+const GRADE_SYSTEMS = { Nepal: ["Percentage (Nepal)", "CGPA-4"], India: ["Percentage (India)", "CGPA-10"], Nigeria: ["CGPA-5", "Percentage"], default: ["Percentage", "CGPA-4", "CGPA-10", "CGPA-5"] };
+const LEVELS = ["Higher secondary (+2)", "Bachelor's degree", "Master's degree"];
+const GAP_REASONS = [["briefcase", "Worked or interned"], ["doc", "Retook or improved exams"], ["user", "Health or family reasons"], ["spark", "Started something of my own"]];
+const SPONSORS = ["Self-funded", "Parents / family", "Education loan", "Mixed"];
+const GOALS = [["match", "Permanent residency", "Settle long-term after study"], ["coins", "Lowest total cost", "Best value for money"], ["cap", "Highest-ranked university", "Prestige and brand"], ["clock", "Fastest admission", "Start as soon as possible"], ["briefcase", "Best employment outcomes", "Strong job prospects"], ["spark", "Research opportunities", "Academic and research depth"]];
+
+function Wizard({ go, onComplete, layout = "steps", initial }) {
+  const [data, setData] = useState(initial || { homeCountry: "Nepal", level: "Bachelor's degree", gradeSystem: "Percentage (Nepal)", grade: 72, englishStatus: "Taken", ielts: 7.0, hasGap: true, gapYears: 1, gapReasons: ["Worked or interned"], destination: "au", budget: 38000, sponsor: "Education loan", goal: "Permanent residency" });
+  const set = (k, v) => setData(d => ({ ...d, [k]: v }));
+  if (layout === "grouped") return <WizardGrouped {...{ data, set, go, onComplete }} />;
+  return <WizardSteps {...{ data, set, go, onComplete }} />;
+}
+
+function WizardSteps({ data, set, go, onComplete }) {
+  const [step, setStep] = useState(0);
+  const steps = ["home", "education", "english", "gap", ...(data.hasGap ? ["gapDetail"] : []), "destination", "budget", "goal"];
+  const total = steps.length;
+  const key = steps[step];
+  const next = () => step < total - 1 ? setStep(step + 1) : onComplete(data);
+  const back = () => step > 0 ? setStep(step - 1) : go("home");
+  return (
+    <div className="wrap-narrow fade-in" style={{ paddingTop: 40, paddingBottom: 80, minHeight: "calc(100vh - 66px)" }}>
+      <div className="row between middle" style={{ marginBottom: 36 }}>
+        <button className="btn-quiet row gap-2 middle" onClick={back} style={{ borderRadius: "var(--r-pill)" }}><Icon name="arrowLeft" size={17} /> Back</button>
+        <span className="mono">step {step + 1} of {total}</span>
+      </div>
+      <ProgressDots total={total} current={step} />
+      <div key={key} className="rise-in" style={{ marginTop: 40 }}><StepBody k={key} data={data} set={set} /></div>
+      <div className="row between middle" style={{ marginTop: 44 }}>
+        <button className="btn-quiet" onClick={() => go("home")}>Save & exit</button>
+        <button className="btn btn-primary btn-lg" onClick={next}>{step === total - 1 ? <>See where I stand <Icon name="arrowRight" size={18} /></> : <>Continue <Icon name="arrowRight" size={18} /></>}</button>
+      </div>
+    </div>
+  );
+}
+
+function ProgressDots({ total, current }) {
+  return <div className="row gap-2" style={{ width: "100%" }}>{Array.from({ length: total }).map((_, i) => <div key={i} className="bar-track" style={{ height: 5, background: i <= current ? "var(--primary)" : "var(--bg-tint)", transition: "background .3s var(--ease)" }} />)}</div>;
+}
+
+function StepBody({ k, data, set }) {
+  if (k === "home") return <StepShell title="Where are you from?" sub="This sets your grade scale and which visa rules we show you."><div className="col gap-2">{HOME_COUNTRIES.map(c => <button key={c.v} className="opt" data-sel={String(data.homeCountry === c.v)} onClick={() => { set("homeCountry", c.v); set("gradeSystem", (GRADE_SYSTEMS[c.v] || GRADE_SYSTEMS.default)[0]); }}><Flag emoji={c.flag} /><span className="wgrow" style={{ fontWeight: 500 }}>{c.v}</span><Mark on={data.homeCountry === c.v} /></button>)}</div></StepShell>;
+
+  if (k === "education") return (
+    <StepShell title="Your education" sub="Enter your result in your own grade system — we convert it for each destination.">
+      <FieldLabel>Latest level completed</FieldLabel>
+      <div className="col gap-2" style={{ marginBottom: 24 }}>{LEVELS.map(l => <button key={l} className="opt" data-sel={String(data.level === l)} onClick={() => set("level", l)}><Icon name="cap" size={19} style={{ color: data.level === l ? "var(--primary)" : "var(--ink-faint)" }} /><span className="wgrow" style={{ fontWeight: 500 }}>{l}</span><Mark on={data.level === l} /></button>)}</div>
+      <FieldLabel>Grade system</FieldLabel>
+      <div className="seg" style={{ marginBottom: 22, flexWrap: "wrap" }}>{(GRADE_SYSTEMS[data.homeCountry] || GRADE_SYSTEMS.default).map(g => <button key={g} data-on={String(data.gradeSystem === g)} onClick={() => set("gradeSystem", g)}>{g}</button>)}</div>
+      <FieldLabel>Your latest result</FieldLabel>
+      <GradeInput system={data.gradeSystem} value={data.grade} onChange={v => set("grade", v)} />
+    </StepShell>
+  );
+
+  if (k === "english") {
+    const taken = data.englishStatus === "Taken";
+    return (
+      <StepShell title="English proficiency" sub="Most destinations need proof of English. Even a planned test helps us tailor your matches.">
+        <FieldLabel>Where are you with an English test?</FieldLabel>
+        <div className="seg" style={{ marginBottom: taken ? 24 : 0 }}>{["Not taken", "Booked", "Taken"].map(s => <button key={s} data-on={String(data.englishStatus === s)} onClick={() => set("englishStatus", s)}>{s}</button>)}</div>
+        {taken && (
+          <div className="card card-pad col gap-4">
+            <FieldLabel>IELTS overall band (or equivalent)</FieldLabel>
+            <div className="row center" style={{ alignItems: "baseline", gap: 6 }}><span style={{ fontSize: 44, fontWeight: 500 }}>{Number(data.ielts).toFixed(1)}</span><span className="body">/ 9.0</span></div>
+            <input type="range" className="slider" min="4" max="9" step="0.5" value={data.ielts} onChange={e => set("ielts", +e.target.value)} />
+            <p className="small" style={{ textAlign: "center", color: "var(--ink-faint)" }}>You can add per-section scores later in your profile.</p>
+          </div>
+        )}
+      </StepShell>
+    );
+  }
+
+  if (k === "gap") return <StepShell title="Any gap in your studies?" sub="A gap is completely normal. Explaining it well actually strengthens your visa case."><div className="col gap-2">{[["No gap", false], ["Yes, there's a gap", true]].map(([label, val]) => <button key={label} className="opt" data-sel={String(data.hasGap === val)} onClick={() => set("hasGap", val)}><span className="wgrow" style={{ fontWeight: 500 }}>{label}</span><Mark on={data.hasGap === val} /></button>)}</div></StepShell>;
+
+  if (k === "gapDetail") return (
+    <StepShell title="What were you doing?" sub="Pick all that apply. We'll help you turn this into a clear statement later.">
+      <FieldLabel>How long was the gap?</FieldLabel>
+      <div className="seg" style={{ marginBottom: 24 }}>{[1, 2, 3].map(y => <button key={y} data-on={String(data.gapYears === y)} onClick={() => set("gapYears", y)}>{y} {y === 1 ? "year" : "years"}{y === 3 ? "+" : ""}</button>)}</div>
+      <FieldLabel>Reasons</FieldLabel>
+      <div className="col gap-2">{GAP_REASONS.map(([ic, label]) => { const on = data.gapReasons.includes(label); return <button key={label} className="opt" data-sel={String(on)} onClick={() => set("gapReasons", on ? data.gapReasons.filter(r => r !== label) : [...data.gapReasons, label])}><Icon name={ic} size={19} style={{ color: on ? "var(--primary)" : "var(--ink-faint)" }} /><span className="wgrow" style={{ fontWeight: 500 }}>{label}</span><span className="opt-mark" style={{ borderRadius: 6 }}>{on && <Icon name="check" size={14} style={{ color: "var(--on-primary)" }} />}</span></button>; })}</div>
+    </StepShell>
+  );
+
+  if (k === "destination") return <StepShell title="Where do you want to study?" sub="You can compare others later — pick the one you're most curious about."><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{DB.countries.map(c => <button key={c.id} className="opt" data-sel={String(data.destination === c.id)} onClick={() => set("destination", c.id)} style={{ padding: "16px 18px" }}><Flag emoji={c.flag} /><span className="wgrow" style={{ fontWeight: 500 }}>{c.name}</span><Mark on={data.destination === c.id} /></button>)}</div></StepShell>;
+
+  if (k === "budget") {
+    const c = DB.countryById(data.destination);
+    return (
+      <StepShell title="Your yearly budget" sub="Tuition plus living costs, per year, in USD. A rough figure is fine.">
+        <div className="card card-pad col gap-4">
+          <div className="row center" style={{ alignItems: "baseline", gap: 4 }}><span style={{ fontSize: 44, fontWeight: 500, letterSpacing: "-0.02em" }}>${data.budget.toLocaleString()}</span><span className="body">/ year</span></div>
+          <input type="range" className="slider" min="8000" max="80000" step="1000" value={data.budget} onChange={e => set("budget", +e.target.value)} />
+          <div className="row between mono"><span>$8k</span><span>$80k</span></div>
+          <p className="small row gap-2 middle" style={{ justifyContent: "center", color: "var(--ink-faint)" }}><Icon name="coins" size={15} /> Typical for {c.name}: {c.tuitionRange.replace(" / yr", "")} tuition + living</p>
+        </div>
+        <div style={{ marginTop: 24 }}>
+          <FieldLabel>How will you fund this?</FieldLabel>
+          <div className="row gap-2" style={{ flexWrap: "wrap" }}>{SPONSORS.map(s => <button key={s} className="chip" data-sel={String(data.sponsor === s)} onClick={() => set("sponsor", s)} style={{ cursor: "pointer", borderColor: data.sponsor === s ? "var(--primary)" : "var(--line-2)", background: data.sponsor === s ? "var(--primary-tint)" : "var(--surface)", color: data.sponsor === s ? "var(--primary)" : "var(--ink-soft)" }}>{s}</button>)}</div>
+        </div>
+      </StepShell>
+    );
+  }
+
+  if (k === "goal") return <StepShell title="What matters most to you?" sub="This shapes how we rank your matches — the same profile sorts differently for different goals."><div className="col gap-2">{GOALS.map(([ic, label, sub]) => <button key={label} className="opt" data-sel={String(data.goal === label)} onClick={() => set("goal", label)}><Icon name={ic} size={20} style={{ color: data.goal === label ? "var(--primary)" : "var(--ink-faint)" }} /><div className="col wgrow"><span style={{ fontWeight: 500 }}>{label}</span><span className="small" style={{ color: "var(--ink-faint)" }}>{sub}</span></div><Mark on={data.goal === label} /></button>)}</div></StepShell>;
+  return null;
+}
+
+function StepShell({ title, sub, children }) { return <div className="col gap-3"><h2 className="h1">{title}</h2><p className="lead" style={{ marginBottom: 14 }}>{sub}</p>{children}</div>; }
+function FieldLabel({ children }) { return <span className="mono-up mono" style={{ display: "block", marginBottom: 10 }}>{children}</span>; }
+function Mark({ on }) { return <span className="opt-mark">{on && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--on-primary)" }} />}</span>; }
+
+function GradeInput({ system, value, onChange }) {
+  const isPct = system.toLowerCase().includes("percent");
+  const max = isPct ? 100 : system.includes("10") ? 10 : system.includes("5") ? 5 : 4;
+  const unit = isPct ? "%" : ("/ " + max);
+  return (
+    <div className="card card-pad col gap-4">
+      <div className="row center" style={{ alignItems: "baseline", gap: 6 }}><span style={{ fontSize: 44, fontWeight: 500 }}>{isPct ? value : (value / 100 * max).toFixed(2)}</span><span className="body">{unit}</span></div>
+      <input type="range" className="slider" min={isPct ? 40 : 0} max={isPct ? 100 : 100} step="1" value={value} onChange={e => onChange(+e.target.value)} />
+      <p className="small" style={{ textAlign: "center", color: "var(--ink-faint)" }}>Drag to your latest {isPct ? "percentage" : "grade"} — you can refine it later.</p>
+    </div>
+  );
+}
+
+function WizardGrouped({ data, set, go, onComplete }) {
+  return (
+    <div className="wrap-narrow fade-in" style={{ paddingTop: 40, paddingBottom: 80 }}>
+      <button className="btn-quiet row gap-2 middle" onClick={() => go("home")} style={{ borderRadius: "var(--r-pill)", marginBottom: 24 }}><Icon name="arrowLeft" size={17} /> Back</button>
+      <Eyebrow>Eligibility check</Eyebrow>
+      <h2 className="h1" style={{ marginTop: 12 }}>A few things about you</h2>
+      <p className="lead" style={{ marginTop: 12, marginBottom: 32 }}>Everything on one page — no result is hidden behind sign-up.</p>
+      <div className="col gap-3">
+        <GroupCard n="1" title="Where you're from"><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>{HOME_COUNTRIES.map(c => <button key={c.v} className="opt" data-sel={String(data.homeCountry === c.v)} style={{ padding: "12px 14px" }} onClick={() => { set("homeCountry", c.v); set("gradeSystem", (GRADE_SYSTEMS[c.v] || GRADE_SYSTEMS.default)[0]); }}><Flag emoji={c.flag} /><span style={{ fontWeight: 500, fontSize: 15 }}>{c.v}</span></button>)}</div></GroupCard>
+        <GroupCard n="2" title="Your education"><div className="seg" style={{ marginBottom: 16, flexWrap: "wrap" }}>{LEVELS.map(l => <button key={l} data-on={String(data.level === l)} onClick={() => set("level", l)}>{l}</button>)}</div><div className="seg" style={{ marginBottom: 16, flexWrap: "wrap" }}>{(GRADE_SYSTEMS[data.homeCountry] || GRADE_SYSTEMS.default).map(g => <button key={g} data-on={String(data.gradeSystem === g)} onClick={() => set("gradeSystem", g)}>{g}</button>)}</div><GradeInput system={data.gradeSystem} value={data.grade} onChange={v => set("grade", v)} /></GroupCard>
+        <GroupCard n="3" title="Study gap"><div className="seg" style={{ marginBottom: data.hasGap ? 16 : 0 }}>{[["No gap", false], ["Yes", true]].map(([l, v]) => <button key={l} data-on={String(data.hasGap === v)} onClick={() => set("hasGap", v)}>{l}</button>)}</div>{data.hasGap && <div className="col gap-2">{GAP_REASONS.map(([ic, label]) => { const on = data.gapReasons.includes(label); return <button key={label} className="opt" data-sel={String(on)} style={{ padding: "12px 16px" }} onClick={() => set("gapReasons", on ? data.gapReasons.filter(r => r !== label) : [...data.gapReasons, label])}><Icon name={ic} size={18} style={{ color: on ? "var(--primary)" : "var(--ink-faint)" }} /><span className="wgrow" style={{ fontWeight: 500 }}>{label}</span><span className="opt-mark" style={{ borderRadius: 6 }}>{on && <Icon name="check" size={13} style={{ color: "var(--on-primary)" }} />}</span></button>; })}</div>}</GroupCard>
+        <GroupCard n="4" title="Destination"><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>{DB.countries.map(c => <button key={c.id} className="opt" data-sel={String(data.destination === c.id)} style={{ padding: "12px 14px" }} onClick={() => set("destination", c.id)}><Flag emoji={c.flag} /><span style={{ fontWeight: 500, fontSize: 15 }}>{c.name}</span></button>)}</div></GroupCard>
+        <GroupCard n="5" title="Yearly budget (USD)"><div className="row center" style={{ alignItems: "baseline", gap: 4, marginBottom: 16 }}><span style={{ fontSize: 34, fontWeight: 500 }}>${data.budget.toLocaleString()}</span><span className="body">/ year</span></div><input type="range" className="slider" min="8000" max="80000" step="1000" value={data.budget} onChange={e => set("budget", +e.target.value)} /></GroupCard>
+      </div>
+      <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 28 }} onClick={() => onComplete(data)}>See where I stand <Icon name="arrowRight" size={18} /></button>
+    </div>
+  );
+}
+function GroupCard({ n, title, children }) { return <div className="card card-pad"><div className="row gap-2 middle" style={{ marginBottom: 16 }}><span className="mono" style={{ color: "var(--primary)", fontSize: 15 }}>{n}</span><h3 className="h3">{title}</h3></div>{children}</div>; }
+
+/* ---------- results.jsx ---------- */
+function scoreProfile(data) {
+  const e = Engine.computeScores(data);
+  return { c: e.country, band: e.band, position: e.overall, academic: e.scores.academic, budgetFit: e.scores.financial, gapFit: e.scores.visa, profileStr: e.scores.profile, scores: e.scores, bands: e.bands };
+}
+
+function Results({ go, data, onSave, variant = "scale" }) {
+  const e = Engine.computeScores(data);
+  const s = { c: e.country, band: e.band, position: e.overall };
+  const v = VERDICT[s.band];
+  return (
+    <div className="wrap-narrow fade-in" style={{ paddingTop: 36, paddingBottom: 60 }}>
+      <button className="btn-quiet row gap-2 middle" onClick={() => go("wizard")} style={{ borderRadius: "var(--r-pill)", marginBottom: 22 }}><Icon name="arrowLeft" size={17} /> Adjust my answers</button>
+      <div className="row gap-2 middle" style={{ marginBottom: 8 }}><Flag emoji={s.c.flag} /><span className="mono-up mono">Your standing for {s.c.name}</span></div>
+      {variant === "scale" ? <VerdictScale s={s} /> : <VerdictCard s={s} />}
+      <div className="card card-pad col gap-4" style={{ marginTop: 18 }}>
+        <div className="row between middle"><h3 className="h3">Why this result</h3><span className="mono">four factors, shown as bands</span></div>
+        {["academic", "financial", "visa", "profile"].map(k => <FactorBar key={k} label={DB.scoreMeta[k].label} value={e.scores[k]} level={e.bands[k]} note={scoreNote(k, data, e)} />)}
+        <p className="mono" style={{ marginTop: 2 }}>We show bands, not a precise percentage — false confidence helps no one.</p>
+      </div>
+      <div className="col gap-3" style={{ marginTop: 18 }}>
+        <span className="mono-up mono">What you've unlocked</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <UnlockTile icon="cap" title="University matches" value={DB.universitiesFor("au").filter(u => u.group === "strong").length + " strong · " + DB.universitiesFor("au").filter(u => u.group === "possible").length + " possible"} onSave={() => onSave(data)} />
+          <UnlockTile icon="coins" title="Cost estimate" value="Tuition + living + visa" onSave={() => onSave(data)} />
+          <UnlockTile icon="award" title="Scholarships" value={DB.scholarships.length + " you can apply to"} onSave={() => onSave(data)} />
+          <UnlockTile icon="spark" title="Action plan" value={DB.actionPlan.filter(a => a.impact === "high").length + " high-impact steps"} onSave={() => onSave(data)} />
+        </div>
+      </div>
+      <div className="card" style={{ marginTop: 18, padding: 0, overflow: "hidden", borderColor: "var(--line-2)" }}>
+        <div className="row gap-2 middle" style={{ padding: "13px 20px", background: riskBg(s.c.risk.level), borderBottom: "1px solid var(--line)" }}>
+          <Icon name="shield" size={17} style={{ color: riskColor(s.c.risk.level) }} /><span style={{ fontWeight: 500, color: "var(--ink)" }}>Recent visa change</span><span className="chip chip-mono" style={{ marginLeft: "auto" }}>{s.c.name}</span>
+        </div>
+        <div className="col gap-3" style={{ padding: 20 }}><span style={{ fontWeight: 500 }}>{s.c.risk.title}</span><p className="body">{s.c.risk.body}</p><SourceTag source={s.c.source} updated={s.c.updated} /></div>
+      </div>
+      <div className="row gap-2" style={{ marginTop: 18, padding: "14px 18px", border: "1px dashed var(--line-2)", borderRadius: "var(--r-md)" }}>
+        <Icon name="doc" size={17} style={{ color: "var(--ink-faint)", marginTop: 2 }} /><p className="small">This is an illustrative estimate, not admissions advice. Pick a specific university to sharpen it — we score against that program's published thresholds.</p>
+      </div>
+      <div className="card card-pad col gap-3" style={{ marginTop: 24, background: "var(--primary-tint)", borderColor: "transparent" }}>
+        <h3 className="h2">Keep this & unlock the full picture</h3>
+        <p className="body" style={{ color: "var(--ink)" }}>Save your profile to open your matches, costs, scholarships, action plan and a feed tailored to {s.c.name}. Free — we'll never sell your details.</p>
+        <div className="row gap-3 middle" style={{ marginTop: 4, flexWrap: "wrap" }}>
+          <button className="btn btn-primary btn-lg" onClick={() => onSave(data)}>Save & see everything <Icon name="arrowRight" size={18} /></button>
+          <button className="btn btn-ghost" onClick={() => go("destinations")}>Compare destinations</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function scoreNote(k, data, e) {
+  const c = e.country;
+  if (k === "academic") return DB.gradeConversion[c.name]?.[data.gradeSystem]?.[data.grade] || ("grade + IELTS " + (data.ielts ?? "—"));
+  if (k === "financial") return "$" + (data.budget ?? 38000).toLocaleString() + "/yr vs " + c.tuitionRange;
+  if (k === "visa") return !data.hasGap ? "no gap · no refusals" : data.gapYears + "yr gap · explained";
+  if (k === "profile") return DB.profile.work.duration + " work · add more";
+  return "";
+}
+
+function UnlockTile({ icon, title, value, onSave }) {
+  return (
+    <button className="card card-pad col gap-2" onClick={onSave} style={{ textAlign: "left", cursor: "pointer", alignItems: "stretch", position: "relative" }}>
+      <div className="row between middle"><span style={{ width: 34, height: 34, borderRadius: 9, background: "var(--primary-tint)", color: "var(--primary)", display: "grid", placeItems: "center" }}><Icon name={icon} size={18} /></span><Icon name="lock" size={15} style={{ color: "var(--ink-faint)" }} /></div>
+      <span style={{ fontWeight: 500 }}>{title}</span><span className="small" style={{ color: "var(--ink-faint)" }}>{value}</span>
+    </button>
+  );
+}
+
+function VerdictScale({ s }) {
+  const v = VERDICT[s.band];
+  return (
+    <div className="card card-pad rise-in">
+      <div className="row gap-3 middle" style={{ marginBottom: 6 }}><h1 className="display" style={{ fontSize: 52, color: v.color }}>{v.label}</h1></div>
+      <p className="lead" style={{ marginBottom: 26 }}>Based on your profile, {s.c.name} looks like a <strong style={{ color: v.color, fontWeight: 500 }}>{v.label.toLowerCase()}</strong> for you — {v.blurb.toLowerCase()}</p>
+      <div style={{ position: "relative", marginTop: 30, marginBottom: 14 }}>
+        <div className="row" style={{ height: 14, borderRadius: "var(--r-pill)", overflow: "hidden" }}><div style={{ flex: 1, background: "var(--reach-tint)" }} /><div style={{ flex: 1, background: "var(--possible-tint)" }} /><div style={{ flex: 1, background: "var(--strong-tint)" }} /></div>
+        <div style={{ position: "absolute", top: -7, left: "calc(" + s.position + "% - 14px)", transition: "left 1s var(--ease)" }}><div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--surface)", border: "3px solid " + v.color, display: "grid", placeItems: "center" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: v.color }} /></div></div>
+      </div>
+      <div className="row between mono" style={{ marginTop: 4 }}><span style={{ color: "var(--reach)" }}>Reach</span><span style={{ color: "var(--possible)" }}>Possible</span><span style={{ color: "var(--strong)" }}>Strong match</span></div>
+    </div>
+  );
+}
+
+function VerdictCard({ s }) {
+  const v = VERDICT[s.band];
+  return (
+    <div className="card card-pad rise-in" style={{ borderColor: v.color, borderWidth: 1.5 }}>
+      <div className="row gap-4 middle" style={{ flexWrap: "wrap" }}>
+        <div style={{ width: 88, height: 88, borderRadius: "50%", border: "4px solid " + v.color, background: v.tint, display: "grid", placeItems: "center", flex: "none" }}><Icon name={s.band === "strong" ? "check" : s.band === "possible" ? "spark" : "pin"} size={36} style={{ color: v.color }} /></div>
+        <div className="wgrow" style={{ minWidth: 220 }}><Verdict level={s.band} size="lg" /><h1 className="h1" style={{ marginTop: 12 }}>{s.c.name} is a {v.label.toLowerCase()} for you</h1><p className="body" style={{ marginTop: 8 }}>{v.blurb} Four factors drove this — see them below.</p></div>
+      </div>
+    </div>
+  );
+}
+
+function riskColor(l) { return l === "info" ? "var(--primary)" : l === "warning" ? "var(--possible)" : "var(--reach)"; }
+function riskBg(l) { return l === "info" ? "var(--primary-tint)" : l === "warning" ? "var(--possible-tint)" : "var(--reach-tint)"; }
+
+/* ---------- auth.jsx ---------- */
+function Auth({ go, onAuthed }) {
+  const [email, setEmail] = useState("");
+  return (
+    <div className="wrap-narrow fade-in" style={{ paddingTop: 64, paddingBottom: 80, maxWidth: 460 }}>
+      <div className="col gap-2" style={{ alignItems: "center", textAlign: "center", marginBottom: 28 }}>
+        <span className="logo-mark" style={{ width: 44, height: 44, borderRadius: 12 }}><Icon name="cap" size={24} /></span>
+        <h2 className="h1" style={{ marginTop: 12 }}>Save your result</h2>
+        <p className="lead">We'll keep your verdict and checklist safe so you can pick up where you left off. No spam, no agents calling you.</p>
+      </div>
+      <div className="card card-pad col gap-3">
+        <div className="col gap-2"><span className="mono-up mono">Email</span><input className="field" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
+        <button className="btn btn-primary btn-lg btn-full" onClick={() => onAuthed()}>Create account & save <Icon name="arrowRight" size={18} /></button>
+        <div className="row gap-3 middle" style={{ margin: "4px 0" }}><hr className="hairline wgrow" /><span className="mono">or</span><hr className="hairline wgrow" /></div>
+        <button className="btn btn-ghost btn-full" onClick={() => onAuthed()}><Icon name="user" size={18} /> Continue with Google</button>
+        <p className="small row gap-2 middle" style={{ justifyContent: "center", color: "var(--ink-faint)", marginTop: 4 }}><Icon name="lock" size={14} /> Your profile is private. We never sell your data.</p>
+      </div>
+      <button className="btn-quiet btn-full" style={{ marginTop: 14 }} onClick={() => go("results")}>Back to my result</button>
+    </div>
+  );
+}
+
+/* ---------- dashboard.jsx ---------- */
+function Dashboard({ go, data }) {
+  const defaults = { homeCountry: "Nepal", gradeSystem: "Percentage (Nepal)", grade: 72, ielts: 7.0, hasGap: true, gapYears: 1, gapReasons: ["Worked or interned"], destination: "au", budget: 38000, sponsor: "Education loan" };
+  const s = scoreProfile(data || defaults);
+  const st = DB.student;
+  return (
+    <div className="fade-in" style={{ paddingBottom: 40 }}>
+      <div className="wrap" style={{ paddingTop: 36 }}>
+        <div className="row between middle" style={{ marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
+          <div className="col gap-1"><span className="mono">{greeting()} · {today()}</span><h1 className="h1">Welcome back, {st.name.split(" ")[0]}.</h1></div>
+          <button className="btn btn-ghost" onClick={() => go("guide")}><Icon name="guide" size={18} style={{ color: "var(--primary)" }} /> Talk to your guide</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 22, alignItems: "start" }}>
+          <div className="col gap-3">
+            <div className="row between middle"><h2 className="h3">For you</h2><span className="mono row gap-2 middle"><Icon name="refresh" size={13} /> refreshed today</span></div>
+            {DB.feed.map(item => <FeedCard key={item.id} item={item} go={go} />)}
+          </div>
+          <aside className="col gap-3 hide-mobile" style={{ position: "sticky", top: 82 }}>
+            <SnapshotCard s={s} go={go} /><ActionMini go={go} /><CompletenessMini go={go} /><ChecklistMini go={go} /><TrustCard />
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeedCard({ item, go }) {
+  const prog = item.programId && DB.programById(item.programId);
+  if (item.kind === "next-action") return (
+    <div className="card card-pad col gap-3" style={{ background: "var(--primary-tint)", borderColor: "transparent" }}>
+      <span className="row gap-2 middle" style={{ color: "var(--primary)", fontWeight: 500 }}><Icon name="spark" size={18} /> {item.title}</span>
+      <p style={{ color: "var(--ink)" }}>{item.body}</p>
+      <button className="btn btn-primary btn-sm" style={{ alignSelf: "flex-start" }}>{item.cta} <Icon name="arrowRight" size={16} /></button>
+    </div>
+  );
+  if (item.kind === "guide") return (
+    <div className="card card-pad row gap-3" style={{ alignItems: "flex-start" }}>
+      <span className="avatar" style={{ background: "var(--primary)", color: "var(--on-primary)" }}><Icon name="guide" size={18} /></span>
+      <div className="col gap-2 wgrow"><span className="mono-up mono">{item.meta}</span><p style={{ color: "var(--ink)" }}>{item.body}</p>
+      <button className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => go("guide")}><Icon name="guide" size={15} /> Continue with your guide</button></div>
+    </div>
+  );
+  const accent = { "visa-update": "var(--possible)", match: "var(--strong)", deadline: "var(--reach)", scholarship: "var(--accent)" }[item.kind] || "var(--primary)";
+  return (
+    <div className="card card-pad col gap-3">
+      <div className="row between middle"><span className="row gap-2 middle" style={{ fontWeight: 500 }}><span style={{ width: 32, height: 32, borderRadius: 9, background: "var(--bg-tint)", display: "grid", placeItems: "center", color: accent }}><Icon name={item.icon} size={17} /></span>{item.flag && <Flag emoji={item.flag} />}</span><span className="mono">{item.updated}</span></div>
+      <div className="col gap-2"><h3 style={{ fontSize: 18, fontWeight: 500 }}>{item.title}</h3><p className="body">{item.body}</p></div>
+      {prog && <div className="row gap-3 middle" style={{ paddingTop: 4 }}><span className="chip chip-mono">{prog.tuition}</span><span className="chip chip-mono">closes {prog.deadline}</span><Verdict level={prog.match} /></div>}
+      <div className="row between middle" style={{ marginTop: 2 }}><span className="mono">{item.meta}</span><button className="btn-quiet btn-sm row gap-1 middle" onClick={() => item.kind === "visa-update" || item.kind === "deadline" ? go("destinations") : go("checklist")}>{item.kind === "match" ? "View program" : item.kind === "scholarship" ? "Check eligibility" : "Open"}<Icon name="chevron" size={15} /></button></div>
+    </div>
+  );
+}
+
+function SnapshotCard({ s, go }) {
+  const v = VERDICT[s.band];
+  const sc = s.scores || { academic: s.academic, financial: s.budgetFit, visa: s.gapFit, profile: s.profileStr };
+  const bd = s.bands || {};
+  return (
+    <div className="card card-pad col gap-3"><span className="mono-up mono">Your standing</span><div className="row gap-2 middle"><Flag emoji={s.c.flag} /><span style={{ fontWeight: 500 }}>{s.c.name}</span><span style={{ marginLeft: "auto" }}><Verdict level={s.band} /></span></div>
+    {["academic", "financial", "visa", "profile"].map(k => <FactorBar key={k} label={DB.scoreMeta[k].label} value={sc[k]} level={bd[k] || (sc[k] >= 70 ? "strong" : sc[k] >= 50 ? "possible" : "reach")} />)}
+    <button className="btn btn-ghost btn-sm btn-full" onClick={() => go("results")}>See full result</button></div>
+  );
+}
+function ActionMini({ go }) { const top = [...DB.actionPlan].filter(a => !a.done).sort((a, b) => ({ high: 0, med: 1, low: 2 }[a.impact] - { high: 0, med: 1, low: 2 }[b.impact]))[0]; if (!top) return null; const sm = DB.scoreMeta[top.score]; return <div className="card card-pad col gap-3"><div className="row between middle"><span className="mono-up mono">Top action</span><span className="tag tag-strong">High impact</span></div><span style={{ fontWeight: 500 }}>{top.title}</span><span className="mono row gap-2 middle"><Icon name={sm.icon} size={13} /> lifts {sm.label.toLowerCase()} · {top.effort}</span><button className="btn btn-primary btn-sm btn-full" onClick={() => go("plan")}>Open action plan</button></div>; }
+function CompletenessMini({ go }) { const comp = Engine.completeness(); return <div className="card card-pad col gap-3"><div className="row between middle"><span className="mono-up mono">Profile</span><span className="mono">{comp.pct}%</span></div><div className="bar-track"><div className="bar-fill" style={{ width: comp.pct + "%", background: "var(--primary)" }} /></div><p className="small">{comp.partial} sections partly done — finishing them sharpens your matches.</p><button className="btn btn-ghost btn-sm btn-full" onClick={() => go("profile")}>Open profile</button></div>; }
+function ChecklistMini({ go }) { const all = DB.checklist.groups.flatMap(g => g.items); const done = all.filter(i => i.done).length; return <div className="card card-pad col gap-3"><div className="row between middle"><span className="mono-up mono">Checklist</span><span className="mono">{done}/{all.length}</span></div><div className="bar-track"><div className="bar-fill" style={{ width: (done / all.length * 100) + "%", background: "var(--primary)" }} /></div><p className="small">{DB.checklist.target} · closes {DB.checklist.deadline}</p><button className="btn btn-ghost btn-sm btn-full" onClick={() => go("checklist")}>Open checklist</button></div>; }
+function TrustCard() { return <div className="card card-pad col gap-2" style={{ background: "var(--surface-2)" }}><Icon name="shield" size={18} style={{ color: "var(--primary)" }} /><p className="small" style={{ color: "var(--ink)" }}>Every visa update here is sourced from official government sites and checked daily.</p><span className="mono">no agents · no hidden commissions</span></div>; }
+function greeting() { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; }
+function today() { return new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }); }
+
+/* ---------- command.jsx ---------- */
+function CommandCentre({ go, data }) {
+  const CC_DEFAULTS = { homeCountry: "Nepal", gradeSystem: "Percentage (Nepal)", grade: 72, ielts: 7.0, hasGap: true, gapYears: 1, gapReasons: ["Worked or interned"], destination: "au", budget: 38000, sponsor: "Education loan" };
+  const s = scoreProfile(data || CC_DEFAULTS);
+  const e = Engine.computeScores(data || CC_DEFAULTS);
+  const comp = Engine.completeness();
+  const st = DB.student;
+  const v = VERDICT[s.band];
+  const move = [...DB.actionPlan].filter(a => !a.done).sort((a, b) => ({ high: 0, med: 1, low: 2 }[a.impact] - { high: 0, med: 1, low: 2 }[b.impact]))[0];
+  const stages = DB.timeline;
+  const activeIdx = stages.findIndex(s => s.status === "active");
+  const checkDone = () => DB.checklist.groups.flatMap(g => g.items).filter(i => i.done).length;
+  const checkTotal = () => DB.checklist.groups.flatMap(g => g.items).length;
+
+  return (
+    <div className="fade-in" style={{ paddingBottom: 48 }}>
+      <div style={{ borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
+        <div className="wrap row between middle" style={{ padding: "26px 28px 24px", flexWrap: "wrap", gap: 16 }}>
+          <div className="col gap-2">
+            <span className="mono row gap-2 middle"><span className="dot" style={{ background: "var(--strong)" }} /> {greeting()} · {today()}</span>
+            <h1 className="h1">{greeting()}, {st.name.split(" ")[0]}.</h1>
+            <span className="mono row gap-2 middle" style={{ flexWrap: "wrap", marginTop: 2 }}><Flag emoji={s.c.flag} /><span style={{ color: "var(--ink-soft)" }}>{s.c.name}</span><Sep /> <span style={{ color: v.color }}>{v.label}</span><Sep /> {st.field} master's<Sep /> July 2027 intake</span>
+          </div>
+          <button className="btn btn-ghost" onClick={() => go("guide")}><Icon name="guide" size={18} style={{ color: "var(--primary)" }} /> Talk to your guide</button>
+        </div>
+      </div>
+      <div className="wrap" style={{ paddingTop: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 18, alignItems: "stretch" }} className="cc-top">
+          {/* Standing */}
+          <div className="card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div className="row between middle" style={{ padding: "14px 24px", borderBottom: "1px solid var(--line)" }}><span className="mono-up mono row gap-2 middle"><span className="mono" style={{ color: "var(--primary)" }}>01</span> Standing</span><span className="mono">illustrative · refine with a uni</span></div>
+            <div style={{ padding: 24, display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 24, flex: 1 }} className="cc-standing">
+              <div className="col gap-3">
+                <span className="mono row gap-2 middle"><Flag emoji={s.c.flag} /> {s.c.name}</span>
+                <span className="display" style={{ fontSize: 46, lineHeight: 1, color: v.color }}>{v.label}</span>
+                <p className="small">{v.blurb} The marker shows your overall position across the bands.</p>
+                <div style={{ position: "relative", marginTop: 8 }}>
+                  <div className="row" style={{ height: 12, borderRadius: "var(--r-pill)", overflow: "hidden" }}><div style={{ flex: 1, background: "var(--reach-tint)" }} /><div style={{ flex: 1, background: "var(--possible-tint)" }} /><div style={{ flex: 1, background: "var(--strong-tint)" }} /></div>
+                  <div style={{ position: "absolute", top: -6, left: "calc(" + s.position + "% - 12px)", transition: "left 1s var(--ease)" }}><div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--surface)", border: "3px solid " + v.color, display: "grid", placeItems: "center" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: v.color }} /></div></div>
+                </div>
+                <div className="row between mono" style={{ marginTop: 2 }}><span style={{ color: "var(--reach)" }}>Reach</span><span style={{ color: "var(--possible)" }}>Possible</span><span style={{ color: "var(--strong)" }}>Strong</span></div>
+              </div>
+              <div style={{ background: "var(--line)" }} className="hide-mobile" />
+              <div className="col gap-3">
+                <span className="mono-up mono">Your four factors</span>
+                {["academic", "financial", "visa", "profile"].map(k => <div key={k} className="col gap-1"><div className="row between middle"><span className="row gap-2 middle small" style={{ fontWeight: 500, color: "var(--ink)" }}><Icon name={DB.scoreMeta[k].icon} size={15} style={{ color: "var(--ink-faint)" }} />{DB.scoreMeta[k].label}</span><span className="mono" style={{ color: VERDICT[e.bands[k]].color }}>{VERDICT[e.bands[k]].label}</span></div><div className="bar-track" style={{ height: 6 }}><div className="bar-fill" style={{ width: e.scores[k] + "%", background: VERDICT[e.bands[k]].color }} /></div></div>)}
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 4, alignSelf: "flex-start" }} onClick={() => go("results")}>Full breakdown <Icon name="arrowRight" size={15} /></button>
+              </div>
+            </div>
+          </div>
+          {/* Move + copilot */}
+          <div className="col gap-3">
+            {move && <div className="card card-pad col gap-3" style={{ background: "var(--primary)", borderColor: "transparent", color: "var(--on-primary)", flex: 1 }}>
+              <span className="mono-up mono" style={{ color: "var(--on-primary)", opacity: .7 }}>Your move today</span>
+              <h3 className="h2" style={{ color: "var(--on-primary)" }}>{move.title}</h3>
+              <p style={{ color: "var(--on-primary)", opacity: .9, fontSize: 15.5, lineHeight: 1.5 }}>{move.desc}</p>
+              <div className="row gap-2 middle" style={{ flexWrap: "wrap", marginTop: 2 }}>
+                <span className="chip chip-mono" style={{ background: "rgba(255,255,255,.14)", borderColor: "transparent", color: "var(--on-primary)" }}><Icon name={DB.scoreMeta[move.score].icon} size={13} /> lifts {DB.scoreMeta[move.score].label.toLowerCase()}</span>
+                <span className="chip chip-mono" style={{ background: "rgba(255,255,255,.14)", borderColor: "transparent", color: "var(--on-primary)" }}><Icon name="clock" size={12} /> {move.effort}</span>
+              </div>
+              <button className="btn" style={{ background: "var(--surface)", color: "var(--primary)", marginTop: 4, alignSelf: "flex-start" }} onClick={() => go("plan")}>Do this now <Icon name="arrowRight" size={17} /></button>
+            </div>}
+            <div className="card card-pad row gap-3" style={{ alignItems: "flex-start" }}>
+              <span className="avatar" style={{ width: 38, height: 38, flex: "none", background: "var(--primary)", color: "var(--on-primary)" }}><Icon name="guide" size={18} /></span>
+              <div className="col gap-2 wgrow"><span className="mono-up mono">Your guide</span><p className="small" style={{ color: "var(--ink)" }}>You're in good shape for Australia. Once that report's uploaded, I'll sharpen your shortlist to a final three.</p><button className="btn-quiet btn-sm row gap-2 middle" style={{ alignSelf: "flex-start", paddingLeft: 0 }} onClick={() => go("guide")}>Continue <Icon name="arrowRight" size={15} /></button></div>
+            </div>
+          </div>
+        </div>
+
+        <SectionLabel n="02" label="Trajectory" hint="where you are in the journey" />
+        <div className="card card-pad">
+          <div className="cc-traj" style={{ display: "grid", gridTemplateColumns: "repeat(" + stages.length + ", 1fr)", gap: 0 }}>
+            {stages.map((m, i) => { const done = i < activeIdx, active = i === activeIdx; const color = active ? "var(--primary)" : done ? "var(--strong)" : "var(--line-2)"; return (
+              <div key={i} className="col gap-2" style={{ position: "relative", paddingRight: 8 }}>
+                {i < stages.length - 1 && <span style={{ position: "absolute", top: 11, left: "calc(50% + 14px)", right: "calc(-50% + 14px)", height: 2, background: i < activeIdx ? "var(--strong)" : "var(--line-2)" }} />}
+                <span style={{ width: 24, height: 24, borderRadius: "50%", display: "grid", placeItems: "center", position: "relative", zIndex: 1, background: active ? "var(--primary)" : done ? "var(--strong)" : "var(--surface)", border: "2px solid " + color }}>{done ? <Icon name="check" size={13} style={{ color: "var(--on-primary)" }} /> : active ? <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--on-primary)" }} /> : <span className="mono" style={{ fontSize: 11, color: "var(--ink-faint)" }}>{i + 1}</span>}</span>
+                <span className="mono" style={{ color: active ? "var(--primary)" : "var(--ink-faint)" }}>{m.date}</span>
+                <span className="small" style={{ fontWeight: 500, color: active ? "var(--ink)" : "var(--ink-soft)" }}>{m.title}</span>
+              </div>
+            ); })}
+          </div>
+          <div className="row between middle" style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--line)", flexWrap: "wrap", gap: 10 }}><span className="small">{stages[activeIdx]?.desc}</span><button className="btn-quiet btn-sm row gap-2 middle" onClick={() => go("plan")}>Full timeline <Icon name="chevron" size={15} /></button></div>
+        </div>
+
+        <SectionLabel n="03" label="Instruments" hint="every panel, at a glance" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(232px, 1fr))", gap: 14 }}>
+          <InstrumentTile icon="cap" label="Matches" go={() => go("matches")} readout={String(DB.universitiesFor("au").length)} unit="universities" detail={DB.universitiesFor("au").filter(u => u.group === "strong").length + " strong · " + DB.universitiesFor("au").filter(u => u.group === "possible").length + " possible"} accent="var(--strong)" />
+          <InstrumentTile icon="doc" label="Checklist" go={() => go("checklist")} readout={String(checkDone())} unit={"of " + checkTotal() + " ready"} detail={"closes " + DB.checklist.deadline} accent="var(--possible)" bar={checkDone() / checkTotal()} />
+          <InstrumentTile icon="user" label="Profile" go={() => go("profile")} readout={comp.pct + "%"} unit="complete" detail={comp.partial + " sections to finish"} accent="var(--primary)" bar={comp.pct / 100} />
+          <InstrumentTile icon="award" label="Scholarships" go={() => go("matches")} readout={String(DB.scholarships.length)} unit="to apply" detail="merit-based · check eligibility" accent="var(--accent)" />
+        </div>
+
+        <SectionLabel n="04" label="Signals" hint="new for you · sourced & dated" />
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {DB.feed.filter(f => ["visa-update", "deadline", "scholarship", "match"].includes(f.kind)).map((it, i) => {
+            const meta = { "visa-update": ["shield", "var(--possible)", "Visa update"], deadline: ["clock", "var(--reach)", "Deadline"], scholarship: ["award", "var(--accent)", "Scholarship"], match: ["match", "var(--strong)", "New match"] };
+            const [ic, color, kind] = meta[it.kind];
+            return (
+              <button key={it.id} className="row gap-3 middle" onClick={() => go(it.kind === "match" ? "matches" : "destinations")} style={{ width: "100%", textAlign: "left", background: "none", border: 0, padding: "16px 22px", borderTop: i ? "1px solid var(--line)" : "none" }}>
+                <span style={{ width: 34, height: 34, borderRadius: 9, background: "var(--bg-tint)", color, display: "grid", placeItems: "center", flex: "none" }}><Icon name={ic} size={16} /></span>
+                <div className="col wgrow" style={{ gap: 2 }}><div className="row gap-2 middle" style={{ flexWrap: "wrap" }}><span style={{ fontWeight: 500 }}>{it.title}</span>{it.flag && <Flag emoji={it.flag} />}</div><span className="small" style={{ color: "var(--ink-faint)" }}>{it.body}</span></div>
+                <div className="col gap-1 hide-mobile" style={{ textAlign: "right", flex: "none" }}><span className="mono" style={{ color }}>{kind}</span><span className="mono">{it.updated}</span></div>
+                <Icon name="chevron" size={16} style={{ color: "var(--ink-faint)", flex: "none" }} />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionLabel({ n, label, hint }) { return <div className="row between middle" style={{ margin: "32px 0 14px" }}><span className="mono-up mono row gap-2 middle"><span style={{ color: "var(--primary)" }}>{n}</span> {label}</span><span className="mono">{hint}</span></div>; }
+function Sep() { return <span style={{ opacity: .4 }}>·</span>; }
+function InstrumentTile({ icon, label, readout, unit, detail, accent, bar, go }) {
+  return (
+    <button className="card card-pad col gap-3" onClick={go} style={{ textAlign: "left", alignItems: "stretch", cursor: "pointer" }}>
+      <div className="row between middle"><span className="mono-up mono">{label}</span><span style={{ width: 30, height: 30, borderRadius: 8, background: "var(--bg-tint)", color: accent, display: "grid", placeItems: "center" }}><Icon name={icon} size={16} /></span></div>
+      <div className="row" style={{ alignItems: "baseline", gap: 6 }}><span style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em" }}>{readout}</span><span className="small" style={{ color: "var(--ink-faint)" }}>{unit}</span></div>
+      {bar != null && <div className="bar-track" style={{ height: 5 }}><div className="bar-fill" style={{ width: (bar * 100) + "%", background: accent }} /></div>}
+      <div className="row between middle"><span className="mono">{detail}</span><Icon name="arrowRight" size={15} style={{ color: "var(--ink-faint)" }} /></div>
+    </button>
+  );
+}
+
+/* ---------- guide.jsx ---------- */
+function Guide({ go }) {
+  const [msgs, setMsgs] = useState([{ role: "guide", text: DB.guideIntro }]);
+  const [typing, setTyping] = useState(false);
+  const [input, setInput] = useState("");
+  const scroller = useRef(null);
+  useEffect(() => { if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [msgs, typing]);
+  const ask = (q) => { if (!q.trim()) return; setMsgs(m => [...m, { role: "me", text: q }]); setInput(""); setTyping(true); const reply = DB.guideReplies[q] || "Good question. In the full product I'd pull this from your profile and the latest official guidance for your destination — with the source and date shown, so you can always check my work."; setTimeout(() => { setTyping(false); setMsgs(m => [...m, { role: "guide", text: reply }]); }, 900 + Math.min(reply.length * 8, 1100)); };
+  const usedPrompts = msgs.filter(m => m.role === "me").map(m => m.text);
+  const remaining = DB.guidePrompts.filter(p => !usedPrompts.includes(p));
+  return (
+    <div className="wrap fade-in" style={{ paddingTop: 28, paddingBottom: 24, maxWidth: 800 }}>
+      <div className="row gap-3 middle" style={{ marginBottom: 20 }}><span className="avatar" style={{ width: 46, height: 46, background: "var(--primary)", color: "var(--on-primary)" }}><Icon name="guide" size={22} /></span><div className="col"><span style={{ fontWeight: 500, fontSize: 19 }}>Your guide</span><span className="mono row gap-2 middle"><span className="dot" style={{ background: "var(--strong)" }} /> remembers your profile · neutral, no commissions</span></div></div>
+      <div className="card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "calc(100vh - 230px)", minHeight: 420 }}>
+        <div ref={scroller} className="col gap-3" style={{ padding: 24, overflowY: "auto", flex: 1 }}>
+          {msgs.map((m, i) => <Bubble key={i} role={m.role} text={m.text} />)}
+          {typing && <Bubble role="guide" typing />}
+        </div>
+        {remaining.length > 0 && <div className="row gap-2" style={{ padding: "0 24px 14px", flexWrap: "wrap" }}>{remaining.map(p => <button key={p} className="chip" style={{ cursor: "pointer" }} onClick={() => ask(p)}>{p}</button>)}</div>}
+        <div className="row gap-2 middle" style={{ padding: 16, borderTop: "1px solid var(--line)", background: "var(--surface-2)" }}>
+          <input className="field" placeholder="Ask your guide anything…" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && ask(input)} />
+          <button className="btn btn-primary" style={{ borderRadius: "var(--r-sm)", padding: "13px 16px" }} onClick={() => ask(input)}><Icon name="send" size={18} /></button>
+        </div>
+      </div>
+      <p className="mono" style={{ marginTop: 14, textAlign: "center" }}>Your guide explains its reasoning and shows sources. It coaches — it never writes your application for you.</p>
+    </div>
+  );
+}
+function Bubble({ role, text, typing }) {
+  const me = role === "me";
+  return (
+    <div className="row rise-in" style={{ gap: 12, alignItems: "flex-start", flexDirection: me ? "row-reverse" : "row" }}>
+      {!me && <span className="avatar" style={{ width: 34, height: 34, flex: "none", background: "var(--primary)", color: "var(--on-primary)" }}><Icon name="guide" size={16} /></span>}
+      {me && <span className="avatar" style={{ width: 34, height: 34, flex: "none" }}>{DB.student.initials}</span>}
+      <div style={{ maxWidth: "78%", background: me ? "var(--primary)" : "var(--surface-2)", color: me ? "var(--on-primary)" : "var(--ink)", border: me ? "none" : "1px solid var(--line)", borderRadius: 14, padding: "13px 17px", fontSize: 16, lineHeight: 1.55 }}>
+        {typing ? <TypingDots /> : text}
+      </div>
+    </div>
+  );
+}
+function TypingDots() { return <span className="row gap-1" style={{ padding: "4px 2px" }}>{[0, 1, 2].map(i => <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--ink-faint)", animation: "blink 1.2s " + (i * 0.18) + "s infinite var(--ease)" }} />)}<style>{"@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}"}</style></span>; }
+
+/* ---------- checklist.jsx ---------- */
+function Checklist({ go }) {
+  const [groups, setGroups] = useState(DB.checklist.groups);
+  const all = groups.flatMap(g => g.items);
+  const done = all.filter(i => i.done).length;
+  const pct = Math.round(done / all.length * 100);
+  const toggle = (id) => setGroups(gs => gs.map(g => ({ ...g, items: g.items.map(it => it.id === id ? { ...it, done: !it.done } : it) })));
+  return (
+    <div className="wrap-narrow fade-in" style={{ paddingTop: 32, paddingBottom: 60 }}>
+      <Eyebrow icon="doc">Document checklist</Eyebrow>
+      <h1 className="h1" style={{ marginTop: 12 }}>{DB.checklist.target}</h1>
+      <p className="lead" style={{ marginTop: 10 }}>We track completeness and deadlines — not authenticity. You decide what's ready.</p>
+      <div className="card card-pad col gap-3" style={{ marginTop: 24 }}>
+        <div className="row between middle">
+          <div className="col gap-1"><span style={{ fontSize: 34, fontWeight: 500 }}>{done} <span className="body" style={{ fontSize: 20 }}>of {all.length} ready</span></span><span className="mono row gap-2 middle"><Icon name="clock" size={14} /> closes {DB.checklist.deadline} · {DB.checklist.weeksLeft} weeks left</span></div>
+          <div style={{ position: "relative", width: 76, height: 76 }}><svg width="76" height="76" viewBox="0 0 76 76"><circle cx="38" cy="38" r="33" fill="none" stroke="var(--bg-tint)" strokeWidth="7" /><circle cx="38" cy="38" r="33" fill="none" stroke="var(--primary)" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 33} strokeDashoffset={2 * Math.PI * 33 * (1 - pct / 100)} transform="rotate(-90 38 38)" style={{ transition: "stroke-dashoffset .9s var(--ease)" }} /></svg><span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontWeight: 500, fontFamily: "var(--font-mono)", fontSize: 15 }}>{pct}%</span></div>
+        </div>
+        <div className="bar-track"><div className="bar-fill" style={{ width: pct + "%", background: "var(--primary)" }} /></div>
+      </div>
+      <div className="col gap-3" style={{ marginTop: 22 }}>
+        {groups.map(g => { const gd = g.items.filter(i => i.done).length; return (
+          <div key={g.name} className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="row between middle" style={{ padding: "14px 20px", background: "var(--surface-2)", borderBottom: "1px solid var(--line)" }}><span style={{ fontWeight: 500 }}>{g.name}</span><span className="mono">{gd}/{g.items.length}</span></div>
+            <div className="col">{g.items.map((it, i) => <button key={it.id} className="row gap-3 middle" onClick={() => toggle(it.id)} style={{ padding: "15px 20px", background: "none", border: 0, textAlign: "left", borderTop: i ? "1px solid var(--line)" : "none" }}><span className="opt-mark" style={{ borderRadius: 7, borderColor: it.done ? "var(--primary)" : "var(--line-2)", background: it.done ? "var(--primary)" : "transparent" }}>{it.done && <Icon name="check" size={14} style={{ color: "var(--on-primary)" }} />}</span><div className="col wgrow"><span style={{ fontWeight: 500, textDecoration: it.done ? "line-through" : "none", color: it.done ? "var(--ink-faint)" : "var(--ink)" }}>{it.label}</span>{it.note && <span className="small" style={{ color: "var(--ink-faint)" }}>{it.note}</span>}</div>{!it.done && <span className="chip chip-mono">to do</span>}</button>)}</div>
+          </div>
+        ); })}
+      </div>
+      <div className="row gap-2" style={{ marginTop: 22, padding: "14px 18px", border: "1px dashed var(--line-2)", borderRadius: "var(--r-md)" }}><Icon name="shield" size={17} style={{ color: "var(--ink-faint)", marginTop: 2 }} /><p className="small">We check that your documents are present and on time. We don't verify authenticity — always submit genuine documents.</p></div>
+    </div>
+  );
+}
+
+/* ---------- matches.jsx ---------- */
+function Matches({ go }) {
+  const [tab, setTab] = useState("universities");
+  return (
+    <div className="wrap fade-in" style={{ paddingTop: 32, paddingBottom: 50 }}>
+      <Eyebrow icon="cap">Matches for {DB.countryById("au").name}</Eyebrow>
+      <h1 className="h1" style={{ marginTop: 12, maxWidth: 640 }}>Where your profile fits today.</h1>
+      <p className="lead" style={{ marginTop: 10 }}>Grouped against each program's published thresholds. As your profile grows, these sharpen.</p>
+      <div className="seg" style={{ marginTop: 24, marginBottom: 28 }}>{[["universities", "Universities"], ["scholarships", "Scholarships"], ["costs", "Cost estimate"]].map(([k, l]) => <button key={k} data-on={String(tab === k)} onClick={() => setTab(k)}>{l}</button>)}</div>
+      {tab === "universities" && <UniversitiesTab go={go} />}
+      {tab === "scholarships" && <ScholarshipsTab />}
+      {tab === "costs" && <CostsTab />}
+    </div>
+  );
+}
+function UniversitiesTab({ go }) {
+  const list = DB.universitiesFor("au");
+  return (
+    <div className="col gap-5">
+      {[["strong", "Strong matches", "Your profile clears their thresholds."], ["possible", "Possible", "Within reach with a sharp application."], ["reach", "Reach", "Ambitious — keep one on your shortlist."]].map(([g, title, sub]) => { const items = list.filter(u => u.group === g); if (!items.length) return null; return (
+        <div key={g} className="col gap-3">
+          <div className="row gap-3 middle"><Verdict level={g} size="lg" /><div className="col"><h3 className="h3">{title}</h3><span className="small">{sub}</span></div><span className="mono" style={{ marginLeft: "auto" }}>{items.length}</span></div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 14 }}>{items.map(u => <UniCard key={u.id} u={u} />)}</div>
+        </div>
+      ); })}
+      <div className="card card-pad row between middle" style={{ flexWrap: "wrap", gap: 14, background: "var(--surface-2)" }}><p className="small" style={{ maxWidth: 460, color: "var(--ink)" }}>A healthy shortlist is one reach, two strong. Want your guide to suggest one?</p><button className="btn btn-ghost btn-sm" onClick={() => go("guide")}><Icon name="guide" size={16} /> Ask your guide</button></div>
+    </div>
+  );
+}
+function UniCard({ u }) {
+  const [saved, setSaved] = useState(false);
+  return (
+    <div className="card card-pad col gap-3" style={{ alignItems: "stretch" }}>
+      <div className="row between middle"><div className="row gap-3 middle"><Flag emoji={u.flag} /><div className="col"><span style={{ fontWeight: 500 }}>{u.name}</span><span className="mono">{u.city} · {u.rank}</span></div></div><Verdict level={u.group} /></div>
+      <hr className="hairline" /><span style={{ fontWeight: 500, fontSize: 15.5 }}>{u.program}</span><p className="small" style={{ color: "var(--ink-faint)" }}>{u.why}</p>
+      <div className="row gap-2" style={{ flexWrap: "wrap" }}><span className="chip chip-mono">{u.tuition}</span><span className="chip chip-mono">closes {u.deadline}</span></div>
+      <div className="row between middle" style={{ marginTop: 2 }}><span className="mono">needs {u.reqGrade} · IELTS {u.reqIELTS}</span><button className="btn-quiet btn-sm row gap-2 middle" onClick={() => setSaved(!saved)} style={{ color: saved ? "var(--primary)" : "var(--ink-soft)" }}><Icon name={saved ? "check" : "match"} size={15} /> {saved ? "Shortlisted" : "Shortlist"}</button></div>
+    </div>
+  );
+}
+function ScholarshipsTab() {
+  return (
+    <div className="col gap-3">
+      {DB.scholarships.map(s => <div key={s.id} className="card card-pad row gap-4" style={{ alignItems: "flex-start", flexWrap: "wrap" }}><span style={{ width: 44, height: 44, borderRadius: 12, background: "var(--accent-tint)", color: "var(--accent)", display: "grid", placeItems: "center", flex: "none" }}><Icon name="award" size={22} /></span><div className="col gap-2 wgrow" style={{ minWidth: 240 }}><div className="row between middle" style={{ gap: 10 }}><span style={{ fontWeight: 500, fontSize: 17 }}>{s.name}</span><Verdict level={s.match} /></div><span className="mono row gap-2 middle"><Flag emoji={s.flag} /> {s.uni} · {s.basis}</span><p className="body">{s.note}</p></div><div className="col gap-2" style={{ textAlign: "right", minWidth: 130 }}><span style={{ fontWeight: 500, color: "var(--accent)" }}>{s.amount}</span><button className="btn btn-ghost btn-sm">Check eligibility</button></div></div>)}
+      <p className="mono row gap-2 middle" style={{ marginTop: 4 }}><Icon name="spark" size={14} /> Add leadership & volunteering to your profile to unlock merit awards.</p>
+    </div>
+  );
+}
+function CostsTab() {
+  const c = DB.costEstimate; const fx = 0.66;
+  const yearly = c.items.reduce((a, i) => a + (i.label === "Student visa (subclass 500)" ? 0 : i.aud), 0);
+  const firstYear = c.items.reduce((a, i) => a + i.aud, 0);
+  const usd = (aud) => Math.round(aud * fx).toLocaleString();
+  return (
+    <div className="col gap-4" style={{ maxWidth: 760 }}>
+      <div className="row gap-2 middle"><span className="mono">{c.basis}</span><span className="chip chip-mono" style={{ marginLeft: "auto" }}>{c.fxNote}</span></div>
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        {c.items.map((it, i) => <div key={it.label} className="row between middle" style={{ padding: "18px 22px", borderTop: i ? "1px solid var(--line)" : "none" }}><div className="row gap-3 middle"><span style={{ width: 38, height: 38, borderRadius: 10, background: "var(--bg-tint)", color: "var(--primary)", display: "grid", placeItems: "center" }}><Icon name={it.icon} size={18} /></span><div className="col"><span style={{ fontWeight: 500 }}>{it.label}</span><span className="small" style={{ color: "var(--ink-faint)" }}>{it.note}</span></div></div><div className="col" style={{ textAlign: "right" }}><span style={{ fontWeight: 500 }}>A${it.aud.toLocaleString()}</span><span className="mono">≈ US${usd(it.aud)}</span></div></div>)}
+        <div className="row between middle" style={{ padding: "20px 22px", borderTop: "1px solid var(--line)", background: "var(--primary-tint)" }}><div className="col"><span style={{ fontWeight: 500, fontSize: 18 }}>First-year total</span><span className="small" style={{ color: "var(--ink)" }}>then ≈ A${yearly.toLocaleString()} / yr ongoing</span></div><div className="col" style={{ textAlign: "right" }}><span style={{ fontWeight: 500, fontSize: 22, color: "var(--primary)" }}>A${firstYear.toLocaleString()}</span><span className="mono">≈ US${usd(firstYear)}</span></div></div>
+      </div>
+      <div className="row gap-2" style={{ padding: "14px 18px", border: "1px dashed var(--line-2)", borderRadius: "var(--r-md)" }}><Icon name="coins" size={17} style={{ color: "var(--ink-faint)", marginTop: 2 }} /><p className="small">Your stated budget is $38,000/yr. The first year runs higher because of one-time visa and setup costs — proof of funds should cover living + first-year tuition.</p></div>
+    </div>
+  );
+}
+
+/* ---------- plan.jsx ---------- */
+const IMPACT = { high: { label: "High impact", color: "var(--strong)", tint: "var(--strong-tint)" }, med: { label: "Medium", color: "var(--possible)", tint: "var(--possible-tint)" }, low: { label: "Low", color: "var(--ink-faint)", tint: "var(--bg-tint)" } };
+function Plan({ go, data }) {
+  const [tab, setTab] = useState("actions");
+  return (
+    <div className="wrap-narrow fade-in" style={{ paddingTop: 32, paddingBottom: 60 }}>
+      <Eyebrow icon="spark">Your plan</Eyebrow>
+      <h1 className="h1" style={{ marginTop: 12 }}>The shortest path to a stronger application.</h1>
+      <p className="lead" style={{ marginTop: 10 }}>Ranked by impact — each step shows which part of your case it lifts.</p>
+      <div className="seg" style={{ marginTop: 24, marginBottom: 28 }}>{[["actions", "Action plan"], ["timeline", "Timeline"], ["visa", "Visa-risk analysis"]].map(([k, l]) => <button key={k} data-on={String(tab === k)} onClick={() => setTab(k)}>{l}</button>)}</div>
+      {tab === "actions" && <ActionPlanTab go={go} />}
+      {tab === "timeline" && <TimelineTab />}
+      {tab === "visa" && <VisaAnalysisTab data={data} />}
+    </div>
+  );
+}
+function ActionPlanTab({ go }) {
+  const [items, setItems] = useState(DB.actionPlan);
+  const done = items.filter(i => i.done).length;
+  const toggle = id => setItems(its => its.map(i => i.id === id ? { ...i, done: !i.done } : i));
+  const order = { high: 0, med: 1, low: 2 };
+  const sorted = [...items].sort((a, b) => (a.done - b.done) || (order[a.impact] - order[b.impact]));
+  return (
+    <div className="col gap-3">
+      <div className="card card-pad row between middle"><div className="col gap-1"><span style={{ fontWeight: 500, fontSize: 18 }}>{done} of {items.length} done</span><span className="mono">do the high-impact ones first</span></div><div className="bar-track" style={{ maxWidth: 180 }}><div className="bar-fill" style={{ width: (done / items.length * 100) + "%", background: "var(--primary)" }} /></div></div>
+      {sorted.map(a => { const im = IMPACT[a.impact]; const sm = DB.scoreMeta[a.score]; return (
+        <div key={a.id} className="card card-pad row gap-3" style={{ alignItems: "flex-start", opacity: a.done ? 0.62 : 1 }}>
+          <button onClick={() => toggle(a.id)} className="opt-mark" style={{ marginTop: 2, borderRadius: 7, flex: "none", borderColor: a.done ? "var(--primary)" : "var(--line-2)", background: a.done ? "var(--primary)" : "transparent" }}>{a.done && <Icon name="check" size={14} style={{ color: "var(--on-primary)" }} />}</button>
+          <div className="col gap-2 wgrow"><div className="row between middle" style={{ gap: 10 }}><span style={{ fontWeight: 500, fontSize: 17, textDecoration: a.done ? "line-through" : "none" }}>{a.title}</span><span className="tag" style={{ background: im.tint, color: im.color, flex: "none" }}>{im.label}</span></div><p className="body">{a.desc}</p><div className="row gap-2 middle" style={{ flexWrap: "wrap" }}><span className="chip chip-mono row gap-2 middle"><Icon name={sm.icon} size={13} /> lifts {sm.label.toLowerCase()}</span><span className="chip chip-mono"><Icon name="clock" size={12} /> {a.effort}</span></div></div>
+        </div>
+      ); })}
+      <div className="card card-pad row between middle" style={{ background: "var(--surface-2)", flexWrap: "wrap", gap: 12 }}><span className="small row gap-2 middle" style={{ color: "var(--ink)" }}><Icon name="guide" size={17} style={{ color: "var(--primary)" }} /> Not sure where to start? Your guide will pick the next one.</span><button className="btn btn-ghost btn-sm" onClick={() => go("guide")}>Ask your guide</button></div>
+    </div>
+  );
+}
+function TimelineTab() {
+  return (
+    <div className="col" style={{ position: "relative", paddingLeft: 8 }}>
+      {DB.timeline.map((m, i) => { const active = m.status === "active"; const last = i === DB.timeline.length - 1; return (
+        <div key={i} className="row gap-4" style={{ alignItems: "stretch" }}>
+          <div className="col middle" style={{ width: 26, flex: "none" }}><span style={{ width: 16, height: 16, borderRadius: "50%", marginTop: 4, background: active ? "var(--primary)" : "var(--surface)", border: "2px solid " + (active ? "var(--primary)" : "var(--line-2)") }} />{!last && <span className="wgrow" style={{ width: 2, background: "var(--line-2)", marginTop: 4 }} />}</div>
+          <div className="col gap-2" style={{ paddingBottom: last ? 0 : 26 }}><span className="mono" style={{ color: active ? "var(--primary)" : "var(--ink-faint)" }}>{m.date}{active && " · now"}</span><span style={{ fontWeight: 500, fontSize: 17 }}>{m.title}</span><p className="body">{m.desc}</p></div>
+        </div>
+      ); })}
+    </div>
+  );
+}
+function VisaAnalysisTab({ data }) {
+  const a = Engine.visaAnalysis(data || DB.profile);
+  return (
+    <div className="col gap-3">
+      <div className="card card-pad col gap-2" style={{ background: "var(--surface-2)" }}><span className="mono-up mono">How a visa officer might read your case</span><p className="body" style={{ color: "var(--ink)" }}>Built from your profile and {DB.countryById("au").name}'s current rules — sourced from {DB.countryById("au").source}, checked {DB.countryById("au").updated}.</p></div>
+      {[["Strengths", a.strengths, "check", "var(--strong)", "var(--strong-tint)"], ["Concerns", a.concerns, "shield", "var(--possible)", "var(--possible-tint)"], ["Missing information", a.missing, "doc", "var(--reach)", "var(--reach-tint)"]].map(([title, items, icon, color, tint]) => (
+        <div key={title} className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div className="row gap-2 middle" style={{ padding: "13px 20px", background: tint, borderBottom: "1px solid var(--line)" }}><Icon name={icon} size={17} style={{ color }} /><span style={{ fontWeight: 500 }}>{title}</span><span className="mono" style={{ marginLeft: "auto" }}>{items.length}</span></div>
+          <div className="col">{items.length ? items.map((t, i) => <div key={i} className="row gap-3 middle" style={{ padding: "13px 20px", borderTop: i ? "1px solid var(--line)" : "none" }}><span className="dot" style={{ background: color, flex: "none" }} /><span className="small" style={{ color: "var(--ink)" }}>{t}</span></div>) : <span className="small" style={{ padding: "13px 20px", color: "var(--ink-faint)" }}>Nothing here — nicely done.</span>}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- profile.jsx ---------- */
+const STATUS = { done: { label: "Complete", color: "var(--strong)", tint: "var(--strong-tint)", icon: "check" }, partial: { label: "Partial", color: "var(--possible)", tint: "var(--possible-tint)", icon: "spark" }, empty: { label: "Not started", color: "var(--ink-faint)", tint: "var(--bg-tint)", icon: "doc" } };
+function Profile({ go }) {
+  const [open, setOpen] = useState(null);
+  const comp = Engine.completeness();
+  const secs = DB.profileSections;
+  return (
+    <div className="wrap fade-in" style={{ paddingTop: 32, paddingBottom: 50 }}>
+      <Eyebrow icon="user">Your profile</Eyebrow>
+      <h1 className="h1" style={{ marginTop: 12, maxWidth: 620 }}>The fuller your profile, the sharper everything gets.</h1>
+      <p className="lead" style={{ marginTop: 10 }}>Every section you complete improves your matches, scores and visa case. Add what you can, when you can.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 22, marginTop: 28, alignItems: "start" }}>
+        <aside className="card card-pad col gap-4 hide-mobile" style={{ position: "sticky", top: 82 }}>
+          <span className="mono-up mono">Completeness</span>
+          <div className="row gap-4 middle">
+            <div style={{ position: "relative", width: 84, height: 84, flex: "none" }}><svg width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="36" fill="none" stroke="var(--bg-tint)" strokeWidth="8" /><circle cx="42" cy="42" r="36" fill="none" stroke="var(--primary)" strokeWidth="8" strokeLinecap="round" strokeDasharray={2 * Math.PI * 36} strokeDashoffset={2 * Math.PI * 36 * (1 - comp.pct / 100)} transform="rotate(-90 42 42)" style={{ transition: "stroke-dashoffset .9s var(--ease)" }} /></svg><span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontWeight: 500, fontFamily: "var(--font-mono)", fontSize: 17 }}>{comp.pct}%</span></div>
+            <div className="col gap-1"><span className="small"><strong style={{ color: "var(--strong)", fontWeight: 500 }}>{comp.done}</strong> complete</span><span className="small"><strong style={{ color: "var(--possible)", fontWeight: 500 }}>{comp.partial}</strong> partial</span><span className="small"><strong style={{ color: "var(--ink-faint)", fontWeight: 500 }}>{comp.empty}</strong> not started</span></div>
+          </div>
+          <hr className="hairline" /><p className="small">Finishing your <strong style={{ fontWeight: 500 }}>partial</strong> sections is the fastest lift right now.</p>
+          <button className="btn btn-primary btn-sm btn-full" onClick={() => go("plan")}>See what to do next</button>
+        </aside>
+        <div className="col gap-2">
+          {secs.map(sec => { const st = STATUS[sec.status]; const isOpen = open === sec.key; return (
+            <div key={sec.key} className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <button className="row gap-3 middle" onClick={() => setOpen(isOpen ? null : sec.key)} style={{ width: "100%", padding: "16px 20px", background: "none", border: 0, textAlign: "left" }}>
+                <span style={{ width: 38, height: 38, borderRadius: 10, background: st.tint, color: st.color, display: "grid", placeItems: "center", flex: "none" }}><Icon name={sec.icon} size={18} /></span>
+                <div className="col wgrow"><span style={{ fontWeight: 500 }}>{sec.title}</span><span className="small" style={{ color: "var(--ink-faint)" }}>{sec.summary}</span></div>
+                <span className="tag" style={{ background: st.tint, color: st.color, flex: "none" }}>{st.label}</span>
+                <Icon name="chevronDown" size={18} style={{ color: "var(--ink-faint)", transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .2s var(--ease)" }} />
+              </button>
+              {isOpen && <div className="col gap-3 rise-in" style={{ padding: "4px 20px 20px 70px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>{sec.fields.map(([label, value], i) => <div key={i} className="col" style={{ gap: 2 }}><span className="mono">{label}</span><span className="small" style={{ color: value === "—" || /not |^No$/i.test(value) ? "var(--ink-faint)" : "var(--ink)", fontWeight: 500 }}>{value}</span></div>)}</div>
+                {sec.status !== "done" && <button className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-start" }}><Icon name="spark" size={15} /> {sec.status === "empty" ? "Add this section" : "Complete this section"}</button>}
+              </div>}
+            </div>
+          ); })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- destination.jsx ---------- */
+function Destinations({ go }) {
+  const [active, setActive] = useState(null);
+  if (active) return <CountryDetail c={DB.countryById(active)} back={() => setActive(null)} go={go} />;
+  return (
+    <div className="wrap fade-in" style={{ paddingTop: 36, paddingBottom: 40 }}>
+      <Eyebrow icon="map">Destinations</Eyebrow>
+      <h1 className="h1" style={{ marginTop: 12, maxWidth: 640 }}>Six countries, done well — depth and freshness over breadth.</h1>
+      <p className="lead" style={{ marginTop: 12 }}>Visa rules, real costs, and what you'll need. Every page shows where the data came from and when we last checked.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 16, marginTop: 32 }}>
+        {DB.countries.map(c => <button key={c.id} className="card card-pad col gap-3" onClick={() => setActive(c.id)} style={{ textAlign: "left", cursor: "pointer", alignItems: "stretch" }}><div className="row between middle"><div className="row gap-3 middle"><Flag emoji={c.flag} /><span style={{ fontWeight: 500, fontSize: 19 }}>{c.name}</span></div><Verdict level={c.match} /></div><p className="body">{c.tagline}</p><hr className="hairline" /><div className="row between mono"><span className="row gap-1 middle"><Icon name="coins" size={13} /> {c.tuitionRange}</span><span className="row gap-1 middle"><Icon name="refresh" size={13} /> {c.updated}</span></div></button>)}
+      </div>
+    </div>
+  );
+}
+function CountryDetail({ c, back, go }) {
+  return (
+    <div className="wrap fade-in" style={{ paddingTop: 28, paddingBottom: 50 }}>
+      <button className="btn-quiet row gap-2 middle" onClick={back} style={{ borderRadius: "var(--r-pill)", marginBottom: 22 }}><Icon name="arrowLeft" size={17} /> All destinations</button>
+      <div className="row gap-4 middle" style={{ flexWrap: "wrap", marginBottom: 8 }}><span className="flag" style={{ width: 52, height: 38, fontSize: 26 }}>{c.flag}</span><div className="wgrow" style={{ minWidth: 200 }}><h1 className="display" style={{ fontSize: 46 }}>{c.name}</h1></div><Verdict level={c.match} size="lg" /></div>
+      <p className="lead" style={{ maxWidth: 620 }}>{c.tagline}</p>
+      <div style={{ marginTop: 14 }}><SourceTag source={c.source} updated={c.updated} /></div>
+      <div className="card" style={{ marginTop: 26, padding: 0, overflow: "hidden" }}>
+        <div className="row gap-2 middle" style={{ padding: "13px 20px", background: riskBg(c.risk.level), borderBottom: "1px solid var(--line)" }}><Icon name="shield" size={17} style={{ color: riskColor(c.risk.level) }} /><span style={{ fontWeight: 500 }}>Current visa note</span></div>
+        <div className="col gap-2" style={{ padding: 20 }}><span style={{ fontWeight: 500 }}>{c.risk.title}</span><p className="body">{c.risk.body}</p></div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginTop: 18 }}>
+        <Fact icon="coins" label="Tuition" value={c.tuitionRange} /><Fact icon="pin" label="Living cost" value={c.livingRange} /><Fact icon="lock" label="Financial proof" value={c.financialProof} /><Fact icon="briefcase" label="Work rights" value={c.workRights} /><Fact icon="cap" label="Post-study" value={c.postStudy} /><Fact icon="refresh" label="Last checked" value={c.updated + " · " + c.source} mono />
+      </div>
+      <div className="card card-pad col gap-3" style={{ marginTop: 18 }}>
+        <h3 className="h3">What you'll need</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>{c.docs.map(d => <div key={d} className="row gap-2 middle"><span className="dot" style={{ background: "var(--primary)" }} /><span className="small" style={{ color: "var(--ink)" }}>{d}</span></div>)}</div>
+      </div>
+      <div className="card card-pad row between middle" style={{ marginTop: 18, flexWrap: "wrap", gap: 16, background: "var(--primary-tint)", borderColor: "transparent" }}>
+        <div className="col gap-1"><span style={{ fontWeight: 500, fontSize: 18 }}>Check your standing for {c.name}</span><span className="small" style={{ color: "var(--ink)" }}>Two minutes, no sign-up to start.</span></div>
+        <button className="btn btn-primary" onClick={() => go("wizard")}>Check eligibility <Icon name="arrowRight" size={17} /></button>
+      </div>
+    </div>
+  );
+}
+function Fact({ icon, label, value, mono }) {
+  return <div className="card card-pad col gap-2"><span className="row gap-2 middle mono-up mono"><Icon name={icon} size={14} style={{ color: "var(--primary)" }} /> {label}</span><span style={{ fontWeight: 500, fontSize: mono ? 13 : 16, fontFamily: mono ? "var(--font-mono)" : "inherit" }}>{value}</span></div>;
+}
+
+/* ---------- app.jsx — router & theme ---------- */
+const PRIMARY_PRESETS = {
+  teal:  { c: "#0f5e54", ink: "#0c4a42", on: "#fcfdfb", dc: "#4eb39f", dink: "#6fc4b2", don: "#08231f" },
+  green: { c: "#1f6d4a", ink: "#185639", on: "#fcfdfb", dc: "#5bbd8c", dink: "#7bcda4", don: "#072019" },
+  blue:  { c: "#1b4f72", ink: "#143b56", on: "#fcfdfb", dc: "#5b9bc9", dink: "#7fb3d6", don: "#08202e" },
+  plum:  { c: "#5b3a6e", ink: "#472d56", on: "#fcfdfb", dc: "#a984c0", dink: "#bb9bce", don: "#1e1226" },
+};
+
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return "rgba(" + ((n >> 16) & 255) + ", " + ((n >> 8) & 255) + ", " + (n & 255) + ", " + a + ")";
+}
+
+function applyTheme(t) {
+  const root = document.documentElement;
+  root.setAttribute("data-theme", t.dark ? "dark" : "light");
+  const p = PRIMARY_PRESETS[t.primary] || PRIMARY_PRESETS.teal;
+  const c = t.dark ? p.dc : p.c, ink = t.dark ? p.dink : p.ink, on = t.dark ? p.don : p.on;
+  root.style.setProperty("--primary", c);
+  root.style.setProperty("--primary-ink", ink);
+  root.style.setProperty("--on-primary", on);
+  root.style.setProperty("--primary-tint", hexA(c, t.dark ? 0.16 : 0.08));
+  root.style.setProperty("--primary-tint-2", hexA(c, t.dark ? 0.28 : 0.16));
+}
+
+function App() {
+  const [dark, setDark] = useState(false);
+  const [view, setView] = useState("home");
+  const [profile, setProfile] = useState(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [homeLayout, setHomeLayout] = useState("command");
+  const [verdictStyle, setVerdictStyle] = useState("scale");
+  const [wizardLayout, setWizardLayout] = useState("steps");
+
+  useEffect(() => { applyTheme({ dark, primary: "teal" }); }, [dark]);
+
+  const go = (v) => { setView(v); window.scrollTo({ top: 0 }); };
+  const toggleTheme = () => setDark(!dark);
+
+  const standalonePages = { wizard: 1, results: 1, auth: 1 };
+  const focused = standalonePages[view];
+
+  let page;
+  if (view === "home") page = <Home go={go} />;
+  else if (view === "wizard") page = <Wizard go={go} layout={wizardLayout} initial={profile} onComplete={(d) => { setProfile(d); go("results"); }} />;
+  else if (view === "results") page = <Results go={go} data={profile} variant={verdictStyle} onSave={(d) => { setProfile(d); go("auth"); }} />;
+  else if (view === "auth") page = <Auth go={go} onAuthed={() => { setLoggedIn(true); go("dashboard"); }} />;
+  else if (view === "dashboard") page = homeLayout === "feed" ? <Dashboard go={go} data={profile} /> : <CommandCentre go={go} data={profile} />;
+  else if (view === "guide") page = <Guide go={go} />;
+  else if (view === "checklist") page = <Checklist go={go} />;
+  else if (view === "matches") page = <Matches go={go} />;
+  else if (view === "plan") page = <Plan go={go} data={profile} />;
+  else if (view === "profile") page = <Profile go={go} />;
+  else if (view === "destinations") page = <Destinations go={go} />;
+  else page = <Home go={go} />;
+
+  return (
+    <>
+      {!focused && <AppBar view={view} go={go} loggedIn={loggedIn} dark={dark} onToggleTheme={toggleTheme} />}
+      {focused && <FocusBar go={go} dark={dark} onToggleTheme={toggleTheme} />}
+      <main>{page}</main>
+      {(view === "home" || view === "destinations" || view === "checklist") && <Footer go={go} />}
+
+      {/* floating settings toggle */}
+      <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 100, display: "flex", gap: 8, flexDirection: "column" }}>
+        <select value={homeLayout} onChange={e => setHomeLayout(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "var(--surface)", color: "var(--ink)", fontFamily: "var(--font-mono)", fontSize: 12, cursor: "pointer" }}>
+          <option value="command">Command centre</option>
+          <option value="feed">Feed dashboard</option>
+        </select>
+        <select value={verdictStyle} onChange={e => setVerdictStyle(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "var(--surface)", color: "var(--ink)", fontFamily: "var(--font-mono)", fontSize: 12, cursor: "pointer" }}>
+          <option value="scale">Verdict: Scale</option>
+          <option value="card">Verdict: Card</option>
+        </select>
+        <select value={wizardLayout} onChange={e => setWizardLayout(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line-2)", background: "var(--surface)", color: "var(--ink)", fontFamily: "var(--font-mono)", fontSize: 12, cursor: "pointer" }}>
+          <option value="steps">Wizard: Steps</option>
+          <option value="grouped">Wizard: Grouped</option>
+        </select>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
