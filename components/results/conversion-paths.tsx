@@ -75,7 +75,7 @@ export function ConversionPaths() {
           </Button>
         </div>
         {captured ? (
-          <p className="text-[15px] text-strong">We'll send your results to {captured}.</p>
+          <p className="text-[15px] text-strong">We&apos;ll send your results to {captured}.</p>
         ) : null}
       </form>
 
