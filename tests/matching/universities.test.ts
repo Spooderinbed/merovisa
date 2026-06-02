@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { matchUniversities, gradeToPercent, effectiveEnglish } from "@/lib/matching/universities";
+import { matchUniversities, effectiveEnglish } from "@/lib/matching/universities";
 import type { StudentProfile } from "@/lib/scoring/types";
 
 const base: StudentProfile = {
@@ -19,11 +19,12 @@ const base: StudentProfile = {
   goal: "permanent-residency",
 };
 
-describe("gradeToPercent", () => {
-  it("passes through percentage systems and converts CGPA scales", () => {
-    expect(gradeToPercent(85, "percentage-nepal")).toBe(85);
-    expect(gradeToPercent(3.2, "cgpa-4")).toBeCloseTo(80);
-    expect(gradeToPercent(8, "cgpa-10")).toBeCloseTo(80);
+describe("matchUniversities grade handling", () => {
+  it("treats grade as a percentage compared directly to the university bar", () => {
+    // unimelb requires ~80%; grade 60 must remain a reach (no CGPA re-scaling).
+    const matches = matchUniversities({ ...base, grade: 60 });
+    const unimelb = matches.find((m) => m.university.id === "unimelb");
+    expect(unimelb?.matchLevel).toBe("reach");
   });
 });
 

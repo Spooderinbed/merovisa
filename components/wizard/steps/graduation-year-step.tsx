@@ -17,7 +17,7 @@ export function GraduationYearStep({ profile, setField, callouts }: StepProps) {
       subtext="We use this to assess your timeline and flag anything visa officers look at."
       callouts={callouts}
     >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div role="radiogroup" aria-label="Graduation year" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {RECENT_YEARS.map((y) => (
           <OptionCard
             key={y}
@@ -39,7 +39,7 @@ export function GraduationYearStep({ profile, setField, callouts }: StepProps) {
             type="number"
             min={2010}
             max={CURRENT_YEAR}
-            value={selected}
+            value={selected ?? CURRENT_YEAR}
             onChange={(e) => setField({ graduationYear: Number(e.target.value) })}
             className="rounded-sm border border-line-2 bg-surface px-3 py-2 text-ink outline-none focus:border-primary"
           />

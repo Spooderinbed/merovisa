@@ -26,15 +26,17 @@ export function GapStep({ profile, setField, callouts }: StepProps) {
       subtext="Pick all that apply. Explaining this well actually strengthens your visa case."
       callouts={callouts}
     >
-      {REASONS.map((r) => (
-        <OptionCard
-          key={r.value}
-          label={r.label}
-          multi
-          selected={current.includes(r.value)}
-          onSelect={() => toggle(r.value)}
-        />
-      ))}
+      <div role="group" aria-label="Gap reasons" className="flex flex-col gap-3">
+        {REASONS.map((r) => (
+          <OptionCard
+            key={r.value}
+            label={r.label}
+            multi
+            selected={current.includes(r.value)}
+            onSelect={() => toggle(r.value)}
+          />
+        ))}
+      </div>
     </StepShell>
   );
 }

@@ -4,10 +4,19 @@ import userEvent from "@testing-library/user-event";
 import { HomeCountryStep } from "@/components/wizard/steps/home-country-step";
 
 describe("HomeCountryStep", () => {
-  it("sets homeCountry and the matching grade system on select", async () => {
+  it("offers Nepal inside a labelled radiogroup and selects it with percentage-nepal", async () => {
     const setField = vi.fn();
     render(<HomeCountryStep profile={{ homeCountry: "Nepal" }} setField={setField} callouts={null} />);
-    await userEvent.click(screen.getByRole("radio", { name: /India/ }));
-    expect(setField).toHaveBeenCalledWith({ homeCountry: "India", gradeSystem: "percentage-india" });
+    const group = screen.getByRole("radiogroup", { name: /Home country/i });
+    expect(group).toBeInTheDocument();
+    const nepal = screen.getByRole("radio", { name: /Nepal/ });
+    expect(nepal).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(nepal);
+    expect(setField).toHaveBeenCalledWith({ homeCountry: "Nepal", gradeSystem: "percentage-nepal" });
+  });
+
+  it("notes that more countries are coming soon", () => {
+    render(<HomeCountryStep profile={{ homeCountry: "Nepal" }} setField={vi.fn()} callouts={null} />);
+    expect(screen.getByText(/More countries coming soon: India/i)).toBeInTheDocument();
   });
 });

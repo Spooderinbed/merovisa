@@ -23,7 +23,8 @@ export function recapLines(p: StudentProfile): string[] {
       : p.englishStatus === "booked"
         ? "IELTS booked"
         : "IELTS pending";
-  const gradeText = p.gradeSystem.startsWith("percentage") ? `${Math.round(p.grade)}%` : `${p.grade} GPA`;
+  // The wizard collects grade as a 0–100 percentage, so it always renders as a percentage.
+  const gradeText = `${Math.round(p.grade)}%`;
   lines.push([gradeText, english].join(" · "));
 
   const gap = computeGapYears(p.graduationYear);

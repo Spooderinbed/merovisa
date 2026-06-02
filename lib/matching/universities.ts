@@ -1,4 +1,4 @@
-import type { FieldOfStudy, GradeSystem, StudentProfile } from "@/lib/scoring/types";
+import type { FieldOfStudy, StudentProfile } from "@/lib/scoring/types";
 import { AU_UNIVERSITIES } from "@/lib/data/universities/au";
 import type { UniversityData } from "@/lib/data/types";
 
@@ -8,19 +8,6 @@ export interface UniversityMatch {
   university: UniversityData;
   matchLevel: MatchLevel;
   reason: string;
-}
-
-export function gradeToPercent(grade: number, system: GradeSystem): number {
-  switch (system) {
-    case "cgpa-4":
-      return (grade / 4) * 100;
-    case "cgpa-5":
-      return (grade / 5) * 100;
-    case "cgpa-10":
-      return (grade / 10) * 100;
-    default:
-      return grade; // percentage, percentage-nepal, percentage-india
-  }
 }
 
 export function effectiveEnglish(profile: Partial<StudentProfile>): number {
@@ -33,8 +20,11 @@ export function effectiveEnglish(profile: Partial<StudentProfile>): number {
 
 const LEVEL_ORDER: Record<MatchLevel, number> = { strong: 0, possible: 1, reach: 2 };
 
+// The wizard collects `grade` as a 0–100 percentage (see education-step + ProfileSchema),
+// so it is compared directly against each university's minimum percentage requirement.
+// CGPA normalization is intentionally deferred until non-percentage corridors are supported.
 export function matchUniversities(profile: StudentProfile): UniversityMatch[] {
-  const pct = gradeToPercent(profile.grade, profile.gradeSystem);
+  const pct = profile.grade;
   const english = effectiveEnglish(profile);
   const field = profile.fieldOfStudy;
 

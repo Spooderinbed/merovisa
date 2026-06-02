@@ -67,7 +67,7 @@ export function BudgetStep({ profile, setField, callouts }: StepProps) {
           onChange={(v) => setField({ budget: v })}
         />
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div role="radiogroup" aria-label="Funding source" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {FUNDING.map((f) => (
           <OptionCard
             key={f.value}

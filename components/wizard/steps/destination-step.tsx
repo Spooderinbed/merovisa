@@ -23,14 +23,16 @@ export function DestinationStep({ profile, setField, callouts }: StepProps) {
       subtext="Pick the one you're most curious about, or let us show you where you fit best."
       callouts={callouts}
     >
-      {DESTINATIONS.map((d) => (
-        <OptionCard
-          key={d.value}
-          label={d.label}
-          selected={profile.destination === d.value}
-          onSelect={() => setField({ destination: d.value })}
-        />
-      ))}
+      <div role="radiogroup" aria-label="Destination" className="flex flex-col gap-3">
+        {DESTINATIONS.map((d) => (
+          <OptionCard
+            key={d.value}
+            label={d.label}
+            selected={profile.destination === d.value}
+            onSelect={() => setField({ destination: d.value })}
+          />
+        ))}
+      </div>
     </StepShell>
   );
 }

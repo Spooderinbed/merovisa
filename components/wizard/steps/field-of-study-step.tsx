@@ -13,7 +13,7 @@ export function FieldOfStudyStep({ profile, setField, callouts }: StepProps) {
       subtext="This affects which universities, fee ranges, and visa categories apply to you."
       callouts={callouts}
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div role="radiogroup" aria-label="Field of study" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {FIELDS_OF_STUDY_DATA.map((f) => (
           <OptionCard
             key={f.id}

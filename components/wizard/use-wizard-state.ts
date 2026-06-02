@@ -29,6 +29,10 @@ const DEFAULT_PROFILE: Partial<StudentProfile> = {
   homeCountry: "Nepal",
   gradeSystem: "percentage-nepal",
   budgetCurrency: "NPR",
+  // Always present so a no-gap profile (gap step skipped) still satisfies
+  // ProfileSchema, which requires gapReasons to be an array. The gap step
+  // populates it when a meaningful gap exists.
+  gapReasons: [],
 };
 
 export interface WizardState {

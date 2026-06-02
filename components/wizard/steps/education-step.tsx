@@ -18,17 +18,19 @@ export function EducationStep({ profile, setField, callouts }: StepProps) {
     <StepShell
       eyebrow="Step 2"
       title="Your education so far"
-      subtext="Enter your result in your own grade system — we convert it for each destination."
+      subtext="Pick your level and set your grade as a percentage — we compare it against each university's bar."
       callouts={callouts}
     >
-      {LEVELS.map((l) => (
-        <OptionCard
-          key={l.value}
-          label={l.label}
-          selected={profile.educationLevel === l.value}
-          onSelect={() => setField({ educationLevel: l.value, grade: profile.grade ?? 70 })}
-        />
-      ))}
+      <div role="radiogroup" aria-label="Education level" className="flex flex-col gap-3">
+        {LEVELS.map((l) => (
+          <OptionCard
+            key={l.value}
+            label={l.label}
+            selected={profile.educationLevel === l.value}
+            onSelect={() => setField({ educationLevel: l.value, grade: profile.grade ?? 70 })}
+          />
+        ))}
+      </div>
       <div className="mt-2 flex flex-col gap-2 rounded-md border border-line bg-surface p-4">
         <div className="flex items-baseline justify-between">
           <span className="text-[15px] text-ink-soft">Your grade</span>

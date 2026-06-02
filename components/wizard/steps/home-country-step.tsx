@@ -1,35 +1,31 @@
 "use client";
 
-import type { GradeSystem } from "@/lib/scoring/types";
 import { OptionCard } from "@/components/ui/option-card";
 import { StepShell } from "@/components/wizard/step-shell";
 import type { StepProps } from "./types";
 
-const COUNTRIES: Array<{ name: string; gradeSystem: GradeSystem }> = [
-  { name: "Nepal", gradeSystem: "percentage-nepal" },
-  { name: "India", gradeSystem: "percentage-india" },
-  { name: "Bangladesh", gradeSystem: "cgpa-5" },
-  { name: "Pakistan", gradeSystem: "percentage" },
-  { name: "Nigeria", gradeSystem: "cgpa-5" },
-  { name: "Other", gradeSystem: "percentage" },
-];
+// MVP corridor is Nepal → Australia. Other source countries are shown as
+// "coming soon" rather than scored, because the wizard collects a percentage
+// grade and we do not yet model their native grade systems (CGPA, etc.).
+const SUPPORTED_COUNTRY = "Nepal";
+const COMING_SOON = ["India", "Bangladesh", "Pakistan", "Nigeria", "Other"];
 
 export function HomeCountryStep({ profile, setField, callouts }: StepProps) {
   return (
     <StepShell
       eyebrow="Step 1"
       title="Where are you applying from?"
-      subtext="This sets your grade scale and which visa rules we show you."
+      subtext="We're starting with Nepal — more countries are coming soon."
       callouts={callouts}
     >
-      {COUNTRIES.map((c) => (
+      <div role="radiogroup" aria-label="Home country" className="flex flex-col gap-3">
         <OptionCard
-          key={c.name}
-          label={c.name}
-          selected={profile.homeCountry === c.name}
-          onSelect={() => setField({ homeCountry: c.name, gradeSystem: c.gradeSystem })}
+          label={SUPPORTED_COUNTRY}
+          selected={profile.homeCountry === SUPPORTED_COUNTRY}
+          onSelect={() => setField({ homeCountry: SUPPORTED_COUNTRY, gradeSystem: "percentage-nepal" })}
         />
-      ))}
+      </div>
+      <p className="text-[13px] text-ink-faint">More countries coming soon: {COMING_SOON.join(", ")}.</p>
     </StepShell>
   );
 }

@@ -22,15 +22,17 @@ export function GoalStep({ profile, setField, callouts }: StepProps) {
       subtext="This shapes how we rank your matches — same profile, different priorities, different results."
       callouts={callouts}
     >
-      {GOALS.map((g) => (
-        <OptionCard
-          key={g.value}
-          label={g.label}
-          description={g.description}
-          selected={profile.goal === g.value}
-          onSelect={() => setField({ goal: g.value })}
-        />
-      ))}
+      <div role="radiogroup" aria-label="Priority" className="flex flex-col gap-3">
+        {GOALS.map((g) => (
+          <OptionCard
+            key={g.value}
+            label={g.label}
+            description={g.description}
+            selected={profile.goal === g.value}
+            onSelect={() => setField({ goal: g.value })}
+          />
+        ))}
+      </div>
     </StepShell>
   );
 }
