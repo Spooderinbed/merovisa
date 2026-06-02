@@ -1,61 +1,76 @@
-export type EducationLevel = "higher-secondary" | "bachelors" | "masters";
+export const EDUCATION_LEVELS = ["higher-secondary", "bachelors", "masters"] as const;
+export type EducationLevel = (typeof EDUCATION_LEVELS)[number];
 
-export type GradeSystem =
-  | "percentage-nepal"
-  | "cgpa-4"
-  | "percentage-india"
-  | "cgpa-10"
-  | "cgpa-5"
-  | "percentage";
+export const GRADE_SYSTEMS = [
+  "percentage-nepal",
+  "cgpa-4",
+  "percentage-india",
+  "cgpa-10",
+  "cgpa-5",
+  "percentage",
+] as const;
+export type GradeSystem = (typeof GRADE_SYSTEMS)[number];
 
-export type FieldOfStudy =
-  | "computer-science"
-  | "business"
-  | "nursing"
-  | "engineering"
-  | "hospitality"
-  | "accounting"
-  | "data-science"
-  | "education"
-  | "agriculture"
-  | "law"
-  | "arts"
-  | "other";
+export const FIELDS_OF_STUDY = [
+  "computer-science",
+  "business",
+  "nursing",
+  "engineering",
+  "hospitality",
+  "accounting",
+  "data-science",
+  "education",
+  "agriculture",
+  "law",
+  "arts",
+  "other",
+] as const;
+export type FieldOfStudy = (typeof FIELDS_OF_STUDY)[number];
 
-export type EnglishStatus = "not-taken" | "booked" | "taken";
+export const ENGLISH_STATUSES = ["not-taken", "booked", "taken"] as const;
+export type EnglishStatus = (typeof ENGLISH_STATUSES)[number];
 
-export type Destination =
-  | "australia"
-  | "canada"
-  | "uk"
-  | "germany"
-  | "usa"
-  | "ireland"
-  | "not-sure";
+export const DESTINATIONS = [
+  "australia",
+  "canada",
+  "uk",
+  "germany",
+  "usa",
+  "ireland",
+  "not-sure",
+] as const;
+export type Destination = (typeof DESTINATIONS)[number];
 
-export type FundingSource =
-  | "self-funded"
-  | "parents-family"
-  | "education-loan"
-  | "mixed"
-  | "scholarship-dependent";
+export const FUNDING_SOURCES = [
+  "self-funded",
+  "parents-family",
+  "education-loan",
+  "mixed",
+  "scholarship-dependent",
+] as const;
+export type FundingSource = (typeof FUNDING_SOURCES)[number];
 
-export type Goal =
-  | "permanent-residency"
-  | "lowest-cost"
-  | "highest-ranked"
-  | "fastest-admission"
-  | "best-employment"
-  | "research";
+export const GOALS = [
+  "permanent-residency",
+  "lowest-cost",
+  "highest-ranked",
+  "fastest-admission",
+  "best-employment",
+  "research",
+] as const;
+export type Goal = (typeof GOALS)[number];
 
-export type Currency = "NPR" | "USD";
+export const CURRENCIES = ["NPR", "USD"] as const;
+export type Currency = (typeof CURRENCIES)[number];
 
-export type GapReason =
-  | "worked"
-  | "retook-exams"
-  | "health-family"
-  | "started-something"
-  | "preparing";
+export const GAP_REASONS = [
+  "worked",
+  "retook-exams",
+  "health-family",
+  "started-something",
+  "preparing",
+] as const;
+export type GapReason = (typeof GAP_REASONS)[number];
 
 export interface StudentProfile {
   homeCountry: string;
@@ -74,7 +89,8 @@ export interface StudentProfile {
   goal: Goal;
 }
 
-export type Verdict = "strong" | "possible" | "reach";
+export const VERDICTS = ["strong", "possible", "reach"] as const;
+export type Verdict = (typeof VERDICTS)[number];
 
 export interface DimensionScore {
   value: number;

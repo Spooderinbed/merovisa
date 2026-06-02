@@ -61,4 +61,14 @@ describe("ProfileSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("rejects englishStatus 'taken' without englishScore", () => {
+    const { englishScore: _omit, ...rest } = validProfile;
+    void _omit;
+    const result = ProfileSchema.safeParse({
+      ...rest,
+      englishStatus: "taken",
+    });
+    expect(result.success).toBe(false);
+  });
 });

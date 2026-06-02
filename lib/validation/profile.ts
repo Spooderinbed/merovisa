@@ -1,76 +1,39 @@
 import { z } from "zod";
+import {
+  EDUCATION_LEVELS,
+  GRADE_SYSTEMS,
+  FIELDS_OF_STUDY,
+  ENGLISH_STATUSES,
+  DESTINATIONS,
+  FUNDING_SOURCES,
+  GOALS,
+  CURRENCIES,
+  GAP_REASONS,
+} from "@/lib/scoring/types";
+import type { StudentProfile } from "@/lib/scoring/types";
+import { computeGapYears, GAP_REQUIRES_REASON_THRESHOLD } from "@/lib/scoring/gap";
 
 export const ProfileSchema = z
   .object({
     homeCountry: z.string().min(1),
-    educationLevel: z.enum(["higher-secondary", "bachelors", "masters"]),
-    gradeSystem: z.enum([
-      "percentage-nepal",
-      "cgpa-4",
-      "percentage-india",
-      "cgpa-10",
-      "cgpa-5",
-      "percentage",
-    ]),
+    educationLevel: z.enum(EDUCATION_LEVELS),
+    gradeSystem: z.enum(GRADE_SYSTEMS),
     grade: z.number().min(0).max(100),
-    fieldOfStudy: z.enum([
-      "computer-science",
-      "business",
-      "nursing",
-      "engineering",
-      "hospitality",
-      "accounting",
-      "data-science",
-      "education",
-      "agriculture",
-      "law",
-      "arts",
-      "other",
-    ]),
-    graduationYear: z.number().int().min(2010).max(2030),
-    gapReasons: z.array(
-      z.enum([
-        "worked",
-        "retook-exams",
-        "health-family",
-        "started-something",
-        "preparing",
-      ]),
-    ),
-    englishStatus: z.enum(["not-taken", "booked", "taken"]),
+    fieldOfStudy: z.enum(FIELDS_OF_STUDY),
+    graduationYear: z.number().int().min(2010).max(new Date().getFullYear() + 5),
+    gapReasons: z.array(z.enum(GAP_REASONS)),
+    englishStatus: z.enum(ENGLISH_STATUSES),
     englishScore: z.number().min(4).max(9).optional(),
-    destination: z.enum([
-      "australia",
-      "canada",
-      "uk",
-      "germany",
-      "usa",
-      "ireland",
-      "not-sure",
-    ]),
+    destination: z.enum(DESTINATIONS),
     budget: z.number().positive(),
-    budgetCurrency: z.enum(["NPR", "USD"]),
-    fundingSource: z.enum([
-      "self-funded",
-      "parents-family",
-      "education-loan",
-      "mixed",
-      "scholarship-dependent",
-    ]),
-    goal: z.enum([
-      "permanent-residency",
-      "lowest-cost",
-      "highest-ranked",
-      "fastest-admission",
-      "best-employment",
-      "research",
-    ]),
+    budgetCurrency: z.enum(CURRENCIES),
+    fundingSource: z.enum(FUNDING_SOURCES),
+    goal: z.enum(GOALS),
   })
   .refine(
     (data) => {
-      const currentYear = new Date().getFullYear();
-      const gap = currentYear - data.graduationYear;
-      if (gap > 1 && data.gapReasons.length === 0) return false;
+      const gap = computeGapYears(data.graduationYear);
+      if (gap > GAP_REQUIRES_REASON_THRESHOLD && data.gapReasons.length === 0) return false;
       return true;
     },
     {
@@ -91,4 +54,14 @@ export const ProfileSchema = z
     },
   );
 
-export type Profile = z.infer<typeof ProfileSchema>;
+// Compile-time check: ProfileSchema's inferred output must be assignable to StudentProfile and vice versa.
+// If you change one without the other, this line will fail typecheck.
+type _InferredMatchesDomain = z.infer<typeof ProfileSchema> extends StudentProfile
+  ? StudentProfile extends z.infer<typeof ProfileSchema>
+    ? true
+    : never
+  : never;
+
+// Touch the type so it isn't tree-shaken or flagged as unused.
+const _typeCheck: _InferredMatchesDomain = true;
+void _typeCheck;
