@@ -31,6 +31,9 @@ yarn-error.log*
 # Claude / local tooling
 .claude/settings.local.json
 
+# Design prototype reference — local-only
+claudedesign/
+
 # Vercel
 .vercel
 
