@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import { ProfileSchema } from "@/lib/validation/profile";
 import { assembleAssessment } from "@/lib/results/assemble";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createAnonymousAssessment } from "@/lib/assessments/repo";
+import { createAnonymousAssessment, getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { assessmentExpiry } from "@/lib/assessments/expiry";
+import { getProfile, upsertProfile } from "@/lib/profiles/repo";
+import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
+import { computeCompleteness } from "@/lib/profiles/completeness";
 import type { Json } from "@/lib/supabase/types";
+
+const FAR_FUTURE = "9999-12-31T00:00:00.000Z";
 
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  try { body = await request.json(); } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
@@ -20,17 +24,48 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const payload = assembleAssessment(parsed.data);
+  const adminDb = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
 
-  // Persist anonymously so the assessment survives the OAuth redirect and can be
-  // claimed on signup. A failed write must never block the user from seeing results.
   let id: string | null = null;
   try {
-    id = await createAnonymousAssessment(createSupabaseAdminClient(), {
-      profile: parsed.data as unknown as Json,
-      result: payload as unknown as Json,
-      ruleVersion: payload.result.ruleVersion,
-      expiresAt: assessmentExpiry(),
-    });
+    if (user) {
+      // Signed-in path
+      const existingPrimary = await getPrimaryAssessmentForUser(supabase, user.id);
+      const { data, error } = await adminDb
+        .from("assessments")
+        .insert({
+          owner: user.id,
+          profile_snapshot: parsed.data as unknown as Json,
+          destination_id: parsed.data.destination,
+          result: payload as unknown as Json,
+          rule_version: payload.result.ruleVersion,
+          expires_at: FAR_FUTURE,
+          is_primary: !existingPrimary,
+        })
+        .select("id")
+        .single();
+      if (!error && data) id = data.id;
+
+      const existingProfile = await getProfile(supabase, user.id);
+      if (!existingProfile) {
+        const googleName = user.user_metadata?.full_name as string | undefined;
+        const sections = profileSectionsFromAssessment(parsed.data as unknown as Record<string, unknown>, { name: googleName }, { nowYear: new Date().getUTCFullYear() });
+        const { pct } = computeCompleteness(sections);
+        await upsertProfile(adminDb, { owner: user.id, sections, completeness: pct });
+      }
+    } else {
+      // Anonymous path
+      id = await createAnonymousAssessment(adminDb, {
+        profileSnapshot: parsed.data as unknown as Json,
+        destinationId: parsed.data.destination,
+        result: payload as unknown as Json,
+        ruleVersion: payload.result.ruleVersion,
+        expiresAt: assessmentExpiry(),
+      });
+    }
   } catch {
     id = null;
   }

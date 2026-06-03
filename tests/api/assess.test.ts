@@ -1,8 +1,22 @@
 import { describe, it, expect, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
+const { getUser } = vi.hoisted(() => ({
+  getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: async () => ({ auth: { getUser } }),
+}));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/assessments/repo", () => ({
   createAnonymousAssessment: vi.fn().mockResolvedValue(null),
+  getPrimaryAssessmentForUser: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/lib/profiles/repo", () => ({
+  getProfile: vi.fn().mockResolvedValue(null),
+  upsertProfile: vi.fn().mockResolvedValue(null),
 }));
 
 import { POST } from "@/app/api/assess/route";
