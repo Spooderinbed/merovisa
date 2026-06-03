@@ -21,7 +21,7 @@ vi.mock("@/components/results/results", () => ({
   Results: ({ mode }: { mode: string }) => <div>owned-results:{mode}</div>,
 }));
 
-import AssessmentPage from "@/app/assessment/[id]/page";
+import AssessmentPage from "@/app/(focused)/assessment/[id]/page";
 
 describe("/assessment/[id]", () => {
   beforeEach(() => {

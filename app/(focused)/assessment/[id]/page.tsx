@@ -15,9 +15,5 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
 
   // result holds the full AssessmentPayload snapshot (see /api/assess).
   const payload = row.result as unknown as AssessmentPayload;
-  return (
-    <main>
-      <Results payload={payload} mode="owned" />
-    </main>
-  );
+  return <Results payload={payload} mode="owned" />;
 }
