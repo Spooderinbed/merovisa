@@ -60,6 +60,15 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toContain("/dashboard");
   });
 
+  it("redirects to /assess?error=expired when the claim fails (expired or wrong owner)", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: false });
+    const res = await GET(url("code=abc&claim=aid-1"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/assess?error=expired");
+  });
+
   it("honors a relative ?next= param when no claim", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });

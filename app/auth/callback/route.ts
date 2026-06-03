@@ -21,9 +21,10 @@ export async function GET(request: Request): Promise<Response> {
   const googleName = data.user?.user_metadata?.full_name as string | undefined;
 
   if (claim && userId) {
-    await claimAndBootstrapProfile(createSupabaseAdminClient(), {
+    const { claimed } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
       assessmentId: claim, userId, googleName,
     });
+    if (!claimed) return NextResponse.redirect(`${origin}/assess?error=expired`);
     return NextResponse.redirect(`${origin}/assessment/${claim}`);
   }
 
