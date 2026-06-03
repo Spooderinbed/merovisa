@@ -1,4 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
+vi.mock("@/lib/assessments/repo", () => ({
+  createAnonymousAssessment: vi.fn().mockResolvedValue(null),
+}));
+
 import { POST } from "@/app/api/assess/route";
 
 const validProfile = {
@@ -31,8 +37,8 @@ describe("POST /api/assess", () => {
     const res = await POST(req(validProfile));
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.result.verdict).toBeDefined();
-    expect(json.matchedCount).toBeGreaterThan(0);
+    expect(json.payload.result.verdict).toBeDefined();
+    expect(json.payload.matchedCount).toBeGreaterThan(0);
   });
 
   it("returns 422 for an invalid profile", async () => {
