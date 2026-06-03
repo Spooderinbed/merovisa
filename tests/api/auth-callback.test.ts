@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { exchangeCodeForSession, getUser, claimAssessment, getOwnedAssessment } = vi.hoisted(() => ({
+const { exchangeCodeForSession, getUser, claimAndBootstrapProfile } = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   getUser: vi.fn(),
-  claimAssessment: vi.fn(),
-  getOwnedAssessment: vi.fn(),
+  claimAndBootstrapProfile: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { exchangeCodeForSession, getUser } }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
-vi.mock("@/lib/assessments/repo", () => ({ claimAssessment, getOwnedAssessment }));
+vi.mock("@/lib/assessments/claim", () => ({ claimAndBootstrapProfile }));
 
 import { GET } from "@/app/auth/callback/route";
 
@@ -21,33 +20,22 @@ describe("GET /auth/callback", () => {
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
     getUser.mockReset();
-    claimAssessment.mockReset();
-    getOwnedAssessment.mockReset();
+    claimAndBootstrapProfile.mockReset();
   });
 
-  it("exchanges the code, claims the assessment, and redirects to it when readable", async () => {
+  it("exchanges the code, claims+bootstraps, and redirects to the assessment", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
-    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    claimAssessment.mockResolvedValue(true);
-    getOwnedAssessment.mockResolvedValue({ id: "aid-1", owner: "user-1" });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", user_metadata: { full_name: "Aarav" } } } });
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: true });
 
     const res = await GET(url("code=abc&claim=aid-1"));
     expect(exchangeCodeForSession).toHaveBeenCalledWith("abc");
-    expect(claimAssessment).toHaveBeenCalledWith({ tag: "admin" }, expect.objectContaining({ id: "aid-1", userId: "user-1" }));
+    expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ assessmentId: "aid-1", userId: "user-1", googleName: "Aarav" }),
+    );
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/assessment/aid-1");
-  });
-
-  it("redirects to /assess?error=expired when the claim is not readable (expired or foreign)", async () => {
-    exchangeCodeForSession.mockResolvedValue({ error: null });
-    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    claimAssessment.mockResolvedValue(false);
-    getOwnedAssessment.mockResolvedValue(null);
-
-    const res = await GET(url("code=abc&claim=aid-1"));
-    expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("/assess");
-    expect(res.headers.get("location")).toContain("error=expired");
   });
 
   it("redirects to /assess with an error flag when the code exchange fails", async () => {
@@ -62,5 +50,39 @@ describe("GET /auth/callback", () => {
     const res = await GET(url("claim=aid-1"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/assess");
+  });
+
+  it("redirects to /dashboard when there is no claim", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    const res = await GET(url("code=abc"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/dashboard");
+  });
+
+  it("redirects to /assess?error=expired when the claim fails (expired or wrong owner)", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: false });
+    const res = await GET(url("code=abc&claim=aid-1"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/assess?error=expired");
+  });
+
+  it("honors a relative ?next= param when no claim", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    const res = await GET(url("code=abc&next=/profile"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/profile");
+  });
+
+  it("rejects a protocol-relative ?next= and falls back to /dashboard", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    const res = await GET(url("code=abc&next=//attacker.com"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/dashboard");
+    expect(res.headers.get("location")).not.toContain("attacker");
   });
 });

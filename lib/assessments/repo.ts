@@ -5,7 +5,8 @@ type DB = SupabaseClient<Database>;
 export type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"];
 
 export interface NewAssessment {
-  profile: Json;
+  profileSnapshot: Json;
+  destinationId: string;
   result: Json;
   ruleVersion: string;
   expiresAt: string;
@@ -16,7 +17,8 @@ export async function createAnonymousAssessment(db: DB, input: NewAssessment): P
     .from("assessments")
     .insert({
       owner: null,
-      profile: input.profile,
+      profile_snapshot: input.profileSnapshot,
+      destination_id: input.destinationId,
       result: input.result,
       rule_version: input.ruleVersion,
       expires_at: input.expiresAt,
@@ -59,4 +61,25 @@ export async function getOwnedAssessment(db: DB, id: string): Promise<Assessment
   const { data, error } = await db.from("assessments").select("*").eq("id", id).maybeSingle();
   if (error || !data) return null;
   return data as AssessmentRow;
+}
+
+export async function getPrimaryAssessmentForUser(db: DB, userId: string): Promise<AssessmentRow | null> {
+  const { data, error } = await db
+    .from("assessments")
+    .select("*")
+    .eq("owner", userId)
+    .eq("is_primary", true)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as AssessmentRow;
+}
+
+export async function listAssessmentsForUser(db: DB, userId: string): Promise<AssessmentRow[]> {
+  const { data, error } = await db
+    .from("assessments")
+    .select("*")
+    .eq("owner", userId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data as AssessmentRow[];
 }

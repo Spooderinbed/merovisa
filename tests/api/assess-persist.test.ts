@@ -1,12 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
-vi.mock("@/lib/assessments/repo", () => ({
+vi.mock("server-only", () => ({}));
+
+const {
+  createAnonymousAssessment, getPrimaryAssessmentForUser, getProfile, upsertProfile, getUser,
+  adminInsertSingle,
+} = vi.hoisted(() => ({
   createAnonymousAssessment: vi.fn(),
+  getPrimaryAssessmentForUser: vi.fn(),
+  getProfile: vi.fn(),
+  upsertProfile: vi.fn(),
+  getUser: vi.fn(),
+  adminInsertSingle: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: async () => ({ auth: { getUser } }),
+}));
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: () => ({
+    from: () => ({
+      insert: () => ({
+        select: () => ({ single: adminInsertSingle }),
+      }),
+    }),
+  }),
+}));
+vi.mock("@/lib/assessments/repo", () => ({
+  createAnonymousAssessment,
+  getPrimaryAssessmentForUser,
+}));
+vi.mock("@/lib/profiles/repo", () => ({ getProfile, upsertProfile }));
+
 import { POST } from "@/app/api/assess/route";
-import { createAnonymousAssessment } from "@/lib/assessments/repo";
 
 const validProfile = {
   homeCountry: "Nepal",
@@ -32,31 +58,73 @@ const req = (body: unknown) =>
     body: JSON.stringify(body),
   });
 
-describe("POST /api/assess (persistence)", () => {
-  beforeEach(() => vi.mocked(createAnonymousAssessment).mockReset());
-
-  it("persists the assessment and returns its id alongside the payload", async () => {
-    vi.mocked(createAnonymousAssessment).mockResolvedValue("assessment-123");
-    const res = await POST(req(validProfile));
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.id).toBe("assessment-123");
-    expect(json.payload.result.verdict).toBeDefined();
-    expect(json.payload.matchedCount).toBeGreaterThan(0);
+describe("POST /api/assess", () => {
+  beforeEach(() => {
+    createAnonymousAssessment.mockReset();
+    getPrimaryAssessmentForUser.mockReset();
+    getProfile.mockReset();
+    upsertProfile.mockReset();
+    getUser.mockReset();
+    adminInsertSingle.mockReset();
   });
 
-  it("still returns the payload with id:null when persistence fails", async () => {
-    vi.mocked(createAnonymousAssessment).mockResolvedValue(null);
-    const res = await POST(req(validProfile));
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.id).toBeNull();
-    expect(json.payload.result.verdict).toBeDefined();
+  describe("anonymous flow", () => {
+    it("persists the assessment and returns its id alongside the payload", async () => {
+      getUser.mockResolvedValue({ data: { user: null } });
+      createAnonymousAssessment.mockResolvedValue("assessment-123");
+      const res = await POST(req(validProfile));
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.id).toBe("assessment-123");
+      expect(json.payload.result.verdict).toBeDefined();
+      expect(json.payload.matchedCount).toBeGreaterThan(0);
+    });
+
+    it("still returns the payload with id:null when persistence fails", async () => {
+      getUser.mockResolvedValue({ data: { user: null } });
+      createAnonymousAssessment.mockResolvedValue(null);
+      const res = await POST(req(validProfile));
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.id).toBeNull();
+      expect(json.payload.result.verdict).toBeDefined();
+    });
   });
 
   it("returns 422 for an invalid profile (no persistence attempted)", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
     const res = await POST(req({ ...validProfile, grade: 999 }));
     expect(res.status).toBe(422);
     expect(createAnonymousAssessment).not.toHaveBeenCalled();
+  });
+
+  describe("signed-in flow", () => {
+    it("persists with owner + is_primary when user has no prior primary", async () => {
+      getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: { full_name: "Aarav" } } } });
+      getPrimaryAssessmentForUser.mockResolvedValue(null);
+      getProfile.mockResolvedValue(null);
+      upsertProfile.mockResolvedValue("p1");
+      adminInsertSingle.mockResolvedValue({ data: { id: "as-1" }, error: null });
+
+      const res = await POST(req(validProfile));
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.id).toBe("as-1");
+      expect(createAnonymousAssessment).not.toHaveBeenCalled();
+      expect(upsertProfile).toHaveBeenCalled();
+    });
+
+    it("does not bootstrap profile when user already has one", async () => {
+      getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
+      getPrimaryAssessmentForUser.mockResolvedValue({ id: "old", owner: "u1" });
+      getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 0 });
+      adminInsertSingle.mockResolvedValue({ data: { id: "as-2" }, error: null });
+
+      const res = await POST(req(validProfile));
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.id).toBe("as-2");
+      expect(upsertProfile).not.toHaveBeenCalled();
+    });
   });
 });

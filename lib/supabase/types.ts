@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -16,30 +18,36 @@ export type Database = {
         Row: {
           claimed_at: string | null
           created_at: string
+          destination_id: string
           expires_at: string
           id: string
+          is_primary: boolean
           owner: string | null
-          profile: Json
+          profile_snapshot: Json
           result: Json
           rule_version: string
         }
         Insert: {
           claimed_at?: string | null
           created_at?: string
+          destination_id: string
           expires_at: string
           id?: string
+          is_primary?: boolean
           owner?: string | null
-          profile: Json
+          profile_snapshot: Json
           result: Json
           rule_version: string
         }
         Update: {
           claimed_at?: string | null
           created_at?: string
+          destination_id?: string
           expires_at?: string
           id?: string
+          is_primary?: boolean
           owner?: string | null
-          profile?: Json
+          profile_snapshot?: Json
           result?: Json
           rule_version?: string
         }
@@ -76,6 +84,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          completeness: number
+          created_at: string
+          id: string
+          owner: string
+          sections: Json
+          updated_at: string
+        }
+        Insert: {
+          completeness?: number
+          created_at?: string
+          id?: string
+          owner: string
+          sections?: Json
+          updated_at?: string
+        }
+        Update: {
+          completeness?: number
+          created_at?: string
+          id?: string
+          owner?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
