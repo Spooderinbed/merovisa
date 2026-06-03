@@ -12,7 +12,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
 vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
-vi.mock("@/components/assess/assess-flow", () => ({ AssessFlow: () => <div data-testid="flow">flow</div> }));
+vi.mock("@/components/assess/assess-flow", () => ({
+  AssessFlow: ({ signedIn }: { signedIn?: boolean }) => (
+    <div data-testid="flow" data-signed-in={!!signedIn}>
+      flow
+    </div>
+  ),
+}));
 vi.mock("@/components/assess/assess-interstitial", () => ({
   AssessInterstitial: () => <div data-testid="interstitial">interstitial</div>,
 }));
@@ -30,6 +36,7 @@ describe("/assess server-side fork", () => {
     const ui = await AssessPage({ searchParams: Promise.resolve({}) });
     render(ui);
     expect(screen.getByTestId("flow")).toBeInTheDocument();
+    expect(screen.getByTestId("flow")).toHaveAttribute("data-signed-in", "false");
   });
 
   it("renders AssessFlow when signed in but no primary", async () => {
@@ -38,6 +45,7 @@ describe("/assess server-side fork", () => {
     const ui = await AssessPage({ searchParams: Promise.resolve({}) });
     render(ui);
     expect(screen.getByTestId("flow")).toBeInTheDocument();
+    expect(screen.getByTestId("flow")).toHaveAttribute("data-signed-in", "true");
   });
 
   it("renders interstitial when signed in with primary and no new=1", async () => {
@@ -54,5 +62,6 @@ describe("/assess server-side fork", () => {
     const ui = await AssessPage({ searchParams: Promise.resolve({ new: "1" }) });
     render(ui);
     expect(screen.getByTestId("flow")).toBeInTheDocument();
+    expect(screen.getByTestId("flow")).toHaveAttribute("data-signed-in", "true");
   });
 });

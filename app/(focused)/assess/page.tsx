@@ -11,7 +11,7 @@ export default async function AssessPage({ searchParams }: { searchParams: Promi
   if (!data.user) return <AssessFlow />;
 
   const primary = await getPrimaryAssessmentForUser(supabase, data.user.id);
-  if (!primary || sp.new === "1") return <AssessFlow />;
+  if (!primary || sp.new === "1") return <AssessFlow signedIn />;
 
   return (
     <AssessInterstitial

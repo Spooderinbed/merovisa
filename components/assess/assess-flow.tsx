@@ -9,7 +9,7 @@ import { Results } from "@/components/results/results";
 
 type Phase = "wizard" | "recap" | "results";
 
-export function AssessFlow() {
+export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
   const [phase, setPhase] = useState<Phase>("wizard");
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [payload, setPayload] = useState<AssessmentPayload | null>(null);
@@ -44,7 +44,7 @@ export function AssessFlow() {
   };
 
   if (phase === "results" && payload) {
-    return <Results payload={payload} mode="anonymous" assessmentId={assessmentId} />;
+    return <Results payload={payload} mode={signedIn ? "owned" : "anonymous"} assessmentId={assessmentId} />;
   }
 
   if (phase === "recap" && profile) {
