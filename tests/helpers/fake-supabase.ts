@@ -15,7 +15,7 @@ export function fakeSupabase(result: FakeResult) {
       calls.push({ method, args });
       return builder;
     });
-  for (const m of ["insert", "update", "upsert", "select", "eq", "is", "gt"]) {
+  for (const m of ["insert", "update", "upsert", "select", "eq", "is", "gt", "order"]) {
     builder[m] = record(m);
   }
   builder.single = vi.fn(() => {

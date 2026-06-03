@@ -62,3 +62,24 @@ export async function getOwnedAssessment(db: DB, id: string): Promise<Assessment
   if (error || !data) return null;
   return data as AssessmentRow;
 }
+
+export async function getPrimaryAssessmentForUser(db: DB, userId: string): Promise<AssessmentRow | null> {
+  const { data, error } = await db
+    .from("assessments")
+    .select("*")
+    .eq("owner", userId)
+    .eq("is_primary", true)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as AssessmentRow;
+}
+
+export async function listAssessmentsForUser(db: DB, userId: string): Promise<AssessmentRow[]> {
+  const { data, error } = await db
+    .from("assessments")
+    .select("*")
+    .eq("owner", userId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data as AssessmentRow[];
+}
