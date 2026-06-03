@@ -13,6 +13,7 @@ export function AssessFlow() {
   const [phase, setPhase] = useState<Phase>("wizard");
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [payload, setPayload] = useState<AssessmentPayload | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [recapElapsed, setRecapElapsed] = useState(false);
   const [error, setError] = useState(false);
 
@@ -34,13 +35,17 @@ export function AssessFlow() {
         body: JSON.stringify(completed),
       });
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      setPayload((await res.json()) as AssessmentPayload);
+      const data = (await res.json()) as { id: string | null; payload: AssessmentPayload };
+      setAssessmentId(data.id);
+      setPayload(data.payload);
     } catch {
       setError(true);
     }
   };
 
-  if (phase === "results" && payload) return <Results payload={payload} />;
+  if (phase === "results" && payload) {
+    return <Results payload={payload} mode="anonymous" assessmentId={assessmentId} />;
+  }
 
   if (phase === "recap" && profile) {
     if (error) {
