@@ -42,4 +42,10 @@ describe("/auth page", () => {
     await expect(AuthPage({ searchParams: Promise.resolve({ next: "/profile" }) })).rejects.toThrow("REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/profile");
   });
+
+  it("rejects a protocol-relative ?next= and falls back to /dashboard", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    await expect(AuthPage({ searchParams: Promise.resolve({ next: "//attacker.com" }) })).rejects.toThrow("REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
 });

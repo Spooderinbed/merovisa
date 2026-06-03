@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
+import { safeNext } from "@/lib/auth/safe-next";
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -28,6 +29,6 @@ export async function GET(request: Request): Promise<Response> {
     return NextResponse.redirect(`${origin}/assessment/${claim}`);
   }
 
-  const fallback = next && next.startsWith("/") ? next : "/dashboard";
+  const fallback = safeNext(next) ?? "/dashboard";
   return NextResponse.redirect(`${origin}${fallback}`);
 }

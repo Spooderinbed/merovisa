@@ -76,4 +76,13 @@ describe("GET /auth/callback", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/profile");
   });
+
+  it("rejects a protocol-relative ?next= and falls back to /dashboard", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    const res = await GET(url("code=abc&next=//attacker.com"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/dashboard");
+    expect(res.headers.get("location")).not.toContain("attacker");
+  });
 });
