@@ -28,12 +28,16 @@ export async function createAnonymousAssessment(db: DB, input: NewAssessment): P
 }
 
 export async function createLead(db: DB, input: { email: string; assessmentId: string }): Promise<void> {
-  await db
+  // PostgREST returns errors as a value, not a throw — surface them so the route
+  // can report failure (e.g. an FK violation for a non-existent assessment id)
+  // rather than silently returning success.
+  const { error } = await db
     .from("leads")
     .upsert(
       { email: input.email, assessment_id: input.assessmentId },
       { onConflict: "assessment_id,email", ignoreDuplicates: true },
     );
+  if (error) throw new Error(error.message);
 }
 
 export async function claimAssessment(

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { claimAssessment } from "@/lib/assessments/repo";
+import { claimAssessment, getOwnedAssessment } from "@/lib/assessments/repo";
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -28,8 +28,13 @@ export async function GET(request: Request): Promise<Response> {
         userId,
         nowIso: new Date().toISOString(),
       });
+      // RLS is the source of truth: if the user can now read it (just-claimed OR
+      // already theirs from a prior sign-in), show it. Otherwise it was expired or
+      // owned by someone else — send them back to start a fresh assessment.
+      const owned = await getOwnedAssessment(supabase, claim);
+      if (owned) return NextResponse.redirect(`${origin}/assessment/${claim}`);
     }
-    return NextResponse.redirect(`${origin}/assessment/${claim}`);
+    return NextResponse.redirect(`${origin}/assess?error=expired`);
   }
 
   return NextResponse.redirect(`${origin}/`);

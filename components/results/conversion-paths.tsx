@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { ASSESSMENT_TTL_DAYS } from "@/lib/assessments/expiry";
 
 function expiryDate(now: Date = new Date()): string {
-  const d = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const d = new Date(now.getTime() + ASSESSMENT_TTL_DAYS * 24 * 60 * 60 * 1000);
   return d.toLocaleString("en-US", { month: "short", day: "numeric" });
 }
 
