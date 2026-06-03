@@ -13,23 +13,36 @@ const TEASERS = [
   },
 ];
 
-export function GatedTeasers({ onUnlock }: { onUnlock: () => void }) {
+export function GatedTeasers({ onUnlock, unlocked = false }: { onUnlock: () => void; unlocked?: boolean }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-[21px]">Unlock your full roadmap</h3>
-      {TEASERS.map((t) => (
-        <button
-          key={t.title}
-          type="button"
-          onClick={onUnlock}
-          className="overflow-hidden rounded-md border border-line bg-surface p-4 text-left"
-        >
-          <span className="block text-ink">{t.title}</span>
-          <span className="mt-1 block text-[15px] text-ink-soft blur-[4px] select-none" aria-hidden>
-            {t.peek}
-          </span>
-        </button>
-      ))}
+      <h3 className="text-[21px]">Your full roadmap</h3>
+      {unlocked ? (
+        <>
+          {TEASERS.map((t) => (
+            <div key={t.title} className="rounded-md border border-line bg-surface p-4">
+              <span className="block text-ink">{t.title}</span>
+            </div>
+          ))}
+          <p className="text-[15px] text-ink-soft">
+            Coming soon — we&apos;re preparing this and will email you when it&apos;s ready.
+          </p>
+        </>
+      ) : (
+        TEASERS.map((t) => (
+          <button
+            key={t.title}
+            type="button"
+            onClick={onUnlock}
+            className="overflow-hidden rounded-md border border-line bg-surface p-4 text-left"
+          >
+            <span className="block text-ink">{t.title}</span>
+            <span className="mt-1 block text-[15px] text-ink-soft blur-[4px] select-none" aria-hidden>
+              {t.peek}
+            </span>
+          </button>
+        ))
+      )}
     </section>
   );
 }

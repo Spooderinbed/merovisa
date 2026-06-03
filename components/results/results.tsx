@@ -10,22 +10,38 @@ import { GatedTeasers } from "./gated-teasers";
 import { AccuracyMeter } from "./accuracy-meter";
 import { ConversionPaths } from "./conversion-paths";
 
-export function Results({ payload }: { payload: AssessmentPayload }) {
+export function Results({
+  payload,
+  mode = "anonymous",
+  assessmentId = null,
+}: {
+  payload: AssessmentPayload;
+  mode?: "anonymous" | "owned";
+  assessmentId?: string | null;
+}) {
   const conversionRef = useRef<HTMLDivElement>(null);
   const scrollToConversion = () =>
     conversionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const owned = mode === "owned";
 
   return (
     <div className="mx-auto flex w-full max-w-narrow flex-col gap-6 px-5 py-10">
       <VerdictCard verdict={payload.result.verdict} />
       <FactorBars dimensions={payload.result.dimensions} />
       <IntakeTimingCard intake={payload.intake} />
-      <UniversityMatches matches={payload.matches} total={payload.matchedCount} onUnlock={scrollToConversion} />
-      <GatedTeasers onUnlock={scrollToConversion} />
+      <UniversityMatches
+        matches={payload.matches}
+        total={payload.matchedCount}
+        onUnlock={scrollToConversion}
+        unlocked={owned}
+      />
+      <GatedTeasers onUnlock={scrollToConversion} unlocked={owned} />
       <AccuracyMeter accuracy={payload.accuracy} />
-      <div ref={conversionRef}>
-        <ConversionPaths />
-      </div>
+      {owned ? null : (
+        <div ref={conversionRef}>
+          <ConversionPaths assessmentId={assessmentId} />
+        </div>
+      )}
     </div>
   );
 }
