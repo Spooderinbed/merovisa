@@ -26,7 +26,7 @@ describe("AuthCard", () => {
       expect.objectContaining({
         provider: "google",
         options: expect.objectContaining({
-          redirectTo: expect.stringContaining("/auth/callback"),
+          redirectTo: expect.stringContaining("/auth/callback?next=%2Fdashboard"),
         }),
       }),
     );
