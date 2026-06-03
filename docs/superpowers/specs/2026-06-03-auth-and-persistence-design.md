@@ -86,11 +86,11 @@ ANONYMOUS                                  CLAIMED (owned)
 
 ## 5. Database Schema & RLS
 
-**Validated live** against the Merovisa project (Postgres 17) during design: tables created, FK enforced, RLS deny-by-default, security advisors clean (only the intended `INFO` on `leads`), and anon / non-owner authenticated reads of anonymous rows both return 0.
+**Validated live** against the Merovisa project (Postgres 17) during design, then **hardened against the Supabase postgres-best-practices skill** (FK indexing, partial index, atomic upsert key, least-privilege grants, FORCE RLS). Final state: security advisors clean (only the intended `INFO` on `leads`); performance advisors show no real issues (only `unused_index` notes, an artifact of empty/never-queried tables that clear under traffic); anon is grant-revoked on both tables; `authenticated` holds SELECT-only on `assessments`.
 
 ```sql
 create table public.assessments (
-  id           uuid primary key default gen_random_uuid(),
+  id           uuid primary key default gen_random_uuid(),   -- unguessable capability id (carried in OAuth redirect + /assessment/[id] URL)
   owner        uuid references auth.users(id) on delete cascade,   -- null = anonymous
   profile      jsonb       not null,        -- StudentProfile
   result       jsonb       not null,        -- AssessmentResult snapshot
@@ -99,39 +99,55 @@ create table public.assessments (
   expires_at   timestamptz not null,        -- created_at + 3 days
   claimed_at   timestamptz                  -- set when owner is assigned
 );
-create index assessments_owner_idx on public.assessments (owner);
+-- Partial index: the RLS policy only ever matches non-null owners; anonymous
+-- rows (owner is null) are never returned, so keep them out of the index.
+create index assessments_owner_idx on public.assessments (owner) where owner is not null;
 
 create table public.leads (
   id            uuid primary key default gen_random_uuid(),
   assessment_id uuid references public.assessments(id) on delete cascade,
   email         text        not null,
   consent_at    timestamptz not null default now(),
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  constraint leads_assessment_email_uniq unique (assessment_id, email)  -- enables atomic ON CONFLICT DO NOTHING
 );
+-- Index the FK (Postgres does not auto-index FKs; flagged by the perf advisor otherwise).
+create index leads_assessment_id_idx on public.leads (assessment_id);
 
 alter table public.assessments enable row level security;
 alter table public.leads        enable row level security;
+-- Defense-in-depth: enforce RLS even for the table-owner role. (service_role still
+-- bypasses via BYPASSRLS, which is what server-side privileged writes rely on.)
+alter table public.assessments force row level security;
+alter table public.leads        force row level security;
 
--- Owner-only reads. (select auth.uid()) is evaluated once per query.
+-- Owner-only reads. (select auth.uid()) is evaluated once per query, not per row.
 create policy assessments_select_own
   on public.assessments
   for select
   to authenticated
   using ((select auth.uid()) = owner);
-
 -- leads: intentionally no policies -> RLS denies anon/authenticated (service-role only).
+
+-- Least privilege: anon never touches these tables; authenticated reads assessments only.
+revoke all on public.assessments from anon;
+revoke all on public.assessments from authenticated;
+grant  select on public.assessments to authenticated;     -- gated by the owner RLS policy
+revoke all on public.leads from anon, authenticated;       -- service-role only
 ```
 
-**RLS model:**
+**RLS + privilege model:**
 
-| Table | SELECT | INSERT / UPDATE / DELETE |
-|-------|--------|--------------------------|
-| `assessments` | `owner = auth.uid()` (authenticated) | none — service-role server writes only |
-| `leads` | none | none — service-role only |
+| Table | anon | authenticated | service_role (server) |
+|-------|------|---------------|------------------------|
+| `assessments` | no grant (blocked at grant level) | `SELECT` only, RLS `owner = auth.uid()` | full (BYPASSRLS) — anon insert, claim |
+| `leads` | no grant | no grant | full (BYPASSRLS) — lead capture |
 
-The only client-facing capability is "a signed-in user reads their own assessments."
+The only client-facing capability is "a signed-in user reads their own assessments." Everything else is server-side privileged code.
 
-**Migration hygiene:** the schema is already recorded as `init_assessments_and_leads` in the remote project history, but the repo has no `supabase/` directory. Plan 3 runs `supabase init`, commits the matching migration file under `supabase/migrations/`, and regenerates `lib/supabase/types.ts` via the MCP `generate_typescript_types`. After committing, re-run `get_advisors` (security) and fix anything flagged.
+**Primary-key choice:** `gen_random_uuid()` (UUIDv4) is kept deliberately — the id is an exposed capability (OAuth redirect + results URL) so it must be unguessable and non-enumerable (ruling out `bigint identity`). The best-practices note about UUIDv4 index fragmentation applies to large, high-write tables; at MVP scale (one row per assessment) it's negligible, and adding the `pg_uuidv7` extension isn't worth it now.
+
+**Migration hygiene:** the original draft is recorded as `init_assessments_and_leads` in the remote project history, but the repo has no `supabase/` directory. Plan 3 runs `supabase init`, commits the migration file (the hardened SQL above) under `supabase/migrations/`, and regenerates `lib/supabase/types.ts` via the MCP `generate_typescript_types`. After committing, re-run `get_advisors` (security **and** performance) and fix anything beyond the known benign INFO notes.
 
 ## 6. Module & File Structure
 
@@ -180,14 +196,15 @@ Each `lib` unit has one responsibility and is unit-testable with a mocked Supaba
 | `/assessment/[id]` not signed in | Redirect to `/assess`. |
 | `/assessment/[id]` signed in, not owner / missing | `notFound()` → calm 404; RLS guarantees no leak. |
 | `/api/leads` invalid email | `422`; UI keeps form + inline validation. |
-| `/api/leads` duplicate email+assessment | Idempotent success. |
+| `/api/leads` duplicate email+assessment | Atomic idempotent success via `insert ... on conflict (assessment_id, email) do nothing` (backed by `leads_assessment_email_uniq`). |
 | Service-role key missing | `admin.ts` throws server-side only; never reaches client. |
 
 ## 8. Testing Strategy
 
 - **Unit (Vitest + mocked Supabase client):** `repo.ts` (correct op per function; claim guards owner-null + expiry; `getOwnedAssessment` null on no-row), `expiry.ts` (pure math), `lead.ts` (Zod), `conversion-paths.tsx` (Tier 1 calls `signInWithOAuth` with correct `redirectTo`; Tier 2 POSTs `/api/leads` + ack), `results.tsx`/`university-matches.tsx`/`gated-teasers.tsx` (`anonymous` vs `owned` rendering).
 - **Route tests:** `/api/assess` returns `{ id, payload }` and tolerates failing insert (id null, still 200); `/api/leads` 200/422; callback claim logic (owner-null + expiry guards) with a mocked admin client.
-- **RLS:** verified live during design (advisors + anon/non-owner simulations). Plan 3 re-runs `get_advisors` after the committed migration and documents an MCP verification step (not a Vitest test — RLS needs real Postgres).
+- **RLS + advisors:** verified live during design (security **and** performance advisors + anon/non-owner simulations + grant inspection). Plan 3 re-runs `get_advisors` (both types) after the committed migration and documents an MCP verification step (not a Vitest test — RLS needs real Postgres).
+- **Lead idempotency:** `repo.createLead` uses `on conflict (assessment_id, email) do nothing`; a unit test asserts a repeated capture does not error and does not duplicate.
 - **Full gate:** `npm test` · `npm run typecheck` · `npm run lint` · `npm run build` all green before finishing.
 
 ## 9. Security Notes (Supabase checklist applied)
