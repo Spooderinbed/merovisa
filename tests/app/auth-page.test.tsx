@@ -26,14 +26,20 @@ describe("/auth page", () => {
 
   it("renders the AuthCard when no user is signed in", async () => {
     getUser.mockResolvedValue({ data: { user: null } });
-    const ui = await AuthPage();
+    const ui = await AuthPage({ searchParams: Promise.resolve({}) });
     render(ui);
     expect(screen.getByText("auth-card")).toBeInTheDocument();
   });
 
-  it("redirects to / when the user is already signed in", async () => {
+  it("redirects to /dashboard when the user is already signed in and no next param", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
-    await expect(AuthPage()).rejects.toThrow("REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/");
+    await expect(AuthPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("redirects to ?next= when present and relative", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    await expect(AuthPage({ searchParams: Promise.resolve({ next: "/profile" }) })).rejects.toThrow("REDIRECT");
+    expect(redirect).toHaveBeenCalledWith("/profile");
   });
 });

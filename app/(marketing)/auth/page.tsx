@@ -2,9 +2,13 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AuthCard } from "@/components/auth/auth-card";
 
-export default async function AuthPage() {
+export default async function AuthPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const sp = await searchParams;
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
-  if (data.user) redirect("/");
+  if (data.user) {
+    const target = sp.next && sp.next.startsWith("/") ? sp.next : "/dashboard";
+    redirect(target);
+  }
   return <AuthCard />;
 }
