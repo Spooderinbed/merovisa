@@ -5,7 +5,8 @@ type DB = SupabaseClient<Database>;
 export type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"];
 
 export interface NewAssessment {
-  profile: Json;
+  profileSnapshot: Json;
+  destinationId: string;
   result: Json;
   ruleVersion: string;
   expiresAt: string;
@@ -16,7 +17,8 @@ export async function createAnonymousAssessment(db: DB, input: NewAssessment): P
     .from("assessments")
     .insert({
       owner: null,
-      profile: input.profile,
+      profile_snapshot: input.profileSnapshot,
+      destination_id: input.destinationId,
       result: input.result,
       rule_version: input.ruleVersion,
       expires_at: input.expiresAt,

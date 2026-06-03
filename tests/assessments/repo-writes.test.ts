@@ -6,7 +6,8 @@ describe("createAnonymousAssessment", () => {
   it("inserts a row and returns the new id", async () => {
     const { client, calls } = fakeSupabase({ data: { id: "new-id" }, error: null });
     const id = await createAnonymousAssessment(client, {
-      profile: { homeCountry: "Nepal" },
+      profileSnapshot: { homeCountry: "Nepal", destination: "australia" },
+      destinationId: "australia",
       result: { result: { verdict: "possible" } },
       ruleVersion: "v0.1.0",
       expiresAt: "2026-06-06T00:00:00.000Z",
@@ -19,7 +20,8 @@ describe("createAnonymousAssessment", () => {
   it("returns null when the insert errors", async () => {
     const { client } = fakeSupabase({ data: null, error: { message: "boom" } });
     const id = await createAnonymousAssessment(client, {
-      profile: {},
+      profileSnapshot: {},
+      destinationId: "australia",
       result: {},
       ruleVersion: "v0.1.0",
       expiresAt: "2026-06-06T00:00:00.000Z",
