@@ -35,3 +35,24 @@ export async function createLead(db: DB, input: { email: string; assessmentId: s
       { onConflict: "assessment_id,email", ignoreDuplicates: true },
     );
 }
+
+export async function claimAssessment(
+  db: DB,
+  input: { id: string; userId: string; nowIso: string },
+): Promise<boolean> {
+  const { data, error } = await db
+    .from("assessments")
+    .update({ owner: input.userId, claimed_at: new Date().toISOString() })
+    .eq("id", input.id)
+    .is("owner", null)
+    .gt("expires_at", input.nowIso)
+    .select("id");
+  if (error || !data) return false;
+  return (data as unknown[]).length > 0;
+}
+
+export async function getOwnedAssessment(db: DB, id: string): Promise<AssessmentRow | null> {
+  const { data, error } = await db.from("assessments").select("*").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  return data as AssessmentRow;
+}
