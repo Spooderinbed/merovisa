@@ -14,7 +14,7 @@ describe("AppBar — marketing variant", () => {
   });
 });
 
-describe.skip("AppBar — marketing-signed-in variant", () => {
+describe("AppBar — marketing-signed-in variant", () => {
   it("hides Sign in and shows Open dashboard CTA + UserPill", () => {
     render(<AppBar variant="marketing-signed-in" user={{ email: "a@b.com", user_metadata: {} } as never} />);
     expect(screen.queryByRole("link", { name: /Sign in/i })).toBeNull();
@@ -23,7 +23,7 @@ describe.skip("AppBar — marketing-signed-in variant", () => {
   });
 });
 
-describe.skip("AppBar — app variant", () => {
+describe("AppBar — app variant", () => {
   it("renders signed-in nav and UserPill", () => {
     render(<AppBar variant="app" user={{ email: "a@b.com", user_metadata: {} } as never} />);
     expect(screen.getByRole("link", { name: /Home/i })).toHaveAttribute("href", "/dashboard");
