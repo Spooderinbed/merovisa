@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { TrustStrip } from "@/components/layout/trust-strip";
 import { Eyebrow } from "@/components/marketing/eyebrow";
 import { HeroPreview } from "@/components/marketing/hero-preview";
@@ -30,7 +32,12 @@ function IconDoc() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Signed-in users skip the marketing landing — drop them on the dashboard.
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   return (
     <>
       <TrustStrip />

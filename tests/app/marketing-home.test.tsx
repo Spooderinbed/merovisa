@@ -1,5 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: async () => ({
+    auth: { getUser: async () => ({ data: { user: null } }) },
+  }),
+}));
+
 import HomePage from "@/app/(marketing)/page";
 
 describe("Marketing homepage", () => {
@@ -22,5 +29,23 @@ describe("Marketing homepage", () => {
     const ctas = screen.getAllByRole("link", { name: /Check your eligibility/i });
     expect(ctas.length).toBeGreaterThanOrEqual(1);
     expect(ctas[0]).toHaveAttribute("href", "/assess");
+  });
+
+  it("redirects signed-in users to /dashboard", async () => {
+    vi.resetModules();
+    const redirectSpy = vi.fn((url: string) => {
+      throw new Error(`REDIRECT:${url}`);
+    });
+    vi.doMock("next/navigation", () => ({ redirect: redirectSpy }));
+    vi.doMock("@/lib/supabase/server", () => ({
+      createSupabaseServerClient: async () => ({
+        auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) },
+      }),
+    }));
+    const { default: SignedInHome } = await import("@/app/(marketing)/page");
+    await expect(SignedInHome()).rejects.toThrow("REDIRECT:/dashboard");
+    expect(redirectSpy).toHaveBeenCalledWith("/dashboard");
+    vi.doUnmock("next/navigation");
+    vi.doUnmock("@/lib/supabase/server");
   });
 });
