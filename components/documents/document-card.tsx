@@ -9,7 +9,6 @@ interface DocumentData {
   id: string;
   originalName: string;
   fileSize: number;
-  signedUrl: string | null;
 }
 
 export function DocumentCard({
@@ -23,6 +22,8 @@ export function DocumentCard({
   const [uploading, setUploading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [viewUrl, setViewUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const upload = async (file: File) => {
@@ -43,9 +44,8 @@ export function DocumentCard({
         id: data.id,
         originalName: file.name,
         fileSize: file.size,
-        signedUrl: null,
       });
-      setNotification("Uploaded — refresh to view the image");
+      setNotification("Uploaded");
     } catch {
       setNotification("Upload failed — please try again");
     } finally {
@@ -58,6 +58,25 @@ export function DocumentCard({
     await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
     setDoc(null);
     setNotification(null);
+  };
+
+  const handleView = async () => {
+    if (!doc) return;
+    setFetchingUrl(true);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/view`);
+      if (!res.ok) {
+        setNotification("Could not load image");
+        return;
+      }
+      const data = (await res.json()) as { url: string };
+      setViewUrl(data.url);
+      setViewerOpen(true);
+    } catch {
+      setNotification("Could not load image");
+    } finally {
+      setFetchingUrl(false);
+    }
   };
 
   const fileSize = doc ? `${(doc.fileSize / 1024).toFixed(0)} KB` : null;
@@ -106,9 +125,9 @@ export function DocumentCard({
           >
             {uploading ? "Uploading…" : doc ? "Re-upload" : "Upload"}
           </Button>
-          {doc && doc.signedUrl && (
-            <Button size="sm" variant="ghost" onClick={() => setViewerOpen(true)}>
-              View
+          {doc && (
+            <Button size="sm" variant="ghost" onClick={handleView} disabled={fetchingUrl}>
+              {fetchingUrl ? "Loading..." : "View"}
             </Button>
           )}
           {doc && (
@@ -119,11 +138,11 @@ export function DocumentCard({
         </div>
       </div>
 
-      {doc && doc.signedUrl && viewerOpen && (
+      {doc && viewerOpen && viewUrl && (
         <DocumentViewerModal
-          url={doc.signedUrl}
+          url={viewUrl}
           label={meta.label}
-          onClose={() => setViewerOpen(false)}
+          onClose={() => { setViewerOpen(false); setViewUrl(null); }}
         />
       )}
     </>

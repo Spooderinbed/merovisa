@@ -6,7 +6,6 @@ interface DocumentData {
   kind: string;
   original_name: string;
   file_size: number;
-  signed_url: string | null;
 }
 
 export function DocumentGroup({
@@ -36,7 +35,6 @@ export function DocumentGroup({
                       id: existing.id,
                       originalName: existing.original_name,
                       fileSize: existing.file_size,
-                      signedUrl: existing.signed_url,
                     }
                   : null
               }
