@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { patchProfileSection } from "@/lib/profiles/repo";
 import { ProfileSectionPatchBodySchema } from "@/lib/validation/profile-section";
+import { invalidatePlan } from "@/lib/plan/invalidate";
 
 export async function PATCH(request: Request): Promise<Response> {
   let body: unknown;
@@ -23,5 +24,6 @@ export async function PATCH(request: Request): Promise<Response> {
 
   const admin = createSupabaseAdminClient();
   const result = await patchProfileSection(admin, data.user.id, parsed.data.section, parsed.data.patch);
+  await invalidatePlan(admin, data.user.id);
   return NextResponse.json({ ok: true, completeness: result.completeness }, { status: 200 });
 }
