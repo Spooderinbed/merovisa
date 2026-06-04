@@ -3,10 +3,11 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getPrimaryAssessmentForUser, getProfile } = vi.hoisted(() => ({
+const { getUser, getPrimaryAssessmentForUser, getProfile, listShortlistForUser } = vi.hoisted(() => ({
   getUser: vi.fn(),
   getPrimaryAssessmentForUser: vi.fn(),
   getProfile: vi.fn(),
+  listShortlistForUser: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -14,6 +15,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
+vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
 vi.mock("@/components/dashboard/snapshot-card", () => ({
   SnapshotCard: ({ primary }: { primary: unknown }) => <div data-testid="snap">{primary ? "has-snap" : "empty-snap"}</div>,
 }));
@@ -34,6 +36,7 @@ describe("/dashboard page", () => {
     getUser.mockReset();
     getPrimaryAssessmentForUser.mockReset();
     getProfile.mockReset();
+    listShortlistForUser.mockReset();
   });
 
   it("renders all five sections for a signed-in user", async () => {
@@ -43,6 +46,7 @@ describe("/dashboard page", () => {
       destination_id: "australia",
     });
     getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav Sharma" } }, completeness: 12 });
+    listShortlistForUser.mockResolvedValue([]);
 
     const ui = await DashboardPage();
     render(ui);
@@ -58,6 +62,7 @@ describe("/dashboard page", () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
     getPrimaryAssessmentForUser.mockResolvedValue(null);
     getProfile.mockResolvedValue(null);
+    listShortlistForUser.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("snap")).toHaveTextContent("empty-snap");

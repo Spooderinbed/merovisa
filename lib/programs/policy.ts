@@ -1,0 +1,36 @@
+// lib/programs/policy.ts
+//
+// Constants from docs/research/2026-06-04-nepal-australia-data.md
+// Update these when the underlying DHA / university policy changes.
+
+export const NEPAL_ASSESSMENT_LEVEL = "L3" as const;
+export const NEPAL_ASSESSMENT_LEVEL_EFFECTIVE = "2026-01-09" as const;
+
+export const DHA_LIVING_COSTS_AUD = 29_710;
+export const DHA_LIVING_COSTS_AUD_EFFECTIVE = "2024-05-10" as const;
+
+export const DHA_PARTNER_COSTS_AUD = 10_394;
+export const DHA_CHILD_COSTS_AUD = 4_449;
+export const DHA_SCHOOLING_COSTS_AUD = 13_502;
+
+// Nepal TU percentage → Australian WAM band (used by scoring engine)
+export const NEPAL_TU_TO_AU_WAM: Array<{ minTuPct: number; auWam: string; auGrade: string }> = [
+  { minTuPct: 80, auWam: ">=75",  auGrade: "Distinction" },
+  { minTuPct: 70, auWam: "65-74", auGrade: "Credit" },
+  { minTuPct: 60, auWam: "50-64", auGrade: "Pass" },
+  { minTuPct: 0,  auWam: "<50",   auGrade: "Fail" },
+];
+
+export function tuPctToAuWamBand(tuPct: number): { auWam: string; auGrade: string } {
+  for (const row of NEPAL_TU_TO_AU_WAM) {
+    if (tuPct >= row.minTuPct) return { auWam: row.auWam, auGrade: row.auGrade };
+  }
+  return NEPAL_TU_TO_AU_WAM[NEPAL_TU_TO_AU_WAM.length - 1]!;
+}
+
+// Visa success rate band for Nepal under Level 3 (practitioner estimate per research §5.4).
+// Surface in UI as a range, never a single number.
+export const NEPAL_AU_VISA_GRANT_RATE_BAND: [number, number] = [55, 65]; // percent
+
+// Bank statement seasoning recommendation under Level 3 (research §4.3)
+export const NEPAL_L3_BANK_SEASONING_MONTHS = 6;

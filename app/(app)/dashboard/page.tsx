@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { getProfile } from "@/lib/profiles/repo";
+import { listShortlistForUser } from "@/lib/matches/repo";
 import { Greeting } from "@/components/dashboard/greeting";
 import { SnapshotCard } from "@/components/dashboard/snapshot-card";
 import { PromptCard, type PromptKind } from "@/components/dashboard/prompt-card";
@@ -27,9 +28,10 @@ export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user!;
-  const [primaryRow, profileRow] = await Promise.all([
+  const [primaryRow, profileRow, shortlist] = await Promise.all([
     getPrimaryAssessmentForUser(supabase, user.id),
     getProfile(supabase, user.id),
+    listShortlistForUser(supabase, user.id),
   ]);
   const primary = (primaryRow?.result as unknown as AssessmentPayload | undefined) ?? null;
   const profileSections = (profileRow?.sections as ProfileSections | undefined) ?? null;
@@ -46,7 +48,7 @@ export default async function DashboardPage() {
       </div>
       <JourneyTimeline currentStep="shortlist" />
       <StatsRow
-        universities={primary?.matchedCount ?? null}
+        universities={shortlist.length}
         checklistDone={null}
         profilePct={completenessPct}
         scholarships={null}
