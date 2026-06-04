@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/rate-limit/upstash", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(true),
+  ipFromRequest: vi.fn().mockReturnValue("1.2.3.4"),
+}));
+
 const { createLead } = vi.hoisted(() => ({ createLead: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/assessments/repo", () => ({ createLead }));

@@ -7,6 +7,7 @@ import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSection } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import { reScoreAssessment } from "@/lib/assessments/re-score";
+import { checkRateLimit } from "@/lib/rate-limit/upstash";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -18,6 +19,10 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = userData.user.id;
+
+  if (!(await checkRateLimit("doc-upload", userId, 20, "1 m"))) {
+    return NextResponse.json({ error: "Too many uploads" }, { status: 429 });
+  }
 
   let formData: FormData;
   try {

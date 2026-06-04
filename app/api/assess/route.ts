@@ -11,10 +11,18 @@ import { computeCompleteness } from "@/lib/profiles/completeness";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import { reScoreAssessment } from "@/lib/assessments/re-score";
 import type { Json } from "@/lib/supabase/types";
+import { checkRateLimit, ipFromRequest } from "@/lib/rate-limit/upstash";
 
 const FAR_FUTURE = "9999-12-31T00:00:00.000Z";
 
 export async function POST(request: Request): Promise<Response> {
+  const ip = ipFromRequest(request);
+  if (!(await checkRateLimit("assess", ip, 10, "1 m"))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+  if (!(await checkRateLimit("assess-daily", ip, 100, "1 d"))) {
+    return NextResponse.json({ error: "Daily limit reached" }, { status: 429 });
+  }
   let body: unknown;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
