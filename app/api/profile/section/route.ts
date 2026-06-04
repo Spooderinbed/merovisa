@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { patchProfileSection } from "@/lib/profiles/repo";
 import { ProfileSectionPatchBodySchema } from "@/lib/validation/profile-section";
 import { invalidatePlan } from "@/lib/plan/invalidate";
+import { reScoreAssessment } from "@/lib/assessments/re-score";
 
 export async function PATCH(request: Request): Promise<Response> {
   let body: unknown;
@@ -28,6 +29,11 @@ export async function PATCH(request: Request): Promise<Response> {
     await invalidatePlan(admin, data.user.id);
   } catch {
     // best-effort; profile save succeeded
+  }
+  try {
+    await reScoreAssessment(admin, data.user.id);
+  } catch {
+    // best-effort — profile save already succeeded
   }
   return NextResponse.json({ ok: true, completeness: result.completeness }, { status: 200 });
 }
