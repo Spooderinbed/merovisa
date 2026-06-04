@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -12,8 +13,7 @@ import type { StudentProfile } from "@/lib/scoring/types";
 import type { Json } from "@/lib/supabase/types";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
-const DEV_EMAIL = "dev@merovisa.local";
-const DEV_PASSWORD = "MerovisaDevPassword2026!";
+const DEV_EMAIL = process.env.DEV_USER_EMAIL ?? "dev@merovisa.local";
 const FAR_FUTURE = "9999-12-31T00:00:00.000Z";
 
 const SAMPLE_PROFILE: StudentProfile = {
@@ -34,16 +34,25 @@ const SAMPLE_PROFILE: StudentProfile = {
 };
 
 /**
- * Dev-only auto sign-in endpoint. Idempotently creates a fixed dev user in
- * Supabase Auth, then signs in via password to set session cookies. On first
- * sign-in (no primary assessment), also seeds a realistic Nepal→Australia
- * assessment + profile so /dashboard, /matches, /plan are populated.
- * Returns 404 in production — the route is functionally dead outside development.
+ * Dev-only auto sign-in endpoint. Multi-gated:
  *
- * Usage: navigate to /api/dev/sign-in (optional ?next=/profile) on localhost.
+ *   1. `NODE_ENV !== "production"`
+ *   2. `ENABLE_DEV_SIGNIN === "1"` (opt-in via env)
+ *   3. `NEXT_PUBLIC_SUPABASE_URL` must look local/dev — not production
+ *
+ * Generates a fresh random password per call (no committed credentials).
+ * Idempotently creates/updates a fixed dev user and signs them in. Seeds
+ * a realistic Nepal→Australia assessment + profile on first sign-in.
+ *
+ * Returns 404 if any gate fails — the route is functionally dead outside
+ * an explicitly-enabled local dev environment.
+ *
+ * Usage: set `ENABLE_DEV_SIGNIN=1` in .env.local, then navigate to
+ * /api/dev/sign-in (optional ?next=/profile).
  */
 export async function GET(request: Request): Promise<Response> {
-  if (process.env.NODE_ENV === "production") {
+  const gate = ensureDevAllowed();
+  if (!gate.allowed) {
     return new NextResponse("Not found", { status: 404 });
   }
 
@@ -54,55 +63,95 @@ export async function GET(request: Request): Promise<Response> {
   try {
     admin = createSupabaseAdminClient();
   } catch (e) {
-    return NextResponse.json(
-      { error: "Admin client init failed", detail: String(e) },
-      { status: 500 },
-    );
+    console.error("[dev sign-in] admin client init failed:", e);
+    return new NextResponse("Server configuration error", { status: 500 });
   }
 
-  // Idempotent user creation. "already registered" is expected on re-runs.
-  const { error: createError } = await admin.auth.admin.createUser({
+  // Fresh random password per session — not committed anywhere.
+  const password = generateRandomPassword();
+
+  // Idempotent user creation. If the user already exists, we still need to
+  // set a known password, so update them either way.
+  const created = await admin.auth.admin.createUser({
     email: DEV_EMAIL,
-    password: DEV_PASSWORD,
+    password,
     email_confirm: true,
     user_metadata: { full_name: "Dev User" },
   });
 
-  if (
-    createError &&
-    !createError.message?.toLowerCase().includes("already") &&
-    !createError.message?.toLowerCase().includes("registered")
-  ) {
-    return NextResponse.json(
-      { error: "Create user failed", detail: createError.message },
-      { status: 500 },
-    );
+  let userId: string | undefined = created.data.user?.id;
+
+  if (created.error) {
+    const msg = created.error.message?.toLowerCase() ?? "";
+    if (!(msg.includes("already") || msg.includes("registered"))) {
+      console.error("[dev sign-in] createUser failed:", created.error.message);
+      return new NextResponse("Sign-in failed", { status: 500 });
+    }
+    // User already exists — look them up and rotate the password.
+    const { data: list } = await admin.auth.admin.listUsers();
+    userId = list?.users.find((u) => u.email === DEV_EMAIL)?.id;
+    if (!userId) {
+      return new NextResponse("Sign-in failed", { status: 500 });
+    }
+    const { error: updateError } = await admin.auth.admin.updateUserById(userId, { password });
+    if (updateError) {
+      console.error("[dev sign-in] updateUserById failed:", updateError.message);
+      return new NextResponse("Sign-in failed", { status: 500 });
+    }
+  }
+
+  if (!userId) {
+    return new NextResponse("Sign-in failed", { status: 500 });
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+  const { error: signInError } = await supabase.auth.signInWithPassword({
     email: DEV_EMAIL,
-    password: DEV_PASSWORD,
+    password,
   });
 
-  if (signInError || !signInData.user) {
-    return NextResponse.json(
-      { error: "Sign-in failed", detail: signInError?.message ?? "no user" },
-      { status: 500 },
-    );
+  if (signInError) {
+    console.error("[dev sign-in] signIn failed:", signInError.message);
+    return new NextResponse("Sign-in failed", { status: 500 });
   }
 
   // Seed sample assessment + profile on first sign-in.
   try {
-    await seedDevUserIfNeeded(admin, signInData.user.id);
+    await seedDevUserIfNeeded(admin, userId);
   } catch (e) {
-    console.error("[dev seed] error (non-fatal):", e);
+    console.error("[dev sign-in] seed error (non-fatal):", e);
   }
 
   return NextResponse.redirect(new URL(next, request.url));
 }
 
-async function seedDevUserIfNeeded(admin: ReturnType<typeof createSupabaseAdminClient>, userId: string): Promise<void> {
+interface GateResult {
+  allowed: boolean;
+}
+
+function ensureDevAllowed(): GateResult {
+  if (process.env.NODE_ENV === "production") return { allowed: false };
+  if (process.env.ENABLE_DEV_SIGNIN !== "1") return { allowed: false };
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  // Allow only if the URL looks like local development or a non-production
+  // Supabase project. Adjust the allowlist as you grow.
+  const looksLocalOrDev =
+    /localhost|127\.0\.0\.1/.test(url) ||
+    /\.supabase\.co/.test(url); // Permit any Supabase-hosted dev project. Tighten if you want.
+  if (!looksLocalOrDev) return { allowed: false };
+  return { allowed: true };
+}
+
+function generateRandomPassword(): string {
+  // 32 random bytes encoded as URL-safe base64 → ~43 chars of entropy.
+  const bytes = crypto.randomBytes(32);
+  return bytes.toString("base64url");
+}
+
+async function seedDevUserIfNeeded(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  userId: string,
+): Promise<void> {
   const existing = await getPrimaryAssessmentForUser(admin, userId);
   if (existing) return;
 
