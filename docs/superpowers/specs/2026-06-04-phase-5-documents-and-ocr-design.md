@@ -1,9 +1,44 @@
 # Phase 5 — Documents, OCR Extraction & Profile Integration
 
 **Date:** 2026-06-04
-**Status:** Design approved, pending implementation
+**Status:** **PARTIALLY SUPERSEDED 2026-06-05.** Phase 5A shipped as a documents vault — no OCR pipeline. Phase 5B remains unbuilt.
 **Scope:** Upload infrastructure, Tesseract.js OCR, profile auto-population, re-scoring cascade, schema extensions
 **Split:** 5A (upload infra + OCR + existing fields) ships first; 5B (schema extensions + scoring updates) ships second. One spec covers both so the architecture has no loose ends.
+
+> **⚠️ SUPERSEDED SECTIONS (post-OCR rip-out, 2026-06-05).** During Phase 5A
+> implementation, the OCR pipeline (Tesseract.js + regex parsers) was tested
+> against real IELTS scorecards and proved unreliable on tabular layouts.
+> The user opted to ship a documents vault instead — users upload manually
+> for personal organization, no auto-extraction. The cascade work
+> (`sectionsToMatchInputs`, `sectionsToStudentProfile`, `reScoreAssessment`)
+> shipped and is now driven by manual edits and document-upload boolean flags
+> instead of OCR extraction.
+>
+> **The following sections are HISTORICAL ONLY — they describe the original
+> design, not what shipped:**
+> - §4.1 "extracted fields" columns (vault stores files only)
+> - §5.1 `extracted_data`, `profile_section`, `status` columns (dropped in migration `20260605000000_simplify_documents.sql`)
+> - §6 entire pipeline + §6.3 parser registry + §6.4 profile mapping + §6.5 sharp preprocessing + §6.6 Tesseract config + §6.7 Vision upgrade path
+> - §7.4 "Document wins" conflict resolution (no extraction → no conflict)
+> - §8.3 "Extracted" card state (only Empty + Uploaded states exist)
+> - §9 OCR-specific error categories
+> - §10 entire Phase 5B section (unbuilt — academic.slcGrade, finance.loanAmount, sponsor income, new visa section, 7 new plan rules all deferred)
+> - §12 testing layers 1–3 (Tesseract not installed)
+> - §13 Phase 5A deliverable list (parser files removed)
+> - §14 Tesseract.js + sharp dependencies (uninstalled)
+>
+> **What actually shipped (Phase 5A):**
+> - `documents` table with minimal columns: `id, owner, kind, file_path, file_size, original_name, created_at` + UNIQUE(owner, kind)
+> - Supabase Storage `documents` bucket, private, organized by `{userId}/{kind}/{uuid}.{ext}`
+> - `POST /api/documents/upload` (multipart, validates auth + size + MIME magic bytes + sanitized filename) and `DELETE /api/documents/[id]` (RLS + boolean flag reversal only when no other doc in group remains)
+> - `GET /api/documents/[id]/view` (60-second signed URL on demand, not server-rendered)
+> - Auto-flip of profile booleans (`english.reportUploaded`, `finance.proofUploaded`, `work.docs`) on upload, reverse on delete
+> - Cascade still runs: `patchProfileSection` → `computeCompleteness` → `reScoreAssessment` → `invalidatePlan`
+> - English section per-band scores (listening/reading/writing/speaking) — added but populated manually, not via OCR
+> - `/documents` page with 20 kinds in 7 groups, fullscreen viewer modal
+>
+> Phase 5B (schema extensions + new scoring rules) was never implemented. If
+> brought back, see audit findings in `docs/superpowers/plans/2026-06-05-pre-mvp-review-fixes.md` §P3.24.
 
 ---
 
