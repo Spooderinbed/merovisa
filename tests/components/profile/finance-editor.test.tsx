@@ -15,7 +15,12 @@ describe("FinanceEditor", () => {
     expect(screen.getByLabelText(/Total funds available/i)).toHaveValue(5000000);
     expect(screen.getByLabelText(/Currency/i)).toHaveValue("NPR");
     expect(screen.getByLabelText(/Source of funds/i)).toHaveValue("parents");
-    expect(screen.getByLabelText(/Proof of funds uploaded/i)).toBeChecked();
+  });
+
+  it("shows Documents page hint", () => {
+    render(<FinanceEditor initial={{}} />);
+    const link = screen.getByRole("link", { name: /Documents page/i });
+    expect(link).toHaveAttribute("href", "/documents");
   });
 
   it("PATCHes with section finance", async () => {
@@ -26,14 +31,13 @@ describe("FinanceEditor", () => {
     await userEvent.type(screen.getByLabelText(/Total funds available/i), "2500000");
     await userEvent.selectOptions(screen.getByLabelText(/Currency/i), "AUD");
     await userEvent.selectOptions(screen.getByLabelText(/Source of funds/i), "loan");
-    await userEvent.click(screen.getByLabelText(/Proof of funds uploaded/i));
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("finance");
     expect(body.patch.total).toBe(2500000);
     expect(body.patch.currency).toBe("AUD");
     expect(body.patch.source).toBe("loan");
-    expect(body.patch.proofUploaded).toBe(true);
+    expect(body.patch.proofUploaded).toBeUndefined();
     expect(await screen.findByText(/Saved/i)).toBeInTheDocument();
     fetchMock.mockRestore();
   });

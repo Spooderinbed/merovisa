@@ -20,7 +20,6 @@ export function WorkEditor({ initial }: { initial: WorkInitial }) {
   const [title, setTitle] = useState(initial.title ?? "");
   const [years, setYears] = useState<string>(initial.years?.toString() ?? "");
   const [relevance, setRelevance] = useState(initial.relevance ?? "");
-  const [docs, setDocs] = useState<boolean>(initial.docs ?? false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const onSave = async (e: React.FormEvent) => {
@@ -30,7 +29,6 @@ export function WorkEditor({ initial }: { initial: WorkInitial }) {
     if (title.trim()) patch.title = title.trim();
     if (years) patch.years = Number(years);
     if (relevance) patch.relevance = relevance;
-    patch.docs = docs;
     const res = await fetch("/api/profile/section", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -63,10 +61,13 @@ export function WorkEditor({ initial }: { initial: WorkInitial }) {
           </select>
         </div>
       </div>
-      <label className="flex items-center gap-2 text-[14px] text-ink">
-        <input type="checkbox" checked={docs} onChange={(e) => setDocs(e.target.checked)} />
-        Reference letter or employment docs available
-      </label>
+      <p className="text-[13px] text-ink-soft">
+        Have an employment letter? Upload it on the{" "}
+        <a href="/documents" className="text-primary underline-offset-2 hover:underline">
+          Documents page
+        </a>{" "}
+        to mark this as complete.
+      </p>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
         {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}

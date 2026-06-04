@@ -26,7 +26,6 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
   const [reading, setReading] = useState<string>(initial.reading?.toString() ?? "");
   const [writing, setWriting] = useState<string>(initial.writing?.toString() ?? "");
   const [speaking, setSpeaking] = useState<string>(initial.speaking?.toString() ?? "");
-  const [reportUploaded, setReportUploaded] = useState<boolean>(initial.reportUploaded ?? false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const onSave = async (e: React.FormEvent) => {
@@ -39,7 +38,6 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
     if (reading) patch.reading = Number(reading);
     if (writing) patch.writing = Number(writing);
     if (speaking) patch.speaking = Number(speaking);
-    patch.reportUploaded = reportUploaded;
     const res = await fetch("/api/profile/section", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -87,10 +85,13 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
             className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
         </div>
       </div>
-      <label className="flex items-center gap-2 text-[14px] text-ink">
-        <input type="checkbox" checked={reportUploaded} onChange={(e) => setReportUploaded(e.target.checked)} />
-        Score report uploaded
-      </label>
+      <p className="text-[13px] text-ink-soft">
+        Have your test report? Upload it on the{" "}
+        <a href="/documents" className="text-primary underline-offset-2 hover:underline">
+          Documents page
+        </a>{" "}
+        to mark this as complete.
+      </p>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
         {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}

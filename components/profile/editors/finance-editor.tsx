@@ -32,7 +32,6 @@ export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
   const [total, setTotal] = useState<string>(initial.total?.toString() ?? "");
   const [currency, setCurrency] = useState<string>(initial.currency ?? "");
   const [source, setSource] = useState<string>(initial.source ?? "");
-  const [proofUploaded, setProofUploaded] = useState<boolean>(initial.proofUploaded ?? false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const onSave = async (e: React.FormEvent) => {
@@ -42,7 +41,6 @@ export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
     if (total) patch.total = Number(total);
     if (currency) patch.currency = currency;
     if (source) patch.source = source;
-    patch.proofUploaded = proofUploaded;
     const res = await fetch("/api/profile/section", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -78,10 +76,13 @@ export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
           ))}
         </select>
       </div>
-      <label className="flex items-center gap-2 text-[14px] text-ink">
-        <input type="checkbox" checked={proofUploaded} onChange={(e) => setProofUploaded(e.target.checked)} />
-        Proof of funds uploaded
-      </label>
+      <p className="text-[13px] text-ink-soft">
+        Have proof of funds? Upload your bank statement, loan sanction letter, or sponsor income on the{" "}
+        <a href="/documents" className="text-primary underline-offset-2 hover:underline">
+          Documents page
+        </a>{" "}
+        to mark this as complete.
+      </p>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
         {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
