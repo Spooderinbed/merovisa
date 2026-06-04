@@ -23,7 +23,7 @@ describe("AcademicEditor", () => {
     await userEvent.selectOptions(screen.getByLabelText(/Degree/i), "masters");
     await userEvent.type(screen.getByLabelText(/Grade percent/i), "82");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("academic");
     expect(body.patch.institution).toBe("Kathmandu University");
     expect(body.patch.degree).toBe("masters");

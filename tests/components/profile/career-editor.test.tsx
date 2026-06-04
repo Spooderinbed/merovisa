@@ -22,7 +22,7 @@ describe("CareerEditor", () => {
     await userEvent.selectOptions(screen.getByLabelText(/Career goal/i), "jobs-abroad");
     await userEvent.type(screen.getByLabelText(/Target role/i), "Data analyst");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("career");
     expect(body.patch.goal).toBe("jobs-abroad");
     expect(body.patch.targetRole).toBe("Data analyst");

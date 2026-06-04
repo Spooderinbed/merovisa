@@ -21,7 +21,7 @@ describe("IntendedStudyEditor", () => {
     await userEvent.selectOptions(screen.getByLabelText(/Level/i), "masters");
     await userEvent.type(screen.getByLabelText(/Field/i), "Data Science");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("intended-study");
     expect(body.patch.level).toBe("masters");
     expect(body.patch.field).toBe("Data Science");

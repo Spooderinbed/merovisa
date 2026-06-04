@@ -24,7 +24,7 @@ describe("DestinationEditor", () => {
       "/api/profile/section",
       expect.objectContaining({ method: "PATCH" }),
     );
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("destination");
     expect(body.patch.primary).toBe("australia");
     expect(body.patch.alternates).toEqual(["canada", "uk"]);

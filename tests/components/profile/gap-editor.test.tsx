@@ -24,7 +24,7 @@ describe("GapEditor", () => {
     await userEvent.click(screen.getByLabelText(/Health/i));
     await userEvent.type(screen.getByLabelText(/Evidence/i), "doc1, doc2");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("gap");
     expect(body.patch.years).toBe(3);
     expect(body.patch.reasons).toEqual(expect.arrayContaining(["worked", "health"]));

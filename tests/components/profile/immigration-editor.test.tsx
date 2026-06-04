@@ -20,7 +20,7 @@ describe("ImmigrationEditor", () => {
     await userEvent.selectOptions(screen.getByLabelText(/Prior visa refusals/i), "none");
     await userEvent.click(screen.getByLabelText(/travelled abroad/i));
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("immigration");
     expect(body.patch.refusals).toBe("none");
     expect(body.patch.travelled).toBe(true);

@@ -21,7 +21,7 @@ describe("ScholarshipsEditor", () => {
       "merit, minority, regional",
     );
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("scholarships");
     expect(body.patch.profile).toEqual(["merit", "minority", "regional"]);
     expect(await screen.findByText(/Saved/i)).toBeInTheDocument();

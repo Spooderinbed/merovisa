@@ -28,7 +28,7 @@ describe("FinanceEditor", () => {
     await userEvent.selectOptions(screen.getByLabelText(/Source of funds/i), "loan");
     await userEvent.click(screen.getByLabelText(/Proof of funds uploaded/i));
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("finance");
     expect(body.patch.total).toBe(2500000);
     expect(body.patch.currency).toBe("AUD");

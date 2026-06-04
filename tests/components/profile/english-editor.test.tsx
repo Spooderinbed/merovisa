@@ -22,7 +22,7 @@ describe("EnglishEditor", () => {
     await userEvent.type(screen.getByLabelText(/Overall score/i), "7.5");
     await userEvent.click(screen.getByLabelText(/Score report uploaded/i));
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("english");
     expect(body.patch.test).toBe("ielts");
     expect(body.patch.overall).toBe(7.5);

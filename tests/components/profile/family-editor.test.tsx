@@ -18,7 +18,7 @@ describe("FamilyEditor", () => {
     render(<FamilyEditor initial={{}} />);
     await userEvent.selectOptions(screen.getByLabelText(/Family situation/i), "spouse-and-kids");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("family");
     expect(body.patch.situation).toBe("spouse-and-kids");
     expect(await screen.findByText(/Saved/i)).toBeInTheDocument();

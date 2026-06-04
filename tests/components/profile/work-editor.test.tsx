@@ -24,7 +24,7 @@ describe("WorkEditor", () => {
     await userEvent.selectOptions(screen.getByLabelText(/Relevance/i), "directly-related");
     await userEvent.click(screen.getByLabelText(/Reference letter/i));
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("work");
     expect(body.patch.title).toBe("Junior Developer");
     expect(body.patch.years).toBe(2);

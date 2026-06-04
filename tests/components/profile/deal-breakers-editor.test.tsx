@@ -21,7 +21,7 @@ describe("DealBreakersEditor", () => {
     await userEvent.click(screen.getByLabelText(/PR-friendly/i));
     await userEvent.click(screen.getByLabelText(/Affordable tuition/i));
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("deal-breakers");
     expect(body.patch.mustHaves).toEqual(expect.arrayContaining(["pr-friendly", "affordable"]));
     expect(body.patch.mustHaves).toHaveLength(2);
