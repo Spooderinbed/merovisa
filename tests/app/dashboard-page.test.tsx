@@ -3,11 +3,12 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getPrimaryAssessmentForUser, getProfile, listShortlistForUser } = vi.hoisted(() => ({
+const { getUser, getPrimaryAssessmentForUser, getProfile, listShortlistForUser, listDocumentsForUser } = vi.hoisted(() => ({
   getUser: vi.fn(),
   getPrimaryAssessmentForUser: vi.fn(),
   getProfile: vi.fn(),
   listShortlistForUser: vi.fn(),
+  listDocumentsForUser: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -16,6 +17,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
+vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
 vi.mock("@/components/dashboard/snapshot-card", () => ({
   SnapshotCard: ({ primary }: { primary: unknown }) => <div data-testid="snap">{primary ? "has-snap" : "empty-snap"}</div>,
 }));
@@ -37,6 +39,7 @@ describe("/dashboard page", () => {
     getPrimaryAssessmentForUser.mockReset();
     getProfile.mockReset();
     listShortlistForUser.mockReset();
+    listDocumentsForUser.mockReset();
   });
 
   it("renders all five sections for a signed-in user", async () => {
@@ -47,6 +50,7 @@ describe("/dashboard page", () => {
     });
     getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav Sharma" } }, completeness: 12 });
     listShortlistForUser.mockResolvedValue([]);
+    listDocumentsForUser.mockResolvedValue([]);
 
     const ui = await DashboardPage();
     render(ui);
@@ -63,6 +67,7 @@ describe("/dashboard page", () => {
     getPrimaryAssessmentForUser.mockResolvedValue(null);
     getProfile.mockResolvedValue(null);
     listShortlistForUser.mockResolvedValue([]);
+    listDocumentsForUser.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("snap")).toHaveTextContent("empty-snap");

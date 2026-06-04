@@ -16,6 +16,7 @@ const NAV_APP = [
   { label: "Matches", href: "/matches" },
   { label: "My plan", href: "/plan" },
   { label: "Profile", href: "/profile" },
+  { label: "Documents", href: "/documents" },
   { label: "Guide", href: "/guide" },
   { label: "Destinations", href: "/destinations" },
 ];
