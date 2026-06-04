@@ -9,6 +9,7 @@ import { UniversityMatches } from "./university-matches";
 import { GatedTeasers } from "./gated-teasers";
 import { AccuracyMeter } from "./accuracy-meter";
 import { ConversionPaths } from "./conversion-paths";
+import { NextSteps } from "./next-steps";
 
 export function Results({
   payload,
@@ -37,7 +38,9 @@ export function Results({
       />
       <GatedTeasers onUnlock={scrollToConversion} unlocked={owned} />
       <AccuracyMeter accuracy={payload.accuracy} />
-      {owned ? null : (
+      {owned ? (
+        <NextSteps />
+      ) : (
         <div ref={conversionRef}>
           <ConversionPaths assessmentId={assessmentId} />
         </div>
