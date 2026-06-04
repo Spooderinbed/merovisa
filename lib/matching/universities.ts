@@ -1,3 +1,6 @@
+// DEPRECATED — used only by the anonymous wizard's snapshot payload.
+// Signed-in users get live DB-driven matches via lib/matches/compute.ts.
+// This file will be deleted once the anonymous flow also reads programs from the DB.
 import type { FieldOfStudy, StudentProfile } from "@/lib/scoring/types";
 import { AU_UNIVERSITIES } from "@/lib/data/universities/au";
 import type { UniversityData } from "@/lib/data/types";
