@@ -1,3 +1,4 @@
+import type * as React from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profiles/repo";
 import { computeCompleteness } from "@/lib/profiles/completeness";
@@ -6,6 +7,18 @@ import type { ProfileSections, SectionKey } from "@/lib/profiles/sections";
 import { CompletenessRing } from "@/components/profile/completeness-ring";
 import { SectionAccordion } from "@/components/profile/section-accordion";
 import { PersonalEditor } from "@/components/profile/editors/personal-editor";
+import { DestinationEditor } from "@/components/profile/editors/destination-editor";
+import { AcademicEditor } from "@/components/profile/editors/academic-editor";
+import { IntendedStudyEditor } from "@/components/profile/editors/intended-study-editor";
+import { EnglishEditor } from "@/components/profile/editors/english-editor";
+import { GapEditor } from "@/components/profile/editors/gap-editor";
+import { WorkEditor } from "@/components/profile/editors/work-editor";
+import { FinanceEditor } from "@/components/profile/editors/finance-editor";
+import { ImmigrationEditor } from "@/components/profile/editors/immigration-editor";
+import { FamilyEditor } from "@/components/profile/editors/family-editor";
+import { CareerEditor } from "@/components/profile/editors/career-editor";
+import { ScholarshipsEditor } from "@/components/profile/editors/scholarships-editor";
+import { DealBreakersEditor } from "@/components/profile/editors/deal-breakers-editor";
 
 const TITLES: Record<SectionKey, string> = {
   "personal":        "Personal information",
@@ -21,6 +34,22 @@ const TITLES: Record<SectionKey, string> = {
   "career":          "Career goals",
   "scholarships":    "Scholarship profile",
   "deal-breakers":   "Deal-breakers",
+};
+
+const EDITORS: Record<SectionKey, React.ComponentType<{ initial: never }>> = {
+  "personal":        PersonalEditor as React.ComponentType<{ initial: never }>,
+  "destination":     DestinationEditor as React.ComponentType<{ initial: never }>,
+  "academic":        AcademicEditor as React.ComponentType<{ initial: never }>,
+  "intended-study":  IntendedStudyEditor as React.ComponentType<{ initial: never }>,
+  "english":         EnglishEditor as React.ComponentType<{ initial: never }>,
+  "gap":             GapEditor as React.ComponentType<{ initial: never }>,
+  "work":            WorkEditor as React.ComponentType<{ initial: never }>,
+  "finance":         FinanceEditor as React.ComponentType<{ initial: never }>,
+  "immigration":     ImmigrationEditor as React.ComponentType<{ initial: never }>,
+  "family":          FamilyEditor as React.ComponentType<{ initial: never }>,
+  "career":          CareerEditor as React.ComponentType<{ initial: never }>,
+  "scholarships":    ScholarshipsEditor as React.ComponentType<{ initial: never }>,
+  "deal-breakers":   DealBreakersEditor as React.ComponentType<{ initial: never }>,
 };
 
 function summarize(key: SectionKey, sections: ProfileSections): string {
@@ -74,11 +103,11 @@ export default async function ProfilePage() {
             summary={summarize(key, sections)}
             status={status[key]}
           >
-            {key === "personal" ? (
-              <PersonalEditor initial={sections.personal ?? {}} />
-            ) : (
-              <p className="text-[14px] text-ink-soft">Editing coming in Phase 2.</p>
-            )}
+            {(() => {
+              const Editor = EDITORS[key];
+              // Cast initial to never to match the EDITORS map signature; each editor knows its shape internally.
+              return <Editor initial={(sections[key] ?? {}) as never} />;
+            })()}
           </SectionAccordion>
         ))}
       </div>

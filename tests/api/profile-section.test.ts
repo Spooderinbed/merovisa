@@ -35,7 +35,7 @@ describe("PATCH /api/profile/section", () => {
 
   it("422s on invalid body", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    const res = await PATCH(req({ section: "academic", patch: {} }));
+    const res = await PATCH(req({ section: "academic", patch: { gradePercent: 150 } }));
     expect(res.status).toBe(422);
   });
 
