@@ -16,8 +16,24 @@ export function ConversionPaths({ assessmentId }: { assessmentId: string | null 
 
   const continueWithGoogle = async () => {
     if (!assessmentId) return;
+    // Fetch a signed claim token before redirecting to OAuth.
+    let claimToken: string | null = null;
+    try {
+      const res = await fetch("/api/results/sign-claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { token?: string };
+        claimToken = data.token ?? null;
+      }
+    } catch {
+      // If signing fails, proceed without claim — user can claim later.
+    }
     const supabase = createSupabaseBrowserClient();
-    const redirectTo = `${window.location.origin}/auth/callback?claim=${assessmentId}`;
+    const params = claimToken ? `?claim=${encodeURIComponent(claimToken)}` : "";
+    const redirectTo = `${window.location.origin}/auth/callback${params}`;
     await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
   };
 

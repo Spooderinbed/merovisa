@@ -1,4 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+vi.mock("server-only", () => ({}));
+
+beforeAll(() => {
+  process.env.CLAIM_HMAC_SECRET = "test-secret-must-be-32-chars-long-abc";
+});
+
+import { signClaim } from "@/lib/auth/hmac-claim";
+
+const ASSESSMENT_UUID = "11815637-f603-4821-8dd0-d9e52560c4f6";
 
 const { exchangeCodeForSession, getUser, claimAndBootstrapProfile } = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
@@ -28,26 +37,29 @@ describe("GET /auth/callback", () => {
     getUser.mockResolvedValue({ data: { user: { id: "user-1", user_metadata: { full_name: "Aarav" } } } });
     claimAndBootstrapProfile.mockResolvedValue({ claimed: true });
 
-    const res = await GET(url("code=abc&claim=aid-1"));
+    const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
+    const res = await GET(url(`code=abc&claim=${encodeURIComponent(claimToken)}`));
     expect(exchangeCodeForSession).toHaveBeenCalledWith("abc");
     expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ assessmentId: "aid-1", userId: "user-1", googleName: "Aarav" }),
+      expect.objectContaining({ assessmentId: ASSESSMENT_UUID, userId: "user-1", googleName: "Aarav" }),
     );
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("/assessment/aid-1");
+    expect(res.headers.get("location")).toContain(`/assessment/${ASSESSMENT_UUID}`);
   });
 
   it("redirects to /assess with an error flag when the code exchange fails", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: { message: "bad code" } });
-    const res = await GET(url("code=bad&claim=aid-1"));
+    const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
+    const res = await GET(url(`code=bad&claim=${encodeURIComponent(claimToken)}`));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/assess");
     expect(res.headers.get("location")).toContain("error=auth");
   });
 
   it("redirects home when there is no code", async () => {
-    const res = await GET(url("claim=aid-1"));
+    const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
+    const res = await GET(url(`claim=${encodeURIComponent(claimToken)}`));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/assess");
   });
@@ -64,9 +76,30 @@ describe("GET /auth/callback", () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     claimAndBootstrapProfile.mockResolvedValue({ claimed: false });
-    const res = await GET(url("code=abc&claim=aid-1"));
+    const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
+    const res = await GET(url(`code=abc&claim=${encodeURIComponent(claimToken)}`));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/assess?error=expired");
+  });
+
+  it("rejects an unsigned (raw) claim and redirects to /assess?error=invalid-claim", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    // Pass the raw UUID without HMAC signing — should be rejected
+    const res = await GET(url(`code=abc&claim=${ASSESSMENT_UUID}`));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/assess?error=invalid-claim");
+    expect(claimAndBootstrapProfile).not.toHaveBeenCalled();
+  });
+
+  it("rejects an expired signed claim and redirects to /assess?error=invalid-claim", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    const expiredToken = signClaim(ASSESSMENT_UUID, Date.now() - 1000);
+    const res = await GET(url(`code=abc&claim=${encodeURIComponent(expiredToken)}`));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/assess?error=invalid-claim");
+    expect(claimAndBootstrapProfile).not.toHaveBeenCalled();
   });
 
   it("honors a relative ?next= param when no claim", async () => {

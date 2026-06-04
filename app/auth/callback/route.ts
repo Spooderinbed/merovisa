@@ -3,11 +3,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
 import { safeNext } from "@/lib/auth/safe-next";
+import { verifyClaim } from "@/lib/auth/hmac-claim";
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const claim = url.searchParams.get("claim");
+  const claimToken = url.searchParams.get("claim");
   const next = url.searchParams.get("next");
   const origin = url.origin;
 
@@ -21,12 +22,21 @@ export async function GET(request: Request): Promise<Response> {
   const userId = data.user?.id;
   const googleName = data.user?.user_metadata?.full_name as string | undefined;
 
-  if (claim && userId) {
+  let claimedAssessmentId: string | null = null;
+  if (claimToken) {
+    const verified = verifyClaim(claimToken);
+    if (!verified) {
+      return NextResponse.redirect(`${origin}/assess?error=invalid-claim`);
+    }
+    claimedAssessmentId = verified.assessmentId;
+  }
+
+  if (claimedAssessmentId && userId) {
     const { claimed } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
-      assessmentId: claim, userId, googleName,
+      assessmentId: claimedAssessmentId, userId, googleName,
     });
     if (!claimed) return NextResponse.redirect(`${origin}/assess?error=expired`);
-    return NextResponse.redirect(`${origin}/assessment/${claim}`);
+    return NextResponse.redirect(`${origin}/assessment/${claimedAssessmentId}`);
   }
 
   const fallback = safeNext(next) ?? "/dashboard";

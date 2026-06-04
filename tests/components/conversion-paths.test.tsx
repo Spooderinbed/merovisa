@@ -9,33 +9,69 @@ vi.mock("@/lib/supabase/client", () => ({
 
 import { ConversionPaths } from "@/components/results/conversion-paths";
 
+const ASSESSMENT_UUID = "11815637-f603-4821-8dd0-d9e52560c4f6";
+const FAKE_CLAIM_TOKEN = "11815637-f603-4821-8dd0-d9e52560c4f6.9999999999999.fakesig";
+
 describe("ConversionPaths", () => {
   beforeEach(() => {
     signInWithOAuth.mockReset();
   });
 
   it("renders the 3-day urgency copy and a Google button", () => {
-    render(<ConversionPaths assessmentId="aid-1" />);
+    render(<ConversionPaths assessmentId={ASSESSMENT_UUID} />);
     expect(screen.getByText(/expires in 3 days/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
   });
 
-  it("starts Google OAuth with the claim id in redirectTo", async () => {
-    render(<ConversionPaths assessmentId="aid-1" />);
+  it("fetches a signed claim token and includes it in the OAuth redirectTo", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      if (typeof input === "string" && input.includes("sign-claim")) {
+        return Promise.resolve(new Response(JSON.stringify({ token: FAKE_CLAIM_TOKEN }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(null, { status: 200 }));
+    });
+
+    render(<ConversionPaths assessmentId={ASSESSMENT_UUID} />);
     await userEvent.click(screen.getByRole("button", { name: /Continue with Google/i }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/results/sign-claim",
+      expect.objectContaining({ method: "POST" }),
+    );
     expect(signInWithOAuth).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: "google",
         options: expect.objectContaining({
-          redirectTo: expect.stringContaining("/auth/callback?claim=aid-1"),
+          redirectTo: expect.stringContaining(`/auth/callback?claim=${encodeURIComponent(FAKE_CLAIM_TOKEN)}`),
         }),
       }),
     );
+    fetchMock.mockRestore();
+  });
+
+  it("proceeds without claim in redirectTo when sign-claim fetch fails", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+
+    render(<ConversionPaths assessmentId={ASSESSMENT_UUID} />);
+    await userEvent.click(screen.getByRole("button", { name: /Continue with Google/i }));
+
+    expect(signInWithOAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "google",
+        options: expect.objectContaining({
+          redirectTo: expect.stringContaining("/auth/callback"),
+        }),
+      }),
+    );
+    // No claim param when signing failed
+    const callArg = signInWithOAuth.mock.calls[0]?.[0];
+    expect(callArg?.options?.redirectTo).not.toContain("claim=");
+    fetchMock.mockRestore();
   });
 
   it("posts a lead and acknowledges it inline", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
-    render(<ConversionPaths assessmentId="aid-1" />);
+    render(<ConversionPaths assessmentId={ASSESSMENT_UUID} />);
     await userEvent.type(screen.getByLabelText(/Email me my results/i), "student@example.com");
     await userEvent.click(screen.getByRole("button", { name: /Email me my results/i }));
     expect(fetchMock).toHaveBeenCalledWith("/api/leads", expect.objectContaining({ method: "POST" }));
