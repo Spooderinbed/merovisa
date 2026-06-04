@@ -16,12 +16,9 @@ describe("documents repo", () => {
       id: "d1",
       kind: "ielts",
       owner: "u1",
-      status: "extracted",
       file_path: "u1/ielts/f.png",
       file_size: 1000,
       original_name: "f.png",
-      extracted_data: null,
-      profile_section: "english",
       created_at: "2026-01-01",
     };
     const { client, calls } = fakeSupabase({ data: [row], error: null });
