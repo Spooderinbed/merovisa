@@ -19,11 +19,14 @@ export async function reScoreAssessment(db: DB, userId: string): Promise<void> {
 
   const sections = (profileRow.sections as ProfileSections | undefined) ?? {};
   const studentProfile = sectionsToStudentProfile(sections);
-  const result = runAssessment(studentProfile);
+  const freshResult = runAssessment(studentProfile);
+
+  const existingPayload = (primaryRow.result as Record<string, unknown>) ?? {};
+  const updatedPayload = { ...existingPayload, result: freshResult };
 
   await db
     .from("assessments")
-    .update({ result: result as unknown as Json })
+    .update({ result: updatedPayload as unknown as Json })
     .eq("id", primaryRow.id)
     .eq("owner", userId);
 }
