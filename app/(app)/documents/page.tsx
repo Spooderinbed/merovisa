@@ -27,8 +27,8 @@ export default async function DocumentsPage() {
         <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Documents</span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">Upload your documents</h1>
         <p className="max-w-[64ch] text-[16px] text-ink-soft">
-          Upload photos of your documents and we&apos;ll extract the data to improve your profile, match accuracy, and
-          assessment verdict.
+          Keep your visa-ready documents in one place. Upload photos so you can pull them up
+          when you need them — for university applications, the visa, or your records.
         </p>
       </header>
 
