@@ -54,12 +54,14 @@ export default async function MatchesPage() {
 
   const scholarshipsPanel = (
     <p className="text-[15px] text-ink-soft">
-      Scholarship matching lands in Phase 4 alongside the plan.
+      Scholarship matching is coming next. We&apos;ll surface scholarships you may qualify for
+      based on your destination, field, and grade.
     </p>
   );
   const costPanel = (
     <p className="text-[15px] text-ink-soft">
-      Live cost estimate (tuition + DHA living + OSHC) lands in Phase 4.
+      Live cost estimate is coming next — tuition, DHA living costs, OSHC, and intake-aligned
+      forecasts rolled into one number you can plan against.
     </p>
   );
 
