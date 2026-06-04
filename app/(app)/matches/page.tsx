@@ -3,6 +3,7 @@ import { getProfile } from "@/lib/profiles/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { listShortlistForUser } from "@/lib/matches/repo";
 import { computeMatches } from "@/lib/matches/compute";
+import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { MatchesTabs } from "@/components/matches/matches-tabs";
 import { VerdictGroup } from "@/components/matches/verdict-group";
@@ -22,14 +23,7 @@ export default async function MatchesPage() {
   ]);
 
   const sections: ProfileSections = (profile?.sections as ProfileSections | undefined) ?? {};
-  const inputs = {
-    userGradePercent: sections.academic?.gradePercent ?? null,
-    userEnglishOverall: sections.english?.overall ?? null,
-    userEnglishBand: sections.english?.overall ?? null, // proxy: assume per-band = overall until uploaded report parsed
-    userBudgetAud: budgetToAud(sections.finance?.total ?? null, sections.finance?.currency ?? null),
-    userField: sections["intended-study"]?.field ?? null,
-    policy: { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL },
-  };
+  const inputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
 
   const matches = computeMatches(inputs, programs, universities);
   const shortlistedIds = new Set(shortlist.map((s) => s.programId));
@@ -81,27 +75,4 @@ export default async function MatchesPage() {
       />
     </div>
   );
-}
-
-// Budget conversion — rough static rates. Replace with FX lookup later.
-function budgetToAud(total: number | null, currency: string | null): number | null {
-  if (total == null) return null;
-  switch (currency) {
-    case "AUD":
-      return total;
-    case "USD":
-      return total * 1.5;
-    case "NPR":
-      return total / 100; // ~AUD 1 = NPR 90-100
-    case "INR":
-      return total / 55; // ~AUD 1 = INR 55
-    case "BDT":
-      return total / 75;
-    case "PKR":
-      return total / 200;
-    case "NGN":
-      return total / 1000;
-    default:
-      return total;
-  }
 }

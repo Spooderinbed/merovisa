@@ -5,6 +5,7 @@ import { getProfile } from "@/lib/profiles/repo";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { computeMatches } from "@/lib/matches/compute";
+import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { generatePlan } from "./generator";
 import type { ProfileSections } from "@/lib/profiles/sections";
@@ -26,18 +27,8 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
   ]);
 
   const sections = (profileRow?.sections as ProfileSections | undefined) ?? {};
-  const matches = computeMatches(
-    {
-      userGradePercent: sections.academic?.gradePercent ?? null,
-      userEnglishOverall: sections.english?.overall ?? null,
-      userEnglishBand: sections.english?.overall ?? null,
-      userBudgetAud: sections.finance?.total ?? null, // ignore currency for plan; rough enough
-      userField: sections["intended-study"]?.field ?? null,
-      policy: { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL },
-    },
-    programs,
-    universities,
-  );
+  const matchInputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
+  const matches = computeMatches(matchInputs, programs, universities);
 
   const items = generatePlan({
     sections,
