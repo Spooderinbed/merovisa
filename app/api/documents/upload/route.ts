@@ -3,13 +3,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DOCUMENT_KINDS, type DocumentKind } from "@/lib/documents/types";
 import { getDocumentByKind, insertDocument, deleteDocument } from "@/lib/documents/repo";
-import { recognizeText } from "@/lib/documents/ocr";
-import { getParser } from "@/lib/documents/parsers/registry";
-import { mapToProfilePatch } from "@/lib/documents/profile-mapping";
-import { patchProfileSection } from "@/lib/profiles/repo";
-import { invalidatePlan } from "@/lib/plan/invalidate";
-import { reScoreAssessment } from "@/lib/assessments/re-score";
-import type { SectionKey } from "@/lib/profiles/sections";
+// OCR removed (phase5a rip-out) — will be rewritten in next task
+// import { recognizeText } from "@/lib/documents/ocr";
+// import { getParser } from "@/lib/documents/parsers/registry";
+// import { mapToProfilePatch } from "@/lib/documents/profile-mapping";
+// patchProfileSection / reScoreAssessment / invalidatePlan removed with OCR (phase5a rip-out)
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -80,30 +78,11 @@ export async function POST(request: Request): Promise<Response> {
   }
   console.log("[upload] storage upload complete");
 
-  // OCR + parse
-  const parser = getParser(docKind);
-  let extractedData: Record<string, unknown> | null = null;
-  let status: "extracted" | "failed" | "stored" = "stored";
-  let profileChanges: Record<string, unknown> | null = null;
-
-  if (parser) {
-    try {
-      console.log("[upload] running OCR...");
-      const rawText = await recognizeText(buffer);
-      console.log("[upload] OCR complete, text length:", rawText.length);
-      console.log("[upload] OCR raw text:\n---\n" + rawText + "\n---");
-      extractedData = parser(rawText);
-      status = extractedData ? "extracted" : "failed";
-      console.log("[upload] parser result:", status);
-    } catch (e) {
-      console.error("[upload] OCR/parse error:", e);
-      status = "failed";
-    }
-  }
-
-  // Find profile section for this kind
-  const profilePatch = extractedData ? mapToProfilePatch(docKind, extractedData) : null;
-  const profileSection = profilePatch?.section ?? null;
+  // OCR removed — users upload manually for organization only (phase5a rip-out)
+  const extractedData: Record<string, unknown> | null = null;
+  const status: "extracted" | "failed" | "stored" = "stored";
+  const profileChanges: Record<string, unknown> | null = null;
+  const profileSection: string | null = null;
 
   // Insert document row
   console.log("[upload] inserting document row...");
@@ -119,24 +98,7 @@ export async function POST(request: Request): Promise<Response> {
   });
   console.log("[upload] document row inserted:", docId);
 
-  // Patch profile + cascade
-  if (profilePatch && extractedData) {
-    try {
-      console.log("[upload] patching profile section:", profilePatch.section);
-      await patchProfileSection(
-        admin,
-        userId,
-        profilePatch.section as SectionKey,
-        profilePatch.patch as any,
-      );
-      profileChanges = profilePatch.patch;
-      await reScoreAssessment(admin, userId);
-      await invalidatePlan(admin, userId);
-      console.log("[upload] cascade complete");
-    } catch (e) {
-      console.error("[upload] cascade error:", e);
-    }
-  }
+  // Profile patch + cascade removed with OCR (phase5a rip-out)
 
   console.log("[upload] done, returning response");
   return NextResponse.json({
