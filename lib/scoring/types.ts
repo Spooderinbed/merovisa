@@ -60,7 +60,7 @@ export const GOALS = [
 ] as const;
 export type Goal = (typeof GOALS)[number];
 
-export const CURRENCIES = ["NPR", "USD"] as const;
+export const CURRENCIES = ["NPR", "USD", "AUD", "INR", "BDT", "PKR", "NGN"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export const GAP_REASONS = [

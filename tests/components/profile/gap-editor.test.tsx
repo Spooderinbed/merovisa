@@ -7,10 +7,10 @@ describe("GapEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it("renders existing values in inputs", () => {
-    render(<GapEditor initial={{ years: 2, reasons: ["worked", "family"], evidence: ["pay slip", "letter"] }} />);
+    render(<GapEditor initial={{ years: 2, reasons: ["worked", "health-family"], evidence: ["pay slip", "letter"] }} />);
     expect(screen.getByLabelText(/Years of gap/i)).toHaveValue(2);
     expect(screen.getByLabelText(/Worked/i)).toBeChecked();
-    expect(screen.getByLabelText(/Family/i)).toBeChecked();
+    expect(screen.getByLabelText(/Health or family/i)).toBeChecked();
     expect(screen.getByLabelText(/Evidence/i)).toHaveValue("pay slip, letter");
   });
 
@@ -21,13 +21,13 @@ describe("GapEditor", () => {
     render(<GapEditor initial={{}} />);
     await userEvent.type(screen.getByLabelText(/Years of gap/i), "3");
     await userEvent.click(screen.getByLabelText(/Worked/i));
-    await userEvent.click(screen.getByLabelText(/Health/i));
+    await userEvent.click(screen.getByLabelText(/Health or family/i));
     await userEvent.type(screen.getByLabelText(/Evidence/i), "doc1, doc2");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("gap");
     expect(body.patch.years).toBe(3);
-    expect(body.patch.reasons).toEqual(expect.arrayContaining(["worked", "health"]));
+    expect(body.patch.reasons).toEqual(expect.arrayContaining(["worked", "health-family"]));
     expect(body.patch.evidence).toEqual(["doc1", "doc2"]);
     expect(await screen.findByText(/Saved/i)).toBeInTheDocument();
     fetchMock.mockRestore();

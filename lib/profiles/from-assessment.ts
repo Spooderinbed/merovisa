@@ -1,4 +1,13 @@
 import type { ProfileSections } from "./sections";
+import type {
+  Destination,
+  EducationLevel,
+  FieldOfStudy,
+  GapReason,
+  Currency,
+  FundingSource,
+  Goal,
+} from "@/lib/scoring/types";
 
 interface Fallback {
   name?: string;
@@ -20,12 +29,12 @@ export function profileSectionsFromAssessment(
   if (fallback.name) out.personal = { name: fallback.name };
 
   // destination
-  const dest = get<string>("destination");
+  const dest = get<Destination>("destination");
   if (dest) out.destination = { primary: dest };
 
   // academic
   const grade = get<number>("grade");
-  const educationLevel = get<string>("educationLevel");
+  const educationLevel = get<EducationLevel>("educationLevel");
   if (grade !== undefined || educationLevel) {
     out.academic = {};
     if (grade !== undefined) out.academic.gradePercent = grade;
@@ -33,7 +42,7 @@ export function profileSectionsFromAssessment(
   }
 
   // intended study
-  const field = get<string>("fieldOfStudy");
+  const field = get<FieldOfStudy>("fieldOfStudy");
   if (field) out["intended-study"] = { field };
 
   // english
@@ -41,7 +50,7 @@ export function profileSectionsFromAssessment(
   if (score !== undefined) out.english = { test: "ielts", overall: score };
 
   // gap
-  const gapReasons = get<string[]>("gapReasons");
+  const gapReasons = get<GapReason[]>("gapReasons");
   const gradYear = get<number>("graduationYear");
   if ((gapReasons && gapReasons.length > 0) || gradYear !== undefined) {
     out.gap = {};
@@ -53,8 +62,8 @@ export function profileSectionsFromAssessment(
 
   // finance
   const budget = get<number>("budget");
-  const budgetCurrency = get<string>("budgetCurrency");
-  const fundingSource = get<string>("fundingSource");
+  const budgetCurrency = get<Currency>("budgetCurrency");
+  const fundingSource = get<FundingSource>("fundingSource");
   if (budget !== undefined || budgetCurrency || fundingSource) {
     out.finance = {};
     if (budget !== undefined) out.finance.total = budget;
@@ -63,7 +72,7 @@ export function profileSectionsFromAssessment(
   }
 
   // career
-  const goal = get<string>("goal");
+  const goal = get<Goal>("goal");
   if (goal) out.career = { goal };
 
   return out;

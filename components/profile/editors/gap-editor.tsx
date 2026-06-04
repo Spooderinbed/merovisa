@@ -11,10 +11,10 @@ export interface GapInitial {
 
 const REASONS = [
   { value: "worked", label: "Worked" },
-  { value: "further-study", label: "Further study" },
-  { value: "family", label: "Family responsibilities" },
-  { value: "health", label: "Health" },
-  { value: "other", label: "Other" },
+  { value: "retook-exams", label: "Retook exams" },
+  { value: "health-family", label: "Health or family" },
+  { value: "started-something", label: "Started something" },
+  { value: "preparing", label: "Preparing to study" },
 ];
 
 export function GapEditor({ initial }: { initial: GapInitial }) {

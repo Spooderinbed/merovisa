@@ -10,7 +10,9 @@ import type { StepProps } from "./types";
 
 const NPR_PER_USD = 135;
 
-const RANGES: Record<Currency, { min: number; max: number; step: number; default: number }> = {
+type WizardCurrency = "NPR" | "USD";
+
+const RANGES: Record<WizardCurrency, { min: number; max: number; step: number; default: number }> = {
   NPR: { min: 1_000_000, max: 10_000_000, step: 100_000, default: 4_500_000 },
   USD: { min: 8_000, max: 80_000, step: 1_000, default: 33_000 },
 };
@@ -24,15 +26,16 @@ const FUNDING: Array<{ value: FundingSource; label: string }> = [
 ];
 
 export function BudgetStep({ profile, setField, callouts }: StepProps) {
-  const currency: Currency = profile.budgetCurrency ?? "NPR";
+  const stored = profile.budgetCurrency;
+  const currency: WizardCurrency = stored === "USD" ? "USD" : "NPR";
   const range = RANGES[currency];
   const budget = profile.budget ?? range.default;
   const converted =
     currency === "NPR" ? formatUsd(Math.round(budget / NPR_PER_USD)) : formatNpr(Math.round(budget * NPR_PER_USD));
 
-  const onCurrency = (next: Currency) => {
+  const onCurrency = (next: WizardCurrency) => {
     const nextRange = RANGES[next];
-    setField({ budgetCurrency: next, budget: nextRange.default });
+    setField({ budgetCurrency: next as Currency, budget: nextRange.default });
   };
 
   return (

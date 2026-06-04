@@ -4,15 +4,23 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export interface CareerInitial {
-  goal?: "permanent-residency" | "jobs-abroad" | "back-home" | "experience";
+  goal?:
+    | "permanent-residency"
+    | "lowest-cost"
+    | "highest-ranked"
+    | "fastest-admission"
+    | "best-employment"
+    | "research";
   targetRole?: string;
 }
 
 const GOALS = [
   { value: "permanent-residency", label: "Permanent residency" },
-  { value: "jobs-abroad", label: "Jobs abroad" },
-  { value: "back-home", label: "Back home" },
-  { value: "experience", label: "Just the experience" },
+  { value: "best-employment", label: "Best employment" },
+  { value: "highest-ranked", label: "Highest-ranked school" },
+  { value: "lowest-cost", label: "Lowest cost" },
+  { value: "fastest-admission", label: "Fastest admission" },
+  { value: "research", label: "Research" },
 ];
 
 export function CareerEditor({ initial }: { initial: CareerInitial }) {

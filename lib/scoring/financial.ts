@@ -29,11 +29,21 @@ const DESTINATION_LABEL: Record<Destination, string> = {
   "not-sure": "your destination",
 };
 
-const NPR_PER_USD = 135;
+function toUsd(amount: number, currency: string): number {
+  switch (currency) {
+    case "USD": return amount;
+    case "NPR": return amount / 135;
+    case "AUD": return amount / 1.5;
+    case "INR": return amount / 83;
+    case "BDT": return amount / 110;
+    case "PKR": return amount / 280;
+    case "NGN": return amount / 1500;
+    default: return amount;
+  }
+}
 
 export function scoreFinancial(profile: StudentProfile): DimensionScore {
-  const budgetUsd =
-    profile.budgetCurrency === "USD" ? profile.budget : profile.budget / NPR_PER_USD;
+  const budgetUsd = toUsd(profile.budget, profile.budgetCurrency);
   const typical = TYPICAL_YEARLY_USD[profile.destination];
   const midpoint = (typical.min + typical.max) / 2;
   const ratio = budgetUsd / midpoint;

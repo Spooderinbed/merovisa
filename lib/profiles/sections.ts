@@ -1,3 +1,14 @@
+import type {
+  EducationLevel,
+  GradeSystem,
+  FieldOfStudy,
+  GapReason,
+  FundingSource,
+  Goal,
+  Currency,
+  Destination,
+} from "@/lib/scoring/types";
+
 export const SECTION_KEYS = [
   "personal", "destination", "academic", "intended-study", "english",
   "gap", "work", "finance", "immigration", "family", "career",
@@ -7,16 +18,16 @@ export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export interface ProfileSections {
   personal?:        { name?: string; age?: number; intakeIso?: string };
-  destination?:     { primary?: string; alternates?: string[] };
-  academic?:        { institution?: string; degree?: string; gradePercent?: number; gradeSystem?: string };
-  "intended-study"?: { level?: string; field?: string; specialisation?: string };
+  destination?:     { primary?: Destination; alternates?: Destination[] };
+  academic?:        { institution?: string; degree?: EducationLevel; gradePercent?: number; gradeSystem?: GradeSystem };
+  "intended-study"?: { level?: EducationLevel; field?: FieldOfStudy; specialisation?: string };
   english?:         { test?: "ielts" | "pte" | "toefl"; overall?: number; listening?: number; reading?: number; writing?: number; speaking?: number; reportUploaded?: boolean };
-  gap?:             { years?: number; reasons?: string[]; evidence?: string[] };
-  work?:            { title?: string; years?: number; relevance?: string; docs?: boolean };
-  finance?:         { total?: number; currency?: string; source?: string; proofUploaded?: boolean };
-  immigration?:     { refusals?: string; travelled?: boolean };
-  family?:          { situation?: string };
-  career?:          { goal?: string; targetRole?: string };
+  gap?:             { years?: number; reasons?: GapReason[]; evidence?: string[] };
+  work?:            { title?: string; years?: number; relevance?: "directly-related" | "related" | "unrelated"; docs?: boolean };
+  finance?:         { total?: number; currency?: Currency; source?: FundingSource; proofUploaded?: boolean };
+  immigration?:     { refusals?: "none" | "one" | "multiple"; travelled?: boolean };
+  family?:          { situation?: "alone" | "spouse" | "spouse-and-kids" | "other" };
+  career?:          { goal?: Goal; targetRole?: string };
   scholarships?:    { profile?: string[] };
   "deal-breakers"?: { mustHaves?: string[] };
 }

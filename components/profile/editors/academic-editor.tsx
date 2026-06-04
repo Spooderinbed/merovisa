@@ -11,10 +11,9 @@ export interface AcademicInitial {
 }
 
 const DEGREES = [
-  { value: "high-school", label: "High school" },
+  { value: "higher-secondary", label: "Higher secondary" },
   { value: "bachelors", label: "Bachelor's" },
   { value: "masters", label: "Master's" },
-  { value: "doctorate", label: "Doctorate" },
 ];
 
 export function AcademicEditor({ initial }: { initial: AcademicInitial }) {

@@ -8,7 +8,7 @@ describe("sectionsToStudentProfile", () => {
       destination: { primary: "australia" },
       academic: { degree: "bachelors", gradePercent: 72, gradeSystem: "percentage-nepal", institution: "TU" },
       english: { test: "ielts", overall: 7.0 },
-      finance: { total: 3_000_000, currency: "NPR", source: "parents" },
+      finance: { total: 3_000_000, currency: "NPR", source: "parents-family" },
       career: { goal: "permanent-residency" },
       gap: { years: 2, reasons: ["worked"] },
       "intended-study": { field: "computer-science" },

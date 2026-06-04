@@ -19,12 +19,12 @@ describe("CareerEditor", () => {
       new Response(JSON.stringify({ ok: true }), { status: 200 }),
     );
     render(<CareerEditor initial={{}} />);
-    await userEvent.selectOptions(screen.getByLabelText(/Career goal/i), "jobs-abroad");
+    await userEvent.selectOptions(screen.getByLabelText(/Career goal/i), "best-employment");
     await userEvent.type(screen.getByLabelText(/Target role/i), "Data analyst");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.section).toBe("career");
-    expect(body.patch.goal).toBe("jobs-abroad");
+    expect(body.patch.goal).toBe("best-employment");
     expect(body.patch.targetRole).toBe("Data analyst");
     expect(await screen.findByText(/Saved/i)).toBeInTheDocument();
     fetchMock.mockRestore();

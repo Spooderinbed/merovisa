@@ -1,4 +1,14 @@
 import { z } from "zod";
+import {
+  EDUCATION_LEVELS,
+  GRADE_SYSTEMS,
+  FIELDS_OF_STUDY,
+  GAP_REASONS,
+  FUNDING_SOURCES,
+  GOALS,
+  CURRENCIES,
+  DESTINATIONS,
+} from "@/lib/scoring/types";
 
 const PersonalPatch = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -9,18 +19,18 @@ export type PersonalSectionPatch = z.infer<typeof PersonalPatch>;
 export const PersonalSectionPatchSchema = PersonalPatch;
 
 const DestinationPatch = z.object({
-  primary: z.string().min(1).max(40).optional(),
-  alternates: z.array(z.string().min(1).max(40)).max(5).optional(),
+  primary: z.enum(DESTINATIONS).optional(),
+  alternates: z.array(z.enum(DESTINATIONS)).max(5).optional(),
 });
 const AcademicPatch = z.object({
   institution: z.string().min(1).max(200).optional(),
-  degree: z.enum(["high-school","bachelors","masters","doctorate"]).optional(),
+  degree: z.enum(EDUCATION_LEVELS).optional(),
   gradePercent: z.number().min(0).max(100).optional(),
-  gradeSystem: z.string().min(1).max(80).optional(),
+  gradeSystem: z.enum(GRADE_SYSTEMS).optional(),
 });
 const IntendedStudyPatch = z.object({
-  level: z.enum(["bachelors","masters","doctorate"]).optional(),
-  field: z.string().min(1).max(80).optional(),
+  level: z.enum(EDUCATION_LEVELS).optional(),
+  field: z.enum(FIELDS_OF_STUDY).optional(),
   specialisation: z.string().min(1).max(160).optional(),
 });
 const EnglishPatch = z.object({
@@ -34,7 +44,7 @@ const EnglishPatch = z.object({
 });
 const GapPatch = z.object({
   years: z.number().int().min(0).max(20).optional(),
-  reasons: z.array(z.string().min(1).max(60)).max(5).optional(),
+  reasons: z.array(z.enum(GAP_REASONS)).max(5).optional(),
   evidence: z.array(z.string().min(1).max(160)).max(5).optional(),
 });
 const WorkPatch = z.object({
@@ -45,8 +55,8 @@ const WorkPatch = z.object({
 });
 const FinancePatch = z.object({
   total: z.number().min(0).max(1_000_000_000).optional(),
-  currency: z.enum(["NPR","USD","AUD","INR","BDT","PKR","NGN"]).optional(),
-  source: z.enum(["self","parents","loan","scholarship","mixed"]).optional(),
+  currency: z.enum(CURRENCIES).optional(),
+  source: z.enum(FUNDING_SOURCES).optional(),
   proofUploaded: z.boolean().optional(),
 });
 const ImmigrationPatch = z.object({
@@ -57,7 +67,7 @@ const FamilyPatch = z.object({
   situation: z.enum(["alone","spouse","spouse-and-kids","other"]).optional(),
 });
 const CareerPatch = z.object({
-  goal: z.enum(["permanent-residency","jobs-abroad","back-home","experience"]).optional(),
+  goal: z.enum(GOALS).optional(),
   targetRole: z.string().min(1).max(120).optional(),
 });
 const ScholarshipsPatch = z.object({

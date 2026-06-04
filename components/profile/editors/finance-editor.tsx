@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export interface FinanceInitial {
   total?: number;
   currency?: "NPR" | "USD" | "AUD" | "INR" | "BDT" | "PKR" | "NGN";
-  source?: "self" | "parents" | "loan" | "scholarship" | "mixed";
+  source?: "self-funded" | "parents-family" | "education-loan" | "scholarship-dependent" | "mixed";
   proofUploaded?: boolean;
 }
 
@@ -21,11 +21,11 @@ const CURRENCIES = [
 ];
 
 const SOURCES = [
-  { value: "self", label: "Self-funded" },
-  { value: "parents", label: "Parents/family" },
-  { value: "loan", label: "Education loan" },
-  { value: "scholarship", label: "Scholarship" },
-  { value: "mixed", label: "Mixed" },
+  { value: "self-funded", label: "Self-funded" },
+  { value: "parents-family", label: "Parents/family" },
+  { value: "education-loan", label: "Education loan" },
+  { value: "scholarship-dependent", label: "Scholarship-dependent" },
+  { value: "mixed", label: "Mixed sources" },
 ];
 
 export function FinanceEditor({ initial }: { initial: FinanceInitial }) {

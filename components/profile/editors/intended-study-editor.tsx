@@ -10,9 +10,24 @@ export interface IntendedStudyInitial {
 }
 
 const LEVELS = [
+  { value: "higher-secondary", label: "Higher secondary" },
   { value: "bachelors", label: "Bachelor's" },
   { value: "masters", label: "Master's" },
-  { value: "doctorate", label: "Doctorate" },
+];
+
+const FIELDS = [
+  { value: "computer-science", label: "Computer science" },
+  { value: "business", label: "Business" },
+  { value: "nursing", label: "Nursing" },
+  { value: "engineering", label: "Engineering" },
+  { value: "hospitality", label: "Hospitality" },
+  { value: "accounting", label: "Accounting" },
+  { value: "data-science", label: "Data science" },
+  { value: "education", label: "Education" },
+  { value: "agriculture", label: "Agriculture" },
+  { value: "law", label: "Law" },
+  { value: "arts", label: "Arts" },
+  { value: "other", label: "Other" },
 ];
 
 export function IntendedStudyEditor({ initial }: { initial: IntendedStudyInitial }) {
@@ -26,7 +41,7 @@ export function IntendedStudyEditor({ initial }: { initial: IntendedStudyInitial
     setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (level) patch.level = level;
-    if (field.trim()) patch.field = field.trim();
+    if (field) patch.field = field;
     if (specialisation.trim()) patch.specialisation = specialisation.trim();
     const res = await fetch("/api/profile/section", {
       method: "PATCH",
@@ -50,8 +65,13 @@ export function IntendedStudyEditor({ initial }: { initial: IntendedStudyInitial
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="ise-field" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Field</label>
-        <input id="ise-field" value={field} onChange={(e) => setField(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+        <select id="ise-field" value={field} onChange={(e) => setField(e.target.value)}
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+          <option value="">Select a field</option>
+          {FIELDS.map((f) => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="ise-spec" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Specialisation</label>
