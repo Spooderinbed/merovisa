@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AssessmentResult, DimensionScore } from "@/lib/scoring/types";
 import { cn } from "@/lib/utils";
+import { bandLabel } from "@/lib/scoring/band";
 
 const DIMENSION_META = [
   { key: "academic", label: "Academic fit" },
@@ -34,7 +35,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
             >
               <span className="flex items-center justify-between">
                 <span className="text-ink">{label}</span>
-                <span className="font-mono text-[12.5px] text-ink-faint">{dim.value}/100</span>
+                <span className="font-mono text-[12.5px] text-ink-faint">{bandLabel(dim.value)}</span>
               </span>
               <span className="h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
                 <span

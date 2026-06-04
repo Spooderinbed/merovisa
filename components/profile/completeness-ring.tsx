@@ -1,3 +1,5 @@
+import { bandLabel } from "@/lib/scoring/band";
+
 export function CompletenessRing({
   pct, complete, partial, empty,
 }: { pct: number; complete: number; partial: number; empty: number }) {
@@ -16,7 +18,7 @@ export function CompletenessRing({
             strokeDashoffset={offset}
             transform="rotate(-90 50 50)"
           />
-          <text x="50" y="55" textAnchor="middle" fontSize="20" className="fill-ink font-medium">{pct}%</text>
+          <text x="50" y="55" textAnchor="middle" fontSize="13" className="fill-ink font-medium">{bandLabel(pct)}</text>
         </svg>
         <ul className="flex flex-col gap-1 text-[14px] text-ink-soft">
           <li>{complete} complete</li>

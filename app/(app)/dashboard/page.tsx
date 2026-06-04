@@ -60,7 +60,7 @@ export default async function DashboardPage() {
       <JourneyTimeline currentStep="shortlist" />
       <StatsRow
         universities={shortlist.length}
-        checklistDone={documents.length}
+        documents={documents.length}
         profilePct={completenessPct}
         scholarships={null}
       />

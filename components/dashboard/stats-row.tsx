@@ -1,3 +1,5 @@
+import { bandLabel } from "@/lib/scoring/band";
+
 function Stat({ label, value, href }: { label: string; value: string | number; href?: string }) {
   const body = (
     <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">
@@ -10,12 +12,12 @@ function Stat({ label, value, href }: { label: string; value: string | number; h
 
 export function StatsRow({
   universities,
-  checklistDone,
+  documents,
   profilePct,
   scholarships,
 }: {
   universities: number | null;
-  checklistDone: number | null;
+  documents: number | null;
   profilePct: number;
   scholarships: number | null;
 }) {
@@ -23,8 +25,8 @@ export function StatsRow({
   return (
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Stat label="Universities" value={universities ?? dash} href="/matches" />
-      <Stat label="Checklist" value={checklistDone ?? dash} href="/checklist" />
-      <Stat label="Profile" value={`${profilePct}%`} href="/profile" />
+      <Stat label="Documents" value={documents ?? dash} href="/checklist" />
+      <Stat label="Profile" value={bandLabel(profilePct)} href="/profile" />
       <Stat label="Scholarships" value={scholarships ?? dash} href="/matches" />
     </section>
   );
