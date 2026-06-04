@@ -7,23 +7,34 @@ export interface IeltsResult {
 }
 
 export function parseIelts(text: string): IeltsResult | null {
-  const overall = extractScore(text, /overall\s*(?:band\s*)?score[:\s]*(\d+\.?\d*)/i);
+  const normalized = text.replace(/[|)(}\]{\[]/g, " ").replace(/\s+/g, " ");
+
+  const overall = extractBandScore(normalized, /overall\s*band\s*score[:\s]+(\d+\.?\d*)/i)
+    ?? extractBandScore(normalized, /overall\s*score[:\s]+(\d+\.?\d*)/i)
+    ?? extractBandScore(normalized, /band\s*score[:\s]+(\d+\.?\d*)/i)
+    ?? extractBandScore(normalized, /band[:\s]+(\d+\.?\d*)/i)
+    ?? extractBandScore(normalized, /overall[:\s]+(\d+\.?\d*)/i);
+
+  const listening = extractBandScore(normalized, /listening[:\s]+(\d+\.?\d*)/i);
+  const reading = extractBandScore(normalized, /reading[:\s]+(\d+\.?\d*)/i);
+  const writing = extractBandScore(normalized, /writing[:\s]+(\d+\.?\d*)/i);
+  const speaking = extractBandScore(normalized, /speaking[:\s]+(\d+\.?\d*)/i);
+
   if (overall == null) return null;
 
-  const listening = extractScore(text, /listening[:\s]*(\d+\.?\d*)/i);
-  const reading = extractScore(text, /reading[:\s]*(\d+\.?\d*)/i);
-  const writing = extractScore(text, /writing[:\s]*(\d+\.?\d*)/i);
-  const speaking = extractScore(text, /speaking[:\s]*(\d+\.?\d*)/i);
-
-  if (listening == null || reading == null || writing == null || speaking == null) return null;
-  return { overall, listening, reading, writing, speaking };
+  return {
+    overall,
+    listening: listening ?? overall,
+    reading: reading ?? overall,
+    writing: writing ?? overall,
+    speaking: speaking ?? overall,
+  };
 }
 
-function extractScore(text: string, pattern: RegExp): number | null {
+function extractBandScore(text: string, pattern: RegExp): number | null {
   const m = text.match(pattern);
-  if (!m) return null;
-  const raw = m[1];
-  if (raw === undefined) return null;
-  const n = parseFloat(raw);
-  return isNaN(n) || n < 0 || n > 9 ? null : n;
+  if (!m || m[1] === undefined) return null;
+  const n = parseFloat(m[1]);
+  if (isNaN(n) || n < 0 || n > 9) return null;
+  return n;
 }

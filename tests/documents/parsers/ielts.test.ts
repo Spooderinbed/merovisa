@@ -41,10 +41,15 @@ describe("parseIelts", () => {
     expect(parseIelts(text)).toBeNull();
   });
 
-  it("returns null when any sub-score is missing", () => {
-    const text = `Overall Band Score: 7.0 Listening: 7.5 Reading: 7.0 Speaking: 6.5`;
-    // Writing is missing
-    expect(parseIelts(text)).toBeNull();
+  it("fills missing sub-scores with overall", () => {
+    const text = `Overall Band Score: 7.0 Listening: 7.5 Speaking: 6.5`;
+    const result = parseIelts(text);
+    expect(result).not.toBeNull();
+    expect(result!.overall).toBe(7.0);
+    expect(result!.listening).toBe(7.5);
+    expect(result!.reading).toBe(7.0);
+    expect(result!.writing).toBe(7.0);
+    expect(result!.speaking).toBe(6.5);
   });
 
   it("returns null when scores are out of range", () => {
@@ -60,14 +65,29 @@ describe("parseIelts", () => {
     expect(result!.listening).toBe(9);
   });
 
-  it("handles 'Overall band score' label variant", () => {
-    const text = `
-      Overall band score 7.0
-      Listening 6.5
-      Reading 7.5
-      Writing 6.5
-      Speaking 7.5
-    `;
+  it("handles real Tesseract OCR output from IELTS scorecard photo", () => {
+    const ocrText = `Test Report Form ACADEMIC
+NOTE Admission to undergraduate and pos! graduate courses should be based on the ACADEMIC Reading and Whiting Modules.
+Centre Number Date 20/0CT/2022 Candidate Number 099543
+Candidate Details
+Date of Birth Sex (M/F) [] Scheme Code | Private Candidate
+Country of
+Nationality BANGLADESH
+First Language BANGALI
+Test Results
+| Overall | | CEFR |
+Listening Reading ) Writing 5 Speaking | 6.0 Band 5.0 Level !
+Score ve
+Administrator Comments Centre stamp Validation stamp`;
+    const result = parseIelts(ocrText);
+    expect(result).not.toBeNull();
+    expect(result!.overall).toBeGreaterThanOrEqual(5.0);
+    expect(result!.writing).toBeGreaterThanOrEqual(5.0);
+    expect(result!.speaking).toBe(6.0);
+  });
+
+  it("handles 'Band X.X' without 'Overall' prefix", () => {
+    const text = `Listening 7.0 Reading 6.5 Writing 6.5 Speaking 7.0 Band 7.0`;
     const result = parseIelts(text);
     expect(result).not.toBeNull();
     expect(result!.overall).toBe(7.0);

@@ -46,11 +46,20 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const docKind = kind as DocumentKind;
-  const admin = createSupabaseAdminClient();
+
+  let admin;
+  try {
+    admin = createSupabaseAdminClient();
+  } catch (e) {
+    console.error("Admin client creation failed:", e);
+    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+  }
 
   // Delete existing document for this kind (one per kind)
+  console.log("[upload] checking existing doc for kind:", docKind);
   const existing = await getDocumentByKind(admin, userId, docKind);
   if (existing) {
+    console.log("[upload] replacing existing doc:", existing.id);
     await admin.storage.from("documents").remove([existing.file_path]);
     await deleteDocument(admin, existing.id, userId);
   }
@@ -59,14 +68,17 @@ export async function POST(request: Request): Promise<Response> {
   const timestamp = Date.now();
   const filePath = `${userId}/${docKind}/${timestamp}-${file.name}`;
   const buffer = Buffer.from(await file.arrayBuffer());
+  console.log("[upload] uploading to storage:", filePath, "size:", buffer.length);
 
   const { error: uploadError } = await admin.storage
     .from("documents")
     .upload(filePath, buffer, { contentType: file.type, upsert: false });
 
   if (uploadError) {
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    console.error("[upload] storage upload failed:", uploadError.message);
+    return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 });
   }
+  console.log("[upload] storage upload complete");
 
   // OCR + parse
   const parser = getParser(docKind);
@@ -76,10 +88,15 @@ export async function POST(request: Request): Promise<Response> {
 
   if (parser) {
     try {
+      console.log("[upload] running OCR...");
       const rawText = await recognizeText(buffer);
+      console.log("[upload] OCR complete, text length:", rawText.length);
+      console.log("[upload] OCR raw text:\n---\n" + rawText + "\n---");
       extractedData = parser(rawText);
       status = extractedData ? "extracted" : "failed";
-    } catch {
+      console.log("[upload] parser result:", status);
+    } catch (e) {
+      console.error("[upload] OCR/parse error:", e);
       status = "failed";
     }
   }
@@ -89,6 +106,7 @@ export async function POST(request: Request): Promise<Response> {
   const profileSection = profilePatch?.section ?? null;
 
   // Insert document row
+  console.log("[upload] inserting document row...");
   const docId = await insertDocument(admin, {
     owner: userId,
     kind: docKind,
@@ -99,10 +117,12 @@ export async function POST(request: Request): Promise<Response> {
     profileSection,
     status,
   });
+  console.log("[upload] document row inserted:", docId);
 
   // Patch profile + cascade
   if (profilePatch && extractedData) {
     try {
+      console.log("[upload] patching profile section:", profilePatch.section);
       await patchProfileSection(
         admin,
         userId,
@@ -112,11 +132,13 @@ export async function POST(request: Request): Promise<Response> {
       profileChanges = profilePatch.patch;
       await reScoreAssessment(admin, userId);
       await invalidatePlan(admin, userId);
-    } catch {
-      // best-effort — document is saved regardless
+      console.log("[upload] cascade complete");
+    } catch (e) {
+      console.error("[upload] cascade error:", e);
     }
   }
 
+  console.log("[upload] done, returning response");
   return NextResponse.json({
     id: docId,
     status,
