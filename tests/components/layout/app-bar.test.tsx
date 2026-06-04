@@ -30,8 +30,9 @@ describe("AppBar — app variant", () => {
     expect(screen.getByRole("link", { name: /Matches/i })).toHaveAttribute("href", "/matches");
     expect(screen.getByRole("link", { name: /My plan/i })).toHaveAttribute("href", "/plan");
     expect(screen.getByRole("link", { name: /^Profile$/i })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("link", { name: /Documents/i })).toHaveAttribute("href", "/documents");
     expect(screen.getByRole("link", { name: /Guide/i })).toHaveAttribute("href", "/guide");
-    expect(screen.getByRole("link", { name: /Destinations/i })).toHaveAttribute("href", "/destinations");
+    expect(screen.queryByRole("link", { name: /Destinations/i })).toBeNull();
     expect(screen.getByTestId("user-pill")).toBeInTheDocument();
   });
 });

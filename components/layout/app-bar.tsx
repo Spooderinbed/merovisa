@@ -11,6 +11,9 @@ const NAV_MARKETING = [
   { label: "Why trust us", href: "/trust" },
 ];
 
+// Canonical app nav (post-2026-06-05 reconciliation): Home / Matches /
+// My plan / Profile / Documents / Guide. "Destinations" is a marketing
+// browse concept — signed-in users have personalized /matches instead.
 const NAV_APP = [
   { label: "Home", href: "/dashboard" },
   { label: "Matches", href: "/matches" },
@@ -18,7 +21,6 @@ const NAV_APP = [
   { label: "Profile", href: "/profile" },
   { label: "Documents", href: "/documents" },
   { label: "Guide", href: "/guide" },
-  { label: "Destinations", href: "/destinations" },
 ];
 
 export function AppBar({ variant, user }: { variant: Variant; user?: User | null }) {
