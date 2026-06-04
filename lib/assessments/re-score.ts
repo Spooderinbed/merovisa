@@ -4,11 +4,17 @@ import type { Database, Json } from "@/lib/supabase/types";
 import { getProfile } from "@/lib/profiles/repo";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { sectionsToStudentProfile } from "@/lib/scoring/from-sections";
-import { runAssessment } from "@/lib/scoring/engine";
+import { assembleAssessment } from "@/lib/results/assemble";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
 type DB = SupabaseClient<Database>;
 
+/**
+ * Recompute the user's primary assessment from their current profile sections.
+ * Replaces the entire AssessmentPayload — matches, intake timing, and accuracy
+ * are rebuilt alongside the verdict so /assessment/[id] reflects the latest
+ * profile data, not a half-stale snapshot.
+ */
 export async function reScoreAssessment(db: DB, userId: string): Promise<void> {
   const [profileRow, primaryRow] = await Promise.all([
     getProfile(db, userId),
@@ -19,14 +25,11 @@ export async function reScoreAssessment(db: DB, userId: string): Promise<void> {
 
   const sections = (profileRow.sections as ProfileSections | undefined) ?? {};
   const studentProfile = sectionsToStudentProfile(sections);
-  const freshResult = runAssessment(studentProfile);
-
-  const existingPayload = (primaryRow.result as Record<string, unknown>) ?? {};
-  const updatedPayload = { ...existingPayload, result: freshResult };
+  const freshPayload = assembleAssessment(studentProfile, new Date());
 
   await db
     .from("assessments")
-    .update({ result: updatedPayload as unknown as Json })
+    .update({ result: freshPayload as unknown as Json })
     .eq("id", primaryRow.id)
     .eq("owner", userId);
 }
