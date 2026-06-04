@@ -533,19 +533,36 @@ Add a documents stat to the dashboard:
 
 ## 12. Testing Strategy
 
-### Unit tests
-- Each parser: given sample OCR text, returns correct structured data or null
+### Layer 1: Parser unit tests (no Tesseract, no images)
+Each parser is a pure function `(rawText: string) => ParseResult | null`. Test with hardcoded OCR output strings:
+- Each parser: given sample OCR text matching real document layouts, returns correct structured data
+- Each parser: given garbage/unrelated text, returns null
+- Each parser: edge cases — partial data, different formatting, extra whitespace, mixed case
 - Profile mapping: given extracted data, produces correct section patch
-- `sectionsToMatchInputs`: given profile sections, produces correct MatchInputs (replaces 3 inline copies)
+- `sectionsToMatchInputs`: given profile sections, produces correct MatchInputs
 - `sectionsToStudentProfile`: given profile sections, produces correct StudentProfile
 - Completeness with new sections: adding visa section doesn't drop existing percentages
 - Conditional required fields: loanAmount required only when source = loan
 
-### Integration tests
+### Layer 2: Pipeline integration tests (mock Tesseract)
+Mock `tesseract.js` to return known text strings, test the full pipeline wiring:
 - Upload route: multipart upload → Storage file created → documents row inserted → profile patched → plan regenerated
 - Delete route: file removed from Storage, row deleted, boolean flag reset
 - Re-upload: old file + row replaced, new extraction runs
 - Re-score cascade: upload IELTS → assessment verdict updates
+- Sharp preprocessing: verify grayscale + contrast + resize runs without error on a test buffer
+
+### Layer 3: OCR accuracy tests (real images, CI-safe)
+Generate synthetic document images programmatically with known values (e.g., render an IELTS scorecard template with scores 7.0/7.5/6.5/6.5/7.0 using sharp/canvas). These:
+- Run Tesseract on the synthetic image
+- Assert the parser extracts the expected values
+- Are deterministic and contain no real PII
+- Validate that Tesseract + sharp preprocessing + parser work end-to-end
+
+Additionally, source real template/sample document images from the web (blank IELTS scorecards, sample transcripts) for a `tests/documents/fixtures/` directory. These serve as smoke tests for real-world OCR accuracy.
+
+### Layer 4: Manual smoke testing
+During development, test with real documents (user's own IELTS scorecard, passport, etc.) to validate extraction accuracy on real-world images with varied lighting, angles, and quality.
 
 ### Edge case tests
 - Upload with missing auth → 401
