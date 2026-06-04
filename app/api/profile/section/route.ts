@@ -24,6 +24,10 @@ export async function PATCH(request: Request): Promise<Response> {
 
   const admin = createSupabaseAdminClient();
   const result = await patchProfileSection(admin, data.user.id, parsed.data.section, parsed.data.patch);
-  await invalidatePlan(admin, data.user.id);
+  try {
+    await invalidatePlan(admin, data.user.id);
+  } catch {
+    // best-effort; profile save succeeded
+  }
   return NextResponse.json({ ok: true, completeness: result.completeness }, { status: 200 });
 }
