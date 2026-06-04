@@ -1,16 +1,28 @@
-import Link from "next/link";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { listAllPlanForUser } from "@/lib/plan/repo";
+import { PlanList } from "@/components/plan/plan-list";
 
-export default function PlanPage() {
+export default async function PlanPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const items = await listAllPlanForUser(supabase, user!.id);
   return (
-    <section className="mx-auto w-full max-w-[720px] px-5 py-16 text-center">
-      <Eyebrow>Coming soon</Eyebrow>
-      <h1 className="mt-4 text-[clamp(28px,3.4vw,40px)]">My plan landing in Phase 4.</h1>
-      <p className="mx-auto mt-4 max-w-[52ch] text-[17px] text-ink-soft">
-        A ranked action list — the highest-impact thing you can do today to strengthen your application, with
-        explanations.
-      </p>
-      <Link href="/dashboard" className="mt-7 inline-flex rounded-pill bg-primary px-7 py-[15px] text-[17px] font-medium text-on-primary hover:bg-primary-ink">Back to dashboard</Link>
-    </section>
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
+      <header className="flex flex-col gap-2">
+        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+          Your plan
+        </span>
+        <h1 className="text-[clamp(28px,3.4vw,40px)]">
+          The shortest path to a stronger application.
+        </h1>
+        <p className="max-w-[64ch] text-[16px] text-ink-soft">
+          Ranked by impact on your verdict + visa case. We regenerate this whenever your profile
+          changes.
+        </p>
+      </header>
+      <PlanList items={items} />
+    </div>
   );
 }

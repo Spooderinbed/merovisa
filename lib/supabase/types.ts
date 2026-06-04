@@ -85,6 +85,48 @@ export type Database = {
           },
         ]
       }
+      plan_items: {
+        Row: {
+          body: string | null
+          completed_at: string | null
+          created_at: string
+          id: number
+          impact: string
+          kind: string
+          lift_estimate: string | null
+          owner: string
+          status: string
+          time_estimate: string | null
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: never
+          impact: string
+          kind: string
+          lift_estimate?: string | null
+          owner: string
+          status?: string
+          time_estimate?: string | null
+          title: string
+        }
+        Update: {
+          body?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: never
+          impact?: string
+          kind?: string
+          lift_estimate?: string | null
+          owner?: string
+          status?: string
+          time_estimate?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           completeness: number

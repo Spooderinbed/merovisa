@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 
 const {
   createAnonymousAssessment, getPrimaryAssessmentForUser, getProfile, upsertProfile, getUser,
-  adminInsertSingle,
+  adminInsertSingle, invalidatePlan,
 } = vi.hoisted(() => ({
   createAnonymousAssessment: vi.fn(),
   getPrimaryAssessmentForUser: vi.fn(),
@@ -12,6 +12,7 @@ const {
   upsertProfile: vi.fn(),
   getUser: vi.fn(),
   adminInsertSingle: vi.fn(),
+  invalidatePlan: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -31,6 +32,7 @@ vi.mock("@/lib/assessments/repo", () => ({
   getPrimaryAssessmentForUser,
 }));
 vi.mock("@/lib/profiles/repo", () => ({ getProfile, upsertProfile }));
+vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
 
 import { POST } from "@/app/api/assess/route";
 
@@ -66,6 +68,7 @@ describe("POST /api/assess", () => {
     upsertProfile.mockReset();
     getUser.mockReset();
     adminInsertSingle.mockReset();
+    invalidatePlan.mockReset();
   });
 
   describe("anonymous flow", () => {
@@ -78,6 +81,7 @@ describe("POST /api/assess", () => {
       expect(json.id).toBe("assessment-123");
       expect(json.payload.result.verdict).toBeDefined();
       expect(json.payload.matchedCount).toBeGreaterThan(0);
+      expect(invalidatePlan).not.toHaveBeenCalled();
     });
 
     it("still returns the payload with id:null when persistence fails", async () => {
@@ -88,6 +92,7 @@ describe("POST /api/assess", () => {
       const json = await res.json();
       expect(json.id).toBeNull();
       expect(json.payload.result.verdict).toBeDefined();
+      expect(invalidatePlan).not.toHaveBeenCalled();
     });
   });
 
@@ -112,6 +117,7 @@ describe("POST /api/assess", () => {
       expect(json.id).toBe("as-1");
       expect(createAnonymousAssessment).not.toHaveBeenCalled();
       expect(upsertProfile).toHaveBeenCalled();
+      expect(invalidatePlan).toHaveBeenCalled();
     });
 
     it("does not bootstrap profile when user already has one", async () => {
@@ -125,6 +131,7 @@ describe("POST /api/assess", () => {
       const json = await res.json();
       expect(json.id).toBe("as-2");
       expect(upsertProfile).not.toHaveBeenCalled();
+      expect(invalidatePlan).toHaveBeenCalled();
     });
   });
 });
