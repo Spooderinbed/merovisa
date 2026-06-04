@@ -12,6 +12,7 @@ import { invalidatePlan } from "@/lib/plan/invalidate";
 import { reScoreAssessment } from "@/lib/assessments/re-score";
 import type { Json } from "@/lib/supabase/types";
 import { checkRateLimit, ipFromRequest } from "@/lib/rate-limit/upstash";
+import type { User } from "@supabase/supabase-js";
 
 const FAR_FUTURE = "9999-12-31T00:00:00.000Z";
 
@@ -36,11 +37,13 @@ export async function POST(request: Request): Promise<Response> {
   const payload = assembleAssessment(parsed.data);
 
   let id: string | null = null;
+  let persistFailed = false;
+  let user: User | null = null;
   try {
     const adminDb = createSupabaseAdminClient();
     const supabase = await createSupabaseServerClient();
     const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
+    user = userData.user;
 
     if (user) {
       const existingPrimary = await getPrimaryAssessmentForUser(supabase, user.id);
@@ -68,7 +71,11 @@ export async function POST(request: Request): Promise<Response> {
       }
 
       await invalidatePlan(adminDb, user.id);
-      try { await reScoreAssessment(adminDb, user.id); } catch { /* best-effort */ }
+      try {
+        await reScoreAssessment(adminDb, user.id);
+      } catch (err) {
+        console.error("[/api/assess] reScoreAssessment failed", err);
+      }
     } else {
       id = await createAnonymousAssessment(adminDb, {
         profileSnapshot: parsed.data as unknown as Json,
@@ -78,9 +85,18 @@ export async function POST(request: Request): Promise<Response> {
         expiresAt: assessmentExpiry(),
       });
     }
-  } catch {
+  } catch (err) {
+    console.error("[/api/assess] persist failed", err);
+    persistFailed = true;
     id = null;
   }
 
+  if (persistFailed && user) {
+    // Authenticated users expect persistence; surface the failure.
+    return NextResponse.json(
+      { error: "Failed to save assessment", payload },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ id, payload }, { status: 200 });
 }

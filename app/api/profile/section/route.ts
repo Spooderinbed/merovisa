@@ -27,13 +27,13 @@ export async function PATCH(request: Request): Promise<Response> {
   const result = await patchProfileSection(admin, data.user.id, parsed.data.section, parsed.data.patch);
   try {
     await invalidatePlan(admin, data.user.id);
-  } catch {
-    // best-effort; profile save succeeded
+  } catch (err) {
+    console.error("[profile/section] invalidatePlan failed", err);
   }
   try {
     await reScoreAssessment(admin, data.user.id);
-  } catch {
-    // best-effort — profile save already succeeded
+  } catch (err) {
+    console.error("[profile/section] reScoreAssessment failed", err);
   }
   return NextResponse.json({ ok: true, completeness: result.completeness }, { status: 200 });
 }

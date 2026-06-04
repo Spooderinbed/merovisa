@@ -39,9 +39,27 @@ describe("upsertProfile", () => {
 describe("patchProfileSection", () => {
   it("merges into sections[key] and updates completeness in one go", async () => {
     const existingRow = { sections: { personal: { name: "Old" }, academic: { gradePercent: 70 } } };
-    const { client, calls } = fakeSupabase({ data: existingRow, error: null });
+    // fakeSupabase returns the same result for all calls including getProfile (maybeSingle)
+    // and the update+select (then/builder). Return an array so the update looks like it matched a row.
+    const { client, calls } = fakeSupabase({ data: [{ id: "p1" }], error: null });
     const result = await patchProfileSection(client, "u1", "personal", { name: "New" });
     expect(typeof result.completeness).toBe("number");
     expect(calls.some((c) => c.method === "update")).toBe(true);
+  });
+
+  it("upserts when the UPDATE matches 0 rows (no profile row exists)", async () => {
+    // data: [] simulates 0 rows updated — triggers the upsert fallback
+    const { client, calls } = fakeSupabase({ data: [], error: null });
+    const result = await patchProfileSection(client, "u1", "personal", { name: "New" });
+    expect(typeof result.completeness).toBe("number");
+    expect(calls.some((c) => c.method === "update")).toBe(true);
+    expect(calls.some((c) => c.method === "upsert")).toBe(true);
+  });
+
+  it("throws when the UPDATE returns an error", async () => {
+    const { client } = fakeSupabase({ data: null, error: { message: "db error" } });
+    await expect(patchProfileSection(client, "u1", "personal", { name: "New" })).rejects.toThrow(
+      "patchProfileSection update failed: db error",
+    );
   });
 });

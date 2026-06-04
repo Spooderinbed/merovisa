@@ -59,10 +59,20 @@ export async function patchProfileSection<K extends SectionKey>(
   };
   const { pct } = computeCompleteness(next);
 
-  await db
+  const { data, error } = await db
     .from("profiles")
     .update({ sections: next as unknown as Json, completeness: pct })
-    .eq("owner", userId);
+    .eq("owner", userId)
+    .select("id");
+
+  if (error) {
+    throw new Error(`patchProfileSection update failed: ${error.message}`);
+  }
+
+  // 0-row update means no profile exists yet — upsert one.
+  if (!data || data.length === 0) {
+    await upsertProfile(db, { owner: userId, sections: next, completeness: pct });
+  }
 
   return { completeness: pct, sections: next };
 }

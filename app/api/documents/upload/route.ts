@@ -111,10 +111,18 @@ export async function POST(request: Request): Promise<Response> {
       } else if (flag.section === "work") {
         await patchProfileSection(admin, userId, "work", { docs: true });
       }
+    } catch (err) {
+      console.error("[documents/upload] patchProfileSection failed", err);
+    }
+    try {
       await reScoreAssessment(admin, userId);
+    } catch (err) {
+      console.error("[documents/upload] reScoreAssessment failed", err);
+    }
+    try {
       await invalidatePlan(admin, userId);
-    } catch (e) {
-      console.error("[upload] cascade error:", e);
+    } catch (err) {
+      console.error("[documents/upload] invalidatePlan failed", err);
     }
   }
 

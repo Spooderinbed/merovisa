@@ -133,5 +133,17 @@ describe("POST /api/assess", () => {
       expect(upsertProfile).not.toHaveBeenCalled();
       expect(invalidatePlan).toHaveBeenCalled();
     });
+
+    it("returns 500 (not 200) when persistence throws for an authenticated user", async () => {
+      getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
+      getPrimaryAssessmentForUser.mockRejectedValue(new Error("db down"));
+
+      const res = await POST(req(validProfile));
+      expect(res.status).toBe(500);
+      const json = await res.json();
+      expect(json.error).toBe("Failed to save assessment");
+      // Payload is still included so the client can display results even on failure
+      expect(json.payload.result.verdict).toBeDefined();
+    });
   });
 });

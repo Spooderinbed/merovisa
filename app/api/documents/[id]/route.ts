@@ -51,10 +51,18 @@ export async function DELETE(
         } else if (flag.section === "work") {
           await patchProfileSection(admin, userId, "work", { docs: false });
         }
+      } catch (err) {
+        console.error("[documents/delete] patchProfileSection failed", err);
+      }
+      try {
         await reScoreAssessment(admin, userId);
+      } catch (err) {
+        console.error("[documents/delete] reScoreAssessment failed", err);
+      }
+      try {
         await invalidatePlan(admin, userId);
-      } catch (e) {
-        console.error("[delete] cascade error:", e);
+      } catch (err) {
+        console.error("[documents/delete] invalidatePlan failed", err);
       }
     }
   }
