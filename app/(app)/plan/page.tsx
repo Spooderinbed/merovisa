@@ -1,4 +1,7 @@
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/auth/safe-next";
 import { listAllPlanForUser } from "@/lib/plan/repo";
 import { PlanList } from "@/components/plan/plan-list";
 
@@ -7,7 +10,12 @@ export default async function PlanPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const items = await listAllPlanForUser(supabase, user!.id);
+  if (!user) {
+    const h = await headers();
+    const next = safeNext(h.get("x-pathname")) ?? "/dashboard";
+    redirect(`/auth?next=${encodeURIComponent(next)}`);
+  }
+  const items = await listAllPlanForUser(supabase, user.id);
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
       <header className="flex flex-col gap-2">

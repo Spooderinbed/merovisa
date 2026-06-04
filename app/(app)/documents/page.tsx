@@ -1,4 +1,7 @@
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/auth/safe-next";
 import { listDocumentsForUser } from "@/lib/documents/repo";
 import { DOCUMENT_META, GROUPS, GROUP_LABELS } from "@/lib/documents/types";
 import { DocumentGroup } from "@/components/documents/document-group";
@@ -8,7 +11,11 @@ export default async function DocumentsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    const h = await headers();
+    const next = safeNext(h.get("x-pathname")) ?? "/dashboard";
+    redirect(`/auth?next=${encodeURIComponent(next)}`);
+  }
 
   const documents = await listDocumentsForUser(supabase, user.id);
 

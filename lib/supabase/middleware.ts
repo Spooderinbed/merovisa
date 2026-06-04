@@ -5,7 +5,11 @@ import type { Database } from "./types";
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return NextResponse.next({ request });
+  if (!url || !anonKey) {
+    const r = NextResponse.next({ request });
+    r.headers.set("x-pathname", request.nextUrl.pathname);
+    return r;
+  }
 
   let response = NextResponse.next({ request });
 
@@ -25,8 +29,11 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
     await supabase.auth.getUser();
   } catch {
-    return NextResponse.next({ request });
+    const r = NextResponse.next({ request });
+    r.headers.set("x-pathname", request.nextUrl.pathname);
+    return r;
   }
 
+  response.headers.set("x-pathname", request.nextUrl.pathname);
   return response;
 }

@@ -1,5 +1,8 @@
 import type * as React from "react";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/auth/safe-next";
 import { getProfile } from "@/lib/profiles/repo";
 import { computeCompleteness } from "@/lib/profiles/completeness";
 import { SECTION_KEYS } from "@/lib/profiles/sections";
@@ -75,7 +78,12 @@ function summarize(key: SectionKey, sections: ProfileSections): string {
 export default async function ProfilePage() {
   const supabase = await createSupabaseServerClient();
   const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user!;
+  if (!userData.user) {
+    const h = await headers();
+    const next = safeNext(h.get("x-pathname")) ?? "/dashboard";
+    redirect(`/auth?next=${encodeURIComponent(next)}`);
+  }
+  const user = userData.user;
   const profileRow = await getProfile(supabase, user.id);
   const sections = (profileRow?.sections as ProfileSections | undefined) ?? {};
   const { pct, status } = computeCompleteness(sections);

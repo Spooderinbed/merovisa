@@ -1,4 +1,7 @@
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/auth/safe-next";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { getProfile } from "@/lib/profiles/repo";
 import { listShortlistForUser } from "@/lib/matches/repo";
@@ -28,7 +31,12 @@ function pickPromptKind(profile: { sections: ProfileSections } | null, primary: 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
   const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user!;
+  if (!userData.user) {
+    const h = await headers();
+    const next = safeNext(h.get("x-pathname")) ?? "/dashboard";
+    redirect(`/auth?next=${encodeURIComponent(next)}`);
+  }
+  const user = userData.user;
   const [primaryRow, profileRow, shortlist, documents] = await Promise.all([
     getPrimaryAssessmentForUser(supabase, user.id),
     getProfile(supabase, user.id),

@@ -4,14 +4,19 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export function AuthCard() {
+interface AuthCardProps {
+  nextPath?: string;
+}
+
+export function AuthCard({ nextPath }: AuthCardProps) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
 
   const continueWithGoogle = async () => {
     const supabase = createSupabaseBrowserClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/dashboard")}`;
+    const destination = nextPath ?? "/dashboard";
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
     await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
   };
 

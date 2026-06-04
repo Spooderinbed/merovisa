@@ -10,5 +10,5 @@ export default async function AuthPage({ searchParams }: { searchParams: Promise
   if (data.user) {
     redirect(safeNext(sp.next) ?? "/dashboard");
   }
-  return <AuthCard />;
+  return <AuthCard nextPath={sp.next} />;
 }

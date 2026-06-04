@@ -10,6 +10,9 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
 vi.mock("next/navigation", () => ({ redirect }));
+vi.mock("next/headers", () => ({
+  headers: async () => ({ get: (_key: string) => null }),
+}));
 vi.mock("@/components/layout/app-bar", () => ({
   AppBar: () => <div data-testid="appbar">appbar</div>,
 }));
@@ -25,10 +28,10 @@ describe("(app) layout", () => {
     redirect.mockClear();
   });
 
-  it("redirects to /auth?next=/dashboard when no user", async () => {
+  it("redirects to /auth?next=%2Fdashboard when no user", async () => {
     getUser.mockResolvedValue({ data: { user: null } });
     await expect(AppLayout({ children: <div>kid</div> })).rejects.toThrow("REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/auth?next=/dashboard");
+    expect(redirect).toHaveBeenCalledWith("/auth?next=%2Fdashboard");
   });
 
   it("renders chrome around children when user is signed in", async () => {

@@ -1,4 +1,7 @@
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/auth/safe-next";
 import { getProfile } from "@/lib/profiles/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { listShortlistForUser } from "@/lib/matches/repo";
@@ -15,11 +18,16 @@ export default async function MatchesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) {
+    const h = await headers();
+    const next = safeNext(h.get("x-pathname")) ?? "/dashboard";
+    redirect(`/auth?next=${encodeURIComponent(next)}`);
+  }
   const [profile, programs, universities, shortlist] = await Promise.all([
-    getProfile(supabase, user!.id),
+    getProfile(supabase, user.id),
     listAllPrograms(supabase),
     listAllUniversities(supabase),
-    listShortlistForUser(supabase, user!.id),
+    listShortlistForUser(supabase, user.id),
   ]);
 
   const sections: ProfileSections = (profile?.sections as ProfileSections | undefined) ?? {};
