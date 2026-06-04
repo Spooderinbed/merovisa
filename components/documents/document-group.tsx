@@ -4,10 +4,9 @@ import { DocumentCard } from "./document-card";
 interface DocumentData {
   id: string;
   kind: string;
-  status: string;
   original_name: string;
   file_size: number;
-  extracted_data: Record<string, unknown> | null;
+  signed_url: string | null;
 }
 
 export function DocumentGroup({
@@ -35,10 +34,9 @@ export function DocumentGroup({
                 existing
                   ? {
                       id: existing.id,
-                      status: existing.status as "extracted" | "failed" | "stored",
                       originalName: existing.original_name,
                       fileSize: existing.file_size,
-                      extractedData: existing.extracted_data,
+                      signedUrl: existing.signed_url,
                     }
                   : null
               }

@@ -2,14 +2,14 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { DocumentViewerModal } from "./document-viewer-modal";
 import type { DocumentKindMeta } from "@/lib/documents/types";
 
 interface DocumentData {
   id: string;
-  status: "extracted" | "failed" | "stored";
   originalName: string;
   fileSize: number;
-  extractedData: Record<string, unknown> | null;
+  signedUrl: string | null;
 }
 
 export function DocumentCard({
@@ -22,6 +22,7 @@ export function DocumentCard({
   const [doc, setDoc] = useState<DocumentData | null>(initial);
   const [uploading, setUploading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const upload = async (file: File) => {
@@ -40,18 +41,11 @@ export function DocumentCard({
       const data = await res.json();
       setDoc({
         id: data.id,
-        status: data.status,
         originalName: file.name,
         fileSize: file.size,
-        extractedData: data.extracted_data,
+        signedUrl: null,
       });
-      if (data.status === "extracted") {
-        setNotification("Data extracted and saved to your profile");
-      } else if (data.status === "failed") {
-        setNotification("Could not read this document — try a clearer photo");
-      } else {
-        setNotification("Document stored");
-      }
+      setNotification("Uploaded — refresh to view the image");
     } catch {
       setNotification("Upload failed — please try again");
     } finally {
@@ -69,89 +63,69 @@ export function DocumentCard({
   const fileSize = doc ? `${(doc.fileSize / 1024).toFixed(0)} KB` : null;
 
   return (
-    <div
-      className={`flex flex-col gap-2 rounded-xl border p-4 transition-colors duration-150 ease-calm ${
-        doc ? "border-primary bg-surface" : "border-line bg-bg-tint"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] text-ink">{meta.label}</span>
+    <>
+      <div
+        className={`flex flex-col gap-2 rounded-xl border p-4 transition-colors duration-150 ease-calm ${
+          doc ? "border-primary bg-surface" : "border-line bg-bg-tint"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[15px] text-ink">{meta.label}</span>
+          {doc && (
+            <span className="rounded-pill bg-strong/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-strong">
+              Uploaded
+            </span>
+          )}
+        </div>
+
         {doc && (
-          <span
-            className={`rounded-pill px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
-              doc.status === "extracted"
-                ? "bg-strong/10 text-strong"
-                : doc.status === "failed"
-                  ? "bg-reach/10 text-reach"
-                  : "bg-ink-faint/10 text-ink-faint"
-            }`}
+          <p className="truncate font-mono text-[12px] text-ink-faint">
+            {doc.originalName} · {fileSize}
+          </p>
+        )}
+
+        {notification && <p className="text-[13px] text-ink-soft">{notification}</p>}
+
+        <div className="mt-1 flex flex-wrap gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) upload(f);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            size="sm"
+            variant={doc ? "ghost" : "primary"}
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
           >
-            {doc.status === "extracted" ? "Extracted" : doc.status === "failed" ? "Failed" : "Stored"}
-          </span>
-        )}
-      </div>
-
-      {doc && (
-        <p className="truncate font-mono text-[12px] text-ink-faint">
-          {doc.originalName} · {fileSize}
-        </p>
-      )}
-
-      {doc?.status === "extracted" && doc.extractedData && (
-        <p className="text-[13px] text-ink-soft">{formatExtracted(meta.kind, doc.extractedData)}</p>
-      )}
-
-      {notification && <p className="text-[13px] text-ink-soft">{notification}</p>}
-
-      <div className="mt-1 flex gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) upload(f);
-            e.target.value = "";
-          }}
-        />
-        <Button
-          size="sm"
-          variant={doc ? "ghost" : "primary"}
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-        >
-          {uploading ? "Uploading…" : doc ? "Re-upload" : "Upload"}
-        </Button>
-        {doc && (
-          <Button size="sm" variant="quiet" onClick={handleDelete}>
-            Delete
+            {uploading ? "Uploading…" : doc ? "Re-upload" : "Upload"}
           </Button>
-        )}
+          {doc && doc.signedUrl && (
+            <Button size="sm" variant="ghost" onClick={() => setViewerOpen(true)}>
+              View
+            </Button>
+          )}
+          {doc && (
+            <Button size="sm" variant="quiet" onClick={handleDelete}>
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
 
-function formatExtracted(kind: string, data: Record<string, unknown>): string {
-  switch (kind) {
-    case "ielts":
-    case "pte":
-    case "toefl":
-      return `Overall: ${data.overall} | L: ${data.listening} | R: ${data.reading} | W: ${data.writing} | S: ${data.speaking}`;
-    case "passport":
-      return `${data.name ?? ""}`;
-    case "bachelors-transcript":
-      return `${data.institution ?? ""} · ${data.gradePercent ?? ""}%`;
-    case "bank-statement":
-      return `Balance: ${data.currency ?? ""} ${Number(data.balance ?? 0).toLocaleString()}`;
-    case "employment-letter":
-      return `${data.title ?? ""} · ${data.years ?? ""} years`;
-    case "salary-slip":
-      return `${data.employer ?? ""} · ${data.amount ?? ""}`;
-    case "offer-letter":
-      return `${data.university ?? ""} · ${data.program ?? ""}`;
-    default:
-      return "";
-  }
+      {doc && doc.signedUrl && viewerOpen && (
+        <DocumentViewerModal
+          url={doc.signedUrl}
+          label={meta.label}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
+    </>
+  );
 }
