@@ -38,7 +38,7 @@ describe("generatePlan", () => {
   });
 
   it("suggests safer options when all matches are reach + has primary", () => {
-    const reachMatch = { verdict: "reach", program: {} as never, university: {} as never, reasons: [], scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0 } } as const;
+    const reachMatch = { verdict: "reach" as const, program: {} as never, university: {} as never, reasons: [], scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0 } };
     const items = generatePlan({
       sections: {}, primaryDestinationId: "australia", matches: [reachMatch], policy,
     });
@@ -46,7 +46,7 @@ describe("generatePlan", () => {
   });
 
   it("does not suggest safer options when there are strong matches", () => {
-    const strongMatch = { verdict: "strong", program: {} as never, university: {} as never, reasons: [], scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0 } } as const;
+    const strongMatch = { verdict: "strong" as const, program: {} as never, university: {} as never, reasons: [], scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0 } };
     const items = generatePlan({
       sections: {}, primaryDestinationId: "australia", matches: [strongMatch], policy,
     });
