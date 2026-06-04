@@ -112,6 +112,151 @@ export type Database = {
         }
         Relationships: []
       }
+      programs: {
+        Row: {
+          created_at: string
+          data_quality: string
+          field: string
+          id: string
+          intakes: string[]
+          last_verified: string | null
+          level: string
+          min_english: number | null
+          min_english_band: number | null
+          min_grade: number | null
+          name: string
+          notes: string | null
+          source: string | null
+          tuition_currency: string
+          tuition_max: number | null
+          tuition_min: number | null
+          university_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_quality?: string
+          field: string
+          id: string
+          intakes?: string[]
+          last_verified?: string | null
+          level: string
+          min_english?: number | null
+          min_english_band?: number | null
+          min_grade?: number | null
+          name: string
+          notes?: string | null
+          source?: string | null
+          tuition_currency?: string
+          tuition_max?: number | null
+          tuition_min?: number | null
+          university_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_quality?: string
+          field?: string
+          id?: string
+          intakes?: string[]
+          last_verified?: string | null
+          level?: string
+          min_english?: number | null
+          min_english_band?: number | null
+          min_grade?: number | null
+          name?: string
+          notes?: string | null
+          source?: string | null
+          tuition_currency?: string
+          tuition_max?: number | null
+          tuition_min?: number | null
+          university_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programs_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      universities: {
+        Row: {
+          city: string
+          country: string
+          created_at: string
+          data_quality: string
+          id: string
+          last_verified: string | null
+          name: string
+          ranking_tier: number
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          country: string
+          created_at?: string
+          data_quality?: string
+          id: string
+          last_verified?: string | null
+          name: string
+          ranking_tier: number
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string
+          data_quality?: string
+          id?: string
+          last_verified?: string | null
+          name?: string
+          ranking_tier?: number
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_program_state: {
+        Row: {
+          created_at: string
+          notes: string | null
+          owner: string
+          program_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          notes?: string | null
+          owner: string
+          program_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          notes?: string | null
+          owner?: string
+          program_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_program_state_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
