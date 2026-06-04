@@ -8,6 +8,7 @@ import { assessmentExpiry } from "@/lib/assessments/expiry";
 import { getProfile, upsertProfile } from "@/lib/profiles/repo";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
+import { invalidatePlan } from "@/lib/plan/invalidate";
 import type { Json } from "@/lib/supabase/types";
 
 const FAR_FUTURE = "9999-12-31T00:00:00.000Z";
@@ -56,6 +57,8 @@ export async function POST(request: Request): Promise<Response> {
         const { pct } = computeCompleteness(sections);
         await upsertProfile(adminDb, { owner: user.id, sections, completeness: pct });
       }
+
+      await invalidatePlan(adminDb, user.id);
     } else {
       // Anonymous path
       id = await createAnonymousAssessment(adminDb, {
