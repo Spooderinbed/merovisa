@@ -14,13 +14,15 @@ export function parseSalarySlip(text: string): SalarySlipResult | null {
   const payMatch = netMatch ?? grossMatch;
   if (!payMatch) return null;
 
-  const amount = parseFloat(payMatch[1].replace(/,/g, ""));
+  const rawPay = payMatch[1];
+  if (rawPay === undefined) return null;
+  const amount = parseFloat(rawPay.replace(/,/g, ""));
   if (isNaN(amount) || amount <= 0) return null;
 
   const employerMatch = text.match(/(?:company|employer|organization)[:\s]*(.{2,80})/i);
 
   return {
     amount,
-    employer: employerMatch ? employerMatch[1].trim() : null,
+    employer: employerMatch?.[1]?.trim() ?? null,
   };
 }

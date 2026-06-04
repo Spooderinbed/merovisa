@@ -12,8 +12,8 @@ export function parseOfferLetter(text: string): OfferLetterResult | null {
   if (!uniMatch && !programMatch) return null;
 
   return {
-    university: uniMatch ? uniMatch[1].trim() : null,
-    program: programMatch ? programMatch[1].trim() : null,
-    intake: dateMatch ? dateMatch[1].trim() : null,
+    university: uniMatch?.[1]?.trim() ?? null,
+    program: programMatch?.[1]?.trim() ?? null,
+    intake: dateMatch?.[1]?.trim() ?? null,
   };
 }

@@ -7,9 +7,11 @@ export function parsePassport(text: string): PassportResult | null {
   const nameMatch = text.match(/(?:surname|family\s*name)[:\s]*([A-Z][A-Z ]+)/i);
   const givenMatch = text.match(/(?:given\s*name|first\s*name|prenom)[:\s]*([A-Z][A-Z ]+)/i);
 
+  const givenName = givenMatch?.[1]?.trim();
+  const familyName = nameMatch?.[1]?.trim();
   const name =
-    nameMatch && givenMatch
-      ? `${givenMatch[1].trim()} ${nameMatch[1].trim()}`
+    givenName && familyName
+      ? `${givenName} ${familyName}`
       : null;
 
   const dobMatch = text.match(
@@ -17,7 +19,9 @@ export function parsePassport(text: string): PassportResult | null {
   );
   if (!name || !dobMatch) return null;
 
-  const dob = normalizeDateToIso(dobMatch[1]);
+  const rawDob = dobMatch[1];
+  if (rawDob === undefined) return null;
+  const dob = normalizeDateToIso(rawDob);
   if (!dob) return null;
 
   return { name, dob };
@@ -26,7 +30,10 @@ export function parsePassport(text: string): PassportResult | null {
 function normalizeDateToIso(raw: string): string | null {
   const parts = raw.split(/[\s/.-]+/);
   if (parts.length !== 3) return null;
-  let [a, b, c] = parts.map(Number);
+  const nums = parts.map(Number);
+  let a = nums[0] ?? 0;
+  let b = nums[1] ?? 0;
+  let c = nums[2] ?? 0;
   if (c < 100) c += 1900 + (c > 50 ? 0 : 100);
   // Assume DD/MM/YYYY (most passport formats)
   const day = a,

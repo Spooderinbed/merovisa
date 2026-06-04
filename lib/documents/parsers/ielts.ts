@@ -22,6 +22,8 @@ export function parseIelts(text: string): IeltsResult | null {
 function extractScore(text: string, pattern: RegExp): number | null {
   const m = text.match(pattern);
   if (!m) return null;
-  const n = parseFloat(m[1]);
+  const raw = m[1];
+  if (raw === undefined) return null;
+  const n = parseFloat(raw);
   return isNaN(n) || n < 0 || n > 9 ? null : n;
 }

@@ -14,14 +14,16 @@ export function parseEmploymentLetter(text: string): EmploymentLetterResult | nu
 
   let years: number | null = null;
   if (yearsMatch) {
-    years = parseInt(yearsMatch[1], 10);
+    const rawYears = yearsMatch[1];
+    if (rawYears !== undefined) years = parseInt(rawYears, 10);
   } else if (sinceMatch) {
-    years = new Date().getFullYear() - parseInt(sinceMatch[1], 10);
+    const rawSince = sinceMatch[1];
+    if (rawSince !== undefined) years = new Date().getFullYear() - parseInt(rawSince, 10);
   }
 
   return {
-    title: titleMatch ? titleMatch[1].trim() : null,
-    employer: employerMatch ? employerMatch[1].trim() : null,
+    title: titleMatch?.[1]?.trim() ?? null,
+    employer: employerMatch?.[1]?.trim() ?? null,
     years: years != null && years >= 0 && years <= 40 ? years : null,
   };
 }

@@ -22,6 +22,8 @@ export function parseToefl(text: string): ToeflResult | null {
 function extractToeflScore(text: string, pattern: RegExp, max = 120): number | null {
   const m = text.match(pattern);
   if (!m) return null;
-  const n = parseInt(m[1], 10);
+  const raw = m[1];
+  if (raw === undefined) return null;
+  const n = parseInt(raw, 10);
   return isNaN(n) || n < 0 || n > max ? null : n;
 }

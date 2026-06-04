@@ -22,6 +22,8 @@ export function parsePte(text: string): PteResult | null {
 function extractPteScore(text: string, pattern: RegExp): number | null {
   const m = text.match(pattern);
   if (!m) return null;
-  const n = parseInt(m[1], 10);
+  const raw = m[1];
+  if (raw === undefined) return null;
+  const n = parseInt(raw, 10);
   return isNaN(n) || n < 10 || n > 90 ? null : n;
 }

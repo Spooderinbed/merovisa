@@ -9,12 +9,15 @@ export function parseBankStatement(text: string): BankStatementResult | null {
   );
   if (!balanceMatch) return null;
 
-  const amount = parseFloat(balanceMatch[2].replace(/,/g, ""));
+  const rawAmount = balanceMatch[2];
+  if (rawAmount === undefined) return null;
+  const amount = parseFloat(rawAmount.replace(/,/g, ""));
   if (isNaN(amount) || amount <= 0) return null;
 
   const currencyMatch = text.match(/\b(NPR|AUD|USD|INR|BDT|PKR|NGN|NRs)\b/i);
-  const currency = currencyMatch
-    ? currencyMatch[1].toUpperCase().replace("NRS", "NPR")
+  const matchedCurrency = currencyMatch?.[1];
+  const currency = matchedCurrency
+    ? matchedCurrency.toUpperCase().replace("NRS", "NPR")
     : balanceMatch[1]?.toUpperCase() ?? null;
 
   return { balance: amount, currency };

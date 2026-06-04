@@ -27,7 +27,7 @@ describe("documents repo", () => {
     const { client, calls } = fakeSupabase({ data: [row], error: null });
     const docs = await listDocumentsForUser(client, "u1");
     expect(docs).toHaveLength(1);
-    expect(docs[0].kind).toBe("ielts");
+    expect(docs[0]?.kind).toBe("ielts");
     expect(calls.some((c) => c.method === "from" && c.args[0] === "documents")).toBe(true);
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner" && c.args[1] === "u1")).toBe(true);
   });

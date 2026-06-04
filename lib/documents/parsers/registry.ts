@@ -12,16 +12,17 @@ import { parseOfferLetter } from "./offer-letter";
 type ParseResult = Record<string, unknown> | null;
 type Parser = (rawText: string) => ParseResult;
 
+// Cast each parser to the generic Parser type to satisfy the index signature requirement.
 const PARSERS: Partial<Record<DocumentKind, Parser>> = {
-  ielts: parseIelts,
-  pte: parsePte,
-  toefl: parseToefl,
-  passport: parsePassport,
-  "bachelors-transcript": parseTranscript,
-  "bank-statement": parseBankStatement,
-  "employment-letter": parseEmploymentLetter,
-  "salary-slip": parseSalarySlip,
-  "offer-letter": parseOfferLetter,
+  ielts: parseIelts as Parser,
+  pte: parsePte as Parser,
+  toefl: parseToefl as Parser,
+  passport: parsePassport as Parser,
+  "bachelors-transcript": parseTranscript as Parser,
+  "bank-statement": parseBankStatement as Parser,
+  "employment-letter": parseEmploymentLetter as Parser,
+  "salary-slip": parseSalarySlip as Parser,
+  "offer-letter": parseOfferLetter as Parser,
 };
 
 export function getParser(kind: DocumentKind): Parser | null {

@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      documents: {
+        Row: {
+          id: string
+          owner: string
+          kind: string
+          file_path: string
+          file_size: number
+          original_name: string
+          extracted_data: Json | null
+          profile_section: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          owner: string
+          kind: string
+          file_path: string
+          file_size: number
+          original_name: string
+          extracted_data?: Json | null
+          profile_section?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          owner?: string
+          kind?: string
+          file_path?: string
+          file_size?: number
+          original_name?: string
+          extracted_data?: Json | null
+          profile_section?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       assessments: {
         Row: {
           claimed_at: string | null

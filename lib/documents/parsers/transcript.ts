@@ -10,11 +10,16 @@ export function parseTranscript(text: string): TranscriptResult | null {
 
   let gradePercent: number | null = null;
   if (gpaMatch) {
-    const gpa = parseFloat(gpaMatch[1]);
-    const scale = gpaMatch[2] ? parseFloat(gpaMatch[2]) : 4.0;
-    gradePercent = Math.round((gpa / scale) * 100);
+    const rawGpa = gpaMatch[1];
+    const rawScale = gpaMatch[2];
+    if (rawGpa !== undefined) {
+      const gpa = parseFloat(rawGpa);
+      const scale = rawScale !== undefined ? parseFloat(rawScale) : 4.0;
+      gradePercent = Math.round((gpa / scale) * 100);
+    }
   } else if (pctMatch) {
-    gradePercent = parseFloat(pctMatch[1]);
+    const rawPct = pctMatch[1];
+    if (rawPct !== undefined) gradePercent = parseFloat(rawPct);
   }
 
   if (gradePercent == null || gradePercent < 0 || gradePercent > 100) return null;
@@ -23,7 +28,7 @@ export function parseTranscript(text: string): TranscriptResult | null {
   const degreeMatch = text.match(/(?:bachelor|master|diploma|certificate|b\.?\s*(?:sc|a|tech|e)|m\.?\s*(?:sc|a|tech|e))/i);
 
   return {
-    institution: instMatch ? instMatch[1].trim() : null,
+    institution: instMatch?.[1]?.trim() ?? null,
     degree: degreeMatch ? normalizeDegree(degreeMatch[0]) : null,
     gradePercent,
   };
