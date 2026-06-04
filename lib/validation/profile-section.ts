@@ -26,6 +26,10 @@ const IntendedStudyPatch = z.object({
 const EnglishPatch = z.object({
   test: z.enum(["ielts","pte","toefl"]).optional(),
   overall: z.number().min(0).max(9).optional(),
+  listening: z.number().min(0).max(9).optional(),
+  reading: z.number().min(0).max(9).optional(),
+  writing: z.number().min(0).max(9).optional(),
+  speaking: z.number().min(0).max(9).optional(),
   reportUploaded: z.boolean().optional(),
 });
 const GapPatch = z.object({

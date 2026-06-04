@@ -10,7 +10,7 @@ export interface ProfileSections {
   destination?:     { primary?: string; alternates?: string[] };
   academic?:        { institution?: string; degree?: string; gradePercent?: number; gradeSystem?: string };
   "intended-study"?: { level?: string; field?: string; specialisation?: string };
-  english?:         { test?: "ielts" | "pte" | "toefl"; overall?: number; reportUploaded?: boolean };
+  english?:         { test?: "ielts" | "pte" | "toefl"; overall?: number; listening?: number; reading?: number; writing?: number; speaking?: number; reportUploaded?: boolean };
   gap?:             { years?: number; reasons?: string[]; evidence?: string[] };
   work?:            { title?: string; years?: number; relevance?: string; docs?: boolean };
   finance?:         { total?: number; currency?: string; source?: string; proofUploaded?: boolean };
