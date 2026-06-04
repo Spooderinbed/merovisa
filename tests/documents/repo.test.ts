@@ -61,9 +61,6 @@ describe("documents repo", () => {
       filePath: "u1/ielts/score.pdf",
       fileSize: 2048,
       originalName: "score.pdf",
-      extractedData: { overall: 7.5 },
-      profileSection: "english",
-      status: "extracted",
     });
     expect(id).toBe("d2");
     expect(calls.some((c) => c.method === "insert")).toBe(true);
@@ -78,9 +75,6 @@ describe("documents repo", () => {
       filePath: "u1/passport/p.jpg",
       fileSize: 512,
       originalName: "p.jpg",
-      extractedData: null,
-      profileSection: "personal",
-      status: "stored",
     });
     expect(id).toBeNull();
   });

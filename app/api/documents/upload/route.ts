@@ -3,11 +3,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DOCUMENT_KINDS, type DocumentKind } from "@/lib/documents/types";
 import { getDocumentByKind, insertDocument, deleteDocument } from "@/lib/documents/repo";
-// OCR removed (phase5a rip-out) — will be rewritten in next task
-// import { recognizeText } from "@/lib/documents/ocr";
-// import { getParser } from "@/lib/documents/parsers/registry";
-// import { mapToProfilePatch } from "@/lib/documents/profile-mapping";
-// patchProfileSection / reScoreAssessment / invalidatePlan removed with OCR (phase5a rip-out)
+import { getFlagForKind } from "@/lib/documents/flags";
+import { patchProfileSection } from "@/lib/profiles/repo";
+import { invalidatePlan } from "@/lib/plan/invalidate";
+import { reScoreAssessment } from "@/lib/assessments/re-score";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -53,20 +52,15 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   }
 
-  // Delete existing document for this kind (one per kind)
-  console.log("[upload] checking existing doc for kind:", docKind);
   const existing = await getDocumentByKind(admin, userId, docKind);
   if (existing) {
-    console.log("[upload] replacing existing doc:", existing.id);
     await admin.storage.from("documents").remove([existing.file_path]);
     await deleteDocument(admin, existing.id, userId);
   }
 
-  // Upload to Storage
   const timestamp = Date.now();
   const filePath = `${userId}/${docKind}/${timestamp}-${file.name}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  console.log("[upload] uploading to storage:", filePath, "size:", buffer.length);
 
   const { error: uploadError } = await admin.storage
     .from("documents")
@@ -76,35 +70,32 @@ export async function POST(request: Request): Promise<Response> {
     console.error("[upload] storage upload failed:", uploadError.message);
     return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 });
   }
-  console.log("[upload] storage upload complete");
 
-  // OCR removed — users upload manually for organization only (phase5a rip-out)
-  const extractedData: Record<string, unknown> | null = null;
-  const status: "extracted" | "failed" | "stored" = "stored";
-  const profileChanges: Record<string, unknown> | null = null;
-  const profileSection: string | null = null;
-
-  // Insert document row
-  console.log("[upload] inserting document row...");
   const docId = await insertDocument(admin, {
     owner: userId,
     kind: docKind,
     filePath,
     fileSize: file.size,
     originalName: file.name,
-    extractedData,
-    profileSection,
-    status,
   });
-  console.log("[upload] document row inserted:", docId);
 
-  // Profile patch + cascade removed with OCR (phase5a rip-out)
+  // Auto-flip profile boolean flag if this kind drives one
+  const flag = getFlagForKind(docKind);
+  if (flag) {
+    try {
+      if (flag.section === "english") {
+        await patchProfileSection(admin, userId, "english", { reportUploaded: true });
+      } else if (flag.section === "finance") {
+        await patchProfileSection(admin, userId, "finance", { proofUploaded: true });
+      } else if (flag.section === "work") {
+        await patchProfileSection(admin, userId, "work", { docs: true });
+      }
+      await reScoreAssessment(admin, userId);
+      await invalidatePlan(admin, userId);
+    } catch (e) {
+      console.error("[upload] cascade error:", e);
+    }
+  }
 
-  console.log("[upload] done, returning response");
-  return NextResponse.json({
-    id: docId,
-    status,
-    extracted_data: extractedData,
-    profile_changes: profileChanges,
-  });
+  return NextResponse.json({ id: docId, status: "stored" });
 }

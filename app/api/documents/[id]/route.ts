@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { listDocumentsByKinds } from "@/lib/documents/repo";
+import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSection } from "@/lib/profiles/repo";
-import type { SectionKey } from "@/lib/profiles/sections";
+import { invalidatePlan } from "@/lib/plan/invalidate";
+import { reScoreAssessment } from "@/lib/assessments/re-score";
+import type { DocumentKind } from "@/lib/documents/types";
 
 export async function DELETE(
   request: Request,
@@ -17,7 +21,6 @@ export async function DELETE(
 
   const userId = userData.user.id;
 
-  // Fetch the document to get file_path and kind
   const { data: doc } = await supabase
     .from("documents")
     .select("*")
@@ -31,27 +34,29 @@ export async function DELETE(
 
   const admin = createSupabaseAdminClient();
 
-  // Delete from Storage
   await admin.storage.from("documents").remove([doc.file_path]);
-
-  // Delete DB row
   await admin.from("documents").delete().eq("id", id).eq("owner", userId);
 
-  // Reset boolean flags based on kind
-  const flagResets: Record<string, { section: SectionKey; patch: Record<string, unknown> }> = {
-    ielts:   { section: "english", patch: { reportUploaded: false } },
-    pte:     { section: "english", patch: { reportUploaded: false } },
-    toefl:   { section: "english", patch: { reportUploaded: false } },
-    "bank-statement": { section: "finance", patch: { proofUploaded: false } },
-    "employment-letter": { section: "work", patch: { docs: false } },
-    "salary-slip": { section: "work", patch: { docs: false } },
-  };
+  const docKind = doc.kind as DocumentKind;
+  const flag = getFlagForKind(docKind);
 
-  const reset = flagResets[doc.kind];
-  if (reset) {
-    try {
-      await patchProfileSection(admin, userId, reset.section, reset.patch as any);
-    } catch { /* best-effort */ }
+  if (flag) {
+    const remaining = await listDocumentsByKinds(admin, userId, flag.groupKinds);
+    if (remaining.length === 0) {
+      try {
+        if (flag.section === "english") {
+          await patchProfileSection(admin, userId, "english", { reportUploaded: false });
+        } else if (flag.section === "finance") {
+          await patchProfileSection(admin, userId, "finance", { proofUploaded: false });
+        } else if (flag.section === "work") {
+          await patchProfileSection(admin, userId, "work", { docs: false });
+        }
+        await reScoreAssessment(admin, userId);
+        await invalidatePlan(admin, userId);
+      } catch (e) {
+        console.error("[delete] cascade error:", e);
+      }
+    }
   }
 
   return NextResponse.json({ ok: true });

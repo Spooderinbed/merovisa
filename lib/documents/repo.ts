@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Json } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 import type { DocumentKind } from "./types";
 
 type DB = SupabaseClient<Database>;
@@ -12,9 +12,6 @@ export interface DocumentRow {
   file_path: string;
   file_size: number;
   original_name: string;
-  extracted_data: Record<string, unknown> | null;
-  profile_section: string | null;
-  status: "processing" | "extracted" | "failed" | "stored";
   created_at: string;
 }
 
@@ -41,6 +38,19 @@ export async function getDocumentByKind(
   return (data as unknown as DocumentRow) ?? null;
 }
 
+export async function listDocumentsByKinds(
+  db: DB,
+  userId: string,
+  kinds: DocumentKind[],
+): Promise<DocumentRow[]> {
+  const { data } = await db
+    .from("documents")
+    .select("*")
+    .eq("owner", userId)
+    .in("kind", kinds);
+  return (data ?? []) as unknown as DocumentRow[];
+}
+
 export async function insertDocument(
   db: DB,
   doc: {
@@ -49,9 +59,6 @@ export async function insertDocument(
     filePath: string;
     fileSize: number;
     originalName: string;
-    extractedData: Record<string, unknown> | null;
-    profileSection: string | null;
-    status: DocumentRow["status"];
   },
 ): Promise<string | null> {
   const { data } = await db
@@ -62,9 +69,6 @@ export async function insertDocument(
       file_path: doc.filePath,
       file_size: doc.fileSize,
       original_name: doc.originalName,
-      extracted_data: (doc.extractedData as Json) ?? null,
-      profile_section: doc.profileSection,
-      status: doc.status,
     })
     .select("id")
     .single();
@@ -73,4 +77,13 @@ export async function insertDocument(
 
 export async function deleteDocument(db: DB, docId: string, userId: string): Promise<void> {
   await db.from("documents").delete().eq("id", docId).eq("owner", userId);
+}
+
+export async function getSignedDocumentUrl(
+  db: DB,
+  filePath: string,
+  expiresInSeconds = 3600,
+): Promise<string | null> {
+  const { data } = await db.storage.from("documents").createSignedUrl(filePath, expiresInSeconds);
+  return data?.signedUrl ?? null;
 }

@@ -22,9 +22,6 @@ export type Database = {
           file_path: string
           file_size: number
           original_name: string
-          extracted_data: Json | null
-          profile_section: string | null
-          status: string
           created_at: string
         }
         Insert: {
@@ -34,9 +31,6 @@ export type Database = {
           file_path: string
           file_size: number
           original_name: string
-          extracted_data?: Json | null
-          profile_section?: string | null
-          status?: string
           created_at?: string
         }
         Update: {
@@ -46,9 +40,6 @@ export type Database = {
           file_path?: string
           file_size?: number
           original_name?: string
-          extracted_data?: Json | null
-          profile_section?: string | null
-          status?: string
           created_at?: string
         }
         Relationships: []
