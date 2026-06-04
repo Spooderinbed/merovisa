@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { humanize } from "@/lib/text/humanize";
 
 export interface PrimaryRef {
   id: string;
@@ -9,7 +10,7 @@ export interface PrimaryRef {
 export function AssessInterstitial({ primary }: { primary: PrimaryRef }) {
   return (
     <section className="mx-auto flex w-full max-w-[640px] flex-col gap-5 px-5 py-16 text-center">
-      <h1 className="text-[clamp(28px,3.4vw,40px)]">You have an active assessment for {primary.destination_id}.</h1>
+      <h1 className="text-[clamp(28px,3.4vw,40px)]">You have an active assessment for {humanize(primary.destination_id)}.</h1>
       <p className="text-[17px] text-ink-soft">
         It&apos;s from {primary.created_at.slice(0, 10)}. You can refresh it with your latest profile, or open your
         dashboard to review what you&apos;ve already got.

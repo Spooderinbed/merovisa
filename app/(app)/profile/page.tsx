@@ -7,6 +7,7 @@ import { getProfile } from "@/lib/profiles/repo";
 import { computeCompleteness } from "@/lib/profiles/completeness";
 import { SECTION_KEYS } from "@/lib/profiles/sections";
 import type { ProfileSections, SectionKey } from "@/lib/profiles/sections";
+import { humanize } from "@/lib/text/humanize";
 import { CompletenessRing } from "@/components/profile/completeness-ring";
 import { SectionAccordion } from "@/components/profile/section-accordion";
 import { PersonalEditor } from "@/components/profile/editors/personal-editor";
@@ -60,16 +61,16 @@ function summarize(key: SectionKey, sections: ProfileSections): string {
   if (!s) return "";
   switch (key) {
     case "personal":      return [s.name as string, s.age ? `${s.age}` : "", s.intakeIso ? `${s.intakeIso} intake` : ""].filter(Boolean).join(" · ");
-    case "destination":   return [s.primary as string, ...((s.alternates as string[] | undefined) ?? [])].filter(Boolean).join(", ");
-    case "academic":      return [s.institution as string, s.gradePercent ? `${s.gradePercent}%` : "", s.degree as string].filter(Boolean).join(" · ");
-    case "intended-study":return [s.level as string, s.field as string, s.specialisation as string].filter(Boolean).join(" · ");
+    case "destination":   return [humanize(s.primary as string), ...((s.alternates as string[] | undefined) ?? []).map(humanize)].filter(Boolean).join(", ");
+    case "academic":      return [s.institution as string, s.gradePercent ? `${s.gradePercent}%` : "", humanize(s.degree as string)].filter(Boolean).join(" · ");
+    case "intended-study":return [humanize(s.level as string), humanize(s.field as string), s.specialisation as string].filter(Boolean).join(" · ");
     case "english":       return s.overall ? `IELTS ${s.overall} — ${s.reportUploaded ? "uploaded" : "report not uploaded"}` : "";
-    case "gap":           return [s.years ? `${s.years} year` : "", ...((s.reasons as string[] | undefined) ?? [])].filter(Boolean).join(" · ");
+    case "gap":           return [s.years ? `${s.years} year` : "", ...((s.reasons as string[] | undefined) ?? []).map(humanize)].filter(Boolean).join(" · ");
     case "work":          return [s.title as string, s.years ? `${s.years} yr` : "", s.docs ? "" : "docs missing"].filter(Boolean).join(" · ");
-    case "finance":       return [s.source as string, s.proofUploaded ? "" : "proof not uploaded"].filter(Boolean).join(" · ");
-    case "immigration":   return [s.refusals ? `${s.refusals} refusals` : "", s.travelled === undefined ? "travel history unknown" : ""].filter(Boolean).join(" · ");
-    case "family":        return (s.situation as string) ?? "";
-    case "career":        return [s.goal as string, s.targetRole as string].filter(Boolean).join(" · ");
+    case "finance":       return [humanize(s.source as string), s.proofUploaded ? "" : "proof not uploaded"].filter(Boolean).join(" · ");
+    case "immigration":   return [s.refusals ? `${humanize(s.refusals as string)} refusal${s.refusals !== "one" ? "s" : ""}` : "", s.travelled === undefined ? "travel history unknown" : ""].filter(Boolean).join(" · ");
+    case "family":        return humanize(s.situation as string);
+    case "career":        return [humanize(s.goal as string), s.targetRole as string].filter(Boolean).join(" · ");
     case "scholarships":  return ((s.profile as string[] | undefined) ?? []).join(", ");
     case "deal-breakers": return ((s.mustHaves as string[] | undefined) ?? []).join(", ");
   }

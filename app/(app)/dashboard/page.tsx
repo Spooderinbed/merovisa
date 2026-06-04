@@ -14,6 +14,7 @@ import { StatsRow } from "@/components/dashboard/stats-row";
 import { RecentUpdates } from "@/components/dashboard/recent-updates";
 import type { AssessmentPayload } from "@/lib/results/types";
 import type { ProfileSections } from "@/lib/profiles/sections";
+import { humanize } from "@/lib/text/humanize";
 
 function partOfDay(): "morning" | "afternoon" | "evening" {
   const h = new Date().getHours();
@@ -53,7 +54,7 @@ export default async function DashboardPage() {
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
       <Greeting name={name} partOfDay={partOfDay()} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <SnapshotCard primary={primary} destinationLabel={primaryRow?.destination_id ?? null} />
+        <SnapshotCard primary={primary} destinationLabel={primaryRow?.destination_id ? humanize(primaryRow.destination_id) : null} />
         <PromptCard kind={promptKind} />
       </div>
       <JourneyTimeline currentStep="shortlist" />
