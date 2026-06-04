@@ -25,15 +25,15 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const payload = assembleAssessment(parsed.data);
-  const adminDb = createSupabaseAdminClient();
-  const supabase = await createSupabaseServerClient();
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
 
   let id: string | null = null;
   try {
+    const adminDb = createSupabaseAdminClient();
+    const supabase = await createSupabaseServerClient();
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+
     if (user) {
-      // Signed-in path
       const existingPrimary = await getPrimaryAssessmentForUser(supabase, user.id);
       const { data, error } = await adminDb
         .from("assessments")
@@ -60,7 +60,6 @@ export async function POST(request: Request): Promise<Response> {
 
       await invalidatePlan(adminDb, user.id);
     } else {
-      // Anonymous path
       id = await createAnonymousAssessment(adminDb, {
         profileSnapshot: parsed.data as unknown as Json,
         destinationId: parsed.data.destination,
