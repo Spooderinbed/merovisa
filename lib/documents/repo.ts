@@ -21,7 +21,7 @@ export async function listDocumentsForUser(db: DB, userId: string): Promise<Docu
     .select("*")
     .eq("owner", userId)
     .order("created_at", { ascending: false });
-  return (data ?? []) as unknown as DocumentRow[];
+  return (data ?? []) as DocumentRow[];
 }
 
 export async function getDocumentByKind(
@@ -35,7 +35,7 @@ export async function getDocumentByKind(
     .eq("owner", userId)
     .eq("kind", kind)
     .maybeSingle();
-  return (data as unknown as DocumentRow) ?? null;
+  return (data as DocumentRow) ?? null;
 }
 
 export async function listDocumentsByKinds(
@@ -48,7 +48,7 @@ export async function listDocumentsByKinds(
     .select("*")
     .eq("owner", userId)
     .in("kind", kinds);
-  return (data ?? []) as unknown as DocumentRow[];
+  return (data ?? []) as DocumentRow[];
 }
 
 export async function insertDocument(

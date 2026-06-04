@@ -14,36 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      documents: {
-        Row: {
-          id: string
-          owner: string
-          kind: string
-          file_path: string
-          file_size: number
-          original_name: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          owner: string
-          kind: string
-          file_path: string
-          file_size: number
-          original_name: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          owner?: string
-          kind?: string
-          file_path?: string
-          file_size?: number
-          original_name?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
       assessments: {
         Row: {
           claimed_at: string | null
@@ -80,6 +50,36 @@ export type Database = {
           profile_snapshot?: Json
           result?: Json
           rule_version?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number
+          id: string
+          kind: string
+          original_name: string
+          owner: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size: number
+          id?: string
+          kind: string
+          original_name: string
+          owner: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          kind?: string
+          original_name?: string
+          owner?: string
         }
         Relationships: []
       }
