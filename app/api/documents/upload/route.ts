@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -8,6 +9,11 @@ import { patchProfileSection } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import { reScoreAssessment } from "@/lib/assessments/re-score";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
+import {
+  sanitizeFilename,
+  verifyImageMagic,
+  extensionFor,
+} from "@/lib/documents/upload-validation";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -63,9 +69,19 @@ export async function POST(request: Request): Promise<Response> {
     await deleteDocument(admin, existing.id, userId);
   }
 
-  const timestamp = Date.now();
-  const filePath = `${userId}/${docKind}/${timestamp}-${file.name}`;
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  // Magic-byte check — defense against MIME spoofing.
+  if (!verifyImageMagic(buffer, file.type)) {
+    return NextResponse.json(
+      { error: "File contents do not match the declared image type" },
+      { status: 422 },
+    );
+  }
+
+  const safeOriginalName = sanitizeFilename(file.name);
+  const storageName = `${crypto.randomUUID()}.${extensionFor(file.type)}`;
+  const filePath = `${userId}/${docKind}/${storageName}`;
 
   const { error: uploadError } = await admin.storage
     .from("documents")
@@ -73,7 +89,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (uploadError) {
     console.error("[upload] storage upload failed:", uploadError.message);
-    return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 });
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
   const docId = await insertDocument(admin, {
@@ -81,7 +97,7 @@ export async function POST(request: Request): Promise<Response> {
     kind: docKind,
     filePath,
     fileSize: file.size,
-    originalName: file.name,
+    originalName: safeOriginalName,
   });
 
   // Auto-flip profile boolean flag if this kind drives one
