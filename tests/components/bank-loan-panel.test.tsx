@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { BankLoanPanel } from "@/components/profile/editors/bank-loan-panel";
 import { FinanceEditor } from "@/components/profile/editors/finance-editor";
 
@@ -15,6 +14,14 @@ describe("BankLoanPanel", () => {
   it("renders a sourced footnote, not an unsourced claim", () => {
     render(<BankLoanPanel />);
     expect(screen.getByText(/Nepal Rastra Bank/i)).toBeInTheDocument();
+  });
+
+  it("renders loan pricing for both base-spread and fixed lenders", () => {
+    render(<BankLoanPanel />);
+    // Himalayan: base-spread (Base + 0.5–2.5%)
+    expect(screen.getByText(/Base \+ 0\.5/)).toBeInTheDocument();
+    // NIC Asia: fixed effective rate (8.99% fixed)
+    expect(screen.getByText(/8\.99% fixed/)).toBeInTheDocument();
   });
 });
 
