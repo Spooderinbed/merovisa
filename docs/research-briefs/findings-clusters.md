@@ -1,8 +1,8 @@
 # Entity+attribute clusters (generated, for review)
 
-Rows sharing `category + entity + attribute`. NOTE: most are **atomic enumerations** — one attribute legitimately split into many true rows (e.g. a NOC attachment list, the components of financial-capacity evidence), NOT contradictions. Treat this as a *review aid*, not a conflict list. Genuine contradictions (e.g. two different interest rates for one bank) are resolved at **integration time, per target**, where they actually surface.
+Rows sharing `category + entity + attribute`. Most are atomic enumerations, NOT contradictions. Real contradictions are resolved at integration time, per target.
 
-**41** clusters · **41** multi-valued (claims enumerate or differ in wording) · **0** byte-identical duplicates.
+**41** clusters · **41** multi-valued · **0** byte-identical duplicates.
 
 ### G1 multi-valued — [A] oshc / application details
 
