@@ -8,7 +8,56 @@
 
 ## Meta-prompt (prepend to every research task below)
 
-> You are gathering authoritative, current (2026) Nepal-Australia data for a visa-eligibility platform serving real Nepali students. **Cite every claim** with a URL + date last verified. **Prefer primary sources:** `immi.homeaffairs.gov.au` (DHA), `*.gov.np` (Nepal government), `nrb.org.np` (Nepal Rastra Bank), `moest.gov.np`, individual university `.edu.au` pages. Migration-agent commentary (Aussizz, AHC Lawyers, Visa Empire, KIEC, IDP, Edwise) is acceptable for *operational* knowledge but flag those findings as **"practitioner"** not "authoritative". If a value differs across 2024/2025/2026, give the **current 2026 value** plus a one-line change history. **Never invent.** If something is unclear, say `"unverified — needs confirmation"` rather than guessing. Output as structured Markdown with clear field labels, or as CSV/JSON for tabular data.
+> You are gathering authoritative, current (2026) Nepal-Australia data for a visa-eligibility platform serving real Nepali students. **Cite every claim** with a URL + date last verified. **Prefer primary sources:** `immi.homeaffairs.gov.au` (DHA), `*.gov.np` (Nepal government), `nrb.org.np` (Nepal Rastra Bank), `moest.gov.np`, individual university `.edu.au` pages. If a value differs across 2024/2025/2026, give the **current 2026 value** plus a one-line change history. **Never invent.** If something is unclear, say `"unverified — needs confirmation"` rather than guessing.
+>
+> **Tag every finding with a confidence tier:**
+> - `primary` — the authoritative source stating its *own* facts: a government body (immi.homeaffairs.gov.au / DHA, Nepal Rastra Bank, MoEST), the institution's own page about itself (a `.edu.au` fees page), a bank's own published rates.
+> - `practitioner` — credible secondary expertise: MARA-registered migration agents, established consultancies (Aussizz, AHC Lawyers, KIEC, IDP, Edwise), reputable news outlets, well-sourced how-to guides.
+> - `anecdotal` — forums, Reddit, Quora, personal blogs, social media. Lived experience, unverified.
+>
+> **Follow the Output format in the next section — it is mandatory for every topic.**
+
+---
+
+## Output format (required for every topic)
+
+Every topic returns its findings in one or both of two forms. Read this before starting.
+
+### Form 1 — Entity CSV (catalog topics)
+
+If the topic has a CSV schema in **Output schemas summary** at the foot of this brief — currently **A1, B2, C1, D1, E1, E2, E3, J1, J2** — produce that CSV as the **primary** deliverable: one row per entity, columns exactly as specified, no extra columns.
+
+### Form 2 — Atomic findings table (the universal net)
+
+For topics *without* a CSV schema this table is the **primary** deliverable. For topics *with* a CSV schema, also produce this table to capture every fact that doesn't fit a column (e.g. *"USyd tightened Nepal AL3 scrutiny in 2025"*). **Nothing a topic surfaces may fall outside both forms** — that is the guarantee that no data is lost in transit.
+
+One atomic fact per row:
+
+| ID | Claim | Entity | Attribute | Source URL | Publisher | Source date | Confidence | Type | Caveats |
+|----|-------|--------|-----------|------------|-----------|-------------|------------|------|---------|
+
+**Column rules**
+
+- **ID** — `<topic-code>.NNN`, sequential and zero-padded (e.g. `A3.001`, `A3.002`). Never reuse or skip numbers.
+- **Claim** — exactly ONE self-contained fact. If a sentence holds two figures, dates, or names, split it into two rows. "Bank X needs NPR 4M collateral and takes 21 days" = two rows.
+- **Entity** — the specific subject (e.g. `ANZ Bank`, `NOC certificate`, `Subclass 500`).
+- **Attribute** — the aspect of that entity (e.g. `collateral requirement`, `processing time`, `English requirement`).
+- **Source URL** — a direct link to the page asserting the fact. Not a homepage, not "search Google". If genuinely unsourceable, write `UNSOURCED` and set Confidence `anecdotal` — never drop a fact silently, never present an unsourced claim as fact.
+- **Publisher** — one of: `gov` · `university` · `bank` · `consultancy` · `news` · `forum` · `blog`.
+- **Source date** — publication or last-updated date (`YYYY-MM` is fine; `undated` if none). Mandatory for anything time-sensitive (fees, rates, processing times, deadlines).
+- **Confidence** — `primary` · `practitioner` · `anecdotal` (definitions in the meta-prompt above).
+- **Type** — `data` (a value/figure/list-membership) · `process` (a procedure or eligibility rule) · `contact` (name/office/email/phone/URL) · `red-flag` (scam pattern, refusal reason, pitfall).
+- **Caveats** — conditions, "as of" notes, or contradictions. If two sources disagree, make a row for **each** and note the other row's ID (e.g. `conflicts with A3.014`).
+
+**Hard rules**
+
+1. **Atomicity over brevity** — more rows beats packed rows. Never bundle.
+2. **Exact values only** — real figures, local currency (NPR / AUD), full official names. Never round, summarize, or paraphrase numbers.
+3. **Keep every occurrence** — if three sources assert the same fact, that's three rows. Corroboration is signal; don't dedupe.
+4. **No invention** — if you're inferring rather than reading from a source, say so in Caveats and mark Confidence `anecdotal`.
+5. **End every topic with one line: `Total findings: N`** — the exact row count, so we can verify nothing was lost in transit.
+
+If a finding can't fit the table (e.g. a long process narrative), put a one-row summary in the table and place the full detail in a numbered appendix referenced by that row's ID.
 
 ---
 
@@ -16,8 +65,8 @@
 
 1. **Hand each topic to a separate research agent** in parallel — don't try to make one agent answer 25 things
 2. **Prepend the meta-prompt** to each topic
-3. **Get CSV/JSON for data-heavy ones** (D1, B2, E1, E3, J2) — easiest to integrate
-4. **Get structured markdown** for narrative ones (A2, A3, F1, I2)
+3. **Topics with a CSV schema** (A1, B2, C1, D1, E1, E2, E3, J1, J2) — return the CSV as the primary deliverable **plus** the atomic findings table for anything that doesn't fit a column
+4. **All other topics** — return the **atomic findings table** (see Output format) as the primary deliverable
 5. **Bring back what's ready, don't wait for all 25** — integrate incrementally
 
 Topics are grouped into 10 categories (A–J). Each category has 2–5 prompts.
@@ -704,6 +753,26 @@ provider_name,course_name,course_level,cricos_course_code,duration_weeks,intake_
 ## Scholarships CSV (J2)
 ```csv
 scholarship_name,provider,type,amount_aud,level,eligibility_summary,application_url,deadline,requires_separate_app,nepali_volume_known,last_verified
+```
+
+## Documents inventory CSV (A1)
+```csv
+document_name,document_name_nepali,stage,issuing_authority,how_to_obtain,official_fee_npr,facilitation_cost_npr,processing_time_standard,processing_time_urgent,validity_for_dha,required_attachments,notarization_needed,translation_needed,common_rejection_reasons,who_obtains,source_url,confidence,last_verified
+```
+
+## Visa subclasses CSV (C1)
+```csv
+subclass_code,subclass_name,category,fee_aud_2026,processing_time_band,work_rights,study_rights,family_rights,duration,key_requirements,transitions_to,al3_notes,source_url,confidence,last_verified
+```
+
+## Course-to-career map CSV (E2)
+```csv
+course_field,nepal_career_path,hiring_employers,salary_band_npr,return_credibility,pr_pathway_note,notes,source_url,confidence,last_verified
+```
+
+## English tests CSV (J1)
+```csv
+test_name,provider,nepal_centers,cost_npr,result_speed,validity_years,score_range,dha_minimum,typical_uni_minimum,home_edition_accepted,notes,source_url,confidence,last_verified
 ```
 
 ---
