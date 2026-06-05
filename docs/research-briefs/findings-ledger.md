@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** pending=1114
+**Status:** pending=1049 · used=65
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -157,72 +157,72 @@
 | B.025 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The NOC portal lists noc@moest.gov.np as its contact email. |
 | B.026 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The NOC portal lists +01-6635419 as its contact number. |
 | B.027 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA tells applicants to use the Document Checklist Tool and the online application form for personalised evid… |
-| B.028 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal Bank Ltd. is listed by NRB as a Class A commercial bank with head office at New Road, Kathmandu. |
-| B.029 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Agricultural Development Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Ramshah … |
-| B.030 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nabil Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Teendhara, Kathmandu. |
-| B.031 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal Investment Mega Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Durbarmarg,… |
-| B.032 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Bank Nepal Ltd. is listed by NRB as a Class A commercial bank with head office at Naya Ban… |
-| B.033 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kamaladi, Kathmandu. |
-| B.034 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kesharmahal, Kathmandu. |
-| B.035 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Lazimpat, Kathmandu. |
-| B.036 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Tangal, Kathmandu. |
-| B.037 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Hattisar, Kathmandu. |
-| B.038 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Citizens Bank International Ltd. is listed by NRB as a Class A commercial bank with head office at Narayanhit… |
-| B.039 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Prime Commercial Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kamalpokhari, Ka… |
-| B.040 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Sanima Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Alakapuri, Naxal, Kathmand… |
-| B.041 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Lazimpat, Kathman… |
-| B.042 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Thapathali, Kathmandu. |
-| B.043 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Global IME Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kamaladi, Kathmandu. |
-| B.044 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NMB Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Babarmahal, Kathmandu. |
-| B.045 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Prabhu Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Babarmahal, Kathmandu. |
-| B.046 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Siddhartha Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Hattisar, Kathmandu. |
-| B.047 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Rastriya Banijya Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Singhadurbarplaz… |
-| B.048 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIMB offers a product called NIMB Education Loan. |
-| B.049 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Global IME’s Education Loan supports study abroad. |
-| B.050 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Global IME’s Education Loan maximum tenure is 15 years. |
-| B.051 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s Education Loan minimum amount is NPR300,000. |
-| B.052 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s Education Loan maximum amount is NPR10,000,000. |
-| B.053 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s Education Loan maximum tenure is 20 years excluding moratorium period. |
-| B.054 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s fixed education-loan rate was 8.99% effective from 13 February 2026. |
-| B.055 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Education Loan minimum term-loan amount is NPR500,000. |
-| B.056 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Education Loan maximum term-loan amount is NPR10,000,000. |
-| B.057 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Education Loan maximum tenure is 15 years. |
-| B.058 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Premier Education Loan non-revolving pricing starts at Base Rate + 0.50% p.a. |
-| B.059 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Premier Education Loan non-revolving pricing ends at Base Rate + 2.50% p.a. |
-| B.060 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank’s fixed education-loan rate was 9.00% effective from 15 May 2026. |
-| B.061 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank’s floating education-loan pricing starts at Base Rate + 2.00%. |
-| B.062 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank’s floating education-loan pricing ends at Base Rate + 4.00%. |
-| B.063 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank finances up to 80% of estimated education cost. |
-| B.064 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank’s Education Loan maximum tenure is 15 years. |
-| B.065 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank’s Education Loan documentation includes the offer letter or I-20. |
-| B.066 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank requires NOC at the time of tuition-fee payment. |
-| B.067 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s Education Loan maximum amount is NPR10,000,000. |
-| B.068 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s Education Loan maximum tenure is 20 years. |
-| B.069 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise can finance up to 100% of total study cost. |
-| B.070 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s fixed education-loan pricing for up to 15 years starts at 7.99% p.a. |
-| B.071 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s fixed education-loan pricing for up to 15 years ends at 11.99% p.a. |
-| B.072 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | ADBL finances up to 80% of the total fee officially prescribed by the institution. |
-| B.073 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | ADBL’s Education Loan tenure can be up to 7 years. |
-| B.074 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | ADBL says collateral can include a personal guarantee backed by real-estate assets. |
-| B.075 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Siddhartha Bank’s Education Loan can be priced up to Base Rate + 3.25%. |
-| B.076 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Siddhartha Bank’s education-loan amendment fee is NPR3,000 per case. |
-| B.077 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Prabhu Bank’s education-loan pricing starts at Base Rate + 1.00%. |
-| B.078 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Prabhu Bank’s education-loan pricing ends at Base Rate + 3.00%. |
-| B.079 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NMB Bank’s education-loan new-limit service charge is 0.75%. |
-| B.080 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NMB Bank’s education-loan offer-letter amendment fee is NPR5,000. |
-| B.081 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank’s education-loan pricing starts at a 1.00% premium. |
-| B.082 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank’s education-loan pricing ends at a 3.00% premium. |
-| B.083 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank launched “Education Hub” to provide education-loan and online-payment services under one… |
-| B.084 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal Bank’s 5-year education-loan floating pricing starts at Base Rate + 2.00%. |
-| B.085 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal Bank’s 5-year education-loan floating pricing ends at Base Rate + 3.00%. |
-| B.086 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI’s fixed education-loan rate for up to 5 years is 9.99%. |
-| B.087 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI’s floating education-loan pricing starts at Base Rate + 2.00%. |
-| B.088 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI’s floating education-loan pricing ends at Base Rate + 4.00%. |
-| B.089 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Citizens Bank says its education loan can cover up to 100% of the borrower’s education expenses. |
+| B.028 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal Bank Ltd. is listed by NRB as a Class A commercial bank with head office at New Road, Kathmandu. |
+| B.029 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Agricultural Development Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Ramshah … |
+| B.030 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nabil Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Teendhara, Kathmandu. |
+| B.031 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal Investment Mega Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Durbarmarg,… |
+| B.032 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Bank Nepal Ltd. is listed by NRB as a Class A commercial bank with head office at Naya Ban… |
+| B.033 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kamaladi, Kathmandu. |
+| B.034 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kesharmahal, Kathmandu. |
+| B.035 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Lazimpat, Kathmandu. |
+| B.036 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Tangal, Kathmandu. |
+| B.037 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Hattisar, Kathmandu. |
+| B.038 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Citizens Bank International Ltd. is listed by NRB as a Class A commercial bank with head office at Narayanhit… |
+| B.039 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Prime Commercial Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kamalpokhari, Ka… |
+| B.040 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Sanima Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Alakapuri, Naxal, Kathmand… |
+| B.041 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Lazimpat, Kathman… |
+| B.042 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Thapathali, Kathmandu. |
+| B.043 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Global IME Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Kamaladi, Kathmandu. |
+| B.044 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | NMB Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Babarmahal, Kathmandu. |
+| B.045 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Prabhu Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Babarmahal, Kathmandu. |
+| B.046 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Siddhartha Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Hattisar, Kathmandu. |
+| B.047 | B | primary | contact |  | used | lib/data/source/nepal-banks.ts (+ finance) | Rastriya Banijya Bank Ltd. is listed by NRB as a Class A commercial bank with head office at Singhadurbarplaz… |
+| B.048 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIMB offers a product called NIMB Education Loan. |
+| B.049 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Global IME’s Education Loan supports study abroad. |
+| B.050 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Global IME’s Education Loan maximum tenure is 15 years. |
+| B.051 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s Education Loan minimum amount is NPR300,000. |
+| B.052 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s Education Loan maximum amount is NPR10,000,000. |
+| B.053 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s Education Loan maximum tenure is 20 years excluding moratorium period. |
+| B.054 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia’s fixed education-loan rate was 8.99% effective from 13 February 2026. |
+| B.055 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Education Loan minimum term-loan amount is NPR500,000. |
+| B.056 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Education Loan maximum term-loan amount is NPR10,000,000. |
+| B.057 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Education Loan maximum tenure is 15 years. |
+| B.058 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Premier Education Loan non-revolving pricing starts at Base Rate + 0.50% p.a. |
+| B.059 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Himalayan Bank’s Premier Education Loan non-revolving pricing ends at Base Rate + 2.50% p.a. |
+| B.060 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank’s fixed education-loan rate was 9.00% effective from 15 May 2026. |
+| B.061 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank’s floating education-loan pricing starts at Base Rate + 2.00%. |
+| B.062 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Everest Bank’s floating education-loan pricing ends at Base Rate + 4.00%. |
+| B.063 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank finances up to 80% of estimated education cost. |
+| B.064 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank’s Education Loan maximum tenure is 15 years. |
+| B.065 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank’s Education Loan documentation includes the offer letter or I-20. |
+| B.066 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | Kumari Bank requires NOC at the time of tuition-fee payment. |
+| B.067 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s Education Loan maximum amount is NPR10,000,000. |
+| B.068 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s Education Loan maximum tenure is 20 years. |
+| B.069 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise can finance up to 100% of total study cost. |
+| B.070 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s fixed education-loan pricing for up to 15 years starts at 7.99% p.a. |
+| B.071 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Laxmi Sunrise’s fixed education-loan pricing for up to 15 years ends at 11.99% p.a. |
+| B.072 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | ADBL finances up to 80% of the total fee officially prescribed by the institution. |
+| B.073 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | ADBL’s Education Loan tenure can be up to 7 years. |
+| B.074 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | ADBL says collateral can include a personal guarantee backed by real-estate assets. |
+| B.075 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Siddhartha Bank’s Education Loan can be priced up to Base Rate + 3.25%. |
+| B.076 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Siddhartha Bank’s education-loan amendment fee is NPR3,000 per case. |
+| B.077 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Prabhu Bank’s education-loan pricing starts at Base Rate + 1.00%. |
+| B.078 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Prabhu Bank’s education-loan pricing ends at Base Rate + 3.00%. |
+| B.079 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NMB Bank’s education-loan new-limit service charge is 0.75%. |
+| B.080 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NMB Bank’s education-loan offer-letter amendment fee is NPR5,000. |
+| B.081 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank’s education-loan pricing starts at a 1.00% premium. |
+| B.082 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank’s education-loan pricing ends at a 3.00% premium. |
+| B.083 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | Machhapuchchhre Bank launched “Education Hub” to provide education-loan and online-payment services under one… |
+| B.084 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal Bank’s 5-year education-loan floating pricing starts at Base Rate + 2.00%. |
+| B.085 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal Bank’s 5-year education-loan floating pricing ends at Base Rate + 3.00%. |
+| B.086 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI’s fixed education-loan rate for up to 5 years is 9.99%. |
+| B.087 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI’s floating education-loan pricing starts at Base Rate + 2.00%. |
+| B.088 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Nepal SBI’s floating education-loan pricing ends at Base Rate + 4.00%. |
+| B.089 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Citizens Bank says its education loan can cover up to 100% of the borrower’s education expenses. |
 | B.090 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Prime Student Saving offers a 25% discount on education-loan processing fees. |
-| B.091 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIMB’s branch list total is 251. |
-| B.092 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia reports 316 branches. |
-| B.093 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Global IME reports 352 branch offices. |
+| B.091 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIMB’s branch list total is 251. |
+| B.092 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | NIC Asia reports 316 branches. |
+| B.093 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Global IME reports 352 branch offices. |
 | B.094 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Nepal says overseas-study forex support includes outward telex transfer of tuition fees. |
 | B.095 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Nepal says the education-related USD prepaid card can be issued against a No Objection Let… |
 | B.096 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Nepal says its USD prepaid card can be issued within 10 to 15 minutes. |
