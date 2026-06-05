@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { BankLoanPanel } from "./bank-loan-panel";
 
 export interface FinanceInitial {
   total?: number;
@@ -76,6 +77,7 @@ export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
           ))}
         </select>
       </div>
+      {source === "education-loan" ? <BankLoanPanel /> : null}
       <p className="text-[13px] text-ink-soft">
         Have proof of funds? Upload your bank statement, loan sanction letter, or sponsor income on the{" "}
         <a href="/documents" className="text-primary underline-offset-2 hover:underline">
