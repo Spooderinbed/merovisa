@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { runAssessment } from "@/lib/scoring/engine";
+import { CONFIG_VERSION } from "@/lib/data/scoring-config";
 import type { StudentProfile } from "@/lib/scoring/types";
 
 const baseProfile: StudentProfile = {
@@ -45,6 +46,14 @@ describe("runAssessment", () => {
     const result = runAssessment(baseProfile);
     expect(result.ruleVersion).toMatch(/^v\d+\.\d+\.\d+$/);
     expect(() => new Date(result.computedAt)).not.toThrow();
+  });
+
+  it("stamps the active config version onto the result", () => {
+    // The config version records which sourced data figures backed this verdict,
+    // so an old assessment stays explainable when a number later changes.
+    const result = runAssessment(baseProfile);
+    expect(result.configVersion).toBe(CONFIG_VERSION);
+    expect(result.configVersion).toMatch(/^config-v\d+$/);
   });
 
   it("returns 'strong' for a clearly qualified profile", () => {

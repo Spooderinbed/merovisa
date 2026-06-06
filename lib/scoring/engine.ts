@@ -4,7 +4,7 @@ import { scoreFinancial } from "./financial";
 import { scoreVisa } from "./visa";
 import { scoreProfileStrength } from "./profile-strength";
 import { mapVerdict } from "./verdict";
-import { DIMENSION_WEIGHTS } from "@/lib/data/scoring-config";
+import { DIMENSION_WEIGHTS, CONFIG_VERSION } from "@/lib/data/scoring-config";
 
 const RULE_VERSION = "v0.1.0";
 
@@ -31,6 +31,7 @@ export function runAssessment(profile: StudentProfile): AssessmentResult {
     weighted,
     dimensions: { academic, financial, visa, profileStrength },
     ruleVersion: RULE_VERSION,
+    configVersion: CONFIG_VERSION,
     computedAt: new Date().toISOString(),
   };
 }

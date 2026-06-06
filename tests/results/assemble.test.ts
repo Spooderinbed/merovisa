@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { assembleAssessment } from "@/lib/results/assemble";
+import { CONFIG_VERSION } from "@/lib/data/scoring-config";
 import type { StudentProfile } from "@/lib/scoring/types";
 
 const aarav: StudentProfile = {
@@ -27,5 +28,13 @@ describe("assembleAssessment", () => {
     expect(payload.matches.length).toBeGreaterThan(0);
     expect(payload.intake.nearest).toBeDefined();
     expect(payload.accuracy.level).toBe("Basic");
+  });
+
+  it("stamps the config version into the persisted result payload", () => {
+    // The whole payload is serialized into assessments.result (Json), so the
+    // config version must ride inside result — that is how a new assessment
+    // persists which data figures it used (Phase 6, no DB migration).
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    expect(payload.result.configVersion).toBe(CONFIG_VERSION);
   });
 });

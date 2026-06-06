@@ -111,5 +111,7 @@ export interface AssessmentResult {
     profileStrength: DimensionScore;
   };
   ruleVersion: string;
+  /** Version of the sourced scoring config (lib/data/scoring-config) used. Bumps when any sourced value changes; stamped so an old verdict stays explainable. */
+  configVersion: string;
   computedAt: string;
 }

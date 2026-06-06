@@ -64,7 +64,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "strong-boundary": {
     "verdict": "strong",
@@ -110,7 +111,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "possible-boundary-high": {
     "verdict": "possible",
@@ -156,7 +158,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "possible-mid": {
     "verdict": "possible",
@@ -213,7 +216,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "possible-boundary-low": {
     "verdict": "possible",
@@ -264,7 +268,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "reach-weighted-boundary": {
     "verdict": "reach",
@@ -315,7 +320,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "reach-min-dimension": {
     "verdict": "reach",
@@ -366,7 +372,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "possible-min-dimension": {
     "verdict": "possible",
@@ -417,7 +424,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "germany-threshold": {
     "verdict": "possible",
@@ -469,7 +477,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "not-sure-destination": {
     "verdict": "strong",
@@ -536,7 +545,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "higher-secondary-no-english": {
     "verdict": "possible",
@@ -588,7 +598,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "unknown-currency-passthrough": {
     "verdict": "strong",
@@ -650,7 +661,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "long-gap-below-english": {
     "verdict": "possible",
@@ -696,7 +708,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   },
   "booked-english-aud": {
     "verdict": "possible",
@@ -737,6 +750,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0"
+    "ruleVersion": "v0.1.0",
+    "configVersion": "config-v1"
   }
 }
