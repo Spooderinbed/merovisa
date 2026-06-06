@@ -22,6 +22,8 @@ import { AU_SKILLED_VISA_CHARGES } from "@/lib/data/policy/au-visa-charges-skill
 import { AuSkilledVisaChargesSchema } from "@/lib/data/schema/au-visa-charges-skilled.schema";
 import { IOM_NEPAL_HEALTH_FEES } from "@/lib/data/source/iom-nepal-health-fees";
 import { IomNepalHealthFeesSchema } from "@/lib/data/schema/iom-nepal-health-fees.schema";
+import { AU_ARRIVAL_CASH_GUIDANCE } from "@/lib/data/source/au-arrival-cash-guidance";
+import { AuArrivalCashGuidanceListSchema } from "@/lib/data/schema/au-arrival-cash-guidance.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -187,6 +189,17 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "iom-nepal-health-fees",
     subRecordKeys: [],
     recordInterface: "IomNepalHealthFee",
+  },
+  {
+    // University-published arrival cash recommendations (arrival category H), AUD.
+    // Fact-only: no scorer reads it. Record array, one recommendation per record.
+    category: "H",
+    exportName: "AU_ARRIVAL_CASH_GUIDANCE",
+    data: AU_ARRIVAL_CASH_GUIDANCE,
+    schema: AuArrivalCashGuidanceListSchema,
+    recordLabel: "au-arrival-cash-guidance",
+    subRecordKeys: [],
+    recordInterface: "AuArrivalCashGuidance",
   },
   {
     // Nepal student-visa grant-rate band shown in the matches policy banner.

@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=103 · pending=1011
+**Status:** used=107 · pending=1007
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -934,10 +934,10 @@
 | H.015 | H | practitioner | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Skyscanner says the cheapest time to book Kathmandu–Sydney is around 40 days in advance. |
 | H.016 | H | practitioner | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Expedia’s 2025 Air Hacks report says booking international airfare about two months before departure saved up… |
 | H.017 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney advises international students to arrive at least three weeks before semester starts… |
-| H.018 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | UNSW’s Australia Awards arrival guidance recommends bringing up to AUD 500 for the first few weeks in Austral… |
-| H.019 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | UQ recommends bringing at least AUD 250 cash into Australia. |
-| H.020 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney recommends having at least AUD 1,500 available in a bank account for use on arrival … |
-| H.021 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney recommends carrying about AUD 300 in cash on arrival. |
+| H.018 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | UNSW’s Australia Awards arrival guidance recommends bringing up to AUD 500 for the first few weeks in Austral… |
+| H.019 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | UQ recommends bringing at least AUD 250 cash into Australia. |
+| H.020 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney recommends having at least AUD 1,500 available in a bank account for use on arrival … |
+| H.021 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney recommends carrying about AUD 300 in cash on arrival. |
 | H.022 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | UQ says arriving international students get free transport to their new home from Brisbane Airport. |
 | H.023 | H | practitioner | red-flag |  | pending | app/(app)/journey pre-departure/post-arrival/working | UNSW’s Human Rights Clinic report says finding suitable housing is challenging for international students, pa… |
 | H.024 | H | practitioner | red-flag |  | pending | app/(app)/journey pre-departure/post-arrival/working | UNSW’s Human Rights Clinic report says first-arrival housing difficulty exposes international students to uns… |

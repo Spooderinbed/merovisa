@@ -186,3 +186,19 @@ export interface IomNepalHealthFee extends Provenanced {
   source: string; // IOM Nepal schedule PDF URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A university-published recommendation for how much cash (or accessible funds) a
+ * newly-arrived student should bring to Australia, in AUD. Fact-only data: no
+ * scorer reads it; it backs the eventual arrival-prep guidance and is reconciled
+ * against findings like every other slice.
+ */
+export interface AuArrivalCashGuidance extends Provenanced {
+  id: string; // slug, e.g. "usyd-cash-on-arrival"
+  publisher: string; // university making the recommendation
+  context: "cash-on-person" | "bank-account" | "first-weeks";
+  amountAud: number;
+  qualifier: "minimum" | "up-to" | "approximate";
+  source: string; // guidance page URL
+  lastVerified?: string; // ISO date
+}
