@@ -14,6 +14,8 @@ import { NEPAL_BANKS } from "@/lib/data/source/nepal-banks";
 import { NepalBanksSchema } from "@/lib/data/schema/nepal-banks.schema";
 import { NEPAL_APPLICATION_FEES } from "@/lib/data/source/nepal-application-fees";
 import { NepalApplicationFeesSchema } from "@/lib/data/schema/nepal-application-fees.schema";
+import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-document-processing-times";
+import { NepalDocumentProcessingTimesSchema } from "@/lib/data/schema/nepal-document-processing-times.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -130,6 +132,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-application-fees",
     subRecordKeys: [],
     recordInterface: "NepalApplicationFee",
+  },
+  {
+    // Nepal-side document processing turnarounds (visa-documents category A), in
+    // working days. Companion to NEPAL_APPLICATION_FEES — the time dimension of
+    // the same document journey. Fact-only: no scorer reads it. Record array,
+    // one service per record, reconciled via the record-array walker.
+    category: "A",
+    exportName: "NEPAL_DOCUMENT_PROCESSING_TIMES",
+    data: NEPAL_DOCUMENT_PROCESSING_TIMES,
+    schema: NepalDocumentProcessingTimesSchema,
+    recordLabel: "nepal-document-processing-times",
+    subRecordKeys: [],
+    recordInterface: "NepalDocumentProcessingTime",
   },
   {
     // Nepal student-visa grant-rate band shown in the matches policy banner.

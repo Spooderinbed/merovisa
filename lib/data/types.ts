@@ -124,3 +124,20 @@ export interface NepalApplicationFee extends Provenanced {
   source: string; // fee page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * The typical processing turnaround, in working days, for a Nepal-side document
+ * a Subclass 500 applicant must obtain, as published by the issuing authority.
+ * Companion to NepalApplicationFee: that is the cost dimension of the document
+ * journey, this is the time dimension. Fact-only data: no scorer reads it; it
+ * backs the eventual "how long applying from Nepal takes" timeline and is
+ * reconciled against findings like every other slice.
+ */
+export interface NepalDocumentProcessingTime extends Provenanced {
+  id: string; // slug, e.g. "police-character-urgent"
+  label: string; // human-readable service name
+  issuer: string; // issuing authority, e.g. "Nepal Police"
+  typicalBusinessDays: number; // normal turnaround the issuer publishes, in working days
+  source: string; // service/FAQ page URL
+  lastVerified?: string; // ISO date
+}

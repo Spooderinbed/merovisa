@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=86 · pending=1028
+**Status:** used=90 · pending=1024
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -56,7 +56,7 @@
 | A.046 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | At the passport enrolment centre, registration includes applicant photo and biometrics. |
 | A.047 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR12,000 for a new or renewed 34-page passport at the Department of Pass… |
 | A.048 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR20,000 for a new or renewed 66-page passport at the Department of Pass… |
-| A.049 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says applications lodged at the Department of Passports are normally processed wi… |
+| A.049 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports says applications lodged at the Department of Passports are normally processed wi… |
 | A.050 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says applications lodged at a district or area administration office normally tak… |
 | A.051 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says a citizenship certificate by descent is issued the same day if ev… |
 | A.052 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says the fee for a citizenship certificate by descent is a NPR10 ticke… |
@@ -94,7 +94,7 @@
 | A.084 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Tribhuvan University’s Curriculum Development Centre says it provides equivalence to certificates obtained fr… |
 | A.085 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says regular equivalence costs NPR1,000. |
 | A.086 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says procedural equivalence for a new university or new subject costs NPR4,000. |
-| A.087 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says regular equivalence can be issued within 3 working days if all documents are complete. |
+| A.087 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says regular equivalence can be issued within 3 working days if all documents are complete. |
 | A.088 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says procedural equivalence takes about one month. |
 | A.089 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says certificates and related documents in languages other than Nepali or English must be transl… |
 | A.090 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says uploaded equivalence documents do not need notarisation. |
@@ -105,8 +105,8 @@
 | A.095 | A | primary | process | G8 | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants can apply online from home or through the nearest cyber. |
 | A.096 | A | primary | process | G8 | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the character-certificate service is available through Nagarik App. |
 | A.097 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants outside Nepal can also apply. |
-| A.098 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the standard character-certificate service is generally completed within 2 w… |
-| A.099 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says urgent character-certificate service is generally completed within 1 working… |
+| A.098 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the standard character-certificate service is generally completed within 2 w… |
+| A.099 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says urgent character-certificate service is generally completed within 1 working… |
 | A.100 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the uploaded document set includes a photo, citizenship certificate, passpor… |
 | A.101 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s FAQ says applicants who departed Nepal through an airport other than Tribhuvan International A… |
 | A.102 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says a character certificate issued for foreign affairs, migration and study purp… |
