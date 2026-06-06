@@ -8,6 +8,7 @@ import {
   AU_DHA_CHILD_CAPACITY_AUD,
   AU_DHA_SCHOOL_COSTS_AUD,
 } from "@/lib/data/policy/au-cost-of-living";
+import { NEPAL_AU_STUDENT_VISA_GRANT_RATE_BAND } from "@/lib/data/policy/visa-outcomes";
 
 export const NEPAL_ASSESSMENT_LEVEL = "L3" as const;
 export const NEPAL_ASSESSMENT_LEVEL_EFFECTIVE = "2026-01-09" as const;
@@ -37,9 +38,11 @@ export function tuPctToAuWamBand(tuPct: number): { auWam: string; auGrade: strin
   return NEPAL_TU_TO_AU_WAM[NEPAL_TU_TO_AU_WAM.length - 1]!;
 }
 
-// Visa success rate band for Nepal under Level 3 (practitioner estimate per research §5.4).
-// Surface in UI as a range, never a single number.
-export const NEPAL_AU_VISA_GRANT_RATE_BAND: [number, number] = [55, 65]; // percent
+// Nepal → Australia student-visa grant rate (DHA, quarter Apr–Jun 2025), sourced
+// to findings I.032 (offshore) / I.033 (onshore). Surface in UI as a range,
+// never a single number.
+const _grantRate = NEPAL_AU_STUDENT_VISA_GRANT_RATE_BAND.value;
+export const NEPAL_AU_VISA_GRANT_RATE_BAND: [number, number] = [_grantRate.min, _grantRate.max]; // percent
 
 // Bank statement seasoning recommendation under Level 3 (research §4.3)
 export const NEPAL_L3_BANK_SEASONING_MONTHS = 6;

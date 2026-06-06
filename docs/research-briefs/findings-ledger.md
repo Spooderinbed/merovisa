@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=78 · pending=1036
+**Status:** used=80 · pending=1034
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1045,8 +1045,8 @@
 | I.029 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s SSVF page says a student needs to provide evidence of financial and English language capacity with the … |
 | I.030 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The BP0015 Student visa grant rates resource locked at 2026-03-31 was updated on 30 April 2026 on data.gov.au. |
 | I.031 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA defines grant rate as the number of grants multiplied by 100 and divided by the number of decisions. |
-| I.032 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal’s outside-Australia student visa grant rate was 76.5% in the quarter from 1 April 2025 to 30 June 2025. |
-| I.033 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal’s in-Australia student visa grant rate was 78.7% in the quarter from 1 April 2025 to 30 June 2025. |
+| I.032 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal’s outside-Australia student visa grant rate was 76.5% in the quarter from 1 April 2025 to 30 June 2025. |
+| I.033 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal’s in-Australia student visa grant rate was 78.7% in the quarter from 1 April 2025 to 30 June 2025. |
 | I.034 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The outside-Australia Higher Education sector grant rate was 85.3% in the quarter from 1 April 2025 to 30 Jun… |
 | I.035 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The outside-Australia Vocational Education and Training sector grant rate was 36.3% in the quarter from 1 Apr… |
 | I.036 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal recorded 14,474 Higher Education visa grants outside Australia in 2024-25 to 30 June 2025. |

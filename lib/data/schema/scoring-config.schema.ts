@@ -28,7 +28,8 @@ export const sourced = <T extends z.ZodTypeAny>(valueSchema: T) =>
   z.object({ value: valueSchema, provenance: ConfigProvenanceSchema });
 
 const numberRecord = z.record(z.string(), z.number());
-const rangeRecord = z.record(z.string(), z.object({ min: z.number(), max: z.number() }));
+const minMax = z.object({ min: z.number(), max: z.number() });
+const rangeRecord = z.record(z.string(), minMax);
 
 export const FieldCompetitivenessSchema = sourced(numberRecord);
 export const LevelBonusSchema = sourced(numberRecord);
@@ -42,6 +43,8 @@ export const GapPenaltiesSchema = sourced(
 export const ScalarPenaltySchema = sourced(z.number());
 export const TypicalYearlySchema = sourced(rangeRecord);
 export const DhaLivingSchema = sourced(z.number());
+/** A sourced {min,max} band (e.g. a published rate range cited to its findings). No min<=max refine: cohorts can invert across quarters. */
+export const MinMaxBandSchema = sourced(minMax);
 export const DimensionWeightsSchema = sourced(
   z.object({
     academic: z.number(),

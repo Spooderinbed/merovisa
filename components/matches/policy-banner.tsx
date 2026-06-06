@@ -22,7 +22,7 @@ export function PolicyBanner() {
           per year (effective {DHA_LIVING_COSTS_AUD_EFFECTIVE}).
         </li>
         <li>
-          Nepal grant rate band (practitioner estimate):{" "}
+          Nepal student-visa grant rate (DHA, Apr&ndash;Jun 2025):{" "}
           <strong className="text-ink">
             {NEPAL_AU_VISA_GRANT_RATE_BAND[0]}&ndash;{NEPAL_AU_VISA_GRANT_RATE_BAND[1]}%
           </strong>.
