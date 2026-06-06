@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=93 · pending=1021
+**Status:** used=97 · pending=1017
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -324,20 +324,20 @@
 | C.057 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Skilled temporary visa category was 63 days in April 2026. |
 | C.058 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Work Regional visa is Subclass 491. |
 | C.059 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa lets the holder stay in Australia for 5 years. |
-| C.060 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa base application charge is from AUD4,910.00. |
+| C.060 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa base application charge is from AUD4,910.00. |
 | C.061 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa requires state or territory nomination or eligible family-member sponsorship. |
 | C.062 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa lets the holder live, work and study in a designated regional area of Australia. |
 | C.063 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The permanent regional follow-on visa is Subclass 191. |
-| C.064 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 191 Regional Provisional stream base application charge is from AUD505.00. |
+| C.064 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 191 Regional Provisional stream base application charge is from AUD505.00. |
 | C.065 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 191 applicant must have had taxable income at or above a specific income threshold for at least 3 … |
 | C.066 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Independent points-tested visa is Subclass 189. |
 | C.067 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 189 points-tested stream lets invited workers live and work permanently anywhere in Australia. |
-| C.068 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 189 points-tested stream base application charge is from AUD4,910.00. |
+| C.068 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 189 points-tested stream base application charge is from AUD4,910.00. |
 | C.069 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Nominated visa is Subclass 190. |
 | C.070 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 190 visa lets nominated skilled workers live and work in Australia as permanent residents. |
 | C.071 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Employer Nomination Scheme visa is Subclass 186. |
 | C.072 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 186 visa lets skilled workers nominated by an employer live in Australia permanently. |
-| C.073 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 186 visa base application charge is from AUD4,910.00. |
+| C.073 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 186 visa base application charge is from AUD4,910.00. |
 | C.074 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of Subclass 858 is National Innovation visa. |
 | C.075 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The National Innovation visa is a permanent visa for exceptionally talented migrants from across the world. |
 | C.076 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | An invitation is needed to apply for the National Innovation visa. |

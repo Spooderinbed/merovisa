@@ -155,3 +155,19 @@ export interface AuPaymentSurcharge extends Provenanced {
   source: string; // DHA surcharges page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * The base (primary-applicant) application charge for an Australian skilled or
+ * employer-sponsored visa subclass, in AUD — the "from" figure DHA publishes on
+ * the visa-listing page. Fact-only data: no scorer reads it; it backs the
+ * eventual post-study visa-pathway cost view and is reconciled against findings
+ * like every other slice.
+ */
+export interface AuSkilledVisaCharge extends Provenanced {
+  id: string; // slug, e.g. "skilled-491"
+  subclass: number; // visa subclass number, e.g. 491
+  visaName: string; // official visa name
+  baseFeeAud: number; // base application charge, primary applicant ("from")
+  source: string; // DHA visa-listing page URL
+  lastVerified?: string; // ISO date
+}

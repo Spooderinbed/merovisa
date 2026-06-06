@@ -18,6 +18,8 @@ import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-documen
 import { NepalDocumentProcessingTimesSchema } from "@/lib/data/schema/nepal-document-processing-times.schema";
 import { AU_PAYMENT_SURCHARGES } from "@/lib/data/policy/au-payment-surcharges";
 import { AuPaymentSurchargesSchema } from "@/lib/data/schema/au-payment-surcharges.schema";
+import { AU_SKILLED_VISA_CHARGES } from "@/lib/data/policy/au-visa-charges-skilled";
+import { AuSkilledVisaChargesSchema } from "@/lib/data/schema/au-visa-charges-skilled.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -159,6 +161,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-payment-surcharges",
     subRecordKeys: [],
     recordInterface: "AuPaymentSurcharge",
+  },
+  {
+    // DHA base application charges for skilled/employer-sponsored visa subclasses
+    // (visa-docs category C), in AUD. Fact-only: no scorer reads it. Record array,
+    // one subclass per record.
+    category: "C",
+    exportName: "AU_SKILLED_VISA_CHARGES",
+    data: AU_SKILLED_VISA_CHARGES,
+    schema: AuSkilledVisaChargesSchema,
+    recordLabel: "au-skilled-visa-charges",
+    subRecordKeys: [],
+    recordInterface: "AuSkilledVisaCharge",
   },
   {
     // Nepal student-visa grant-rate band shown in the matches policy banner.
