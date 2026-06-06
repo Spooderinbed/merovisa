@@ -32,6 +32,8 @@ import { AUSTRALIA_AWARDS_SCHOLARSHIPS } from "@/lib/data/source/australia-award
 import { AustraliaAwardsScholarshipsSchema } from "@/lib/data/schema/australia-awards-scholarship.schema";
 import { AU_STUDENT_VISA_LIMITS } from "@/lib/data/policy/au-student-visa-limits";
 import { AuStudentVisaLimitsSchema } from "@/lib/data/schema/au-student-visa-limits.schema";
+import { AU_STUDENT_WORKER_WAGES } from "@/lib/data/source/au-student-worker-wages";
+import { AuStudentWorkerWagesSchema } from "@/lib/data/schema/au-student-worker-wages.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -270,5 +272,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-student-visa-limits",
     subRecordKeys: [],
     recordInterface: "AuStudentVisaLimit",
+  },
+  {
+    // AU student-worker wages & super (arrival category H): the ATO super
+    // guarantee rate, the Fair Work National Minimum Wage (current + announced),
+    // and the Hospitality Award casual introductory penalty ladder. One rate per
+    // record (ratePct or hourlyRateAud). Fact-only: no scorer reads it.
+    category: "H",
+    exportName: "AU_STUDENT_WORKER_WAGES",
+    data: AU_STUDENT_WORKER_WAGES,
+    schema: AuStudentWorkerWagesSchema,
+    recordLabel: "au-student-worker-wages",
+    subRecordKeys: [],
+    recordInterface: "AuWorkerWage",
   },
 ];

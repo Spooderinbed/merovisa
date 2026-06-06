@@ -284,3 +284,24 @@ export interface AuStudentVisaLimit extends Provenanced {
   source: string; // DHA page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A wage or superannuation figure a student worker in Australia needs: the super
+ * guarantee rate (a percent), or an hourly wage (AUD) — the National Minimum
+ * Wage or a named-award penalty rate. Each record sets exactly one rate field:
+ * `ratePct` for the super guarantee, `hourlyRateAud` for wages. Fact-only data:
+ * no scorer reads it; it backs the eventual working-in-Australia guidance and is
+ * reconciled against findings like every other slice.
+ */
+export interface AuWorkerWage extends Provenanced {
+  id: string; // slug, e.g. "super-guarantee-rate"
+  label: string; // human-readable figure name
+  wageType: "super-guarantee" | "national-minimum-wage" | "award-penalty";
+  ratePct?: number; // set only when wageType is "super-guarantee"
+  hourlyRateAud?: number; // set only for a wage (national-minimum-wage or award-penalty)
+  award?: string; // award name, set only for "award-penalty"
+  penaltyDay?: "ordinary" | "saturday" | "sunday" | "public-holiday"; // set only for "award-penalty"
+  status?: "current" | "announced"; // distinguishes an operative figure from an announced-not-yet-operative one
+  source: string; // ATO / Fair Work page URL
+  lastVerified?: string; // ISO date
+}

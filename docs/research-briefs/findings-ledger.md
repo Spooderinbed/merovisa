@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=131 · pending=983
+**Status:** used=138 · pending=976
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -981,13 +981,13 @@
 | H.062 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | ATO says the DASP tax rate for working holiday makers is 65%. |
 | H.063 | H | anecdotal | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | NRB thresholds distinguishing inbound remittances from student-source income versus employment-source income … |
 | H.064 | H | anecdotal | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Current 2026 city-by-city weekly rates for UniLodge, Iglu, Scape and Y Suites were unverified — needs confirm… |
-| H.065 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says the super guarantee rate is 12% from 1 July 2025. |
-| H.066 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Fair Work says the National Minimum Wage is AUD 24.95 per hour from 1 July 2025. |
-| H.067 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Fair Work says the National Minimum Wage will be AUD 26.44 per hour from 1 July 2026. |
-| H.068 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory ordinary hourly rate is AUD 30.35. |
-| H.069 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory Saturday hourly rate is AUD 36.42. |
-| H.070 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory Sunday hourly rate is AUD 42.49. |
-| H.071 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory public-holiday hourly rate is AUD 60.70. |
+| H.065 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | ATO says the super guarantee rate is 12% from 1 July 2025. |
+| H.066 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Fair Work says the National Minimum Wage is AUD 24.95 per hour from 1 July 2025. |
+| H.067 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Fair Work says the National Minimum Wage will be AUD 26.44 per hour from 1 July 2026. |
+| H.068 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory ordinary hourly rate is AUD 30.35. |
+| H.069 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory Saturday hourly rate is AUD 36.42. |
+| H.070 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory Sunday hourly rate is AUD 42.49. |
+| H.071 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Under the Hospitality Industry Award, the adult casual introductory public-holiday hourly rate is AUD 60.70. |
 | H.072 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | Home Affairs says Student visa holders can work up to 48 hours a fortnight when the course is in session. |
 | H.073 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | Home Affairs says a fortnight is a period of 14 days starting on a Monday. |
 | H.074 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | Home Affairs says Student visa holders can work unlimited hours when the course is not in session. |
