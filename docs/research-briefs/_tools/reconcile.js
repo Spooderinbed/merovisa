@@ -103,6 +103,52 @@ function collectFindingRefs(data, opts = {}) {
 }
 
 /**
+ * (d) Conflict gate. A contradiction is a set of findings linked by
+ * `conflict_with` (treated as symmetric + transitive). At most one member may
+ * be `used` — more than one means two contradictory values are both shipping.
+ * Returns CONFLICT_UNRESOLVED errors. Pure — operates on the findings alone.
+ */
+function conflictGate(findings) {
+  const byId = new Map(findings.map((f) => [f.id, f]));
+  const adj = new Map();
+  const link = (a, b) => {
+    if (!adj.has(a)) adj.set(a, new Set());
+    adj.get(a).add(b);
+  };
+  for (const f of findings) {
+    if (f.conflict_with == null) continue;
+    const partners = Array.isArray(f.conflict_with) ? f.conflict_with : [f.conflict_with];
+    for (const p of partners) {
+      link(f.id, p);
+      link(p, f.id);
+    }
+  }
+  const errors = [];
+  const seen = new Set();
+  for (const f of findings) {
+    if (!adj.has(f.id) || seen.has(f.id)) continue;
+    const comp = [];
+    const queue = [f.id];
+    seen.add(f.id);
+    while (queue.length) {
+      const id = queue.shift();
+      comp.push(id);
+      for (const nb of adj.get(id) || []) {
+        if (!seen.has(nb)) {
+          seen.add(nb);
+          queue.push(nb);
+        }
+      }
+    }
+    const used = comp.filter((id) => byId.get(id) && byId.get(id).status === "used").sort();
+    if (used.length > 1) {
+      errors.push(`CONFLICT_UNRESOLVED {${comp.slice().sort().join(",")}} has ${used.length} used: ${used.join(",")}`);
+    }
+  }
+  return errors;
+}
+
+/**
  * @param findings  array of finding objects (from findings/*.jsonl)
  * @param codeRefs  array of { recordPath, interface?, findingRefs[], values[] }
  * @param exempt    { provenanceExemptInterfaces?[], findingExemptIds?[] }
@@ -150,8 +196,11 @@ function reconcileCore({ findings, codeRefs, exempt = {} }) {
     if (f.value_status === "unset") errors.push(`USED_UNSET ${f.id}`);
   }
 
+  // pass 3 — (d) conflict gate: a contradiction may ship at most one used member
+  errors.push(...conflictGate(findings));
+
   const usedCount = findings.filter((f) => f.status === "used").length;
   return { errors, report: { total: findings.length, used: usedCount, referenced: referenced.size } };
 }
 
-module.exports = { reconcileCore, recordContainsValue, collectFindingRefs, scalarLeaves };
+module.exports = { reconcileCore, conflictGate, recordContainsValue, collectFindingRefs, scalarLeaves };
