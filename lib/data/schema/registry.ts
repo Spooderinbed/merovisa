@@ -22,8 +22,8 @@ import {
   AU_DHA_INCOME_METHOD_THRESHOLD_AUD,
 } from "@/lib/data/policy/au-cost-of-living";
 import { AU_SUBCLASS_500_APPLICATION_CHARGE_AUD } from "@/lib/data/policy/au-visa-fees";
-import { NEPAL_AU_STUDENT_VISA_GRANT_RATE_BAND } from "@/lib/data/policy/visa-outcomes";
-import { DhaLivingSchema, MinMaxBandSchema } from "@/lib/data/schema/scoring-config.schema";
+import { NEPAL_AU_STUDENT_VISA_GRANT_RATE } from "@/lib/data/policy/visa-outcomes";
+import { DhaLivingSchema, GrantRateCohortsSchema } from "@/lib/data/schema/scoring-config.schema";
 
 export interface DataModuleEntry {
   /** Research category this module integrates (A–J). Also locates findings/<category>.jsonl. */
@@ -137,9 +137,9 @@ export const DATA_MODULES: DataModuleEntry[] = [
     // scorer reads it. recordLabel must equal the used_by prefix the flip tool
     // writes: nepal-visa-grant-rate[0].
     category: "I",
-    exportName: "NEPAL_AU_STUDENT_VISA_GRANT_RATE_BAND",
-    data: NEPAL_AU_STUDENT_VISA_GRANT_RATE_BAND,
-    schema: MinMaxBandSchema,
+    exportName: "NEPAL_AU_STUDENT_VISA_GRANT_RATE",
+    data: NEPAL_AU_STUDENT_VISA_GRANT_RATE,
+    schema: GrantRateCohortsSchema,
     recordLabel: "nepal-visa-grant-rate",
     subRecordKeys: [],
     recordInterface: "Sourced",

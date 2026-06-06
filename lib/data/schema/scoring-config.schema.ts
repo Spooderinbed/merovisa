@@ -43,8 +43,10 @@ export const GapPenaltiesSchema = sourced(
 export const ScalarPenaltySchema = sourced(z.number());
 export const TypicalYearlySchema = sourced(rangeRecord);
 export const DhaLivingSchema = sourced(z.number());
-/** A sourced {min,max} band (e.g. a published rate range cited to its findings). No min<=max refine: cohorts can invert across quarters. */
-export const MinMaxBandSchema = sourced(minMax);
+/** Grant rate (%) by application cohort, each bound cited to its finding. Named fields (not min/max) so the offshore/onshore meaning survives a quarter where the two invert. */
+export const GrantRateCohortsSchema = sourced(
+  z.object({ offshore: z.number().min(0).max(100), onshore: z.number().min(0).max(100) }),
+);
 export const DimensionWeightsSchema = sourced(
   z.object({
     academic: z.number(),

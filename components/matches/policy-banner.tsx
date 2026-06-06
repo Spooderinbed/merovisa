@@ -23,9 +23,9 @@ export function PolicyBanner() {
         </li>
         <li>
           Nepal student-visa grant rate (DHA, Apr&ndash;Jun 2025):{" "}
-          <strong className="text-ink">
-            {NEPAL_AU_VISA_GRANT_RATE_BAND[0]}&ndash;{NEPAL_AU_VISA_GRANT_RATE_BAND[1]}%
-          </strong>.
+          <strong className="text-ink">{NEPAL_AU_VISA_GRANT_RATE_BAND[0]}%</strong> applying from
+          outside Australia, <strong className="text-ink">{NEPAL_AU_VISA_GRANT_RATE_BAND[1]}%</strong>{" "}
+          from within.
         </li>
       </ul>
     </aside>
