@@ -119,7 +119,7 @@ export interface NepalBank extends Provenanced {
 export interface NepalApplicationFee extends Provenanced {
   id: string; // slug, e.g. "vfs-biometric"
   label: string; // human-readable fee name
-  kind: "english-test" | "visa-logistics" | "medical";
+  kind: "english-test" | "visa-logistics" | "medical" | "document";
   amountNpr: number;
   source: string; // fee page URL
   lastVerified?: string; // ISO date

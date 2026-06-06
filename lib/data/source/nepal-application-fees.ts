@@ -2,8 +2,9 @@ import type { NepalApplicationFee } from "@/lib/data/types";
 
 /**
  * Nepal-side out-of-pocket fees a Subclass 500 applicant pays during the
- * application journey — English test, visa logistics (VFS), and the panel
- * medical. Amounts in NPR, each traced to its finding.
+ * application journey — English test, visa logistics (VFS), the panel medical,
+ * and government documents (passport, citizenship, academic equivalence).
+ * Amounts in NPR, each traced to its finding.
  *
  * Fact-only data: no scorer reads it, so it moves no verdict. It backs the
  * eventual "cost of applying from Nepal" breakdown and is machine-checked
@@ -15,6 +16,9 @@ import type { NepalApplicationFee } from "@/lib/data/types";
  */
 const VFS_KATHMANDU_SOURCE = "https://visa.vfsglobal.com/npl/en/aus/attend-centre/kathmandu";
 const IDP_KATHMANDU_SOURCE = "https://ielts.org/test-centres/idp-education-nepal-private-ltd-kathmandu-test-room";
+const PASSPORT_DEPT_SOURCE = "https://nepalpassport.gov.np/process/-41";
+const DAO_TANAHUN_SOURCE = "https://daotanahu.moha.gov.np/";
+const TU_CDC_SOURCE = "https://tucdc.edu.np/faq";
 
 export const NEPAL_APPLICATION_FEES: NepalApplicationFee[] = [
   {
@@ -61,5 +65,59 @@ export const NEPAL_APPLICATION_FEES: NepalApplicationFee[] = [
     source: "https://patient.norvichospital.com/doctor/slot/PPHY/0",
     lastVerified: "2026-06-07",
     provenance: { findingRefs: ["B.125"] },
+  },
+  {
+    id: "passport-34-page",
+    label: "Nepal passport, 34-page (Department of Passports)",
+    kind: "document",
+    amountNpr: 12_000,
+    source: PASSPORT_DEPT_SOURCE,
+    lastVerified: "2026-06-07",
+    provenance: { findingRefs: ["A.047"] },
+  },
+  {
+    id: "passport-66-page",
+    label: "Nepal passport, 66-page (Department of Passports)",
+    kind: "document",
+    amountNpr: 20_000,
+    source: PASSPORT_DEPT_SOURCE,
+    lastVerified: "2026-06-07",
+    provenance: { findingRefs: ["A.048"] },
+  },
+  {
+    id: "citizenship-by-descent",
+    label: "Citizenship certificate by descent — ticket fee (District Administration Office)",
+    kind: "document",
+    amountNpr: 10,
+    source: DAO_TANAHUN_SOURCE,
+    lastVerified: "2026-06-07",
+    provenance: { findingRefs: ["A.052"] },
+  },
+  {
+    id: "citizenship-duplicate",
+    label: "Duplicate citizenship certificate — ticket fee (District Administration Office)",
+    kind: "document",
+    amountNpr: 20,
+    source: DAO_TANAHUN_SOURCE,
+    lastVerified: "2026-06-07",
+    provenance: { findingRefs: ["A.054"] },
+  },
+  {
+    id: "tu-equivalence-regular",
+    label: "TU academic equivalence, regular (TU CDC)",
+    kind: "document",
+    amountNpr: 1_000,
+    source: TU_CDC_SOURCE,
+    lastVerified: "2026-06-07",
+    provenance: { findingRefs: ["A.085"] },
+  },
+  {
+    id: "tu-equivalence-procedural",
+    label: "TU academic equivalence, procedural — new university or subject (TU CDC)",
+    kind: "document",
+    amountNpr: 4_000,
+    source: TU_CDC_SOURCE,
+    lastVerified: "2026-06-07",
+    provenance: { findingRefs: ["A.086"] },
   },
 ];

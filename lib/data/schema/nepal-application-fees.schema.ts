@@ -10,7 +10,7 @@ import { ProvenanceSchema, HttpUrl, IsoDate } from "./common";
 const NepalApplicationFeeSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  kind: z.enum(["english-test", "visa-logistics", "medical"]),
+  kind: z.enum(["english-test", "visa-logistics", "medical", "document"]),
   amountNpr: z.number().positive(),
   source: HttpUrl,
   lastVerified: IsoDate.optional(),

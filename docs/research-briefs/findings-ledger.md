@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=80 · pending=1034
+**Status:** used=86 · pending=1028
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -54,14 +54,14 @@
 | A.044 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says the applicant chooses the enrolment centre and appointment date and time dur… |
 | A.045 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | After submitting the pre-enrolment form, the applicant receives a copy with a barcode and QR code. |
 | A.046 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | At the passport enrolment centre, registration includes applicant photo and biometrics. |
-| A.047 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR12,000 for a new or renewed 34-page passport at the Department of Pass… |
-| A.048 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR20,000 for a new or renewed 66-page passport at the Department of Pass… |
+| A.047 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR12,000 for a new or renewed 34-page passport at the Department of Pass… |
+| A.048 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR20,000 for a new or renewed 66-page passport at the Department of Pass… |
 | A.049 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says applications lodged at the Department of Passports are normally processed wi… |
 | A.050 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says applications lodged at a district or area administration office normally tak… |
 | A.051 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says a citizenship certificate by descent is issued the same day if ev… |
-| A.052 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says the fee for a citizenship certificate by descent is a NPR10 ticke… |
+| A.052 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says the fee for a citizenship certificate by descent is a NPR10 ticke… |
 | A.053 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says a duplicate citizenship certificate is issued the same day if evi… |
-| A.054 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says the fee for a duplicate citizenship certificate is a NPR20 ticket. |
+| A.054 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun says the fee for a duplicate citizenship certificate is a NPR20 ticket. |
 | A.055 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Tanahun lists a recommendation service for name, surname or age mismatches bet… |
 | A.056 | A | primary | contact |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Kathmandu lists Babarmahal, Kathmandu as its office address. |
 | A.057 | A | primary | contact |  | pending | lib/documents/types.ts (+ plan rules) | District Administration Office Kathmandu lists office hours of 09:00 AM to 5:00 PM from Monday to Friday. |
@@ -92,8 +92,8 @@
 | A.082 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Kathmandu University’s online document and certificate portal requires the student’s details to match the uni… |
 | A.083 | A | primary | contact |  | pending | lib/documents/types.ts (+ plan rules) | Purbanchal University’s Office of the Examination Management is at Biratnagar, Puspalal Chowk, Nepal. |
 | A.084 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Tribhuvan University’s Curriculum Development Centre says it provides equivalence to certificates obtained fr… |
-| A.085 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says regular equivalence costs NPR1,000. |
-| A.086 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says procedural equivalence for a new university or new subject costs NPR4,000. |
+| A.085 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says regular equivalence costs NPR1,000. |
+| A.086 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says procedural equivalence for a new university or new subject costs NPR4,000. |
 | A.087 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says regular equivalence can be issued within 3 working days if all documents are complete. |
 | A.088 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says procedural equivalence takes about one month. |
 | A.089 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | TU CDC’s FAQ says certificates and related documents in languages other than Nepali or English must be transl… |
