@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** pending=1049 · used=65
+**Status:** pending=1044 · used=70
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -22,7 +22,7 @@
 | A.012 | A | primary | data | G2 | pending | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover 12 months of living costs. |
 | A.013 | A | primary | data | G2 | pending | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover tuition fees for the student and any accompanying family members. |
 | A.014 | A | primary | data | G2 | pending | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover school costs for any school-aged dependants. |
-| A.015 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | For student visas lodged on or after 10 May 2024, the individual-student financial capacity figure is AUD29,7… |
+| A.015 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | For student visas lodged on or after 10 May 2024, the individual-student financial capacity figure is AUD29,7… |
 | A.016 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Student visa applications lodged on or after 23 March 2024 are assessed under the Genuine Student requirement. |
 | A.017 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The first GS question asks for the applicant’s current circumstances, including ties to family, community, em… |
 | A.018 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The second GS question asks why the applicant wants to study the course in Australia with that provider and t… |
@@ -131,10 +131,10 @@
 | A.121 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Australian Catholic University says a CoE will be issued only after enrolment and Genuine Student conditions … |
 | A.122 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | UTS says a tuition deposit is needed to receive an electronic Confirmation of Enrolment. |
 | B.001 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The Subclass 500 Student visa base application charge is AUD2,000.00. |
-| B.002 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks a student to declare or provide is AUD29,710. |
-| B.003 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks for a student’s partner or spouse is AUD10,394. |
-| B.004 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks for a dependent child is AUD4,449. |
-| B.005 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The annual school-cost amount DHA asks for a child is AUD13,502. |
+| B.002 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks a student to declare or provide is AUD29,710. |
+| B.003 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks for a student’s partner or spouse is AUD10,394. |
+| B.004 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks for a dependent child is AUD4,449. |
+| B.005 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual school-cost amount DHA asks for a child is AUD13,502. |
 | B.006 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The annual personal-income threshold DHA accepts from parents or partners is AUD87,856. |
 | B.007 | B | primary | process | G12 | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA lists money deposits held with a financial institution as an acceptable evidence path for student financi… |
 | B.008 | B | primary | process | G12 | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA lists a loan with a government or financial institution as an acceptable evidence path for student financ… |

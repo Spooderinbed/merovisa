@@ -2,7 +2,12 @@
 //
 // Constants from docs/research/2026-06-04-nepal-australia-data.md
 // Update these when the underlying DHA / university policy changes.
-import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
+import {
+  AU_DHA_LIVING_CAPACITY_AUD,
+  AU_DHA_PARTNER_CAPACITY_AUD,
+  AU_DHA_CHILD_CAPACITY_AUD,
+  AU_DHA_SCHOOL_COSTS_AUD,
+} from "@/lib/data/policy/au-cost-of-living";
 
 export const NEPAL_ASSESSMENT_LEVEL = "L3" as const;
 export const NEPAL_ASSESSMENT_LEVEL_EFFECTIVE = "2026-01-09" as const;
@@ -12,9 +17,10 @@ export const NEPAL_ASSESSMENT_LEVEL_EFFECTIVE = "2026-01-09" as const;
 export const DHA_LIVING_COSTS_AUD = AU_DHA_LIVING_CAPACITY_AUD.value;
 export const DHA_LIVING_COSTS_AUD_EFFECTIVE = "2024-05-10" as const;
 
-export const DHA_PARTNER_COSTS_AUD = 10_394;
-export const DHA_CHILD_COSTS_AUD = 4_449;
-export const DHA_SCHOOLING_COSTS_AUD = 13_502;
+// Sourced to the DHA dependant/school figures (findings B.003/B.004/B.005).
+export const DHA_PARTNER_COSTS_AUD = AU_DHA_PARTNER_CAPACITY_AUD.value;
+export const DHA_CHILD_COSTS_AUD = AU_DHA_CHILD_CAPACITY_AUD.value;
+export const DHA_SCHOOLING_COSTS_AUD = AU_DHA_SCHOOL_COSTS_AUD.value;
 
 // Nepal TU percentage → Australian WAM band (used by scoring engine)
 export const NEPAL_TU_TO_AU_WAM: Array<{ minTuPct: number; auWam: string; auGrade: string }> = [

@@ -12,7 +12,12 @@
 import type { ZodType } from "zod";
 import { NEPAL_BANKS } from "@/lib/data/source/nepal-banks";
 import { NepalBanksSchema } from "@/lib/data/schema/nepal-banks.schema";
-import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
+import {
+  AU_DHA_LIVING_CAPACITY_AUD,
+  AU_DHA_PARTNER_CAPACITY_AUD,
+  AU_DHA_CHILD_CAPACITY_AUD,
+  AU_DHA_SCHOOL_COSTS_AUD,
+} from "@/lib/data/policy/au-cost-of-living";
 import { DhaLivingSchema } from "@/lib/data/schema/scoring-config.schema";
 
 export interface DataModuleEntry {
@@ -55,6 +60,35 @@ export const DATA_MODULES: DataModuleEntry[] = [
     data: AU_DHA_LIVING_CAPACITY_AUD,
     schema: DhaLivingSchema,
     recordLabel: "au-cost-of-living",
+    subRecordKeys: [],
+    recordInterface: "Sourced",
+  },
+  {
+    // DHA dependant/school financial-capacity figures (finance category B),
+    // backing the constants in lib/programs/policy.ts. Each is a single sourced value.
+    category: "B",
+    exportName: "AU_DHA_PARTNER_CAPACITY_AUD",
+    data: AU_DHA_PARTNER_CAPACITY_AUD,
+    schema: DhaLivingSchema,
+    recordLabel: "au-dha-partner-cost",
+    subRecordKeys: [],
+    recordInterface: "Sourced",
+  },
+  {
+    category: "B",
+    exportName: "AU_DHA_CHILD_CAPACITY_AUD",
+    data: AU_DHA_CHILD_CAPACITY_AUD,
+    schema: DhaLivingSchema,
+    recordLabel: "au-dha-child-cost",
+    subRecordKeys: [],
+    recordInterface: "Sourced",
+  },
+  {
+    category: "B",
+    exportName: "AU_DHA_SCHOOL_COSTS_AUD",
+    data: AU_DHA_SCHOOL_COSTS_AUD,
+    schema: DhaLivingSchema,
+    recordLabel: "au-dha-school-cost",
     subRecordKeys: [],
     recordInterface: "Sourced",
   },
