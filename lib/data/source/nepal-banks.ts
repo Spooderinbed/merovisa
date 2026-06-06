@@ -13,9 +13,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       notes: "5-year education-loan floating pricing.",
       source:
         "https://www.nepalbank.com.np/interest-rate/interest-rate-on-loans-advances-floating-rate",
+      provenance: { findingRefs: ["B.084", "B.085"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.028"] },
   },
   {
     id: "adbl",
@@ -29,9 +31,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       notes:
         "Finances up to 80% of the total fee officially prescribed by the institution. Collateral can include a personal guarantee backed by real-estate assets.",
       source: "https://adbl.gov.np/products/loan/consumer-loan/education-loan",
+      provenance: { findingRefs: ["B.072", "B.073", "B.074"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.029"] },
   },
   {
     id: "nabil",
@@ -40,6 +44,7 @@ export const NEPAL_BANKS: NepalBank[] = [
     headOffice: "Teendhara, Kathmandu",
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.030"] },
   },
   {
     id: "nimb",
@@ -50,9 +55,11 @@ export const NEPAL_BANKS: NepalBank[] = [
     educationLoan: {
       productName: "NIMB Education Loan",
       source: "https://www.nimb.com.np/digital-banking/products/loan/education-loan",
+      provenance: { findingRefs: ["B.048"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.031", "B.091"] },
   },
   {
     id: "standard-chartered",
@@ -61,6 +68,7 @@ export const NEPAL_BANKS: NepalBank[] = [
     headOffice: "Naya Baneshwor, Kathmandu",
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.032"] },
   },
   {
     id: "himalayan",
@@ -74,9 +82,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       maxTenureYears: 15,
       pricing: { kind: "base-spread", minSpreadPct: 0.5, maxSpreadPct: 2.5 },
       source: "https://himalayanbank.com/en/loan-products/education-loan",
+      provenance: { findingRefs: ["B.055", "B.056", "B.057", "B.058", "B.059"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.033"] },
   },
   {
     id: "nepal-sbi",
@@ -87,9 +97,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       pricing: { kind: "base-spread", minSpreadPct: 2.0, maxSpreadPct: 4.0 },
       notes: "Fixed education-loan rate for up to 5 years is 9.99%; floating pricing is Base Rate + 2.00% to + 4.00%.",
       source: "https://nsbl.statebank/interest-rates-loans",
+      provenance: { findingRefs: ["B.086", "B.087", "B.088"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.034"] },
   },
   {
     id: "everest",
@@ -101,9 +113,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       notes: "Fixed education-loan rate was 9.00% effective from 15 May 2026; floating pricing is Base Rate + 2.00% to + 4.00%.",
       source:
         "https://everestbankltd.com/supports/interest-and-rates/interest-rates-loans-and-advances/",
+      provenance: { findingRefs: ["B.060", "B.061", "B.062"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.035"] },
   },
   {
     id: "kumari",
@@ -116,9 +130,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       notes:
         "Finances up to 80% of estimated education cost. Documentation includes the offer letter or I-20; NOC required at the time of tuition-fee payment.",
       source: "https://www.kumaribank.com/personal-banking/education-loan",
+      provenance: { findingRefs: ["B.063", "B.064", "B.065", "B.066"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.036"] },
   },
   {
     id: "laxmi-sunrise",
@@ -131,9 +147,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       financingRatioPct: 100,
       pricing: { kind: "fixed", minRatePct: 7.99, maxRatePct: 11.99 },
       source: "https://www.laxmisunrise.com/loan/education-loan/",
+      provenance: { findingRefs: ["B.067", "B.068", "B.069", "B.070", "B.071"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.037"] },
   },
   {
     id: "citizens",
@@ -144,9 +162,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       financingRatioPct: 100,
       notes: "Education loan can cover up to 100% of the borrower's education expenses.",
       source: "https://ctznbank.com/products/loan/citizens-education-loans",
+      provenance: { findingRefs: ["B.089"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.038"] },
   },
   {
     id: "prime",
@@ -155,6 +175,7 @@ export const NEPAL_BANKS: NepalBank[] = [
     headOffice: "Kamalpokhari, Kathmandu",
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.039"] },
   },
   {
     id: "sanima",
@@ -163,6 +184,7 @@ export const NEPAL_BANKS: NepalBank[] = [
     headOffice: "Alakapuri, Naxal, Kathmandu",
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.040"] },
   },
   {
     id: "machhapuchchhre",
@@ -174,9 +196,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       notes:
         "Education-loan pricing is a 1.00% to 3.00% premium. Bank operates an \"Education Hub\" providing education-loan and online-payment services under one window.",
       source: "https://www.machbank.com/information/rates-and-charges/loan-interest-rate",
+      provenance: { findingRefs: ["B.081", "B.082", "B.083"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.041"] },
   },
   {
     id: "nic-asia",
@@ -190,9 +214,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       maxTenureYears: 20,
       pricing: { kind: "fixed", effectiveRatePct: 8.99, effectiveDate: "2026-02-13" },
       source: "https://www.nicasiabank.com/loans/education-loan/",
+      provenance: { findingRefs: ["B.051", "B.052", "B.053", "B.054"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.042", "B.092"] },
   },
   {
     id: "global-ime",
@@ -204,9 +230,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       maxTenureYears: 15,
       notes: "Supports study abroad.",
       source: "https://www.globalimebank.com/products/loans/education-loan/",
+      provenance: { findingRefs: ["B.049", "B.050"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.043", "B.093"] },
   },
   {
     id: "nmb",
@@ -217,9 +245,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       notes:
         "Education-loan new-limit service charge is 0.75%; offer-letter amendment fee is NPR 5,000.",
       source: "https://backend.nmb.com.np/storage/download/2026/02/1064-STC%20-February.2026.pdf",
+      provenance: { findingRefs: ["B.079", "B.080"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.044"] },
   },
   {
     id: "prabhu",
@@ -229,9 +259,11 @@ export const NEPAL_BANKS: NepalBank[] = [
     educationLoan: {
       pricing: { kind: "base-spread", minSpreadPct: 1.0, maxSpreadPct: 3.0 },
       source: "https://www.prabhubank.com/interest-rates",
+      provenance: { findingRefs: ["B.077", "B.078"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.045"] },
   },
   {
     id: "siddhartha",
@@ -242,9 +274,11 @@ export const NEPAL_BANKS: NepalBank[] = [
       notes:
         "Education loan can be priced up to Base Rate + 3.25%. Amendment fee is NPR 3,000 per case.",
       source: "https://www.siddharthabank.com/interest-rates",
+      provenance: { findingRefs: ["B.075", "B.076"] },
     },
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.046"] },
   },
   {
     id: "rastriya-banijya",
@@ -253,5 +287,6 @@ export const NEPAL_BANKS: NepalBank[] = [
     headOffice: "Singhadurbarplaza, Kathmandu",
     source: NRB_LIST,
     lastVerified: "2025-01-15",
+    provenance: { findingRefs: ["B.047"] },
   },
 ];

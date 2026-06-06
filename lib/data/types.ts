@@ -74,7 +74,7 @@ export type LoanPricing =
   | { kind: "base-spread"; minSpreadPct: number; maxSpreadPct: number }
   | { kind: "fixed"; minRatePct?: number; maxRatePct?: number; effectiveRatePct?: number; effectiveDate?: string };
 
-export interface NepalBankLoan {
+export interface NepalBankLoan extends Sourced {
   productName?: string;
   minAmountNpr?: number;
   maxAmountNpr?: number;
@@ -87,7 +87,7 @@ export interface NepalBankLoan {
   lastVerified?: string; // ISO date; omitted when the source page is undated
 }
 
-export interface NepalBank {
+export interface NepalBank extends Sourced {
   id: string; // slug, e.g. "himalayan"
   name: string; // official name, e.g. "Himalayan Bank Ltd."
   nrbClass: "A";
