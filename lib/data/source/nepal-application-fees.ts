@@ -46,7 +46,10 @@ export const NEPAL_APPLICATION_FEES: NepalApplicationFee[] = [
     amountNpr: 36_000,
     source: IDP_KATHMANDU_SOURCE,
     lastVerified: "2026-06-07",
-    provenance: { findingRefs: ["B.121"] },
+    provenance: {
+      findingRefs: ["B.121", "G.051"],
+      note: "Corroborated by Edwise (G.051), an independent consultancy source listing the same NPR 36,000 computer-based fee for 2026.",
+    },
   },
   {
     id: "ielts-ukvi-academic-computer",

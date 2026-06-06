@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=159 · pending=955
+**Status:** used=160 · pending=954
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -859,7 +859,7 @@
 | G.048 | G | primary | data |  | pending | app/(app)/journey/working-with-agents | Edwise says it gives smart guidance on GTE for Australia. |
 | G.049 | G | primary | data |  | pending | app/(app)/journey/working-with-agents | Edwise says its advisers include counsellors who graduated from universities in Australia. |
 | G.050 | G | practitioner | data |  | pending | app/(app)/journey/working-with-agents | Edwise says consultancies or institutes in Nepal normally charge NPR 5,000-12,000 for IELTS preparation cours… |
-| G.051 | G | practitioner | data |  | pending | app/(app)/journey/working-with-agents | Edwise says the IELTS exam fee in Nepal is NPR 36,000 for computer-based testing in 2026. |
+| G.051 | G | practitioner | data |  | used | app/(app)/journey/working-with-agents | Edwise says the IELTS exam fee in Nepal is NPR 36,000 for computer-based testing in 2026. |
 | G.052 | G | practitioner | data |  | pending | app/(app)/journey/working-with-agents | Edwise says the IELTS exam fee in Nepal is NPR 36,200 for paper-based testing in 2026. |
 | G.053 | G | primary | contact |  | pending | app/(app)/journey/working-with-agents | Global Reach Kathmandu is at Punya Mansion, 2nd and 3rd Floor, next to Batule Ghar, Dilli Bazaar Road, Kathma… |
 | G.054 | G | primary | contact |  | pending | app/(app)/journey/working-with-agents | Global Reach Chitwan is at Rotary Dandapani Bhattarai Bhawan, 4th Floor, Bharatpur Ukalo, Chitwan. |
