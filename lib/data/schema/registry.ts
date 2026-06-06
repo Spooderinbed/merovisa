@@ -34,6 +34,8 @@ import { AU_STUDENT_VISA_LIMITS } from "@/lib/data/policy/au-student-visa-limits
 import { AuStudentVisaLimitsSchema } from "@/lib/data/schema/au-student-visa-limits.schema";
 import { AU_STUDENT_WORKER_WAGES } from "@/lib/data/source/au-student-worker-wages";
 import { AuStudentWorkerWagesSchema } from "@/lib/data/schema/au-student-worker-wages.schema";
+import { AU_ENGLISH_TESTS } from "@/lib/data/source/au-english-tests";
+import { AuEnglishTestsSchema } from "@/lib/data/schema/au-english-tests.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -285,5 +287,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-student-worker-wages",
     subRecordKeys: [],
     recordInterface: "AuWorkerWage",
+  },
+  {
+    // DHA-accepted English tests for the Subclass 500 student visa (English-tests
+    // category J). One record per test: acceptedByDha boolean + DHA minimum
+    // component scores where the instrument sets them. minScores is nested data,
+    // not a provenance-bearing sub-record (subRecordKeys stays empty). Fact-only.
+    category: "J",
+    exportName: "AU_ENGLISH_TESTS",
+    data: AU_ENGLISH_TESTS,
+    schema: AuEnglishTestsSchema,
+    recordLabel: "au-english-tests",
+    subRecordKeys: [],
+    recordInterface: "AuEnglishTest",
   },
 ];

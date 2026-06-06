@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=138 · pending=976
+**Status:** used=149 · pending=965
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1094,22 +1094,22 @@
 | I.078 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue work permits. |
 | I.079 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue visa labels. |
 | I.080 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue Labour Market Impact Assessments. |
-| J1.001 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Cambridge C1 Advanced (C1 Advanced) is accepted by the Australian Department of Home Affairs as evidence of E… |
-| J1.002 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Canadian English Language Proficiency Index Program General (CELPIP General) is accepted by the Australian De… |
-| J1.003 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | IELTS Academic (including One Skill Retake) is accepted by the Australian Department of Home Affairs for visa… |
-| J1.004 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | IELTS General Training (including One Skill Retake) is accepted by the Australian Department of Home Affairs … |
-| J1.005 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | PTE Academic is accepted by the Australian Department of Home Affairs as evidence of English proficiency for … |
-| J1.006 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT (in-person, at authorised test centres) is accepted by the Australian Department of Home Affairs fo… |
-| J1.007 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Occupational English Test (OET) is accepted by the Australian Department of Home Affairs as evidence of Engli… |
-| J1.008 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | LANGUAGECERT Academic is accepted by the Australian Department of Home Affairs for visa English proficiency (… |
-| J1.009 | J1 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Michigan English Test (MET) is accepted by the Australian Department of Home Affairs as evidence of English p… |
-| J1.010 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Duolingo English Test is not accepted by the Australian Department of Home Affairs for student visa (subclass… |
+| J1.001 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Cambridge C1 Advanced (C1 Advanced) is accepted by the Australian Department of Home Affairs as evidence of E… |
+| J1.002 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Canadian English Language Proficiency Index Program General (CELPIP General) is accepted by the Australian De… |
+| J1.003 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | IELTS Academic (including One Skill Retake) is accepted by the Australian Department of Home Affairs for visa… |
+| J1.004 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | IELTS General Training (including One Skill Retake) is accepted by the Australian Department of Home Affairs … |
+| J1.005 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | PTE Academic is accepted by the Australian Department of Home Affairs as evidence of English proficiency for … |
+| J1.006 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT (in-person, at authorised test centres) is accepted by the Australian Department of Home Affairs fo… |
+| J1.007 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Occupational English Test (OET) is accepted by the Australian Department of Home Affairs as evidence of Engli… |
+| J1.008 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | LANGUAGECERT Academic is accepted by the Australian Department of Home Affairs for visa English proficiency (… |
+| J1.009 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Michigan English Test (MET) is accepted by the Australian Department of Home Affairs as evidence of English p… |
+| J1.010 | J1 | practitioner | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Duolingo English Test is not accepted by the Australian Department of Home Affairs for student visa (subclass… |
 | J1.011 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | British Council offers IELTS tests in nine Nepal locations: Banepa, Biratnagar, Birtamode, Butwal, Chitwan, G… |
 | J1.012 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | IDP Education Nepal operates four IELTS test centres: Biratnagar, Chitwan (Bharatpur), Pokhara, and Kathmandu |
 | J1.013 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Alfa Beta Institute (Kathmandu) is the only PTE Academic test centre in Nepal |
 | J1.014 | J1 | anecdotal | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT (in-person) is offered at authorized test centres in Nepal, including Kathmandu, Lalitpur, and Chit… |
 | J1.015 | J1 | anecdotal | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT exam fee in Nepal is USD 180 (approximately NPR 23,967) |
-| J1.016 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | The TOEFL iBT Home Edition (online-from-home) is not accepted by the Australian Department of Home Affairs fo… |
+| J1.016 | J1 | practitioner | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | The TOEFL iBT Home Edition (online-from-home) is not accepted by the Australian Department of Home Affairs fo… |
 | J1.017 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT (in-person) is recognized by 100% of Australian universities and accepted for Australian visa purpo… |
 | J1.018 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | The fee for IELTS Academic (on computer) at the IDP Biratnagar test centre is NPR 36,000 (2026) |
 | J2.001 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarship recipients receive full tuition fees paid by the Australian government |

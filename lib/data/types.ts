@@ -305,3 +305,31 @@ export interface AuWorkerWage extends Provenanced {
   source: string; // ATO / Fair Work page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * An English-language test and whether the Australian Department of Home Affairs
+ * (DHA) accepts it as proof of English for the Subclass 500 student visa, with
+ * DHA's minimum component scores where the instrument sets numeric thresholds.
+ * One record per test. The acceptance boolean is the gate-checked fact; the score
+ * thresholds ride as sourced detail from the same finding's caveat. Fact-only
+ * data: no scorer reads it; it backs the eventual English-requirements view and
+ * is reconciled against findings like every other slice.
+ */
+export interface AuEnglishTest extends Provenanced {
+  id: string; // slug, e.g. "ielts-academic"
+  testName: string; // official test name
+  acceptedByDha: boolean; // DHA accepts this test for the Subclass 500 visa (true) or explicitly not (false)
+  // DHA minimum component scores for competent English, where the instrument
+  // sets numeric thresholds. `eachComponent` is used where one minimum applies
+  // to every band (IELTS 6.0); per-skill minimums use listening/reading/etc.
+  minScores?: {
+    listening?: number;
+    reading?: number;
+    writing?: number;
+    speaking?: number;
+    overall?: number;
+    eachComponent?: number;
+  };
+  source: string; // source URL (the citing finding's source)
+  lastVerified?: string; // ISO date
+}
