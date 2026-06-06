@@ -40,6 +40,8 @@ import { AU_PROVIDER_APPLICATION_FEES } from "@/lib/data/source/au-provider-appl
 import { AuProviderApplicationFeesSchema } from "@/lib/data/schema/au-provider-application-fees.schema";
 import { AU_PROVIDER_ENGLISH_MINIMUMS } from "@/lib/data/source/au-provider-english-minimums";
 import { AuProviderEnglishMinimumsSchema } from "@/lib/data/schema/au-provider-english-minimums.schema";
+import { AU_RMIT_PROGRAMS } from "@/lib/data/source/au-rmit-programs";
+import { AuRmitProgramsSchema } from "@/lib/data/schema/au-rmit-programs.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -328,5 +330,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-provider-english-minimums",
     subRecordKeys: [],
     recordInterface: "AuProviderEnglishMinimum",
+  },
+  {
+    // RMIT international engineering programs (programs category E): 2026 annual
+    // international fee + standard duration, from the RMIT international guide.
+    // Each program is one record citing its duration + tuition finding pair; the
+    // walker matches each finding's value against the record's leaf union.
+    category: "E",
+    exportName: "AU_RMIT_PROGRAMS",
+    data: AU_RMIT_PROGRAMS,
+    schema: AuRmitProgramsSchema,
+    recordLabel: "au-rmit-programs",
+    subRecordKeys: [],
+    recordInterface: "AuRmitProgram",
   },
 ];

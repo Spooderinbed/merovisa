@@ -370,3 +370,24 @@ export interface AuProviderEnglishMinimum extends Provenanced {
   source: string; // entry-requirements page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * An RMIT University degree program offered to international students, with its
+ * 2026 indicative annual international fee (AUD per year — not a program total)
+ * and standard full-time duration, as the RMIT international guide states them.
+ * `tuitionAudPerYear` is the gate-checked value; `durationYears` rides as a
+ * sourced leaf (each program pairs one tuition finding with one duration
+ * finding). Fact-only data: no scorer reads it; it backs the eventual
+ * program/course view and is reconciled against findings like every other slice.
+ */
+export interface AuRmitProgram extends Provenanced {
+  id: string; // slug, e.g. "be-civil-infrastructure-honours"
+  provider: "RMIT University"; // fixed provider literal
+  programName: string; // full program name as the finding states it
+  level: "bachelor" | "master";
+  tuitionAudPerYear: number; // 2026 annual international fee, AUD
+  durationYears: number; // standard full-time duration, years
+  fieldOfStudy?: string; // free-form discipline label (NOT the scoring FieldOfStudy enum)
+  source: string; // RMIT international guide URL
+  lastVerified?: string; // ISO date
+}

@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=160 · pending=954
+**Status:** used=172 · pending=942
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -597,18 +597,18 @@
 | E.066 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Business Administration has a 2026 annual fee of AUD 49,920. |
 | E.067 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Project Management has a duration of 2 years. |
 | E.068 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Project Management has a 2026 annual fee of AUD 50,880. |
-| E.069 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Civil and Infrastructure) (Honours) has a duration of 4 years. |
-| E.070 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Civil and Infrastructure) (Honours) has a 2026 annual fee of AUD 47,040. |
-| E.071 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Civil Engineering) has a duration of 2 years. |
-| E.072 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Civil Engineering) has a 2026 annual fee of AUD 48,000. |
-| E.073 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Electrical Engineering) (Honours) has a duration of 4 years. |
-| E.074 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Electrical Engineering) (Honours) has a 2026 annual fee of AUD 47,040. |
-| E.075 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Electrical Engineering) has a duration of 2 years. |
-| E.076 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Electrical Engineering) has a 2026 annual fee of AUD 48,000. |
-| E.077 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Mechanical Engineering) (Honours) has a duration of 4 years. |
-| E.078 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Mechanical Engineering) (Honours) has a 2026 annual fee of AUD 47,040. |
-| E.079 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Mechanical Engineering) has a duration of 2 years. |
-| E.080 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Mechanical Engineering) has a 2026 annual fee of AUD 48,000. |
+| E.069 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Civil and Infrastructure) (Honours) has a duration of 4 years. |
+| E.070 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Civil and Infrastructure) (Honours) has a 2026 annual fee of AUD 47,040. |
+| E.071 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Civil Engineering) has a duration of 2 years. |
+| E.072 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Civil Engineering) has a 2026 annual fee of AUD 48,000. |
+| E.073 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Electrical Engineering) (Honours) has a duration of 4 years. |
+| E.074 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Electrical Engineering) (Honours) has a 2026 annual fee of AUD 47,040. |
+| E.075 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Electrical Engineering) has a duration of 2 years. |
+| E.076 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Electrical Engineering) has a 2026 annual fee of AUD 48,000. |
+| E.077 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Mechanical Engineering) (Honours) has a duration of 4 years. |
+| E.078 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Mechanical Engineering) (Honours) has a 2026 annual fee of AUD 47,040. |
+| E.079 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Mechanical Engineering) has a duration of 2 years. |
+| E.080 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Mechanical Engineering) has a 2026 annual fee of AUD 48,000. |
 | E.081 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing has a duration of 2 years. |
 | E.082 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing has a 2026 annual fee of AUD 19,250. |
 | E.083 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing requires IELTS 7.0 with no band below 7.0. |
