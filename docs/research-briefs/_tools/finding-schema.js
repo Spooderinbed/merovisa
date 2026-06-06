@@ -32,6 +32,9 @@ const CONFIDENCE = new Set(["primary", "practitioner", "anecdotal"]);
 const CLAIM_TYPE = new Set(["data", "process", "contact", "red-flag"]);
 const VALUE_STATUS = new Set(["unset", "structured", "prose-only"]);
 const VALUE_TYPE = new Set(["number", "enum", "string", "boolean", "money", "percent", "duration"]);
+// Optional: set on members of an entity+attribute cluster (see build-ledger.js).
+// Absent = not in a cluster. "contradiction" members must resolve via the conflict gate.
+const CLUSTER_TRIAGE = new Set(["untriaged", "enumeration", "contradiction", "duplicate"]);
 
 function isValidStatus(s) {
   return s === "pending" || s === "used" || (typeof s === "string" && s.startsWith("rejected:"));
@@ -57,6 +60,9 @@ function validateFinding(f) {
   if (!CLAIM_TYPE.has(f.claim_type)) errors.push(`bad claim_type: ${JSON.stringify(f.claim_type)}`);
   if (!isValidStatus(f.status)) errors.push(`bad status: ${JSON.stringify(f.status)}`);
   if (!VALUE_STATUS.has(f.value_status)) errors.push(`bad value_status: ${JSON.stringify(f.value_status)}`);
+  if (f.cluster_triage != null && !CLUSTER_TRIAGE.has(f.cluster_triage)) {
+    errors.push(`bad cluster_triage: ${JSON.stringify(f.cluster_triage)}`);
+  }
 
   if (f.value_status === "structured") {
     if (f.value === null || f.value === undefined) {

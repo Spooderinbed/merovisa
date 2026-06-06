@@ -51,14 +51,31 @@ for (const r of all) {
 }
 fs.writeFileSync(LEDGER, led);
 
-let cf = "# Entity+attribute clusters (generated, for review)\n\n";
-cf += "Rows sharing `category + entity + attribute`. Most are atomic enumerations, NOT contradictions. Real contradictions are resolved at integration time, per target.\n\n";
+let cf = "# Entity+attribute clusters (generated, triage worksheet)\n\n";
+cf += "Rows sharing `category + entity + attribute`. Each member carries a `cluster_triage` (enumeration | contradiction | duplicate). Contradictions also set `conflict_with` and are enforced by the conflict gate (reconcile pass-3): a contradiction may ship at most one `used` member.\n\n";
 const needReview = collisions.filter((c) => c.differ);
-cf += `**${collisions.length}** clusters · **${needReview.length}** multi-valued · **${collisions.length - needReview.length}** byte-identical duplicates.\n\n`;
+const triageCount = {};
+for (const c of collisions) for (const r of c.rows) {
+  const t = r.cluster_triage || "untriaged";
+  triageCount[t] = (triageCount[t] || 0) + 1;
+}
+const contradictionClusters = collisions.filter((c) => c.rows.some((r) => r.cluster_triage === "contradiction"));
+const untriaged = collisions.filter((c) => c.rows.some((r) => !r.cluster_triage));
+cf += `**${collisions.length}** clusters · **${needReview.length}** multi-valued · member triage: ${Object.entries(triageCount).map(([k, v]) => `${k}=${v}`).join(" · ")}\n\n`;
+if (contradictionClusters.length) {
+  cf += `**Contradictions (${contradictionClusters.length}):** ${contradictionClusters.map((c) => c.gid).join(", ")} — each must resolve to exactly one \`used\` member (rest \`rejected:<reason>\`).\n\n`;
+}
+if (untriaged.length) {
+  cf += `**⚠ Untriaged clusters (${untriaged.length}):** ${untriaged.map((c) => c.gid).join(", ")} — label every member's \`cluster_triage\`.\n\n`;
+}
+const triLabel = (c) => [...new Set(c.rows.map((r) => r.cluster_triage || "untriaged"))].join("+");
 for (const c of collisions.sort((a, b) => Number(b.differ) - Number(a.differ))) {
   const p = c.key.split("|");
-  cf += `### ${c.gid} ${c.differ ? "multi-valued" : "identical-dup"} — [${p[0]}] ${p[1]} / ${p[2]}\n\n`;
-  for (const r of c.rows) cf += `- \`${r.id}\` (${r.confidence}/${r.publisher}, ${r.source_date}) ${esc(clip(r.claim || "", 160))}\n`;
+  cf += `### ${c.gid} [${triLabel(c)}] — [${p[0]}] ${p[1]} / ${p[2]}\n\n`;
+  for (const r of c.rows) {
+    const cw = r.conflict_with ? ` ⇄ ${Array.isArray(r.conflict_with) ? r.conflict_with.join(",") : r.conflict_with}` : "";
+    cf += `- \`${r.id}\` _${r.cluster_triage || "untriaged"}_${cw} (${r.confidence}/${r.publisher}, ${r.source_date}) ${esc(clip(r.claim || "", 160))}\n`;
+  }
   cf += "\n";
 }
 fs.writeFileSync(CONFLICTS, cf);

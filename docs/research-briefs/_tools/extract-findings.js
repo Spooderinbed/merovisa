@@ -138,6 +138,10 @@ for (const cat of Object.keys(perCat)) {
       if (p.value_type !== undefined) r.value_type = p.value_type;
       if (p.unit !== undefined) r.unit = p.unit;
       if (p.value_status !== undefined) r.value_status = p.value_status;
+      // carry forward human triage edits (survive re-extraction; keyed by id,
+      // since dup_group is recomputed each run)
+      if (p.conflict_with != null) r.conflict_with = p.conflict_with;
+      if (p.cluster_triage != null) r.cluster_triage = p.cluster_triage;
     }
   }
   const jsonl = perCat[cat].rows.map((r) => JSON.stringify(r)).join("\n") + "\n";

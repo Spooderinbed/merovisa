@@ -72,6 +72,20 @@ describe("validateFinding", () => {
     expect(validateFinding({ ...base, value_status: "guessed" }).length).toBeGreaterThan(0);
   });
 
+  it("accepts a valid cluster_triage label", () => {
+    expect(validateFinding({ ...base, cluster_triage: "enumeration" })).toEqual([]);
+    expect(validateFinding({ ...base, cluster_triage: "contradiction" })).toEqual([]);
+    expect(validateFinding({ ...base, cluster_triage: "duplicate" })).toEqual([]);
+  });
+
+  it("treats cluster_triage as optional (absent is fine)", () => {
+    expect(validateFinding(base)).toEqual([]);
+  });
+
+  it("flags an unknown cluster_triage label", () => {
+    expect(validateFinding({ ...base, cluster_triage: "maybe-dupe" }).length).toBeGreaterThan(0);
+  });
+
   it("exposes the canonical field list", () => {
     expect(FINDING_FIELDS).toContain("id");
     expect(FINDING_FIELDS).toContain("value_status");
