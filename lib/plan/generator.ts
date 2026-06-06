@@ -1,6 +1,7 @@
 import type { ProfileSections } from "@/lib/profiles/sections";
 import type { MatchResult } from "@/lib/matches/types";
 import type { PlanItem } from "./types";
+import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -63,7 +64,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "upload-proof-of-funds",
       impact: "high",
       title: "Add proof of funds",
-      body: `DHA expects evidence covering AUD ${(29710).toLocaleString()} living + first-year tuition. Bank statement or sanction letter from a Class A institution.`,
+      body: `DHA expects evidence covering AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living + first-year tuition. Bank statement or sanction letter from a Class A institution.`,
       liftEstimate: "Single biggest lift for visa case strength",
       timeEstimate: "1-3 days",
     });

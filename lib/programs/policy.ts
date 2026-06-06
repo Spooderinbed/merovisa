@@ -2,11 +2,14 @@
 //
 // Constants from docs/research/2026-06-04-nepal-australia-data.md
 // Update these when the underlying DHA / university policy changes.
+import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
 
 export const NEPAL_ASSESSMENT_LEVEL = "L3" as const;
 export const NEPAL_ASSESSMENT_LEVEL_EFFECTIVE = "2026-01-09" as const;
 
-export const DHA_LIVING_COSTS_AUD = 29_710;
+// Single source of truth: the DHA living figure lives in the sourced config layer
+// (finding A.015). Re-exported here so existing consumers keep compiling.
+export const DHA_LIVING_COSTS_AUD = AU_DHA_LIVING_CAPACITY_AUD.value;
 export const DHA_LIVING_COSTS_AUD_EFFECTIVE = "2024-05-10" as const;
 
 export const DHA_PARTNER_COSTS_AUD = 10_394;

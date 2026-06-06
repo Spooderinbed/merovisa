@@ -4,15 +4,9 @@ import { scoreFinancial } from "./financial";
 import { scoreVisa } from "./visa";
 import { scoreProfileStrength } from "./profile-strength";
 import { mapVerdict } from "./verdict";
+import { DIMENSION_WEIGHTS } from "@/lib/data/scoring-config";
 
 const RULE_VERSION = "v0.1.0";
-
-const WEIGHTS = {
-  academic: 0.3,
-  financial: 0.25,
-  visa: 0.25,
-  profileStrength: 0.2,
-} as const;
 
 export function runAssessment(profile: StudentProfile): AssessmentResult {
   const academic = scoreAcademic(profile);
@@ -21,10 +15,10 @@ export function runAssessment(profile: StudentProfile): AssessmentResult {
   const profileStrength = scoreProfileStrength(profile);
 
   const weighted = Math.round(
-    academic.value * WEIGHTS.academic +
-      financial.value * WEIGHTS.financial +
-      visa.value * WEIGHTS.visa +
-      profileStrength.value * WEIGHTS.profileStrength,
+    academic.value * DIMENSION_WEIGHTS.academic +
+      financial.value * DIMENSION_WEIGHTS.financial +
+      visa.value * DIMENSION_WEIGHTS.visa +
+      profileStrength.value * DIMENSION_WEIGHTS.profileStrength,
   );
 
   const verdict = mapVerdict({

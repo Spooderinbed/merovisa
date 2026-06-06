@@ -1,23 +1,5 @@
-import type { DimensionScore, Destination, FundingSource, StudentProfile } from "./types";
-
-// Typical yearly total (tuition + living) in USD for each destination.
-const TYPICAL_YEARLY_USD: Record<Destination, { min: number; max: number }> = {
-  australia: { min: 30000, max: 55000 },
-  canada: { min: 25000, max: 45000 },
-  uk: { min: 28000, max: 50000 },
-  germany: { min: 12000, max: 22000 },
-  usa: { min: 40000, max: 75000 },
-  ireland: { min: 25000, max: 40000 },
-  "not-sure": { min: 25000, max: 45000 },
-};
-
-const FUNDING_RELIABILITY: Record<FundingSource, number> = {
-  "self-funded": 0.95,
-  "parents-family": 0.9,
-  "education-loan": 0.8,
-  mixed: 0.85,
-  "scholarship-dependent": 0.55,
-};
+import type { DimensionScore, Destination, FundingSource, StudentProfile, Currency } from "./types";
+import { TYPICAL_YEARLY_USD, FUNDING_RELIABILITY, FX_RATES } from "@/lib/data/scoring-config";
 
 const DESTINATION_LABEL: Record<Destination, string> = {
   australia: "Australia",
@@ -30,16 +12,10 @@ const DESTINATION_LABEL: Record<Destination, string> = {
 };
 
 function toUsd(amount: number, currency: string): number {
-  switch (currency) {
-    case "USD": return amount;
-    case "NPR": return amount / 135;
-    case "AUD": return amount / 1.5;
-    case "INR": return amount / 83;
-    case "BDT": return amount / 110;
-    case "PKR": return amount / 280;
-    case "NGN": return amount / 1500;
-    default: return amount;
-  }
+  // An unmapped currency has no rate → passthrough (amount unchanged), exactly
+  // as the previous switch's `default` branch did. USD's rate is 1 (identity).
+  const rate = FX_RATES[currency as Currency];
+  return rate === undefined ? amount : amount / rate;
 }
 
 export function scoreFinancial(profile: StudentProfile): DimensionScore {

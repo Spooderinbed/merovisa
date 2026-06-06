@@ -1,19 +1,20 @@
 import type { DimensionScore, StudentProfile } from "./types";
+import { PROFILE_STRENGTH_POINTS } from "@/lib/data/scoring-config";
 
 export function scoreProfileStrength(profile: StudentProfile): DimensionScore {
-  let score = 55;
+  let score = PROFILE_STRENGTH_POINTS.base;
 
-  if (profile.educationLevel === "masters") score += 18;
-  else if (profile.educationLevel === "bachelors") score += 8;
+  if (profile.educationLevel === "masters") score += PROFILE_STRENGTH_POINTS.masters;
+  else if (profile.educationLevel === "bachelors") score += PROFILE_STRENGTH_POINTS.bachelors;
 
   const hasWork = profile.gapReasons.includes("worked");
   const hasOwnVenture = profile.gapReasons.includes("started-something");
-  if (hasWork) score += 10;
-  if (hasOwnVenture) score += 6;
+  if (hasWork) score += PROFILE_STRENGTH_POINTS.work;
+  if (hasOwnVenture) score += PROFILE_STRENGTH_POINTS.venture;
 
   if (profile.englishStatus === "taken" && profile.englishScore !== undefined) {
-    if (profile.englishScore >= 7.5) score += 8;
-    else if (profile.englishScore >= 7.0) score += 5;
+    if (profile.englishScore >= 7.5) score += PROFILE_STRENGTH_POINTS.english75;
+    else if (profile.englishScore >= 7.0) score += PROFILE_STRENGTH_POINTS.english70;
   }
 
   const value = Math.max(0, Math.min(100, Math.round(score)));

@@ -1,23 +1,12 @@
-import type { DimensionScore, Destination, GapReason, StudentProfile } from "./types";
+import type { DimensionScore, StudentProfile } from "./types";
 import { computeGapYears } from "./gap";
-
-const GAP_REASON_WEIGHT: Record<GapReason, number> = {
-  worked: 0.9,
-  "retook-exams": 0.75,
-  preparing: 0.7,
-  "started-something": 0.85,
-  "health-family": 0.5,
-};
-
-const ENGLISH_THRESHOLD_BY_DEST: Record<Destination, number> = {
-  australia: 6.5,
-  canada: 6.5,
-  uk: 6.5,
-  germany: 6.0,
-  usa: 6.5,
-  ireland: 6.5,
-  "not-sure": 6.5,
-};
+import {
+  GAP_REASON_WEIGHT,
+  ENGLISH_THRESHOLD_BY_DEST,
+  GAP_PENALTIES,
+  ENGLISH_NOT_TAKEN_PENALTY,
+  ENGLISH_BAND_DELTA_POINTS,
+} from "@/lib/data/scoring-config";
 
 export function scoreVisa(profile: StudentProfile): DimensionScore {
   const gap = computeGapYears(profile.graduationYear);
@@ -25,13 +14,13 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
   // Baseline 80; penalise for gap length.
   let score = 80;
   if (gap === 0) {
-    score += 8;
+    score += GAP_PENALTIES.none;
   } else if (gap <= 2) {
-    score -= 6;
+    score += GAP_PENALTIES.upTo2;
   } else if (gap <= 5) {
-    score -= 14;
+    score += GAP_PENALTIES.upTo5;
   } else {
-    score -= 22;
+    score += GAP_PENALTIES.beyond;
   }
 
   // Gap reason mitigation: average the weights of selected reasons.
@@ -46,9 +35,9 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
   const threshold = ENGLISH_THRESHOLD_BY_DEST[profile.destination];
   if (profile.englishStatus === "taken" && profile.englishScore !== undefined) {
     const englishDelta = profile.englishScore - threshold;
-    score += englishDelta * 10;
+    score += englishDelta * ENGLISH_BAND_DELTA_POINTS;
   } else if (profile.englishStatus === "not-taken") {
-    score -= 8;
+    score += ENGLISH_NOT_TAKEN_PENALTY;
   }
 
   const value = Math.max(0, Math.min(100, Math.round(score)));

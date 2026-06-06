@@ -1,25 +1,5 @@
 import type { DimensionScore, StudentProfile, FieldOfStudy } from "./types";
-
-const FIELD_COMPETITIVENESS: Record<FieldOfStudy, number> = {
-  "computer-science": 0.95,
-  "data-science": 0.95,
-  engineering: 0.9,
-  business: 0.85,
-  nursing: 0.85,
-  accounting: 0.8,
-  law: 0.85,
-  education: 0.75,
-  hospitality: 0.7,
-  agriculture: 0.7,
-  arts: 0.7,
-  other: 0.8,
-};
-
-const LEVEL_BONUS: Record<StudentProfile["educationLevel"], number> = {
-  "higher-secondary": -5,
-  bachelors: 0,
-  masters: 6,
-};
+import { FIELD_COMPETITIVENESS, LEVEL_BONUS } from "@/lib/data/scoring-config";
 
 const FIELD_LABEL: Record<FieldOfStudy, string> = {
   "computer-science": "Computer Science",

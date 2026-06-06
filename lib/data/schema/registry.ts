@@ -12,6 +12,8 @@
 import type { ZodType } from "zod";
 import { NEPAL_BANKS } from "@/lib/data/source/nepal-banks";
 import { NepalBanksSchema } from "@/lib/data/schema/nepal-banks.schema";
+import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
+import { DhaLivingSchema } from "@/lib/data/schema/scoring-config.schema";
 
 export interface DataModuleEntry {
   /** Research category this module integrates (A–J). Also locates findings/<category>.jsonl. */
@@ -44,5 +46,16 @@ export const DATA_MODULES: DataModuleEntry[] = [
     subRecordKeys: ["educationLoan"],
     recordInterface: "NepalBank",
     subRecordInterface: "NepalBankLoan",
+  },
+  {
+    // A single sourced config value reconciles like any other slice: its lone
+    // findingRef (A.015) must be `used` and its value (29,710) must be in code.
+    category: "A",
+    exportName: "AU_DHA_LIVING_CAPACITY_AUD",
+    data: AU_DHA_LIVING_CAPACITY_AUD,
+    schema: DhaLivingSchema,
+    recordLabel: "au-cost-of-living",
+    subRecordKeys: [],
+    recordInterface: "Sourced",
   },
 ];
