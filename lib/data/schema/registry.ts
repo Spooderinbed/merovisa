@@ -16,6 +16,8 @@ import { NEPAL_APPLICATION_FEES } from "@/lib/data/source/nepal-application-fees
 import { NepalApplicationFeesSchema } from "@/lib/data/schema/nepal-application-fees.schema";
 import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-document-processing-times";
 import { NepalDocumentProcessingTimesSchema } from "@/lib/data/schema/nepal-document-processing-times.schema";
+import { AU_PAYMENT_SURCHARGES } from "@/lib/data/policy/au-payment-surcharges";
+import { AuPaymentSurchargesSchema } from "@/lib/data/schema/au-payment-surcharges.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -145,6 +147,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-document-processing-times",
     subRecordKeys: [],
     recordInterface: "NepalDocumentProcessingTime",
+  },
+  {
+    // DHA payment-method surcharges on the visa application charge (visa-docs
+    // category C), as a percent. Fact-only: no scorer reads it. Record array,
+    // one payment method per record.
+    category: "C",
+    exportName: "AU_PAYMENT_SURCHARGES",
+    data: AU_PAYMENT_SURCHARGES,
+    schema: AuPaymentSurchargesSchema,
+    recordLabel: "au-payment-surcharges",
+    subRecordKeys: [],
+    recordInterface: "AuPaymentSurcharge",
   },
   {
     // Nepal student-visa grant-rate band shown in the matches policy banner.

@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=90 · pending=1024
+**Status:** used=93 · pending=1021
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -404,9 +404,9 @@
 | C.137 | C | primary | process | G24 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If the student or agent organised OSHC, the application form requires the name of the health insurer, the pol… |
 | C.138 | C | primary | process | G24 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If the education provider arranged OSHC, the application form requires the insurer name and the policy start … |
 | C.139 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | From 1 January 2025, onshore Student visa applicants must lodge with a Confirmation of Enrolment rather than … |
-| C.140 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A current surcharge of 1.40% applies to Visa card payments for visa application charges. |
-| C.141 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A current surcharge of 1.40% applies to MasterCard payments for visa application charges. |
-| C.142 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A current surcharge of 1.01% applies to PayPal payments for visa application charges. |
+| C.140 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A current surcharge of 1.40% applies to Visa card payments for visa application charges. |
+| C.141 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A current surcharge of 1.40% applies to MasterCard payments for visa application charges. |
+| C.142 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A current surcharge of 1.01% applies to PayPal payments for visa application charges. |
 | C.143 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If an applicant applied online, ImmiAccount shows health-assessment processing information through “View heal… |
 | C.144 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s current processing page says offshore Student visa applications lodged on or after 14 November 2025 are… |
 | D.001 | D | anecdotal | data |  | pending | supabase seed_universities migration | The requested D1 import schema should use the columns `id,name,country,city,ranking_tier,md115_tier,cricos_pr… |

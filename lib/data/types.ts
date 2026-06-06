@@ -141,3 +141,17 @@ export interface NepalDocumentProcessingTime extends Provenanced {
   source: string; // service/FAQ page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A payment-method surcharge DHA adds to a visa application charge when it is
+ * paid by that method, as a percent of the charge. Fact-only data: no scorer
+ * reads it; it backs the eventual "what you'll actually pay" cost breakdown and
+ * is reconciled against findings like every other slice.
+ */
+export interface AuPaymentSurcharge extends Provenanced {
+  id: string; // slug, e.g. "visa-card"
+  method: string; // payment method, e.g. "Visa card"
+  surchargePct: number; // surcharge as a percent of the visa charge
+  source: string; // DHA surcharges page URL
+  lastVerified?: string; // ISO date
+}
