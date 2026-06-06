@@ -217,3 +217,22 @@ export interface AuTaxFigure extends Provenanced {
   source: string; // ATO page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A state public-transport concession fact for international/tertiary students —
+ * a card fee (0 = free), a card validity, a percentage saving, or a flat fare.
+ * Only the field matching `concessionType` is set. Fact-only data: no scorer
+ * reads it; it backs the eventual arrival/settlement cost guidance and is
+ * reconciled against findings like every other slice.
+ */
+export interface AuTransportConcession extends Provenanced {
+  id: string; // slug, e.g. "act-myway-tertiary"
+  state: "NSW" | "VIC" | "QLD" | "ACT";
+  label: string; // human-readable concession
+  concessionType: "card-fee" | "card-validity" | "percentage-saving" | "flat-fare";
+  amountAud?: number; // card-fee (0 = free) or flat-fare
+  validityMonths?: number; // card-validity
+  discountPct?: number; // percentage-saving
+  source: string; // transport-authority page URL
+  lastVerified?: string; // ISO date
+}

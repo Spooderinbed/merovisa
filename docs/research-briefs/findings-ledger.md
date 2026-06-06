@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=112 · pending=1002
+**Status:** used=117 · pending=997
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1001,14 +1001,14 @@
 | H.082 | H | primary | data | G40 | pending | app/(app)/journey pre-departure/post-arrival/working | UQ says jobs are usually offered in customer service. |
 | H.083 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | UQ says tutoring may be an option if the student has the right qualifications. |
 | H.084 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | NSW concession eligibility includes international students on Endeavour, Australia Awards or RTP scholarships. |
-| H.085 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Transport for NSW says the Transport Concession Entitlement Card is free. |
-| H.086 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Transport for NSW says the Transport Concession Entitlement Card is valid for up to 15 months while eligibili… |
+| H.085 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Transport for NSW says the Transport Concession Entitlement Card is free. |
+| H.086 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Transport for NSW says the Transport Concession Entitlement Card is valid for up to 15 months while eligibili… |
 | H.087 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | Transport for NSW says a Concession Opal card is mailed within 5–7 working days once eligibility is confirmed. |
-| H.088 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Victoria’s International Student Travel Pass saves 50% on a public transport ticket. |
-| H.089 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Translink says all fares on its services are 50 cents per journey. |
+| H.088 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Victoria’s International Student Travel Pass saves 50% on a public transport ticket. |
+| H.089 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Translink says all fares on its services are 50 cents per journey. |
 | H.090 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | Translink says tertiary students no longer need to apply for concession fares. |
 | H.091 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | Transport Canberra says primary, secondary and tertiary students are eligible for concession fares. |
-| H.092 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Transport Canberra says the MyWay+ tertiary student fare is AUD 1.71 from 10 January 2026. |
+| H.092 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Transport Canberra says the MyWay+ tertiary student fare is AUD 1.71 from 10 January 2026. |
 | H.093 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney says its Welcome Program includes orientation events, activities and workshops for n… |
 | H.094 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney says its student card allows borrowing from the library. |
 | H.095 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | UQ says a government-issued document such as a passport must be uploaded to request a student ID card. |

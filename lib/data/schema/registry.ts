@@ -26,6 +26,8 @@ import { AU_ARRIVAL_CASH_GUIDANCE } from "@/lib/data/source/au-arrival-cash-guid
 import { AuArrivalCashGuidanceListSchema } from "@/lib/data/schema/au-arrival-cash-guidance.schema";
 import { AU_TAX_FIGURES } from "@/lib/data/policy/au-tax-figures";
 import { AuTaxFiguresSchema } from "@/lib/data/schema/au-tax-figures.schema";
+import { AU_STUDENT_TRANSPORT_CONCESSIONS } from "@/lib/data/source/au-student-transport-concessions";
+import { AuStudentTransportConcessionsSchema } from "@/lib/data/schema/au-student-transport-concessions.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -213,6 +215,17 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-tax-figures",
     subRecordKeys: [],
     recordInterface: "AuTaxFigure",
+  },
+  {
+    // State public-transport student concessions (arrival category H): card fees,
+    // validity, savings, flat fares. Fact-only: no scorer reads it. Record array.
+    category: "H",
+    exportName: "AU_STUDENT_TRANSPORT_CONCESSIONS",
+    data: AU_STUDENT_TRANSPORT_CONCESSIONS,
+    schema: AuStudentTransportConcessionsSchema,
+    recordLabel: "au-student-transport-concessions",
+    subRecordKeys: [],
+    recordInterface: "AuTransportConcession",
   },
   {
     // Nepal student-visa grant-rate band shown in the matches policy banner.
