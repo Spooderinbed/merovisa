@@ -17,7 +17,9 @@ import {
   AU_DHA_PARTNER_CAPACITY_AUD,
   AU_DHA_CHILD_CAPACITY_AUD,
   AU_DHA_SCHOOL_COSTS_AUD,
+  AU_DHA_INCOME_METHOD_THRESHOLD_AUD,
 } from "@/lib/data/policy/au-cost-of-living";
+import { AU_SUBCLASS_500_APPLICATION_CHARGE_AUD } from "@/lib/data/policy/au-visa-fees";
 import { DhaLivingSchema } from "@/lib/data/schema/scoring-config.schema";
 
 export interface DataModuleEntry {
@@ -89,6 +91,28 @@ export const DATA_MODULES: DataModuleEntry[] = [
     data: AU_DHA_SCHOOL_COSTS_AUD,
     schema: DhaLivingSchema,
     recordLabel: "au-dha-school-cost",
+    subRecordKeys: [],
+    recordInterface: "Sourced",
+  },
+  {
+    // DHA Subclass 500 base visa application charge. Corroborated across two
+    // primary findings — A.001 (visa-documents) and B.001 (finance) — the same
+    // fee in both categories, so both cite this one value (global reconcile).
+    category: "A",
+    exportName: "AU_SUBCLASS_500_APPLICATION_CHARGE_AUD",
+    data: AU_SUBCLASS_500_APPLICATION_CHARGE_AUD,
+    schema: DhaLivingSchema,
+    recordLabel: "au-visa-application-charge",
+    subRecordKeys: [],
+    recordInterface: "Sourced",
+  },
+  {
+    // DHA annual personal-income threshold (income method, finding B.006).
+    category: "B",
+    exportName: "AU_DHA_INCOME_METHOD_THRESHOLD_AUD",
+    data: AU_DHA_INCOME_METHOD_THRESHOLD_AUD,
+    schema: DhaLivingSchema,
+    recordLabel: "au-dha-income-threshold",
     subRecordKeys: [],
     recordInterface: "Sourced",
   },

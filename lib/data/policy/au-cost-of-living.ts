@@ -61,6 +61,19 @@ export const AU_DHA_SCHOOL_COSTS_AUD: Sourced<number> = {
   },
 };
 
+const DHA_SSVF_SOURCE =
+  "https://immi.homeaffairs.gov.au/what-we-do/education-program/what-we-do/simplified-student-visa-framework";
+
+export const AU_DHA_INCOME_METHOD_THRESHOLD_AUD: Sourced<number> = {
+  value: 87_856,
+  provenance: {
+    findingRefs: ["B.006"],
+    source: DHA_SSVF_SOURCE,
+    lastVerified: "2026-06-07",
+    note: "DHA annual personal-income threshold accepted from a parent or partner as proof of financial capacity (AUD), in lieu of the savings/deposit method.",
+  },
+};
+
 export const TYPICAL_YEARLY_USD: Sourced<Record<Destination, { min: number; max: number }>> = {
   value: {
     australia: { min: 30000, max: 55000 },
