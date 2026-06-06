@@ -236,3 +236,31 @@ export interface AuTransportConcession extends Provenanced {
   source: string; // transport-authority page URL
   lastVerified?: string; // ISO date
 }
+
+/** A government-funded inclusion of the Australia Awards Scholarship. */
+export type AustraliaAwardsBenefit =
+  | "full-tuition"
+  | "return-airfare"
+  | "oshc"
+  | "living-stipend";
+
+/**
+ * The Australia Awards Scholarship as offered to Nepal — DFAT's fully-funded
+ * award for Master's study in Australia. Captures the government-funded
+ * inclusions (`benefits`), the eligible study level, and the published
+ * application window. Fact-only data: no scorer reads it; it backs the eventual
+ * scholarships view and is reconciled against findings like every other slice.
+ * The stipend's dollar amount is intentionally not modeled (DFAT sets it by
+ * policy and revises it annually) — only its existence is recorded as a benefit.
+ */
+export interface AustraliaAwardsScholarship extends Provenanced {
+  id: string; // slug, e.g. "australia-awards-nepal"
+  name: string; // official scholarship name
+  country: string; // recipient-country scope, e.g. "Nepal"
+  studyLevel: "masters"; // eligible study level (Nepal Awards fund Master's only)
+  benefits: AustraliaAwardsBenefit[]; // government-funded inclusions
+  applicationOpens: string; // ISO date the application window opens
+  applicationCloses: string; // ISO date the window closes (the published deadline)
+  source: string; // DFAT information-for-intake PDF URL
+  lastVerified?: string; // ISO date
+}

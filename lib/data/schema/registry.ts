@@ -28,6 +28,8 @@ import { AU_TAX_FIGURES } from "@/lib/data/policy/au-tax-figures";
 import { AuTaxFiguresSchema } from "@/lib/data/schema/au-tax-figures.schema";
 import { AU_STUDENT_TRANSPORT_CONCESSIONS } from "@/lib/data/source/au-student-transport-concessions";
 import { AuStudentTransportConcessionsSchema } from "@/lib/data/schema/au-student-transport-concessions.schema";
+import { AUSTRALIA_AWARDS_SCHOLARSHIPS } from "@/lib/data/source/australia-awards-scholarship";
+import { AustraliaAwardsScholarshipsSchema } from "@/lib/data/schema/australia-awards-scholarship.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -239,5 +241,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-visa-grant-rate",
     subRecordKeys: [],
     recordInterface: "Sourced",
+  },
+  {
+    // The Australia Awards Scholarship offered to Nepal (English-tests &
+    // scholarships category J) — DFAT-funded Master's study. A single record
+    // citing the DFAT information-for-intake booklet; benefits are an enum list
+    // so each inclusion (tuition/airfare/OSHC/stipend) reconciles to its own
+    // finding. Fact-only: no scorer reads it.
+    category: "J",
+    exportName: "AUSTRALIA_AWARDS_SCHOLARSHIPS",
+    data: AUSTRALIA_AWARDS_SCHOLARSHIPS,
+    schema: AustraliaAwardsScholarshipsSchema,
+    recordLabel: "australia-awards-scholarship",
+    subRecordKeys: [],
+    recordInterface: "AustraliaAwardsScholarship",
   },
 ];
