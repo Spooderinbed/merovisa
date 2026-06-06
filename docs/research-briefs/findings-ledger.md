@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=97 · pending=1017
+**Status:** used=103 · pending=1011
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -381,12 +381,12 @@
 | C.114 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The pregnancy health undertaking requires the applicant to contact the Migration Medical Services Provider wi… |
 | C.115 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The eMedical Client service lets a client check whether health examinations have been submitted to DHA after … |
 | C.116 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | eMedical Client login requires family name, HAP ID and date of birth. |
-| C.117 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 501 Medical Examination at USD49.00. |
-| C.118 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 502 Chest X-ray Exam at USD25.00. |
-| C.119 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 707 HIV testing at USD6.00. |
-| C.120 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 708 Hepatitis B testing at USD8.00. |
-| C.121 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 716 Hepatitis C testing at USD8.00. |
-| C.122 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s MHAC service-fees PDF surfaced a package line for “Medical Exam + X-Ray + Blood Test” at USD93.00. |
+| C.117 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 501 Medical Examination at USD49.00. |
+| C.118 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 502 Chest X-ray Exam at USD25.00. |
+| C.119 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 707 HIV testing at USD6.00. |
+| C.120 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 708 Hepatitis B testing at USD8.00. |
+| C.121 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 716 Hepatitis C testing at USD8.00. |
+| C.122 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s MHAC service-fees PDF surfaced a package line for “Medical Exam + X-Ray + Blood Test” at USD93.00. |
 | C.123 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Nepal is included in Australia’s biometrics program. |
 | C.124 | C | primary | contact |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s biometrics page lists Nepal biometric-collection locations as Kathmandu and Pokhara*. |
 | C.125 | C | primary | contact |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Kathmandu Australia biometrics centre page lists the address as Thapathali-11, Kathmandu, Nepal. |

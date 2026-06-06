@@ -171,3 +171,18 @@ export interface AuSkilledVisaCharge extends Provenanced {
   source: string; // DHA visa-listing page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * An IOM Nepal health-assessment fee a Subclass 500 applicant pays for the panel
+ * medical, in USD (IOM Nepal publishes this schedule in USD, not NPR). Fact-only
+ * data: no scorer reads it; it backs the "cost of applying from Nepal" breakdown
+ * alongside NepalApplicationFee, and is reconciled against findings.
+ */
+export interface IomNepalHealthFee extends Provenanced {
+  id: string; // slug, e.g. "hiv-707"
+  label: string; // human-readable line item
+  examCode?: string; // IOM exam code where the schedule lists one, e.g. "501"
+  amountUsd: number;
+  source: string; // IOM Nepal schedule PDF URL
+  lastVerified?: string; // ISO date
+}
