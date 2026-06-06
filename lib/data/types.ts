@@ -264,3 +264,23 @@ export interface AustraliaAwardsScholarship extends Provenanced {
   source: string; // DFAT information-for-intake PDF URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A single numeric limit or key figure governing the Australian student-visa
+ * journey — a maximum stay, a work-hour cap, a processing-time median, or a
+ * Genuine Student application constraint — as published by the Department of
+ * Home Affairs. One numeric `value` with its `unit`. Fact-only data: no scorer
+ * reads it; it backs the eventual visa-conditions view and is reconciled against
+ * findings like every other slice.
+ */
+export interface AuStudentVisaLimit extends Provenanced {
+  id: string; // slug, e.g. "subclass-500-max-stay"
+  subclass: 500 | 590; // visa subclass the limit governs
+  kind: "stay-period" | "work-limit" | "processing-time" | "application-limit";
+  appliesTo: "student" | "family-member" | "guardian"; // who the limit governs
+  label: string; // human-readable limit name
+  value: number; // the numeric limit
+  unit: "years" | "hours-per-fortnight" | "days" | "words";
+  source: string; // DHA page URL
+  lastVerified?: string; // ISO date
+}

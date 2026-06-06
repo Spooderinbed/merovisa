@@ -30,6 +30,8 @@ import { AU_STUDENT_TRANSPORT_CONCESSIONS } from "@/lib/data/source/au-student-t
 import { AuStudentTransportConcessionsSchema } from "@/lib/data/schema/au-student-transport-concessions.schema";
 import { AUSTRALIA_AWARDS_SCHOLARSHIPS } from "@/lib/data/source/australia-awards-scholarship";
 import { AustraliaAwardsScholarshipsSchema } from "@/lib/data/schema/australia-awards-scholarship.schema";
+import { AU_STUDENT_VISA_LIMITS } from "@/lib/data/policy/au-student-visa-limits";
+import { AuStudentVisaLimitsSchema } from "@/lib/data/schema/au-student-visa-limits.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -255,5 +257,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "australia-awards-scholarship",
     subRecordKeys: [],
     recordInterface: "AustraliaAwardsScholarship",
+  },
+  {
+    // DHA Subclass 500/590 numeric limits (visa-conditions category C): maximum
+    // stay periods, the 48-hour-a-fortnight work caps (student + family), the
+    // category median processing time, and the Genuine Student word limit. One
+    // value+unit per record, each tracing to its own finding. Fact-only.
+    category: "C",
+    exportName: "AU_STUDENT_VISA_LIMITS",
+    data: AU_STUDENT_VISA_LIMITS,
+    schema: AuStudentVisaLimitsSchema,
+    recordLabel: "au-student-visa-limits",
+    subRecordKeys: [],
+    recordInterface: "AuStudentVisaLimit",
   },
 ];

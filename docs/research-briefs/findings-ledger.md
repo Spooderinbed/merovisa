@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=123 · pending=991
+**Status:** used=131 · pending=983
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -265,7 +265,7 @@
 | B.133 | B | primary | process | G18 | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney refunds 50% of tuition fees paid when an international student withdraws after semes… |
 | B.134 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Nepal Police provides online character certificates to local and foreign nationals. |
 | B.135 | B | anecdotal | red-flag |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Exact scenario totals for flights, first-month housing, SIM, public transport, groceries, furniture, NOC fee,… |
-| C.001 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 500 Student visa lets a student stay in Australia for up to 6 years and in line with enrolment. |
+| C.001 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 500 Student visa lets a student stay in Australia for up to 6 years and in line with enrolment. |
 | C.002 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 500 Student visa base application charge is from AUD2,000.00. |
 | C.003 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 500 Student visa can be applied for online in or outside Australia. |
 | C.004 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A valid Confirmation of Enrolment is required before DHA decides a Subclass 500 Student visa application. |
@@ -283,22 +283,22 @@
 | C.016 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a spouse or de facto partner is AUD10,394. |
 | C.017 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a dependent child is AUD4,449. |
 | C.018 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA annual school-cost amount is AUD13,502. |
-| C.019 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Student visa holders can work up to 48 hours a fortnight when the course is in session. |
+| C.019 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Student visa holders can work up to 48 hours a fortnight when the course is in session. |
 | C.020 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Family members of a Student visa holder cannot work before the student’s course starts. |
-| C.021 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Family members of a Student visa holder can work up to 48 hours a fortnight while the course is in session. |
+| C.021 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Family members of a Student visa holder can work up to 48 hours a fortnight while the course is in session. |
 | C.022 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Student visa holder can work over 48 hours a fortnight only if the visa was granted in relation to a master… |
 | C.023 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | There are no restrictions on the duration of courses a student must study to be accompanied by family members. |
 | C.024 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Family members of existing Student visa holders who do not already hold a Student visa must apply for a Stude… |
 | C.025 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Students under 18 must have welfare arrangements in place until they turn 18. |
 | C.026 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A student must not enter Australia before welfare arrangements start. |
 | C.027 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If a provider approves welfare arrangements, the CAAW minimum period must cover the same period as the CoE pl… |
-| C.028 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The maximum period for a Student visa for primary-school-aged students is generally 3 years. |
-| C.029 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | High-school students in years 7 to 12 may be granted a Student visa for a maximum period of 6 years. |
-| C.030 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Student visa category was 28 days in April 2026. |
+| C.028 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The maximum period for a Student visa for primary-school-aged students is generally 3 years. |
+| C.029 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | High-school students in years 7 to 12 may be granted a Student visa for a maximum period of 6 years. |
+| C.030 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Student visa category was 28 days in April 2026. |
 | C.031 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA student-visa processing priorities, Priority 1 applications are aimed to commence within 1 to 4 wee… |
 | C.032 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA student-visa processing priorities, Priority 2 applications are aimed to commence within 5 to 8 wee… |
 | C.033 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA student-visa processing priorities, Priority 3 applications are aimed to commence within 9 to 12 we… |
-| C.034 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 590 Student Guardian visa allows a person to visit Australia for up to 5 years to support a chil… |
+| C.034 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 590 Student Guardian visa allows a person to visit Australia for up to 5 years to support a chil… |
 | C.035 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 590 Student Guardian visa base application charge is from AUD2,000.00. |
 | C.036 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If a guardian is applying to accompany and care for a student under 18, the guardian must prove enough money … |
 | C.037 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA says a current bank statement is an example of a document that can be attached to prove Subclass 590 fina… |
@@ -398,7 +398,7 @@
 | C.131 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | ImmiAccount is the DHA online service used to apply, notify changes, check status or withdraw an application. |
 | C.132 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Document Checklist Tool is intended to be used before lodging a Student visa application to find out what… |
 | C.133 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Answers to the Genuine Student questions must be written in English. |
-| C.134 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The maximum length for each Genuine Student response is 150 words. |
+| C.134 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The maximum length for each Genuine Student response is 150 words. |
 | C.135 | C | primary | process | G23 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | There is an additional Genuine Student question for applicants who previously held a Student visa. |
 | C.136 | C | primary | process | G23 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | There is an additional Genuine Student question for applicants lodging in Australia from a non-student visa. |
 | C.137 | C | primary | process | G24 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If the student or agent organised OSHC, the application form requires the name of the health insurer, the pol… |
