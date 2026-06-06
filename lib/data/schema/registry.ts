@@ -12,6 +12,8 @@
 import type { ZodType } from "zod";
 import { NEPAL_BANKS } from "@/lib/data/source/nepal-banks";
 import { NepalBanksSchema } from "@/lib/data/schema/nepal-banks.schema";
+import { NEPAL_APPLICATION_FEES } from "@/lib/data/source/nepal-application-fees";
+import { NepalApplicationFeesSchema } from "@/lib/data/schema/nepal-application-fees.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -115,5 +117,17 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-dha-income-threshold",
     subRecordKeys: [],
     recordInterface: "Sourced",
+  },
+  {
+    // Nepal-side application/test/medical fees (finance category B). A record
+    // array (like the bank directory): one fee per record, each traced to its
+    // finding via the same record-array walker.
+    category: "B",
+    exportName: "NEPAL_APPLICATION_FEES",
+    data: NEPAL_APPLICATION_FEES,
+    schema: NepalApplicationFeesSchema,
+    recordLabel: "nepal-application-fees",
+    subRecordKeys: [],
+    recordInterface: "NepalApplicationFee",
   },
 ];

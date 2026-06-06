@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=73 · pending=1041
+**Status:** used=78 · pending=1036
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -226,8 +226,8 @@
 | B.094 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Nepal says overseas-study forex support includes outward telex transfer of tuition fees. |
 | B.095 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Nepal says the education-related USD prepaid card can be issued against a No Objection Let… |
 | B.096 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Standard Chartered Nepal says its USD prepaid card can be issued within 10 to 15 minutes. |
-| B.097 | B | practitioner | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | VFS Kathmandu’s biometric-collection service fee for Australia is NPR2,365.00. |
-| B.098 | B | practitioner | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | VFS Kathmandu’s online visa-form lodgement assistance fee is NPR472.00. |
+| B.097 | B | practitioner | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | VFS Kathmandu’s biometric-collection service fee for Australia is NPR2,365.00. |
+| B.098 | B | practitioner | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | VFS Kathmandu’s online visa-form lodgement assistance fee is NPR472.00. |
 | B.099 | B | practitioner | process | G14 | pending | lib/data/source/nepal-banks.ts (+ finance) | VFS Nepal provides Australia visa-form lodgement services. |
 | B.100 | B | practitioner | process | G14 | pending | lib/data/source/nepal-banks.ts (+ finance) | VFS Nepal provides Australia biometric-collection services. |
 | B.101 | B | primary | data | G15 | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney accepts Flywire for international payments. |
@@ -250,11 +250,11 @@
 | B.118 | B | primary | data | G16 | pending | lib/data/source/nepal-banks.ts (+ finance) | Convera says its student platform supports e-wallet payments. |
 | B.119 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Convera says its platform is available in more than 140 currencies. |
 | B.120 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Convera says its platform is available in over 200 countries and territories. |
-| B.121 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | IELTS Academic on computer at the IDP Kathmandu test room costs NPR36,000. |
-| B.122 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | IELTS UKVI Academic on computer at the IDP Kathmandu test room costs NPR36,400. |
+| B.121 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | IELTS Academic on computer at the IDP Kathmandu test room costs NPR36,000. |
+| B.122 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | IELTS UKVI Academic on computer at the IDP Kathmandu test room costs NPR36,400. |
 | B.123 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | ETS’s public TOEFL iBT fee page accessed on 2026-06-05 did not expose Nepal’s base registration fee in static… |
 | B.124 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Pearson’s public PTE pricing pages accessed on 2026-06-05 did not expose Nepal’s exact test fee in static tex… |
-| B.125 | B | practitioner | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Norvic’s Australia immigration-medical page lists “Medical Examination + Serum Creatinine” at NPR6,400. |
+| B.125 | B | practitioner | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Norvic’s Australia immigration-medical page lists “Medical Examination + Serum Creatinine” at NPR6,400. |
 | B.126 | B | practitioner | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Norvic says Australia immigration-medical reports are forwarded electronically via eMedical within three work… |
 | B.127 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney’s 2026 postgraduate-coursework tuition in Arts and Social Sciences starts at A$49,70… |
 | B.128 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney’s 2026 postgraduate-coursework tuition in Arts and Social Sciences ends at A$57,300. |

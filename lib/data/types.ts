@@ -108,3 +108,19 @@ export interface NepalBank extends Provenanced {
   source: string; // NRB Class-A listing URL
   lastVerified?: string;
 }
+
+/**
+ * A Nepal-side out-of-pocket fee a Subclass 500 applicant pays during the
+ * application journey (English test, VFS visa logistics, panel medical).
+ * Amounts in NPR. Fact-only data: no scorer reads it; it backs the eventual
+ * "cost of applying" breakdown and is reconciled against findings like every
+ * other slice.
+ */
+export interface NepalApplicationFee extends Provenanced {
+  id: string; // slug, e.g. "vfs-biometric"
+  label: string; // human-readable fee name
+  kind: "english-test" | "visa-logistics" | "medical";
+  amountNpr: number;
+  source: string; // fee page URL
+  lastVerified?: string; // ISO date
+}
