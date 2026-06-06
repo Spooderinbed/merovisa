@@ -12,6 +12,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const { validateFinding } = require("./finding-schema");
 
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SRC = path.join(ROOT, "Research Documents");
@@ -86,6 +87,11 @@ for (const f of files) {
       conflict_with: null,
       dup_group: null,
       status: "pending",
+      // Structured value, filled by a human at integration time (claim stays prose).
+      value: null,
+      value_type: null,
+      unit: null,
+      value_status: "unset",
     };
     rows.push(finding);
     all.push(finding);
@@ -127,6 +133,11 @@ for (const cat of Object.keys(perCat)) {
     if (p) {
       r.status = p.status || r.status;
       if (p.used_by) r.used_by = p.used_by;
+      // carry forward structured-value fields filled at integration time
+      if (p.value !== undefined) r.value = p.value;
+      if (p.value_type !== undefined) r.value_type = p.value_type;
+      if (p.unit !== undefined) r.unit = p.unit;
+      if (p.value_status !== undefined) r.value_status = p.value_status;
     }
   }
   const jsonl = perCat[cat].rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
@@ -135,6 +146,7 @@ for (const cat of Object.keys(perCat)) {
 
 // derive cluster review counts for the stdout summary
 const needReview = collisions.filter((c) => c.differ);
+const schemaInvalid = all.filter((r) => validateFinding(r).length > 0).length;
 
 // stdout summary (derived answer only)
 console.log("category  rows  reported  jsonlLines  parity");
@@ -147,5 +159,5 @@ for (const cat of Object.keys(perCat).sort()) {
   console.log(`${cat.padEnd(9)}${String(rows.length).padStart(4)}${String(reported).padStart(10)}${String(lines).padStart(12)}  ${ok ? "OK" : "FAIL"}`);
 }
 console.log("-".repeat(45));
-console.log(`TOTAL ${all.length} findings · entity+attr clusters ${collisions.length} (multi-valued ${needReview.length}) · end-to-end parity ${okAll ? "OK" : "FAIL"}`);
+console.log(`TOTAL ${all.length} findings · entity+attr clusters ${collisions.length} (multi-valued ${needReview.length}) · end-to-end parity ${okAll ? "OK" : "FAIL"} · schema-invalid ${schemaInvalid}`);
 console.log("wrote: raw-results/*.md, findings/*.jsonl (run build-ledger.js to regenerate the ledger views)");

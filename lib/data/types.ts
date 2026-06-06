@@ -1,5 +1,29 @@
 import type { FieldOfStudy, GradeSystem } from "@/lib/scoring/types";
 
+/**
+ * Machine-checkable provenance: links a data value back to the research
+ * finding(s) it came from (docs/research-briefs/findings/*.jsonl). The
+ * reconciliation harness (docs/research-briefs/_tools/reconcile.js) asserts
+ * every findingRef exists, is `used`, and that the data matches the finding.
+ */
+export interface Provenance {
+  /** Finding IDs this value is sourced from, e.g. ["B.045"]. At least one. */
+  findingRefs: string[];
+  /** Source URL/label, used when the wrapped value has no sibling `source`. */
+  source?: string;
+  /** ISO date (YYYY-MM-DD) the source was last verified. */
+  lastVerified?: string;
+  /** ISO date the value took regulatory effect, when applicable. */
+  effectiveDate?: string;
+  /** Freeform note (e.g. why a value is an internal heuristic). */
+  note?: string;
+}
+
+/** Mixin for data records that declare their finding provenance. */
+export interface Sourced {
+  provenance: Provenance;
+}
+
 export interface SourceCountryData {
   id: string;
   name: string;
