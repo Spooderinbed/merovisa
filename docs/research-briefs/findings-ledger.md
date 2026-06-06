@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=107 · pending=1007
+**Status:** used=112 · pending=1002
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -973,12 +973,12 @@
 | H.054 | H | anecdotal | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | Nepal’s reciprocal-health-care status for Medicare access was unverified — needs confirmation. |
 | H.055 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | UQ tells arriving students to read Australian Government information about what they can and can’t bring into… |
 | H.056 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO provides an online TFN application pathway for foreign passport holders, permanent migrants and temporary… |
-| H.057 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says it mails the TFN within 28 days after processing the application. |
+| H.057 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | ATO says it mails the TFN within 28 days after processing the application. |
 | H.058 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says an overseas student enrolled in a course that lasts for six months or more may be an Australian resi… |
-| H.059 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says a full-year Australian tax resident pays no tax on the first AUD 18,200 of income. |
-| H.060 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says the DASP tax rate on the taxable component’s taxed element is 35%. |
-| H.061 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says the DASP tax rate on the taxable component’s untaxed element is 45%. |
-| H.062 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says the DASP tax rate for working holiday makers is 65%. |
+| H.059 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | ATO says a full-year Australian tax resident pays no tax on the first AUD 18,200 of income. |
+| H.060 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | ATO says the DASP tax rate on the taxable component’s taxed element is 35%. |
+| H.061 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | ATO says the DASP tax rate on the taxable component’s untaxed element is 45%. |
+| H.062 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | ATO says the DASP tax rate for working holiday makers is 65%. |
 | H.063 | H | anecdotal | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | NRB thresholds distinguishing inbound remittances from student-source income versus employment-source income … |
 | H.064 | H | anecdotal | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Current 2026 city-by-city weekly rates for UniLodge, Iglu, Scape and Y Suites were unverified — needs confirm… |
 | H.065 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | ATO says the super guarantee rate is 12% from 1 July 2025. |

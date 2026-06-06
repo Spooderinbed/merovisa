@@ -202,3 +202,18 @@ export interface AuArrivalCashGuidance extends Provenanced {
   source: string; // guidance page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * An ATO tax figure relevant to a student worker — a threshold (AUD), a rate (%),
+ * or a turnaround (days). One numeric `value` with its `unit`. Fact-only data: no
+ * scorer reads it; it backs the eventual working/tax guidance and is reconciled
+ * against findings like every other slice.
+ */
+export interface AuTaxFigure extends Provenanced {
+  id: string; // slug, e.g. "tax-free-threshold"
+  label: string; // human-readable figure name
+  value: number; // the figure
+  unit: "AUD" | "%" | "days";
+  source: string; // ATO page URL
+  lastVerified?: string; // ISO date
+}

@@ -24,6 +24,8 @@ import { IOM_NEPAL_HEALTH_FEES } from "@/lib/data/source/iom-nepal-health-fees";
 import { IomNepalHealthFeesSchema } from "@/lib/data/schema/iom-nepal-health-fees.schema";
 import { AU_ARRIVAL_CASH_GUIDANCE } from "@/lib/data/source/au-arrival-cash-guidance";
 import { AuArrivalCashGuidanceListSchema } from "@/lib/data/schema/au-arrival-cash-guidance.schema";
+import { AU_TAX_FIGURES } from "@/lib/data/policy/au-tax-figures";
+import { AuTaxFiguresSchema } from "@/lib/data/schema/au-tax-figures.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -200,6 +202,17 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-arrival-cash-guidance",
     subRecordKeys: [],
     recordInterface: "AuArrivalCashGuidance",
+  },
+  {
+    // ATO tax figures for student workers (arrival category H): tax-free threshold,
+    // DASP rates, TFN turnaround. Fact-only: no scorer reads it. Record array.
+    category: "H",
+    exportName: "AU_TAX_FIGURES",
+    data: AU_TAX_FIGURES,
+    schema: AuTaxFiguresSchema,
+    recordLabel: "au-tax-figures",
+    subRecordKeys: [],
+    recordInterface: "AuTaxFigure",
   },
   {
     // Nepal student-visa grant-rate band shown in the matches policy banner.
