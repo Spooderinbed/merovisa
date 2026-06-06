@@ -333,3 +333,40 @@ export interface AuEnglishTest extends Provenanced {
   source: string; // source URL (the citing finding's source)
   lastVerified?: string; // ISO date
 }
+
+/**
+ * An Australian provider's application fee for international students, in AUD
+ * (0 = no application fee). `conditionality` records whether the fee always
+ * applies ("standard"), only in some cases ("conditional", e.g. UNSW's "may be
+ * payable"), or genuinely does not exist ("none"). Fact-only data: no scorer
+ * reads it; it backs the eventual cost-of-applying view and is reconciled against
+ * findings like every other slice.
+ */
+export interface AuProviderApplicationFee extends Provenanced {
+  id: string; // slug, e.g. "uts"
+  provider: string; // official provider name
+  amountAud: number; // application fee in AUD; 0 = no fee
+  conditionality: "standard" | "conditional" | "none";
+  refundable?: boolean; // set only where the source states (non-)refundability
+  source: string; // provider fee page URL
+  lastVerified?: string; // ISO date
+}
+
+/**
+ * An Australian provider's minimum English requirement for international entry,
+ * as an IELTS band. `overallMin` is the headline overall band (the gate-checked
+ * value); `perBandMin` is the per-subtest floor where the provider states one,
+ * carried as sourced detail from the same finding. Fact-only data: no scorer
+ * reads it; it backs the eventual entry-requirements view and is reconciled
+ * against findings like every other slice.
+ */
+export interface AuProviderEnglishMinimum extends Provenanced {
+  id: string; // slug, e.g. "trinity-foundation"
+  provider: string; // provider/program name as the finding states it
+  test: "IELTS"; // only IELTS appears in these findings
+  overallMin: number; // overall IELTS band
+  perBandMin?: number; // per-subtest floor, where the provider states one
+  appliesTo?: string; // program scope, e.g. "most programs"
+  source: string; // entry-requirements page URL
+  lastVerified?: string; // ISO date
+}

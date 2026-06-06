@@ -36,6 +36,10 @@ import { AU_STUDENT_WORKER_WAGES } from "@/lib/data/source/au-student-worker-wag
 import { AuStudentWorkerWagesSchema } from "@/lib/data/schema/au-student-worker-wages.schema";
 import { AU_ENGLISH_TESTS } from "@/lib/data/source/au-english-tests";
 import { AuEnglishTestsSchema } from "@/lib/data/schema/au-english-tests.schema";
+import { AU_PROVIDER_APPLICATION_FEES } from "@/lib/data/source/au-provider-application-fees";
+import { AuProviderApplicationFeesSchema } from "@/lib/data/schema/au-provider-application-fees.schema";
+import { AU_PROVIDER_ENGLISH_MINIMUMS } from "@/lib/data/source/au-provider-english-minimums";
+import { AuProviderEnglishMinimumsSchema } from "@/lib/data/schema/au-provider-english-minimums.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -300,5 +304,29 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-english-tests",
     subRecordKeys: [],
     recordInterface: "AuEnglishTest",
+  },
+  {
+    // Australian provider application fees for international students (providers
+    // category D), in AUD (0 = no fee). conditionality flags standard vs
+    // conditional ("may be payable") vs none. Fact-only: no scorer reads it.
+    category: "D",
+    exportName: "AU_PROVIDER_APPLICATION_FEES",
+    data: AU_PROVIDER_APPLICATION_FEES,
+    schema: AuProviderApplicationFeesSchema,
+    recordLabel: "au-provider-application-fees",
+    subRecordKeys: [],
+    recordInterface: "AuProviderApplicationFee",
+  },
+  {
+    // Australian provider minimum English requirements as IELTS bands (providers
+    // category D). overallMin is the gate-checked value; perBandMin rides as
+    // sourced detail. Fact-only: no scorer reads it.
+    category: "D",
+    exportName: "AU_PROVIDER_ENGLISH_MINIMUMS",
+    data: AU_PROVIDER_ENGLISH_MINIMUMS,
+    schema: AuProviderEnglishMinimumsSchema,
+    recordLabel: "au-provider-english-minimums",
+    subRecordKeys: [],
+    recordInterface: "AuProviderEnglishMinimum",
   },
 ];

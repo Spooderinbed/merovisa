@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=149 · pending=965
+**Status:** used=159 · pending=955
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -469,8 +469,8 @@
 | D.058 | D | primary | data |  | pending | supabase seed_universities migration | Monash College says 96% of diploma students transition to Monash University. |
 | D.059 | D | primary | data |  | pending | supabase seed_universities migration | Monash College says 84% of Foundation Year students transition to Monash University. |
 | D.060 | D | primary | data |  | pending | supabase seed_universities migration | Trinity College Foundation Studies uses CRICOS provider number 00709G. |
-| D.061 | D | primary | data |  | pending | supabase seed_universities migration | Trinity College’s 2026 Standard or Comprehensive Foundation Studies English minimum is IELTS 6.0 with no band… |
-| D.062 | D | primary | data |  | pending | supabase seed_universities migration | Trinity College Foundation Studies says there is no application fee. |
+| D.061 | D | primary | data |  | used | supabase seed_universities migration | Trinity College’s 2026 Standard or Comprehensive Foundation Studies English minimum is IELTS 6.0 with no band… |
+| D.062 | D | primary | data |  | used | supabase seed_universities migration | Trinity College Foundation Studies says there is no application fee. |
 | D.063 | D | primary | data |  | pending | supabase seed_universities migration | Navitas Australia Pty Limited trading as Taylors College uses CRICOS provider code 01682E. |
 | D.064 | D | primary | data |  | pending | supabase seed_universities migration | The University of Sydney Foundation Program Standard Intensive spans 9 months. |
 | D.065 | D | primary | data |  | pending | supabase seed_universities migration | Taylors College says 90% of University of Sydney Foundation Program graduates received offers to the Universi… |
@@ -493,10 +493,10 @@
 | D.082 | D | primary | process |  | pending | supabase seed_universities migration | TAFE NSW says its international application steps include finding an agent if required, gathering documents, … |
 | D.083 | D | primary | data |  | pending | supabase seed_universities migration | TAFE Queensland uses CRICOS provider code 03020E. |
 | D.084 | D | primary | data |  | pending | supabase seed_universities migration | Holmesglen Institute uses CRICOS provider code 00012G. |
-| D.085 | D | primary | data |  | pending | supabase seed_universities migration | Holmesglen’s international Certificate III in Carpentry requires IELTS 6.0 or equivalent. |
+| D.085 | D | primary | data |  | used | supabase seed_universities migration | Holmesglen’s international Certificate III in Carpentry requires IELTS 6.0 or equivalent. |
 | D.086 | D | primary | data |  | pending | supabase seed_universities migration | Holmesglen’s international Certificate III in Carpentry requires students to be at least 18 at commencement. |
 | D.087 | D | primary | data |  | pending | supabase seed_universities migration | Australia Institute of Business and Technology uses CRICOS provider code 03430J. |
-| D.088 | D | primary | data |  | pending | supabase seed_universities migration | AIBT’s 2026 fee guide lists IELTS 6.0 for Certificate IV in Accounting and Bookkeeping. |
+| D.088 | D | primary | data |  | used | supabase seed_universities migration | AIBT’s 2026 fee guide lists IELTS 6.0 for Certificate IV in Accounting and Bookkeeping. |
 | D.089 | D | primary | data |  | pending | supabase seed_universities migration | Greenwich College uses CRICOS code 02672K. |
 | D.090 | D | primary | data |  | pending | supabase seed_universities migration | Kingsford International Institute uses CRICOS code 03689D. |
 | D.091 | D | primary | data |  | pending | supabase seed_universities migration | Stanley College uses CRICOS provider code 03047E. |
@@ -510,18 +510,18 @@
 | D.099 | D | primary | red-flag |  | pending | supabase seed_universities migration | ASQA says the cancellation of Gills College Australia’s registration took effect on 2024-11-21. |
 | D.100 | D | primary | red-flag |  | pending | supabase seed_universities migration | training.gov.au shows Lonsdale Institute Pty Ltd RTO status as cancelled. |
 | D.101 | D | practitioner | red-flag |  | pending | supabase seed_universities migration | Australian Pacific College said Lonsdale Institute decided to discontinue providing courses from 2025-07-14. |
-| D.102 | D | primary | data |  | pending | supabase seed_universities migration | UTS charges a non-refundable A$100 application fee for international students. |
-| D.103 | D | primary | process |  | pending | supabase seed_universities migration | UTS waives the A$100 application fee for current UTS students applying for a second degree and current UTS Co… |
-| D.104 | D | primary | data |  | pending | supabase seed_universities migration | The University of Sydney charges a non-refundable A$150 application processing fee. |
+| D.102 | D | primary | data |  | used | supabase seed_universities migration | UTS charges a non-refundable A$100 application fee for international students. |
+| D.103 | D | primary | process |  | used | supabase seed_universities migration | UTS waives the A$100 application fee for current UTS students applying for a second degree and current UTS Co… |
+| D.104 | D | primary | data |  | used | supabase seed_universities migration | The University of Sydney charges a non-refundable A$150 application processing fee. |
 | D.105 | D | primary | process |  | pending | supabase seed_universities migration | The University of Sydney allows international applicants to apply directly from the course page or via an aut… |
 | D.106 | D | primary | process |  | pending | supabase seed_universities migration | Deakin lists Nepal among countries whose students must apply through an authorised international agent. |
-| D.107 | D | primary | data |  | pending | supabase seed_universities migration | Monash University charges a A$125 application fee for international applicants. |
+| D.107 | D | primary | data |  | used | supabase seed_universities migration | Monash University charges a A$125 application fee for international applicants. |
 | D.108 | D | primary | process |  | pending | supabase seed_universities migration | Monash says offer acceptance requires payment of the deposit, including OSHC, and return of the signed Intern… |
-| D.109 | D | primary | data |  | pending | supabase seed_universities migration | UNSW’s Apply Online FAQ says an AUD $150 non-refundable application processing fee may be payable. |
+| D.109 | D | primary | data |  | used | supabase seed_universities migration | UNSW’s Apply Online FAQ says an AUD $150 non-refundable application processing fee may be payable. |
 | D.110 | D | primary | process |  | pending | supabase seed_universities migration | The University of Melbourne says all other international undergraduate applicants must apply directly to the … |
 | D.111 | D | primary | process |  | pending | supabase seed_universities migration | UTS says Nepal applicants can be considered with at least one full-time year of a four-year bachelor degree a… |
 | D.112 | D | primary | process |  | pending | supabase seed_universities migration | RMIT’s Nepal country-equivalency page says bachelor-degree entry is case-by-case and requires a minimum avera… |
-| D.113 | D | primary | data |  | pending | supabase seed_universities migration | Western Sydney University’s general English requirement for most programs is IELTS 6.5 overall with a minimum… |
+| D.113 | D | primary | data |  | used | supabase seed_universities migration | Western Sydney University’s general English requirement for most programs is IELTS 6.5 overall with a minimum… |
 | D.114 | D | primary | process |  | pending | supabase seed_universities migration | UTS says international applications require certified copies of academic transcripts and a certified copy of … |
 | D.115 | D | primary | process |  | pending | supabase seed_universities migration | The University of Newcastle says international applicants should provide an academic transcript, completion c… |
 | D.116 | D | primary | process |  | pending | supabase seed_universities migration | The University of Tasmania says international applicants should provide original or certified academic docume… |
