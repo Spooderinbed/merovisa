@@ -1,0 +1,742 @@
+{
+  "strong-clear": {
+    "verdict": "strong",
+    "weighted": 87,
+    "dimensions": {
+      "academic": {
+        "value": 78,
+        "factors": [
+          {
+            "label": "Strong grade (86%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Computer Science."
+          },
+          {
+            "label": "Master's degree completed",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens academic standing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 92,
+        "factors": [
+          {
+            "label": "Budget above typical range",
+            "influence": "positive",
+            "detail": "Comfortably covers Australia costs."
+          },
+          {
+            "label": "Self-funded",
+            "influence": "positive",
+            "detail": "Strongest funding signal for visa officers."
+          }
+        ]
+      },
+      "visa": {
+        "value": 98,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.5",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 81,
+        "factors": [
+          {
+            "label": "Master's degree",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens profile."
+          },
+          {
+            "label": "Strong English (7.5)",
+            "influence": "positive",
+            "detail": "High IELTS opens up more selective programs."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "strong-boundary": {
+    "verdict": "strong",
+    "weighted": 72,
+    "dimensions": {
+      "academic": {
+        "value": 57,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Business."
+          }
+        ]
+      },
+      "financial": {
+        "value": 73,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Canada costs."
+          }
+        ]
+      },
+      "visa": {
+        "value": 93,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.0",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for canada."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 68,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "possible-boundary-high": {
+    "verdict": "possible",
+    "weighted": 71,
+    "dimensions": {
+      "academic": {
+        "value": 56,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Business."
+          }
+        ]
+      },
+      "financial": {
+        "value": 71,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Canada costs."
+          }
+        ]
+      },
+      "visa": {
+        "value": 93,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.0",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for canada."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 68,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "possible-mid": {
+    "verdict": "possible",
+    "weighted": 65,
+    "dimensions": {
+      "academic": {
+        "value": 53,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Hospitality."
+          }
+        ]
+      },
+      "financial": {
+        "value": 59,
+        "factors": [
+          {
+            "label": "Budget below typical range",
+            "influence": "risk",
+            "detail": "Typical year in Australia costs USD 30,000–55,000."
+          },
+          {
+            "label": "Education loan",
+            "influence": "neutral",
+            "detail": "Acceptable funding when sanction letter is documented."
+          }
+        ]
+      },
+      "visa": {
+        "value": 79,
+        "factors": [
+          {
+            "label": "2-year gap explained by work",
+            "influence": "neutral",
+            "detail": "Documented employment mitigates gap concerns."
+          },
+          {
+            "label": "IELTS 6.5",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 73,
+        "factors": [
+          {
+            "label": "Work experience",
+            "influence": "positive",
+            "detail": "Documented employment strengthens both profile and visa case."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "possible-boundary-low": {
+    "verdict": "possible",
+    "weighted": 50,
+    "dimensions": {
+      "academic": {
+        "value": 46,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Arts."
+          }
+        ]
+      },
+      "financial": {
+        "value": 43,
+        "factors": [
+          {
+            "label": "Budget below typical range",
+            "influence": "risk",
+            "detail": "Typical year in Australia costs USD 30,000–55,000."
+          },
+          {
+            "label": "Scholarship-dependent funding",
+            "influence": "risk",
+            "detail": "Outcome depends on receiving scholarships — adds uncertainty to visa case."
+          }
+        ]
+      },
+      "visa": {
+        "value": 50,
+        "factors": [
+          {
+            "label": "6-year gap",
+            "influence": "risk",
+            "detail": "Long gaps face extra scrutiny — strong documentation required."
+          },
+          {
+            "label": "No English test taken",
+            "influence": "risk",
+            "detail": "Required for student visa — book a test to strengthen your case."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 63,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "reach-weighted-boundary": {
+    "verdict": "reach",
+    "weighted": 49,
+    "dimensions": {
+      "academic": {
+        "value": 44,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Arts."
+          }
+        ]
+      },
+      "financial": {
+        "value": 41,
+        "factors": [
+          {
+            "label": "Budget below typical range",
+            "influence": "risk",
+            "detail": "Typical year in Australia costs USD 30,000–55,000."
+          },
+          {
+            "label": "Scholarship-dependent funding",
+            "influence": "risk",
+            "detail": "Outcome depends on receiving scholarships — adds uncertainty to visa case."
+          }
+        ]
+      },
+      "visa": {
+        "value": 50,
+        "factors": [
+          {
+            "label": "6-year gap",
+            "influence": "risk",
+            "detail": "Long gaps face extra scrutiny — strong documentation required."
+          },
+          {
+            "label": "No English test taken",
+            "influence": "risk",
+            "detail": "Required for student visa — book a test to strengthen your case."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 63,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "reach-min-dimension": {
+    "verdict": "reach",
+    "weighted": 63,
+    "dimensions": {
+      "academic": {
+        "value": 64,
+        "factors": [
+          {
+            "label": "Strong grade (80%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Computer Science."
+          }
+        ]
+      },
+      "financial": {
+        "value": 29,
+        "factors": [
+          {
+            "label": "Budget below typical range",
+            "influence": "risk",
+            "detail": "Typical year in Australia costs USD 30,000–55,000."
+          },
+          {
+            "label": "Scholarship-dependent funding",
+            "influence": "risk",
+            "detail": "Outcome depends on receiving scholarships — adds uncertainty to visa case."
+          }
+        ]
+      },
+      "visa": {
+        "value": 93,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.0",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 68,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "possible-min-dimension": {
+    "verdict": "possible",
+    "weighted": 64,
+    "dimensions": {
+      "academic": {
+        "value": 64,
+        "factors": [
+          {
+            "label": "Strong grade (80%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Computer Science."
+          }
+        ]
+      },
+      "financial": {
+        "value": 30,
+        "factors": [
+          {
+            "label": "Budget below typical range",
+            "influence": "risk",
+            "detail": "Typical year in Australia costs USD 30,000–55,000."
+          },
+          {
+            "label": "Scholarship-dependent funding",
+            "influence": "risk",
+            "detail": "Outcome depends on receiving scholarships — adds uncertainty to visa case."
+          }
+        ]
+      },
+      "visa": {
+        "value": 93,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.0",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 68,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "germany-threshold": {
+    "verdict": "possible",
+    "weighted": 70,
+    "dimensions": {
+      "academic": {
+        "value": 60,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Engineering."
+          }
+        ]
+      },
+      "financial": {
+        "value": 70,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Germany costs."
+          }
+        ]
+      },
+      "visa": {
+        "value": 79,
+        "factors": [
+          {
+            "label": "1-year gap explained by work",
+            "influence": "neutral",
+            "detail": "Documented employment mitigates gap concerns."
+          },
+          {
+            "label": "IELTS 6.0",
+            "influence": "positive",
+            "detail": "Meets the 6 threshold for germany."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 73,
+        "factors": [
+          {
+            "label": "Work experience",
+            "influence": "positive",
+            "detail": "Documented employment strengthens both profile and visa case."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "not-sure-destination": {
+    "verdict": "strong",
+    "weighted": 83,
+    "dimensions": {
+      "academic": {
+        "value": 73,
+        "factors": [
+          {
+            "label": "Strong grade (82%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Data Science."
+          },
+          {
+            "label": "Master's degree completed",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens academic standing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 83,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical your destination costs."
+          },
+          {
+            "label": "Self-funded",
+            "influence": "positive",
+            "detail": "Strongest funding signal for visa officers."
+          }
+        ]
+      },
+      "visa": {
+        "value": 98,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.5",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for not-sure."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 81,
+        "factors": [
+          {
+            "label": "Master's degree",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens profile."
+          },
+          {
+            "label": "Strong English (7.5)",
+            "influence": "positive",
+            "detail": "High IELTS opens up more selective programs."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "higher-secondary-no-english": {
+    "verdict": "possible",
+    "weighted": 64,
+    "dimensions": {
+      "academic": {
+        "value": 52,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Arts."
+          }
+        ]
+      },
+      "financial": {
+        "value": 71,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Australia costs."
+          }
+        ]
+      },
+      "visa": {
+        "value": 80,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "No English test taken",
+            "influence": "risk",
+            "detail": "Required for student visa — book a test to strengthen your case."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 55,
+        "factors": [
+          {
+            "label": "Higher secondary only",
+            "influence": "neutral",
+            "detail": "A completed bachelor's would significantly improve standing."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "unknown-currency-passthrough": {
+    "verdict": "strong",
+    "weighted": 77,
+    "dimensions": {
+      "academic": {
+        "value": 76,
+        "factors": [
+          {
+            "label": "Strong grade (78%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Accounting."
+          },
+          {
+            "label": "Master's degree completed",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens academic standing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 65,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical the USA costs."
+          },
+          {
+            "label": "Education loan",
+            "influence": "neutral",
+            "detail": "Acceptable funding when sanction letter is documented."
+          }
+        ]
+      },
+      "visa": {
+        "value": 83,
+        "factors": [
+          {
+            "label": "2-year gap",
+            "influence": "neutral",
+            "detail": "Gap requires a clear explanation in your SOP."
+          },
+          {
+            "label": "IELTS 7.0",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for usa."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 84,
+        "factors": [
+          {
+            "label": "Master's degree",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens profile."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "long-gap-below-english": {
+    "verdict": "possible",
+    "weighted": 58,
+    "dimensions": {
+      "academic": {
+        "value": 56,
+        "factors": [
+          {
+            "label": "Grade within range",
+            "influence": "neutral",
+            "detail": "Around the typical threshold for Nursing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 66,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Australia costs."
+          }
+        ]
+      },
+      "visa": {
+        "value": 48,
+        "factors": [
+          {
+            "label": "6-year gap",
+            "influence": "risk",
+            "detail": "Long gaps face extra scrutiny — strong documentation required."
+          },
+          {
+            "label": "IELTS 6.0",
+            "influence": "risk",
+            "detail": "Below the 6.5 threshold for australia."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 63,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  },
+  "booked-english-aud": {
+    "verdict": "possible",
+    "weighted": 67,
+    "dimensions": {
+      "academic": {
+        "value": 61,
+        "factors": [
+          {
+            "label": "Strong grade (76%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Engineering."
+          }
+        ]
+      },
+      "financial": {
+        "value": 70,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Australia costs."
+          }
+        ]
+      },
+      "visa": {
+        "value": 75,
+        "factors": [
+          {
+            "label": "2-year gap",
+            "influence": "risk",
+            "detail": "Gap requires a clear explanation in your SOP."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 63,
+        "factors": []
+      }
+    },
+    "ruleVersion": "v0.1.0"
+  }
+}
