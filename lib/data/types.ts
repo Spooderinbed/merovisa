@@ -20,7 +20,18 @@ export interface Provenance {
 }
 
 /** Mixin for data records that declare their finding provenance. */
-export interface Sourced {
+export interface Provenanced {
+  provenance: Provenance;
+}
+
+/**
+ * A single value paired with its provenance — the unit of the sourced config
+ * layer (lib/data/scoring-config.ts). The facade re-exports `.value` unwrapped so
+ * scoring math stays byte-identical; the provenance rides alongside for
+ * explainability and reconciliation against findings.
+ */
+export interface Sourced<T> {
+  value: T;
   provenance: Provenance;
 }
 
@@ -74,7 +85,7 @@ export type LoanPricing =
   | { kind: "base-spread"; minSpreadPct: number; maxSpreadPct: number }
   | { kind: "fixed"; minRatePct?: number; maxRatePct?: number; effectiveRatePct?: number; effectiveDate?: string };
 
-export interface NepalBankLoan extends Sourced {
+export interface NepalBankLoan extends Provenanced {
   productName?: string;
   minAmountNpr?: number;
   maxAmountNpr?: number;
@@ -87,7 +98,7 @@ export interface NepalBankLoan extends Sourced {
   lastVerified?: string; // ISO date; omitted when the source page is undated
 }
 
-export interface NepalBank extends Sourced {
+export interface NepalBank extends Provenanced {
   id: string; // slug, e.g. "himalayan"
   name: string; // official name, e.g. "Himalayan Bank Ltd."
   nrbClass: "A";
