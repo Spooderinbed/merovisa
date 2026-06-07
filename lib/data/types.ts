@@ -391,3 +391,13 @@ export interface AuRmitProgram extends Provenanced {
   source: string; // RMIT international guide URL
   lastVerified?: string; // ISO date
 }
+
+export interface AuCricosCode extends Provenanced {
+  id: string; // slug, e.g. "university-of-sydney"; a location/program suffix disambiguates providers holding several codes
+  provider: string; // provider name as the finding states it
+  providerType: "university" | "pathway-college" | "vet-rto"; // vet-rto = any non-university registered provider (TAFE / private RTO / private higher-ed college)
+  cricosCode: string; // CRICOS provider code: five digits + a letter, e.g. "00026A"
+  coverage?: string; // location coverage for location-specific codes (multi-code providers), e.g. "Melbourne"
+  source: string; // canonical CRICOS register URL
+  lastVerified?: string; // ISO date
+}

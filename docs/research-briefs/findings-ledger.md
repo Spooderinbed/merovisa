@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=172 · pending=942
+**Status:** used=234 · pending=880
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -423,89 +423,89 @@
 | D.012 | D | primary | process |  | pending | supabase seed_universities migration | The Post-Vocational Education Work stream is for international students who recently graduated with an associ… |
 | D.013 | D | primary | process |  | pending | supabase seed_universities migration | DHA tells higher-education students to check provider priority status on the Education portfolio’s Visa Prior… |
 | D.014 | D | primary | data |  | pending | supabase seed_universities migration | Adelaide University began operations in January 2026. |
-| D.015 | D | primary | data |  | pending | supabase seed_universities migration | The University of Sydney uses CRICOS provider number 00026A. |
-| D.016 | D | primary | data |  | pending | supabase seed_universities migration | UNSW Sydney uses CRICOS provider code 00098G. |
-| D.017 | D | primary | data |  | pending | supabase seed_universities migration | Monash University uses CRICOS provider number 00008C. |
-| D.018 | D | primary | data |  | pending | supabase seed_universities migration | The University of Queensland uses CRICOS provider number 00025B. |
-| D.019 | D | primary | data |  | pending | supabase seed_universities migration | The University of Western Australia uses CRICOS provider code 00126G. |
-| D.020 | D | primary | data |  | pending | supabase seed_universities migration | Adelaide University uses CRICOS provider number 04249J. |
-| D.021 | D | primary | data |  | pending | supabase seed_universities migration | RMIT University uses CRICOS provider number 00122A. |
-| D.022 | D | primary | data |  | pending | supabase seed_universities migration | University of Technology Sydney uses CRICOS provider number 00099F. |
-| D.023 | D | primary | data |  | pending | supabase seed_universities migration | Curtin University uses CRICOS provider code 00301J. |
-| D.024 | D | primary | data |  | pending | supabase seed_universities migration | Queensland University of Technology uses CRICOS number 00213J. |
-| D.025 | D | primary | data |  | pending | supabase seed_universities migration | Deakin University uses CRICOS provider code 00113B. |
-| D.026 | D | primary | data |  | pending | supabase seed_universities migration | La Trobe University uses CRICOS provider code 00115M. |
-| D.027 | D | primary | data |  | pending | supabase seed_universities migration | Griffith University uses CRICOS provider number 00233E. |
-| D.028 | D | primary | data |  | pending | supabase seed_universities migration | Macquarie University uses CRICOS provider code 00002J. |
-| D.029 | D | primary | data |  | pending | supabase seed_universities migration | Western Sydney University uses CRICOS provider number 00917K. |
-| D.030 | D | primary | data |  | pending | supabase seed_universities migration | The University of Newcastle uses CRICOS provider code 00109J. |
-| D.031 | D | primary | data |  | pending | supabase seed_universities migration | The University of Wollongong uses CRICOS provider number 00102E. |
-| D.032 | D | primary | data |  | pending | supabase seed_universities migration | The University of Tasmania uses CRICOS provider code 00586B. |
-| D.033 | D | primary | data |  | pending | supabase seed_universities migration | Flinders University uses CRICOS provider number 00114A. |
-| D.034 | D | primary | data |  | pending | supabase seed_universities migration | James Cook University uses CRICOS provider code 00117J. |
-| D.035 | D | primary | data |  | pending | supabase seed_universities migration | Edith Cowan University uses CRICOS provider code 00279B. |
-| D.036 | D | primary | data |  | pending | supabase seed_universities migration | Murdoch University uses CRICOS provider code 00125J. |
-| D.037 | D | primary | data |  | pending | supabase seed_universities migration | Federation University Australia uses CRICOS provider number 00103D. |
-| D.038 | D | primary | data |  | pending | supabase seed_universities migration | Central Queensland University uses CRICOS provider code 00219C. |
-| D.039 | D | primary | data |  | pending | supabase seed_universities migration | Victoria University uses CRICOS provider number 00124K for Melbourne. |
-| D.040 | D | primary | data |  | pending | supabase seed_universities migration | Victoria University uses CRICOS provider number 02475D for Sydney and Brisbane. |
-| D.041 | D | primary | data |  | pending | supabase seed_universities migration | Australian Catholic University uses CRICOS registration 00004G. |
-| D.042 | D | primary | data |  | pending | supabase seed_universities migration | Bond University uses CRICOS provider code 00017B. |
-| D.043 | D | primary | data |  | pending | supabase seed_universities migration | The University of Notre Dame Australia uses CRICOS provider code 01032F. |
-| D.044 | D | primary | data |  | pending | supabase seed_universities migration | Torrens University Australia uses CRICOS provider code 03389E. |
-| D.045 | D | primary | data |  | pending | supabase seed_universities migration | The University of Canberra uses CRICOS provider code 00212K. |
-| D.046 | D | primary | data |  | pending | supabase seed_universities migration | Charles Sturt University uses CRICOS provider number 00005F in New South Wales. |
-| D.047 | D | primary | data |  | pending | supabase seed_universities migration | Charles Sturt University uses CRICOS provider number 01947G in Victoria. |
-| D.048 | D | primary | data |  | pending | supabase seed_universities migration | Charles Sturt University uses CRICOS provider number 02960B in the ACT. |
-| D.049 | D | primary | data |  | pending | supabase seed_universities migration | Charles Darwin University uses CRICOS provider code 00300K. |
-| D.050 | D | primary | data |  | pending | supabase seed_universities migration | Southern Cross University uses CRICOS provider code 01241G. |
-| D.051 | D | primary | data |  | pending | supabase seed_universities migration | The University of New England uses CRICOS provider number 00003G. |
-| D.052 | D | primary | data |  | pending | supabase seed_universities migration | UniSQ uses CRICOS provider code 00244B in Queensland. |
-| D.053 | D | primary | data |  | pending | supabase seed_universities migration | UniSQ uses CRICOS provider code 02225M in New South Wales. |
-| D.054 | D | primary | data |  | pending | supabase seed_universities migration | Avondale University uses CRICOS provider number 02731D. |
+| D.015 | D | primary | data |  | used | supabase seed_universities migration | The University of Sydney uses CRICOS provider number 00026A. |
+| D.016 | D | primary | data |  | used | supabase seed_universities migration | UNSW Sydney uses CRICOS provider code 00098G. |
+| D.017 | D | primary | data |  | used | supabase seed_universities migration | Monash University uses CRICOS provider number 00008C. |
+| D.018 | D | primary | data |  | used | supabase seed_universities migration | The University of Queensland uses CRICOS provider number 00025B. |
+| D.019 | D | primary | data |  | used | supabase seed_universities migration | The University of Western Australia uses CRICOS provider code 00126G. |
+| D.020 | D | primary | data |  | used | supabase seed_universities migration | Adelaide University uses CRICOS provider number 04249J. |
+| D.021 | D | primary | data |  | used | supabase seed_universities migration | RMIT University uses CRICOS provider number 00122A. |
+| D.022 | D | primary | data |  | used | supabase seed_universities migration | University of Technology Sydney uses CRICOS provider number 00099F. |
+| D.023 | D | primary | data |  | used | supabase seed_universities migration | Curtin University uses CRICOS provider code 00301J. |
+| D.024 | D | primary | data |  | used | supabase seed_universities migration | Queensland University of Technology uses CRICOS number 00213J. |
+| D.025 | D | primary | data |  | used | supabase seed_universities migration | Deakin University uses CRICOS provider code 00113B. |
+| D.026 | D | primary | data |  | used | supabase seed_universities migration | La Trobe University uses CRICOS provider code 00115M. |
+| D.027 | D | primary | data |  | used | supabase seed_universities migration | Griffith University uses CRICOS provider number 00233E. |
+| D.028 | D | primary | data |  | used | supabase seed_universities migration | Macquarie University uses CRICOS provider code 00002J. |
+| D.029 | D | primary | data |  | used | supabase seed_universities migration | Western Sydney University uses CRICOS provider number 00917K. |
+| D.030 | D | primary | data |  | used | supabase seed_universities migration | The University of Newcastle uses CRICOS provider code 00109J. |
+| D.031 | D | primary | data |  | used | supabase seed_universities migration | The University of Wollongong uses CRICOS provider number 00102E. |
+| D.032 | D | primary | data |  | used | supabase seed_universities migration | The University of Tasmania uses CRICOS provider code 00586B. |
+| D.033 | D | primary | data |  | used | supabase seed_universities migration | Flinders University uses CRICOS provider number 00114A. |
+| D.034 | D | primary | data |  | used | supabase seed_universities migration | James Cook University uses CRICOS provider code 00117J. |
+| D.035 | D | primary | data |  | used | supabase seed_universities migration | Edith Cowan University uses CRICOS provider code 00279B. |
+| D.036 | D | primary | data |  | used | supabase seed_universities migration | Murdoch University uses CRICOS provider code 00125J. |
+| D.037 | D | primary | data |  | used | supabase seed_universities migration | Federation University Australia uses CRICOS provider number 00103D. |
+| D.038 | D | primary | data |  | used | supabase seed_universities migration | Central Queensland University uses CRICOS provider code 00219C. |
+| D.039 | D | primary | data |  | used | supabase seed_universities migration | Victoria University uses CRICOS provider number 00124K for Melbourne. |
+| D.040 | D | primary | data |  | used | supabase seed_universities migration | Victoria University uses CRICOS provider number 02475D for Sydney and Brisbane. |
+| D.041 | D | primary | data |  | used | supabase seed_universities migration | Australian Catholic University uses CRICOS registration 00004G. |
+| D.042 | D | primary | data |  | used | supabase seed_universities migration | Bond University uses CRICOS provider code 00017B. |
+| D.043 | D | primary | data |  | used | supabase seed_universities migration | The University of Notre Dame Australia uses CRICOS provider code 01032F. |
+| D.044 | D | primary | data |  | used | supabase seed_universities migration | Torrens University Australia uses CRICOS provider code 03389E. |
+| D.045 | D | primary | data |  | used | supabase seed_universities migration | The University of Canberra uses CRICOS provider code 00212K. |
+| D.046 | D | primary | data |  | used | supabase seed_universities migration | Charles Sturt University uses CRICOS provider number 00005F in New South Wales. |
+| D.047 | D | primary | data |  | used | supabase seed_universities migration | Charles Sturt University uses CRICOS provider number 01947G in Victoria. |
+| D.048 | D | primary | data |  | used | supabase seed_universities migration | Charles Sturt University uses CRICOS provider number 02960B in the ACT. |
+| D.049 | D | primary | data |  | used | supabase seed_universities migration | Charles Darwin University uses CRICOS provider code 00300K. |
+| D.050 | D | primary | data |  | used | supabase seed_universities migration | Southern Cross University uses CRICOS provider code 01241G. |
+| D.051 | D | primary | data |  | used | supabase seed_universities migration | The University of New England uses CRICOS provider number 00003G. |
+| D.052 | D | primary | data |  | used | supabase seed_universities migration | UniSQ uses CRICOS provider code 00244B in Queensland. |
+| D.053 | D | primary | data |  | used | supabase seed_universities migration | UniSQ uses CRICOS provider code 02225M in New South Wales. |
+| D.054 | D | primary | data |  | used | supabase seed_universities migration | Avondale University uses CRICOS provider number 02731D. |
 | D.055 | D | anecdotal | data |  | pending | supabase seed_universities migration | University of Melbourne CRICOS provider code is unverified — needs confirmation in this pass. |
 | D.056 | D | anecdotal | data |  | pending | supabase seed_universities migration | Australian National University CRICOS provider code is unverified — needs confirmation in this pass. |
-| D.057 | D | primary | data |  | pending | supabase seed_universities migration | Monash College uses CRICOS provider number 01857J. |
+| D.057 | D | primary | data |  | used | supabase seed_universities migration | Monash College uses CRICOS provider number 01857J. |
 | D.058 | D | primary | data |  | pending | supabase seed_universities migration | Monash College says 96% of diploma students transition to Monash University. |
 | D.059 | D | primary | data |  | pending | supabase seed_universities migration | Monash College says 84% of Foundation Year students transition to Monash University. |
-| D.060 | D | primary | data |  | pending | supabase seed_universities migration | Trinity College Foundation Studies uses CRICOS provider number 00709G. |
+| D.060 | D | primary | data |  | used | supabase seed_universities migration | Trinity College Foundation Studies uses CRICOS provider number 00709G. |
 | D.061 | D | primary | data |  | used | supabase seed_universities migration | Trinity College’s 2026 Standard or Comprehensive Foundation Studies English minimum is IELTS 6.0 with no band… |
 | D.062 | D | primary | data |  | used | supabase seed_universities migration | Trinity College Foundation Studies says there is no application fee. |
-| D.063 | D | primary | data |  | pending | supabase seed_universities migration | Navitas Australia Pty Limited trading as Taylors College uses CRICOS provider code 01682E. |
+| D.063 | D | primary | data |  | used | supabase seed_universities migration | Navitas Australia Pty Limited trading as Taylors College uses CRICOS provider code 01682E. |
 | D.064 | D | primary | data |  | pending | supabase seed_universities migration | The University of Sydney Foundation Program Standard Intensive spans 9 months. |
 | D.065 | D | primary | data |  | pending | supabase seed_universities migration | Taylors College says 90% of University of Sydney Foundation Program graduates received offers to the Universi… |
-| D.066 | D | primary | data |  | pending | supabase seed_universities migration | UNSW College uses CRICOS provider code 01020K for its Applied Degrees, Foundation Studies, Academic English, … |
-| D.067 | D | primary | data |  | pending | supabase seed_universities migration | UNSW College says UNSW Diplomas are delivered on behalf of UNSW Sydney under CRICOS provider code 00098G. |
-| D.068 | D | primary | data |  | pending | supabase seed_universities migration | Deakin College uses CRICOS provider code 01590J. |
+| D.066 | D | primary | data |  | used | supabase seed_universities migration | UNSW College uses CRICOS provider code 01020K for its Applied Degrees, Foundation Studies, Academic English, … |
+| D.067 | D | primary | data |  | used | supabase seed_universities migration | UNSW College says UNSW Diplomas are delivered on behalf of UNSW Sydney under CRICOS provider code 00098G. |
+| D.068 | D | primary | data |  | used | supabase seed_universities migration | Deakin College uses CRICOS provider code 01590J. |
 | D.069 | D | primary | data |  | pending | supabase seed_universities migration | Deakin College lists the 2026 international fee for its Diploma of Information Technology as A$37,600. |
-| D.070 | D | primary | data |  | pending | supabase seed_universities migration | UTS College uses CRICOS provider code 00859D. |
+| D.070 | D | primary | data |  | used | supabase seed_universities migration | UTS College uses CRICOS provider code 00859D. |
 | D.071 | D | primary | data |  | pending | supabase seed_universities migration | UTS College lists the international fee for its Diploma of Information Technology as A$39,000. |
 | D.072 | D | primary | data |  | pending | supabase seed_universities migration | UTS College lists a 12-month standard duration for its Diploma of Information Technology. |
 | D.073 | D | primary | data |  | pending | supabase seed_universities migration | UTS College lists an 8-month accelerated duration for its Diploma of Information Technology. |
-| D.074 | D | primary | data |  | pending | supabase seed_universities migration | La Trobe College Australia uses CRICOS code 03312D. |
-| D.075 | D | primary | data |  | pending | supabase seed_universities migration | Curtin College uses CRICOS provider code 02042G. |
-| D.076 | D | primary | data |  | pending | supabase seed_universities migration | Western Sydney University International College uses CRICOS provider code 03663C. |
-| D.077 | D | primary | data |  | pending | supabase seed_universities migration | Western Sydney University The College uses CRICOS provider code 02851G. |
+| D.074 | D | primary | data |  | used | supabase seed_universities migration | La Trobe College Australia uses CRICOS code 03312D. |
+| D.075 | D | primary | data |  | used | supabase seed_universities migration | Curtin College uses CRICOS provider code 02042G. |
+| D.076 | D | primary | data |  | used | supabase seed_universities migration | Western Sydney University International College uses CRICOS provider code 03663C. |
+| D.077 | D | primary | data |  | used | supabase seed_universities migration | Western Sydney University The College uses CRICOS provider code 02851G. |
 | D.078 | D | primary | process |  | pending | supabase seed_universities migration | Western Sydney University International College says its Diploma in Business guarantees entry into the second… |
 | D.079 | D | primary | process |  | pending | supabase seed_universities migration | Deakin College says its Foundation Program can lead to entry into a Deakin College diploma or the first year … |
 | D.080 | D | primary | data |  | pending | supabase seed_universities migration | Western Sydney University says its pathway foundation programs are offered in Business, Health Science and Nu… |
-| D.081 | D | primary | data |  | pending | supabase seed_universities migration | TAFE NSW uses CRICOS provider number 00591E. |
+| D.081 | D | primary | data |  | used | supabase seed_universities migration | TAFE NSW uses CRICOS provider number 00591E. |
 | D.082 | D | primary | process |  | pending | supabase seed_universities migration | TAFE NSW says its international application steps include finding an agent if required, gathering documents, … |
-| D.083 | D | primary | data |  | pending | supabase seed_universities migration | TAFE Queensland uses CRICOS provider code 03020E. |
-| D.084 | D | primary | data |  | pending | supabase seed_universities migration | Holmesglen Institute uses CRICOS provider code 00012G. |
+| D.083 | D | primary | data |  | used | supabase seed_universities migration | TAFE Queensland uses CRICOS provider code 03020E. |
+| D.084 | D | primary | data |  | used | supabase seed_universities migration | Holmesglen Institute uses CRICOS provider code 00012G. |
 | D.085 | D | primary | data |  | used | supabase seed_universities migration | Holmesglen’s international Certificate III in Carpentry requires IELTS 6.0 or equivalent. |
 | D.086 | D | primary | data |  | pending | supabase seed_universities migration | Holmesglen’s international Certificate III in Carpentry requires students to be at least 18 at commencement. |
-| D.087 | D | primary | data |  | pending | supabase seed_universities migration | Australia Institute of Business and Technology uses CRICOS provider code 03430J. |
+| D.087 | D | primary | data |  | used | supabase seed_universities migration | Australia Institute of Business and Technology uses CRICOS provider code 03430J. |
 | D.088 | D | primary | data |  | used | supabase seed_universities migration | AIBT’s 2026 fee guide lists IELTS 6.0 for Certificate IV in Accounting and Bookkeeping. |
-| D.089 | D | primary | data |  | pending | supabase seed_universities migration | Greenwich College uses CRICOS code 02672K. |
-| D.090 | D | primary | data |  | pending | supabase seed_universities migration | Kingsford International Institute uses CRICOS code 03689D. |
-| D.091 | D | primary | data |  | pending | supabase seed_universities migration | Stanley College uses CRICOS provider code 03047E. |
+| D.089 | D | primary | data |  | used | supabase seed_universities migration | Greenwich College uses CRICOS code 02672K. |
+| D.090 | D | primary | data |  | used | supabase seed_universities migration | Kingsford International Institute uses CRICOS code 03689D. |
+| D.091 | D | primary | data |  | used | supabase seed_universities migration | Stanley College uses CRICOS provider code 03047E. |
 | D.092 | D | primary | contact |  | pending | supabase seed_universities migration | Stanley College lists `admissions@stanleycollege.edu.au` as its student application email. |
-| D.093 | D | primary | data |  | pending | supabase seed_universities migration | Australian Pacific College uses CRICOS provider code 01331F. |
-| D.094 | D | primary | data |  | pending | supabase seed_universities migration | Kent Institute Australia uses CRICOS code 00161E. |
-| D.095 | D | primary | data |  | pending | supabase seed_universities migration | Engineering Institute of Technology uses CRICOS provider number 03567C. |
+| D.093 | D | primary | data |  | used | supabase seed_universities migration | Australian Pacific College uses CRICOS provider code 01331F. |
+| D.094 | D | primary | data |  | used | supabase seed_universities migration | Kent Institute Australia uses CRICOS code 00161E. |
+| D.095 | D | primary | data |  | used | supabase seed_universities migration | Engineering Institute of Technology uses CRICOS provider number 03567C. |
 | D.096 | D | primary | data |  | pending | supabase seed_universities migration | Holmes Institute uses CRICOS provider codes 02639M in Victoria, 02767C in New South Wales and 02727M in Queen… |
-| D.097 | D | primary | data |  | pending | supabase seed_universities migration | Acknowledge Education, which operates Stott’s College-branded study options, uses CRICOS code 00197D. |
+| D.097 | D | primary | data |  | used | supabase seed_universities migration | Acknowledge Education, which operates Stott’s College-branded study options, uses CRICOS code 00197D. |
 | D.098 | D | primary | red-flag |  | pending | supabase seed_universities migration | Gills College Australia Pty Ltd, trading as Sterling Business College, ceased operating on 2024-10-17. |
 | D.099 | D | primary | red-flag |  | pending | supabase seed_universities migration | ASQA says the cancellation of Gills College Australia’s registration took effect on 2024-11-21. |
 | D.100 | D | primary | red-flag |  | pending | supabase seed_universities migration | training.gov.au shows Lonsdale Institute Pty Ltd RTO status as cancelled. |

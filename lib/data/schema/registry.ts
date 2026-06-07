@@ -42,6 +42,8 @@ import { AU_PROVIDER_ENGLISH_MINIMUMS } from "@/lib/data/source/au-provider-engl
 import { AuProviderEnglishMinimumsSchema } from "@/lib/data/schema/au-provider-english-minimums.schema";
 import { AU_RMIT_PROGRAMS } from "@/lib/data/source/au-rmit-programs";
 import { AuRmitProgramsSchema } from "@/lib/data/schema/au-rmit-programs.schema";
+import { AU_CRICOS_CODES } from "@/lib/data/source/au-cricos-codes";
+import { AuCricosCodesSchema } from "@/lib/data/schema/au-cricos-codes.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -343,5 +345,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-rmit-programs",
     subRecordKeys: [],
     recordInterface: "AuRmitProgram",
+  },
+  {
+    // CRICOS provider codes for Australian education providers (providers
+    // category D) — the unified provider→code map. One record per provider code;
+    // cricosCode is the gate-checked value (reconcile's enum match proves it
+    // equals the finding's value). providerType buckets university /
+    // pathway-college / vet-rto. cricosCode is not unique (one code can be shared,
+    // e.g. UNSW Sydney 00098G). Fact-only: no scorer reads it. Record array.
+    category: "D",
+    exportName: "AU_CRICOS_CODES",
+    data: AU_CRICOS_CODES,
+    schema: AuCricosCodesSchema,
+    recordLabel: "au-cricos-codes",
+    subRecordKeys: [],
+    recordInterface: "AuCricosCode",
   },
 ];
