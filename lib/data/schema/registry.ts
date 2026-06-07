@@ -54,6 +54,8 @@ import { NEPAL_ENGLISH_TEST_CENTRES } from "@/lib/data/source/nepal-english-test
 import { NepalEnglishTestCentresSchema } from "@/lib/data/schema/nepal-english-test-centres.schema";
 import { NEPAL_FOREX_CARDS } from "@/lib/data/source/nepal-forex-cards";
 import { NepalForexCardsSchema } from "@/lib/data/schema/nepal-forex-cards.schema";
+import { AU_SKILLED_VISA_DIRECTORY } from "@/lib/data/source/au-skilled-visa-directory";
+import { AuSkilledVisaDirectorySchema } from "@/lib/data/schema/au-skilled-visa-directory.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -445,5 +447,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-forex-cards",
     subRecordKeys: [],
     recordInterface: "NepalForexCard",
+  },
+  {
+    // Directory of Australian skilled/employer-sponsored/regional/PR/temporary-
+    // activity work visas (visa-conditions category C) — the post-485 migration
+    // pathways, by DHA subclass: 408, 482 (Skills in Demand), 491 (+5yr stay),
+    // 191, 189, 190, 186, 858 (National Innovation). The subclass code (or the
+    // current name, for renamed visas) is the gate-checked value; 482's stay range
+    // uses the {min,max} matcher. Fact-only: no scorer reads it. Record array.
+    category: "C",
+    exportName: "AU_SKILLED_VISA_DIRECTORY",
+    data: AU_SKILLED_VISA_DIRECTORY,
+    schema: AuSkilledVisaDirectorySchema,
+    recordLabel: "au-skilled-visa-directory",
+    subRecordKeys: [],
+    recordInterface: "AuSkilledVisaSubclass",
   },
 ];

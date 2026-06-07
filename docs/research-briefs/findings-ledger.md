@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=307 · pending=807
+**Status:** used=317 · pending=797
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -313,32 +313,32 @@
 | C.046 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Post-Higher Education Work stream lets the visa holder bring family members. |
 | C.047 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Second Post-Higher Education Work stream lets the visa holder bring family members. |
 | C.048 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA has a dedicated page for changes to the Temporary Graduate visa program from 1 July 2024. |
-| C.049 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Activity visa is Subclass 408. |
+| C.049 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Activity visa is Subclass 408. |
 | C.050 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 408 visa allows a person to come to Australia to do specific types of work on a short-term, temp… |
 | C.051 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Research Activities stream of Subclass 408 lets the holder and immediate family stay in Australia for up … |
-| C.052 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of Subclass 482 is Skills in Demand visa. |
-| C.053 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skills in Demand visa allows workers to stay in Australia for between 2 and 5 years. |
+| C.052 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of Subclass 482 is Skills in Demand visa. |
+| C.053 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skills in Demand visa allows workers to stay in Australia for between 2 and 5 years. |
 | C.054 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skills in Demand visa requires the primary applicant to meet minimum English-language standards unless an… |
 | C.055 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skills in Demand visa Labour Agreement stream says the holder can have their employer sponsor them for pe… |
 | C.056 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The skilled occupation list page includes the Skills in Demand visa Core Skills stream. |
 | C.057 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Skilled temporary visa category was 63 days in April 2026. |
-| C.058 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Work Regional visa is Subclass 491. |
-| C.059 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa lets the holder stay in Australia for 5 years. |
+| C.058 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Work Regional visa is Subclass 491. |
+| C.059 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa lets the holder stay in Australia for 5 years. |
 | C.060 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa base application charge is from AUD4,910.00. |
 | C.061 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa requires state or territory nomination or eligible family-member sponsorship. |
 | C.062 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa lets the holder live, work and study in a designated regional area of Australia. |
-| C.063 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The permanent regional follow-on visa is Subclass 191. |
+| C.063 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The permanent regional follow-on visa is Subclass 191. |
 | C.064 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 191 Regional Provisional stream base application charge is from AUD505.00. |
 | C.065 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 191 applicant must have had taxable income at or above a specific income threshold for at least 3 … |
-| C.066 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Independent points-tested visa is Subclass 189. |
+| C.066 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Independent points-tested visa is Subclass 189. |
 | C.067 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 189 points-tested stream lets invited workers live and work permanently anywhere in Australia. |
 | C.068 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 189 points-tested stream base application charge is from AUD4,910.00. |
-| C.069 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Nominated visa is Subclass 190. |
+| C.069 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Nominated visa is Subclass 190. |
 | C.070 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 190 visa lets nominated skilled workers live and work in Australia as permanent residents. |
-| C.071 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Employer Nomination Scheme visa is Subclass 186. |
+| C.071 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Employer Nomination Scheme visa is Subclass 186. |
 | C.072 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 186 visa lets skilled workers nominated by an employer live in Australia permanently. |
 | C.073 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 186 visa base application charge is from AUD4,910.00. |
-| C.074 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of Subclass 858 is National Innovation visa. |
+| C.074 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of Subclass 858 is National Innovation visa. |
 | C.075 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The National Innovation visa is a permanent visa for exceptionally talented migrants from across the world. |
 | C.076 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | An invitation is needed to apply for the National Innovation visa. |
 | C.077 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Visitor visa Tourist stream for offshore applicants lets a person visit Australia for up to 12 months as … |

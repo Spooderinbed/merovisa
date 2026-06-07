@@ -513,3 +513,23 @@ export interface NepalForexCard extends Provenanced {
   source: string; // issuer page / tariff sheet URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Directory of Australian skilled, employer-sponsored, regional, permanent-
+ * residence and temporary-activity work visas — the post-study migration
+ * pathways a graduate may look toward, by DHA subclass. Each record carries the
+ * subclass code, the visa's current DHA name, whether it is temporary or
+ * permanent, and the stay period where DHA states one (a fixed term, or a range).
+ * Fact-only reference — no scorer reads it; machine-checked against the findings.
+ */
+export interface AuSkilledVisaSubclass extends Provenanced {
+  id: string; // slug, e.g. "subclass-491-skilled-work-regional"
+  subclass: string; // DHA subclass code, e.g. "491"
+  name: string; // current DHA visa name
+  permanence?: "temporary" | "permanent"; // visa class
+  stayYears?: number; // fixed stay where DHA states one, years
+  minStayYears?: number; // stay-range lower bound, years
+  maxStayYears?: number; // stay-range upper bound, years
+  source: string; // DHA visa-listing page URL
+  lastVerified?: string; // ISO date
+}
