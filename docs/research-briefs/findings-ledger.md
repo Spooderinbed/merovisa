@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=301 · pending=813
+**Status:** used=307 · pending=807
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -948,13 +948,13 @@
 | H.029 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | CommBank’s student-banking page says international students need to verify passport ID at a branch before the… |
 | H.030 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | NIC ASIA GOcard allows cash withdrawal from Visa ATMs worldwide except Nepal, India and Bhutan. |
 | H.031 | H | primary | red-flag |  | pending | app/(app)/journey pre-departure/post-arrival/working | NIC ASIA GOcard is described by the bank as a substitute for carrying a large amount of physical cash during … |
-| H.032 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | NIC ASIA’s standard tariff sets the international card cash-load fee at NPR 500 per transaction. |
-| H.033 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | NIC ASIA’s standard tariff sets foreign-country ATM cash withdrawal on an international card at the greater o… |
+| H.032 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | NIC ASIA’s standard tariff sets the international card cash-load fee at NPR 500 per transaction. |
+| H.033 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | NIC ASIA’s standard tariff sets foreign-country ATM cash withdrawal on an international card at the greater o… |
 | H.034 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Nabil’s standard charge sheet says its USD card is valid worldwide except India. |
-| H.035 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Nabil’s standard charge sheet sets the cross-border fee on the USD card at 1% of the transaction amount. |
-| H.036 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Wise says its card lets customers load, hold and convert 40+ currencies at the mid-market exchange rate. |
-| H.037 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Wise says ATM withdrawals are fee-free up to AUD 400 per month worldwide. |
-| H.038 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Wise says a 2.69% variable fee applies to ATM withdrawal amounts above AUD 400 per month. |
+| H.035 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Nabil’s standard charge sheet sets the cross-border fee on the USD card at 1% of the transaction amount. |
+| H.036 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Wise says its card lets customers load, hold and convert 40+ currencies at the mid-market exchange rate. |
+| H.037 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Wise says ATM withdrawals are fee-free up to AUD 400 per month worldwide. |
+| H.038 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Wise says a 2.69% variable fee applies to ATM withdrawal amounts above AUD 400 per month. |
 | H.039 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Telstra’s prepaid mobile plans are available on eSIM. |
 | H.040 | H | primary | contact |  | pending | app/(app)/journey pre-departure/post-arrival/working | Sydney Airport lists SIM Planet shops in T1 International Arrivals. |
 | H.041 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney says maintaining OSHC for the duration of studies is a condition of the student visa. |

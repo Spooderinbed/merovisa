@@ -52,6 +52,8 @@ import { AU_SCHOLARSHIPS } from "@/lib/data/source/au-scholarships";
 import { AuScholarshipsSchema } from "@/lib/data/schema/au-scholarships.schema";
 import { NEPAL_ENGLISH_TEST_CENTRES } from "@/lib/data/source/nepal-english-test-centres";
 import { NepalEnglishTestCentresSchema } from "@/lib/data/schema/nepal-english-test-centres.schema";
+import { NEPAL_FOREX_CARDS } from "@/lib/data/source/nepal-forex-cards";
+import { NepalForexCardsSchema } from "@/lib/data/schema/nepal-forex-cards.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -428,5 +430,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-english-test-centres",
     subRecordKeys: [],
     recordInterface: "NepalEnglishTestCentre",
+  },
+  {
+    // Forex / travel card fees for students going abroad (arrival category H):
+    // NIC ASIA international card (cash-load + foreign-ATM fee), Nabil USD card
+    // (cross-border fee), and the Wise card (fee-free ATM limit, above-limit fee,
+    // 40+ currencies). Nepali figures come from the banks' standard tariff sheets;
+    // Wise's are its own published terms. Each present fee reconciles to its own
+    // finding. Fact-only: no scorer reads it. Record array.
+    category: "H",
+    exportName: "NEPAL_FOREX_CARDS",
+    data: NEPAL_FOREX_CARDS,
+    schema: NepalForexCardsSchema,
+    recordLabel: "nepal-forex-cards",
+    subRecordKeys: [],
+    recordInterface: "NepalForexCard",
   },
 ];

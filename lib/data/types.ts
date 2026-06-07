@@ -490,3 +490,26 @@ export interface NepalEnglishTestCentre extends Provenanced {
   source: string; // official test-provider page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Forex / travel cards a Nepalese student can use to carry and spend money
+ * abroad, with the fees the issuer publishes. Covers Nepali bank cards (from the
+ * banks' standard tariff sheets) and global fintech cards (e.g. Wise) popular
+ * with students. Fields are optional because each card exposes a different fee
+ * structure. Fact-only reference — no scorer reads it; machine-checked against
+ * the findings.
+ */
+export interface NepalForexCard extends Provenanced {
+  id: string; // slug, e.g. "wise-card"
+  provider: string; // issuing bank or fintech
+  card: string; // product name
+  cashLoadFeeNpr?: number; // fee to load cash onto the card, NPR (per transaction)
+  foreignAtmFeePct?: number; // foreign-ATM withdrawal fee, percent of the amount
+  foreignAtmFeeMinUsd?: number; // floor applied to the foreign-ATM fee, USD ("greater of" rule)
+  crossBorderFeePct?: number; // cross-border transaction fee, percent
+  feeFreeAtmMonthlyLimitAud?: number; // monthly fee-free ATM withdrawal limit, AUD
+  atmFeeAboveLimitPct?: number; // fee on ATM withdrawals above the free limit, percent
+  supportedCurrencyCount?: number; // number of currencies the card supports (a "N+" floor)
+  source: string; // issuer page / tariff sheet URL
+  lastVerified?: string; // ISO date
+}
