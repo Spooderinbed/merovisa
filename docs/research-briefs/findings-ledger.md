@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=336 · pending=778
+**Status:** used=342 · pending=772
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -232,18 +232,18 @@
 | B.100 | B | practitioner | process | G14 | pending | lib/data/source/nepal-banks.ts (+ finance) | VFS Nepal provides Australia biometric-collection services. |
 | B.101 | B | primary | data | G15 | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney accepts Flywire for international payments. |
 | B.102 | B | primary | data | G15 | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney accepts Convera for international payments. |
-| B.103 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney says international bank transfers can take up to 10 business days. |
+| B.103 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The University of Sydney says international bank transfers can take up to 10 business days. |
 | B.104 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | UNSW uses Convera for deposit and tuition-fee payments. |
-| B.105 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | UNSW says Convera holds the exchange rate for 72 hours. |
-| B.106 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Monash says Convera telegraphic transfers from outside Australia take 5 working days. |
-| B.107 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Monash says card payments take 2 working days. |
+| B.105 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | UNSW says Convera holds the exchange rate for 72 hours. |
+| B.106 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Monash says Convera telegraphic transfers from outside Australia take 5 working days. |
+| B.107 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Monash says card payments take 2 working days. |
 | B.108 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Monash requires the student ID number to appear first in the payment description or reference. |
 | B.109 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Monash says students are responsible for any bank fees or exchange-rate differences on their payments. |
 | B.110 | B | primary | red-flag |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Monash warns that payments made through unauthorised third parties can later be reversed and still leave the … |
-| B.111 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Melbourne requires an initial tuition-fee deposit of A$17,000 when an international student… |
+| B.111 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The University of Melbourne requires an initial tuition-fee deposit of A$17,000 when an international student… |
 | B.112 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The University of Melbourne says a student-visa holder must also pay for OSHC. |
 | B.113 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Flywire says it imposes no additional fees beyond the final amount confirmed when a payment is booked. |
-| B.114 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | Flywire says refund requests may incur a 1% refund-processing charge. |
+| B.114 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | Flywire says refund requests may incur a 1% refund-processing charge. |
 | B.115 | B | primary | data | G16 | pending | lib/data/source/nepal-banks.ts (+ finance) | Convera says its student platform supports bank transfers. |
 | B.116 | B | primary | data | G16 | pending | lib/data/source/nepal-banks.ts (+ finance) | Convera says its student platform supports credit-card payments. |
 | B.117 | B | primary | data | G16 | pending | lib/data/source/nepal-banks.ts (+ finance) | Convera says its student platform supports debit-card payments. |

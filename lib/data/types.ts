@@ -598,3 +598,22 @@ export interface AuPathwayProgram extends Provenanced {
   source: string; // college program page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Facts about paying tuition to an Australian university: how long a payment
+ * channel takes to clear, how long an FX rate is held, the initial deposit on
+ * accepting an offer, and refund-processing fees. One labeled value per record,
+ * stated by the university or the payment provider. Fact-only reference — no
+ * scorer reads it; machine-checked against the findings.
+ */
+export interface AuTuitionPaymentFact extends Provenanced {
+  id: string; // slug, e.g. "monash-card-payment-time"
+  provider: string; // who states the fact (university or payment provider)
+  channel?: string; // payment channel where relevant (Convera, Flywire, bank transfer, card)
+  kind: "processing-time" | "fx-rate-hold" | "deposit" | "refund-fee";
+  label: string; // human description of the fact
+  value: number; // the scalar
+  unit: string; // "business days" | "working days" | "hours" | "AUD" | "%"
+  source: string; // university / provider page URL
+  lastVerified?: string; // ISO date
+}

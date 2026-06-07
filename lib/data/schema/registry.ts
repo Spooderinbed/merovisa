@@ -62,6 +62,8 @@ import { AU_VISA_FACTS } from "@/lib/data/source/au-visa-facts";
 import { AuVisaFactsSchema } from "@/lib/data/schema/au-visa-facts.schema";
 import { AU_PATHWAY_PROGRAMS } from "@/lib/data/source/au-pathway-programs";
 import { AuPathwayProgramsSchema } from "@/lib/data/schema/au-pathway-programs.schema";
+import { AU_TUITION_PAYMENT_FACTS } from "@/lib/data/source/au-tuition-payment-facts";
+import { AuTuitionPaymentFactsSchema } from "@/lib/data/schema/au-tuition-payment-facts.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -514,5 +516,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-pathway-programs",
     subRecordKeys: [],
     recordInterface: "AuPathwayProgram",
+  },
+  {
+    // How students pay tuition to an Australian university (finance category B):
+    // payment-channel clearing times (USyd transfer, Monash TT + card), the UNSW
+    // Convera FX-rate hold, the Melbourne initial deposit, and the Flywire refund
+    // fee. One labeled value per record. Fact-only: no scorer reads it.
+    category: "B",
+    exportName: "AU_TUITION_PAYMENT_FACTS",
+    data: AU_TUITION_PAYMENT_FACTS,
+    schema: AuTuitionPaymentFactsSchema,
+    recordLabel: "au-tuition-payment-facts",
+    subRecordKeys: [],
+    recordInterface: "AuTuitionPaymentFact",
   },
 ];
