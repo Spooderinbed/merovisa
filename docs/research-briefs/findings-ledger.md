@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=327 · pending=787
+**Status:** used=331 · pending=783
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -573,11 +573,11 @@
 | E.042 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science has a duration of 3 years. |
 | E.043 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science has a 2026 annual fee of AUD 42,240. |
 | E.044 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science requires IELTS 6.5 with no band below 6.0. |
-| E.045 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science lists a minimum average score of 65%. |
+| E.045 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science lists a minimum average score of 65%. |
 | E.046 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Data Science has a duration of 2 years. |
 | E.047 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Data Science has a 2026 annual fee of AUD 43,200. |
 | E.048 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Data Science requires IELTS 6.5 with no band below 6.0. |
-| E.049 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Deakin Master of Data Science shows an estimated tuition fee of AUD 34,400 for 1 year full-time. |
+| E.049 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | Deakin Master of Data Science shows an estimated tuition fee of AUD 34,400 for 1 year full-time. |
 | E.050 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | Deakin Master of Data Science requires IELTS 6.5 with no band below 6.0. |
 | E.051 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Information Technology has a duration of 2 years. |
 | E.052 | E | primary | data | G27 | pending | lib/data/programs seed (+ course-career) | RMIT Master of Information Technology has a 2026 annual fee of AUD 43,200 in the RMIT International Course Gu… |
@@ -587,10 +587,10 @@
 | E.056 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Cyber Security has a 2026 annual fee of AUD 43,200. |
 | E.057 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology has a duration of 3 years. |
 | E.058 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology has a 2026 annual fee of AUD 42,240. |
-| E.059 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology lists a minimum average score of 65%. |
+| E.059 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology lists a minimum average score of 65%. |
 | E.060 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business has a duration of 3 years. |
 | E.061 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business has a 2026 annual fee of AUD 45,120. |
-| E.062 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business lists a minimum average score of 65%. |
+| E.062 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business lists a minimum average score of 65%. |
 | E.063 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Professional Accounting has a duration of 2 years. |
 | E.064 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Professional Accounting has a 2026 annual fee of AUD 49,920. |
 | E.065 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Business Administration has a duration of 2 years. |

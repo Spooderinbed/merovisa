@@ -388,6 +388,7 @@ export interface AuRmitProgram extends Provenanced {
   tuitionAudPerYear: number; // 2026 annual international fee, AUD
   durationYears: number; // standard full-time duration, years
   fieldOfStudy?: string; // free-form discipline label (NOT the scoring FieldOfStudy enum)
+  entryMinAveragePct?: number; // RMIT-stated minimum average entry score, percent (where given)
   source: string; // RMIT international guide URL
   lastVerified?: string; // ISO date
 }

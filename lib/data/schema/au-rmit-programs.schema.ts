@@ -15,6 +15,7 @@ const AuRmitProgramSchema = z.object({
   tuitionAudPerYear: z.number().positive(),
   durationYears: z.number().positive(),
   fieldOfStudy: z.string().min(1).optional(),
+  entryMinAveragePct: z.number().positive().max(100).optional(),
   source: HttpUrl,
   lastVerified: IsoDate.optional(),
   provenance: ProvenanceSchema,

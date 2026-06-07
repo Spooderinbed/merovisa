@@ -53,6 +53,20 @@ export const AU_UNIVERSITY_PROGRAMS: AuUniversityProgram[] = [
       note: "2026 indicative first-year fee; online variant — the on-campus fee may differ.",
     },
   },
+  {
+    id: "deakin-master-of-data-science",
+    provider: "Deakin University",
+    programName: "Master of Data Science",
+    level: "master",
+    firstYearTuitionAud: 34400,
+    fieldOfStudy: "Data science",
+    source: "https://www.deakin.edu.au/course/master-data-science",
+    lastVerified: "2026-06-07",
+    provenance: {
+      findingRefs: ["E.049"],
+      note: "Estimated AUD 34,400 for one year full-time (2026).",
+    },
+  },
 
   // Torrens University programs offered to Nepalese students, by program CRICOS code.
   {
