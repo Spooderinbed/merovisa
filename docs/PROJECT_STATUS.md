@@ -1,11 +1,11 @@
 # MyVisa — project status & phase log
 
-**Snapshot:** 2026-06-04, master at `b53c24e`
-**Tests:** 383 passing across 123 test files
+**Snapshot:** 2026-06-07, scorer-wiring slice 1 (DHA financial-capacity gate) merged
+**Tests:** 597 passing across 153 test files
 **Typecheck:** clean
 **Build:** clean (27 routes including `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
 **Code surface:** 25 files in `app/`, 52 in `lib/`, 76 in `components/`, 125 in `tests/`, 5 SQL migrations applied
-**Branch state:** master is 92 commits ahead of `origin/master` (never pushed — local-only by user preference)
+**Branch state:** pushed to `origin/master` (the prior local-only preference was lifted on 2026-06-07 at user request)
 
 ---
 
@@ -57,6 +57,15 @@
 
 - Phase 5: `documents` + `checklist_items` tables, Supabase Storage bucket + RLS, signed-upload URL flow, `/checklist/[programId]` page with section grouping (Identity/Academic/Financial/Visa), document upload affordance per item, dashboard Checklist stat
 - Phase 6: `guide_threads` + `guide_messages` tables, `private.owns_thread()` security-definer helper, `/guide` page with SSE-streamed chat, Anthropic SDK integration with prompt caching. **Blocks at runtime without `ANTHROPIC_API_KEY` set in `.env.local`.**
+
+---
+
+## Data integration & scorer-wiring (2026-06-04 → 2026-06-07)
+
+Two layers feed verdicts: (a) the **production scoring path** — `lib/scoring/*` reads sourced config via `lib/data/scoring-config.ts` (from `lib/data/policy/*`); the per-program `/matches` path reads `lib/programs/seed.ts` (15 unis, 64 programs) via Supabase; and (b) the **reconciled fact layer** `lib/data/source/*` — ~342 atomic findings turned into typed, sourced, machine-checked modules (registry-driven, guarded by `docs/research-briefs/_tools/reconcile.js`). Most of (b) is reference-only; wiring a fact into (a) is verdict-changing.
+
+- **Scorer-wiring slice 1 — DHA financial-capacity gate (merged 2026-06-07).** Spec: `docs/superpowers/specs/2026-06-07-dha-financial-capacity-gate-design.md`. The financial dimension now gates a Nepal→Australia budget against the government DHA capacity floor (living 29,710 + representative tuition 44,500 ≈ AUD 74,210 ≈ USD 49,473) instead of only the internal-heuristic cost band: below the floor caps financial at 49 (blocks "strong"); below 0.75× forces "reach". AU-only; non-AU unchanged. `RULE_VERSION v0.1.0→v0.2.0`, `CONFIG_VERSION config-v1→config-v2`; characterization golden regenerated (boundary-straddle fixtures relocated to `canada` to isolate verdict.ts cutoffs from the gate). **Known design note:** the cap makes AU financial values 30–48 unreachable (a deliberate dead-zone). **Deferred fast-follows:** travel/airfare in the floor; field-of-study-indexed tuition; dependents (needs a profile-schema field).
+- **Open scorer-wiring backlog:** see the roadmap — visa-grant-rate into the visa dimension (trust-sensitive), provenance surfaced in results UI, `/matches` sourced-data consolidation, etc.
 
 ---
 
