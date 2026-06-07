@@ -450,3 +450,24 @@ export interface AuTemporaryGraduateVisaFact extends Provenanced {
   source: string; // DHA page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Australian study scholarships open to international (incl. Nepalese) students,
+ * beyond the Australia Awards (which keeps its own dedicated module). A generic
+ * shape: each scholarship carries whatever the funder states — a per-year award
+ * amount, the number granted annually, the funder's total annual scholarship
+ * spend, and/or descriptive benefits. Fact-only reference — no scorer reads it;
+ * machine-checked against the findings.
+ */
+export interface AuScholarship extends Provenanced {
+  id: string; // slug, e.g. "destination-australia-scholarship"
+  provider: string; // funding body or university
+  name: string; // scholarship name as published
+  annualAmountAud?: number; // per-student award per year, AUD
+  annualScholarshipCount?: number; // number granted per year (a "more than N" floor)
+  totalAnnualValueAud?: number; // funder's total annual scholarship spend, AUD (an "over N" floor)
+  benefits?: string[]; // descriptive (non-scalar) benefits, e.g. tuition remission
+  regionalCampusOnly?: boolean; // award limited to regional campuses
+  source: string; // funder page URL
+  lastVerified?: string; // ISO date
+}

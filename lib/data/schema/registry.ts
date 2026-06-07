@@ -48,6 +48,8 @@ import { AU_UNIVERSITY_PROGRAMS } from "@/lib/data/source/au-university-programs
 import { AuUniversityProgramsSchema } from "@/lib/data/schema/au-university-programs.schema";
 import { AU_TEMPORARY_GRADUATE_VISA } from "@/lib/data/source/au-temporary-graduate-visa";
 import { AuTemporaryGraduateVisaSchema } from "@/lib/data/schema/au-temporary-graduate-visa.schema";
+import { AU_SCHOLARSHIPS } from "@/lib/data/source/au-scholarships";
+import { AuScholarshipsSchema } from "@/lib/data/schema/au-scholarships.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -395,5 +397,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-temporary-graduate-visa",
     subRecordKeys: [],
     recordInterface: "AuTemporaryGraduateVisaFact",
+  },
+  {
+    // Australian study scholarships beyond the Australia Awards (English-tests &
+    // scholarships category J): Destination Australia (AUD 15k/yr, regional),
+    // Melbourne Graduate Research (300+ annually, living allowance + tuition
+    // remission), and Sydney (over AUD 135M/yr total). Generic record; each
+    // present scalar reconciles to its own finding, with Melbourne's benefits
+    // riding as a prose-only citation (J2.007). Fact-only: no scorer reads it.
+    category: "J",
+    exportName: "AU_SCHOLARSHIPS",
+    data: AU_SCHOLARSHIPS,
+    schema: AuScholarshipsSchema,
+    recordLabel: "au-scholarships",
+    subRecordKeys: [],
+    recordInterface: "AuScholarship",
   },
 ];

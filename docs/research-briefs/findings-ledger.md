@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=294 · pending=820
+**Status:** used=298 · pending=816
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1117,8 +1117,8 @@
 | J2.003 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarship includes a contribution to living expenses (stipend) for recipients |
 | J2.004 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarship includes overseas student health cover (OSHC) for the duration of the scholarship |
 | J2.005 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarships for Nepal (commencing 2027 intake) open 1 Feb 2026 and close 30 Apr 2026 |
-| J2.006 | J2 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Destination Australia Scholarships provide AUD 15,000 per year to eligible international students studying at… |
-| J2.007 | J2 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | University of Melbourne Graduate Research Scholarships provide eligible international research students with … |
-| J2.008 | J2 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | The University of Melbourne offers more than 300 Graduate Research Scholarships to international graduate stu… |
-| J2.009 | J2 | primary | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | The University of Sydney awards over AUD $135 million in scholarships annually to domestic and international … |
+| J2.006 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Destination Australia Scholarships provide AUD 15,000 per year to eligible international students studying at… |
+| J2.007 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | University of Melbourne Graduate Research Scholarships provide eligible international research students with … |
+| J2.008 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | The University of Melbourne offers more than 300 Graduate Research Scholarships to international graduate stu… |
+| J2.009 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | The University of Sydney awards over AUD $135 million in scholarships annually to domestic and international … |
 | J2.010 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarships (Nepal) are offered for Master’s programs only (Master’s by coursework or by re… |
