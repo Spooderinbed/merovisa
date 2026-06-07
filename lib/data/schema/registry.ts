@@ -56,6 +56,8 @@ import { NEPAL_FOREX_CARDS } from "@/lib/data/source/nepal-forex-cards";
 import { NepalForexCardsSchema } from "@/lib/data/schema/nepal-forex-cards.schema";
 import { AU_SKILLED_VISA_DIRECTORY } from "@/lib/data/source/au-skilled-visa-directory";
 import { AuSkilledVisaDirectorySchema } from "@/lib/data/schema/au-skilled-visa-directory.schema";
+import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
+import { AuHealthBiometricFactsSchema } from "@/lib/data/schema/au-health-biometric-facts.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -462,5 +464,21 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-skilled-visa-directory",
     subRecordKeys: [],
     recordInterface: "AuSkilledVisaSubclass",
+  },
+  {
+    // DHA health-requirement + biometrics facts (visa-conditions category C, plus
+    // the Services Australia reciprocal-agreement count from category H): health-
+    // exam validity (12 months), the Significant Cost Threshold (AUD 86,000),
+    // reciprocal-health countries (11), Nepal's inclusion in the biometrics program
+    // (boolean), and the VFS Kathmandu collection fee (NPR 2,365). One labeled
+    // value per record; the inclusion flag is the single boolean value matched by
+    // reconcile. Fact-only: no scorer reads it. Record array.
+    category: "C",
+    exportName: "AU_HEALTH_BIOMETRIC_FACTS",
+    data: AU_HEALTH_BIOMETRIC_FACTS,
+    schema: AuHealthBiometricFactsSchema,
+    recordLabel: "au-health-biometric-facts",
+    subRecordKeys: [],
+    recordInterface: "AuHealthBiometricFact",
   },
 ];

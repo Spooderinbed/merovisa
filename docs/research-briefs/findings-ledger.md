@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=317 · pending=797
+**Status:** used=322 · pending=792
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -356,7 +356,7 @@
 | C.089 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The My Health Declarations service allows a client to complete health examinations before submitting a visa a… |
 | C.090 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If a client does not use My Health Declarations, they must wait until after lodging the visa application and … |
 | C.091 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If a visa application was lodged online, the HAP ID is in the referral letter downloaded when the application… |
-| C.092 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Health examination results are generally valid for 12 months. |
+| C.092 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Health examination results are generally valid for 12 months. |
 | C.093 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | After health examinations, the panel physician records the results and makes a recommendation to DHA about th… |
 | C.094 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The panel physician will not tell the applicant whether they meet the health requirement. |
 | C.095 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If health results show no significant health conditions, the health case may be cleared without referral to a… |
@@ -365,7 +365,7 @@
 | C.098 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA says a health undertaking may be requested for inactive tuberculosis. |
 | C.099 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA says a health undertaking may be requested for HIV. |
 | C.100 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA says a health undertaking may be requested for hepatitis B or hepatitis C. |
-| C.101 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current Significant Cost Threshold is AUD86,000. |
+| C.101 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current Significant Cost Threshold is AUD86,000. |
 | C.102 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Temporary visa applicants aged 11 years or older can be required to undergo a chest x-ray. |
 | C.103 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Temporary visa applicants aged 15 years or older can be required to undergo serum creatinine/eGFR testing. |
 | C.104 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Temporary visa applicants are not normally required to undergo HIV testing except for certain groups or when … |
@@ -387,11 +387,11 @@
 | C.120 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 708 Hepatitis B testing at USD8.00. |
 | C.121 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s Australia health-assessment schedule lists 716 Hepatitis C testing at USD8.00. |
 | C.122 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | IOM Nepal’s MHAC service-fees PDF surfaced a package line for “Medical Exam + X-Ray + Blood Test” at USD93.00. |
-| C.123 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Nepal is included in Australia’s biometrics program. |
+| C.123 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Nepal is included in Australia’s biometrics program. |
 | C.124 | C | primary | contact |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s biometrics page lists Nepal biometric-collection locations as Kathmandu and Pokhara*. |
 | C.125 | C | primary | contact |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Kathmandu Australia biometrics centre page lists the address as Thapathali-11, Kathmandu, Nepal. |
 | C.126 | C | primary | contact |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Kathmandu Australia biometrics centre page lists business hours as Monday to Friday, 09:00 to 16:00. |
-| C.127 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Kathmandu Australia biometrics centre page lists the biometric collection service fee as NPR2,365.00. |
+| C.127 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Kathmandu Australia biometrics centre page lists the biometric collection service fee as NPR2,365.00. |
 | C.128 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | At a biometrics collection appointment, DHA says an image of the face is taken with a digital camera. |
 | C.129 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | At a biometrics collection appointment, DHA says all 10 fingertips are scanned with a digital scanner. |
 | C.130 | C | practitioner | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A VFS Australia “what happens at the centre” page says children under 5 years must attend the appointment but… |
@@ -964,7 +964,7 @@
 | H.045 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | UQ says OSHC provides limited cover for ambulance services. |
 | H.046 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Bupa says OSHC includes visits to a doctor. |
 | H.047 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Bupa says OSHC includes visits to a specialist. |
-| H.048 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Services Australia says Australia has reciprocal health care agreements with 11 countries. |
+| H.048 | H | primary | data |  | used | app/(app)/journey pre-departure/post-arrival/working | Services Australia says Australia has reciprocal health care agreements with 11 countries. |
 | H.049 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney Health Service says it has direct-billing arrangements for students covered by Bupa … |
 | H.050 | H | primary | process |  | pending | app/(app)/journey pre-departure/post-arrival/working | The University of Sydney Health Service says it continues direct billing students with Allianz OSHC cover. |
 | H.051 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Services Australia says an Individual Healthcare Identifier is a unique number used to identify an individual… |

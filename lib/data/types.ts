@@ -533,3 +533,23 @@ export interface AuSkilledVisaSubclass extends Provenanced {
   source: string; // DHA visa-listing page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Single DHA health-requirement and biometrics facts a visa applicant meets along
+ * the way: how long a health examination stays valid, the Significant Cost
+ * Threshold, how many countries have reciprocal health agreements, whether Nepal
+ * is in the biometrics program, and the local biometric-collection fee. One
+ * labeled value per record (numeric, or a boolean for program inclusion), each
+ * traced to its own finding — mirrors AuStudentVisaLimit. Fact-only reference —
+ * no scorer reads it; machine-checked against the findings.
+ */
+export interface AuHealthBiometricFact extends Provenanced {
+  id: string; // slug, e.g. "significant-cost-threshold"
+  topic: "health" | "biometrics";
+  kind: "validity" | "cost-threshold" | "agreement-count" | "program-inclusion" | "service-fee";
+  label: string; // human description of the fact
+  value: number | boolean; // the scalar (boolean only for program inclusion)
+  unit?: string; // unit for numeric facts (months, AUD, NPR, countries); omitted for booleans
+  source: string; // DHA / Services Australia / official-contractor URL
+  lastVerified?: string; // ISO date
+}
