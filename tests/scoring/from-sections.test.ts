@@ -44,4 +44,33 @@ describe("sectionsToStudentProfile", () => {
     const without = sectionsToStudentProfile({ english: { test: "ielts" } });
     expect(without.englishStatus).toBe("booked");
   });
+
+  // B2 follow-up — route the signed-in family.situation enum into the dependents
+  // signal so a signed-in re-score honours the DHA capacity floor. The enum has no
+  // child count, so spouse-and-kids maps to a conservative one-child floor.
+  describe("dependents from family.situation", () => {
+    const deps = (situation: "alone" | "spouse" | "spouse-and-kids" | "other") =>
+      sectionsToStudentProfile({ family: { situation } }).dependents;
+
+    test("spouse → a partner, no children", () => {
+      expect(deps("spouse")).toEqual({ partner: true, children: 0 });
+    });
+
+    test("spouse-and-kids → a partner plus one child (count not captured by the enum)", () => {
+      expect(deps("spouse-and-kids")).toEqual({ partner: true, children: 1 });
+    });
+
+    test("alone → no dependents (applying alone)", () => {
+      expect(deps("alone")).toBeUndefined();
+    });
+
+    test("other → no dependents (ambiguous → no capacity bump)", () => {
+      expect(deps("other")).toBeUndefined();
+    });
+
+    test("an unset family section leaves dependents undefined", () => {
+      expect(sectionsToStudentProfile({}).dependents).toBeUndefined();
+      expect(sectionsToStudentProfile({ family: {} }).dependents).toBeUndefined();
+    });
+  });
 });
