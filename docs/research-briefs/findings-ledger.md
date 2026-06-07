@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=284 · pending=830
+**Status:** used=294 · pending=820
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -302,16 +302,16 @@
 | C.035 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 590 Student Guardian visa base application charge is from AUD2,000.00. |
 | C.036 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If a guardian is applying to accompany and care for a student under 18, the guardian must prove enough money … |
 | C.037 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA says a current bank statement is an example of a document that can be attached to prove Subclass 590 fina… |
-| C.038 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Graduate visa remains Subclass 485 in current DHA materials. |
-| C.039 | C | primary | data | G21 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of one Subclass 485 stream is Post-Higher Education Work. |
-| C.040 | C | primary | data | G21 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of one Subclass 485 stream is Post-Vocational Education Work. |
-| C.041 | C | primary | data | G21 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of one Subclass 485 stream is Second Post-Higher Education Work. |
-| C.042 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Graduate visa base application charge is from AUD4,600.00. |
-| C.043 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 485 applicant must be aged 35 years or under when applying, unless an exception applies. |
+| C.038 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Graduate visa remains Subclass 485 in current DHA materials. |
+| C.039 | C | primary | data | G21 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of one Subclass 485 stream is Post-Higher Education Work. |
+| C.040 | C | primary | data | G21 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of one Subclass 485 stream is Post-Vocational Education Work. |
+| C.041 | C | primary | data | G21 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of one Subclass 485 stream is Second Post-Higher Education Work. |
+| C.042 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Graduate visa base application charge is from AUD4,600.00. |
+| C.043 | C | primary | process |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 485 applicant must be aged 35 years or under when applying, unless an exception applies. |
 | C.044 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 485 applicant must have held a Student visa in the last 6 months. |
 | C.045 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 485 applicant must have completed the relevant study in the 6 months immediately before applying. |
-| C.046 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Post-Higher Education Work stream lets the visa holder bring family members. |
-| C.047 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Second Post-Higher Education Work stream lets the visa holder bring family members. |
+| C.046 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Post-Higher Education Work stream lets the visa holder bring family members. |
+| C.047 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Second Post-Higher Education Work stream lets the visa holder bring family members. |
 | C.048 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA has a dedicated page for changes to the Temporary Graduate visa program from 1 July 2024. |
 | C.049 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Activity visa is Subclass 408. |
 | C.050 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 408 visa allows a person to come to Australia to do specific types of work on a short-term, temp… |
@@ -543,8 +543,8 @@
 | E.012 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | DHA says the GS criterion acknowledges that post-study pathways are available for those who may be eligible. |
 | E.013 | E | primary | red-flag |  | pending | lib/data/programs seed (+ course-career) | DHA does not accept English tests delivered completely online for visa purposes. |
 | E.014 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | English test results taken on or before 2025-08-06 may be used as visa evidence until 2028-08-06 inclusive, d… |
-| E.015 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The Temporary Graduate visa Post-Higher Education Work stream permits a stay of 2 to 3 years. |
-| E.016 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The Temporary Graduate visa Post-Vocational Education Work stream usually permits a stay of up to 18 months. |
+| E.015 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | The Temporary Graduate visa Post-Higher Education Work stream permits a stay of 2 to 3 years. |
+| E.016 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | The Temporary Graduate visa Post-Vocational Education Work stream usually permits a stay of up to 18 months. |
 | E.017 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The Australian study requirement requires course or courses to be CRICOS registered. |
 | E.018 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The Australian study requirement requires at least 16 calendar months of study. |
 | E.019 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The Australian study requirement requires at least 92 weeks of study. |

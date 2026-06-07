@@ -46,6 +46,8 @@ import { AU_CRICOS_CODES } from "@/lib/data/source/au-cricos-codes";
 import { AuCricosCodesSchema } from "@/lib/data/schema/au-cricos-codes.schema";
 import { AU_UNIVERSITY_PROGRAMS } from "@/lib/data/source/au-university-programs";
 import { AuUniversityProgramsSchema } from "@/lib/data/schema/au-university-programs.schema";
+import { AU_TEMPORARY_GRADUATE_VISA } from "@/lib/data/source/au-temporary-graduate-visa";
+import { AuTemporaryGraduateVisaSchema } from "@/lib/data/schema/au-temporary-graduate-visa.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -376,5 +378,22 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-university-programs",
     subRecordKeys: [],
     recordInterface: "AuUniversityProgram",
+  },
+  {
+    // Australian Temporary Graduate visa (Subclass 485) post-study work facts
+    // (visa-conditions category C, plus the E-category stay-period findings). A
+    // visa-level overview (base charge, age cap) + one record per DHA stream
+    // (Post-Higher Education Work stay range + family rights, Post-Vocational
+    // Education Work 18-month cap, Second Post-Higher Education Work family
+    // rights). Optional fields; each present value reconciles to its own DHA
+    // finding (the stay range uses the {min,max} matcher). Fact-only: no scorer
+    // reads it. Record array.
+    category: "C",
+    exportName: "AU_TEMPORARY_GRADUATE_VISA",
+    data: AU_TEMPORARY_GRADUATE_VISA,
+    schema: AuTemporaryGraduateVisaSchema,
+    recordLabel: "au-temporary-graduate-visa",
+    subRecordKeys: [],
+    recordInterface: "AuTemporaryGraduateVisaFact",
   },
 ];

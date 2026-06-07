@@ -427,3 +427,26 @@ export interface AuUniversityProgram extends Provenanced {
   source: string; // provider page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Australian Temporary Graduate (Subclass 485) post-study work visa — the facts
+ * a Nepalese graduate planning post-study work needs: the streams, how long each
+ * lets you stay, whether family can be included, the base charge and the age cap.
+ * A visa-level overview record carries the shared facts; one record per DHA stream
+ * carries that stream's stay period and family rights. Detail fields are optional
+ * (each stream states different facts). Fact-only reference — no scorer reads it;
+ * machine-checked against the DHA findings.
+ */
+export interface AuTemporaryGraduateVisaFact extends Provenanced {
+  id: string; // slug, e.g. "subclass-485-post-higher-education-work"
+  subclass: "485"; // the Temporary Graduate visa subclass (C.038)
+  stream?: string; // DHA stream name, exactly as published; absent on the overview record
+  minStayYears?: number; // lower bound of the stay range, years
+  maxStayYears?: number; // upper bound of the stay range, years
+  maxStayMonths?: number; // stay cap expressed in months (streams DHA states in months)
+  bringsFamily?: boolean; // whether the holder may include family members
+  baseApplicationChargeAud?: number; // base visa application charge ("from" figure), AUD
+  maxAgeYears?: number; // age cap at time of application, years
+  source: string; // DHA page URL
+  lastVerified?: string; // ISO date
+}
