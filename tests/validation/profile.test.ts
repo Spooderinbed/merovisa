@@ -71,4 +71,44 @@ describe("ProfileSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // B2 — optional dependents (partner boolean, children int 0–10).
+  it("accepts a valid dependents object", () => {
+    const result = ProfileSchema.safeParse({
+      ...validProfile,
+      dependents: { partner: true, children: 2 },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.dependents).toEqual({ partner: true, children: 2 });
+  });
+
+  it("accepts a profile with dependents omitted (applying alone)", () => {
+    const result = ProfileSchema.safeParse(validProfile);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects more children than the cap", () => {
+    const result = ProfileSchema.safeParse({
+      ...validProfile,
+      dependents: { partner: true, children: 11 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a negative or non-integer child count", () => {
+    expect(ProfileSchema.safeParse({ ...validProfile, dependents: { partner: false, children: -1 } }).success).toBe(
+      false,
+    );
+    expect(ProfileSchema.safeParse({ ...validProfile, dependents: { partner: false, children: 1.5 } }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a non-boolean partner", () => {
+    const result = ProfileSchema.safeParse({
+      ...validProfile,
+      dependents: { partner: "yes", children: 0 },
+    });
+    expect(result.success).toBe(false);
+  });
 });

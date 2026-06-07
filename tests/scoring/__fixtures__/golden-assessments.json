@@ -801,5 +801,159 @@
     },
     "ruleVersion": "v0.3.0",
     "configVersion": "config-v3"
+  },
+  "dependents-alone-clears": {
+    "verdict": "strong",
+    "weighted": 85,
+    "dimensions": {
+      "academic": {
+        "value": 78,
+        "factors": [
+          {
+            "label": "Strong grade (86%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Computer Science."
+          },
+          {
+            "label": "Master's degree completed",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens academic standing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 85,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Australia costs."
+          },
+          {
+            "label": "Meets DHA financial-capacity requirement",
+            "influence": "positive",
+            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition).",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
+          },
+          {
+            "label": "Self-funded",
+            "influence": "positive",
+            "detail": "Strongest funding signal for visa officers."
+          }
+        ]
+      },
+      "visa": {
+        "value": 98,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.5",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 81,
+        "factors": [
+          {
+            "label": "Master's degree",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens profile."
+          },
+          {
+            "label": "Strong English (7.5)",
+            "influence": "positive",
+            "detail": "High IELTS opens up more selective programs."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
+  },
+  "dependents-partner-capped": {
+    "verdict": "possible",
+    "weighted": 76,
+    "dimensions": {
+      "academic": {
+        "value": 78,
+        "factors": [
+          {
+            "label": "Strong grade (86%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Computer Science."
+          },
+          {
+            "label": "Master's degree completed",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens academic standing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 49,
+        "factors": [
+          {
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Australia costs."
+          },
+          {
+            "label": "Below DHA financial-capacity requirement",
+            "influence": "risk",
+            "detail": "Short of the ~AUD 84,604 the student visa expects (12-month living + first-year tuition) — show more provable funds to strengthen the case.",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
+          },
+          {
+            "label": "Self-funded",
+            "influence": "positive",
+            "detail": "Strongest funding signal for visa officers."
+          }
+        ]
+      },
+      "visa": {
+        "value": 98,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.5",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 81,
+        "factors": [
+          {
+            "label": "Master's degree",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens profile."
+          },
+          {
+            "label": "Strong English (7.5)",
+            "influence": "positive",
+            "detail": "High IELTS opens up more selective programs."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   }
 }

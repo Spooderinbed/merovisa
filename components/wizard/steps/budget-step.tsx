@@ -25,6 +25,16 @@ const FUNDING: Array<{ value: FundingSource; label: string }> = [
   { value: "scholarship-dependent", label: "Scholarship-dependent" },
 ];
 
+const MAX_CHILDREN = 10;
+
+type FamilyMode = "none" | "partner" | "partner-kids";
+
+const FAMILY_OPTIONS: Array<{ value: FamilyMode; label: string }> = [
+  { value: "none", label: "Just me" },
+  { value: "partner", label: "Partner" },
+  { value: "partner-kids", label: "Partner + children" },
+];
+
 export function BudgetStep({ profile, setField, callouts }: StepProps) {
   const stored = profile.budgetCurrency;
   const currency: WizardCurrency = stored === "USD" ? "USD" : "NPR";
@@ -36,6 +46,23 @@ export function BudgetStep({ profile, setField, callouts }: StepProps) {
   const onCurrency = (next: WizardCurrency) => {
     const nextRange = RANGES[next];
     setField({ budgetCurrency: next as Currency, budget: nextRange.default });
+  };
+
+  // Dependents raise the DHA financial-capacity floor — relevant only for the
+  // Australia gate, so the control only shows for that destination.
+  const dependents = profile.dependents;
+  const children = dependents?.children ?? 0;
+  const familyMode: FamilyMode =
+    !dependents || (!dependents.partner && children === 0) ? "none" : children > 0 ? "partner-kids" : "partner";
+
+  const onFamilyMode = (mode: FamilyMode) => {
+    if (mode === "none") setField({ dependents: undefined });
+    else if (mode === "partner") setField({ dependents: { partner: true, children: 0 } });
+    else setField({ dependents: { partner: true, children: Math.max(1, children) } });
+  };
+
+  const setChildren = (n: number) => {
+    setField({ dependents: { partner: true, children: Math.min(MAX_CHILDREN, Math.max(1, n)) } });
   };
 
   return (
@@ -80,6 +107,46 @@ export function BudgetStep({ profile, setField, callouts }: StepProps) {
           />
         ))}
       </div>
+
+      {profile.destination === "australia" && (
+        <div className="flex flex-col gap-3">
+          <span className="text-[15px] text-ink-soft">
+            Bringing family to Australia? <span className="text-ink-faint">(optional)</span>
+          </span>
+          <Segmented
+            ariaLabel="Bringing family to Australia?"
+            options={FAMILY_OPTIONS}
+            value={familyMode}
+            onChange={onFamilyMode}
+          />
+          {familyMode === "partner-kids" && (
+            <div className="flex items-center gap-3">
+              <span className="text-[15px] text-ink-soft">Children</span>
+              <button
+                type="button"
+                aria-label="Remove a child"
+                onClick={() => setChildren(children - 1)}
+                disabled={children <= 1}
+                className="flex h-8 w-8 items-center justify-center rounded-pill border border-line text-ink-soft transition-colors duration-150 ease-calm hover:text-ink disabled:opacity-40"
+              >
+                −
+              </button>
+              <span aria-live="polite" className="min-w-6 text-center font-mono text-[15px] text-ink">
+                {children}
+              </span>
+              <button
+                type="button"
+                aria-label="Add a child"
+                onClick={() => setChildren(children + 1)}
+                disabled={children >= MAX_CHILDREN}
+                className="flex h-8 w-8 items-center justify-center rounded-pill border border-line text-ink-soft transition-colors duration-150 ease-calm hover:text-ink disabled:opacity-40"
+              >
+                +
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </StepShell>
   );
 }

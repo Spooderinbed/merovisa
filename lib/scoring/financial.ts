@@ -4,6 +4,8 @@ import {
   FUNDING_RELIABILITY,
   FX_RATES,
   AU_DHA_LIVING_CAPACITY_AUD,
+  AU_DHA_PARTNER_CAPACITY_AUD,
+  AU_DHA_CHILD_CAPACITY_AUD,
   AU_REPRESENTATIVE_TUITION_AUD,
   AU_DHA_CAPACITY_GATE,
   CONFIG_PROVENANCE,
@@ -67,10 +69,21 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
   // thresholds (50 blocks "strong", 30 forces "reach"), reusing those floors
   // rather than inventing new verdict logic. The gate only ever lowers the score.
   if (profile.destination === "australia") {
-    const capacityAud = AU_DHA_LIVING_CAPACITY_AUD + AU_REPRESENTATIVE_TUITION_AUD;
+    // Declared dependents raise the DHA financial-capacity floor: a partner and
+    // each child each add their gov-sourced Subclass 500 figure, so bringing
+    // family honestly requires more provable funds (school costs are deferred —
+    // they need child ages the wizard doesn't capture).
+    const dependents = profile.dependents;
+    const dependentsAud =
+      (dependents?.partner ? AU_DHA_PARTNER_CAPACITY_AUD : 0) +
+      (dependents?.children ?? 0) * AU_DHA_CHILD_CAPACITY_AUD;
+    const capacityAud = AU_DHA_LIVING_CAPACITY_AUD + AU_REPRESENTATIVE_TUITION_AUD + dependentsAud;
     const fxAud = FX_RATES.AUD ?? 1;
     const capacityUsd = capacityAud / fxAud;
     const capacityLabel = `~AUD ${capacityAud.toLocaleString()}`;
+    // Keep the itemised breakdown consistent with the raised total — an unexplained
+    // jump in the ~AUD figure would read as a contradiction in a trust-first UI.
+    const familyClause = dependentsAud > 0 ? ` + AUD ${dependentsAud.toLocaleString()} for family` : "";
     // Trust attribution: the gov DHA figure backs this factor; surface its source.
     const dhaProv = CONFIG_PROVENANCE.AU_DHA_LIVING_CAPACITY_AUD;
     const dhaUrl = dhaProv?.source;
@@ -79,7 +92,7 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
       factors.push({
         label: "Meets DHA financial-capacity requirement",
         influence: "positive",
-        detail: `Budget covers the ${capacityLabel} the student visa expects (AUD ${AU_DHA_LIVING_CAPACITY_AUD.toLocaleString()} living + AUD ${AU_REPRESENTATIVE_TUITION_AUD.toLocaleString()} first-year tuition).`,
+        detail: `Budget covers the ${capacityLabel} the student visa expects (AUD ${AU_DHA_LIVING_CAPACITY_AUD.toLocaleString()} living + AUD ${AU_REPRESENTATIVE_TUITION_AUD.toLocaleString()} first-year tuition${familyClause}).`,
         source,
       });
     } else if (budgetUsd >= capacityUsd * AU_DHA_CAPACITY_GATE.reachRatio) {

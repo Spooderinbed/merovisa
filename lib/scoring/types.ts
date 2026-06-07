@@ -87,6 +87,12 @@ export interface StudentProfile {
   budgetCurrency: Currency;
   fundingSource: FundingSource;
   goal: Goal;
+  /**
+   * Family the applicant intends to bring. Omitted/undefined = applying alone.
+   * Raises the DHA Subclass 500 financial-capacity floor (partner + each child)
+   * in the Australia financial gate — see lib/scoring/financial.ts.
+   */
+  dependents?: { partner: boolean; children: number };
 }
 
 export const VERDICTS = ["strong", "possible", "reach"] as const;

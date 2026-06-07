@@ -24,6 +24,8 @@ import {
 } from "./policy/english-thresholds";
 import {
   AU_DHA_LIVING_CAPACITY_AUD as AU_DHA_LIVING_CAPACITY_AUD_SRC,
+  AU_DHA_PARTNER_CAPACITY_AUD as AU_DHA_PARTNER_CAPACITY_AUD_SRC,
+  AU_DHA_CHILD_CAPACITY_AUD as AU_DHA_CHILD_CAPACITY_AUD_SRC,
   TYPICAL_YEARLY_USD as TYPICAL_YEARLY_USD_SRC,
   AU_REPRESENTATIVE_TUITION_AUD as AU_REPRESENTATIVE_TUITION_AUD_SRC,
   AU_DHA_CAPACITY_GATE as AU_DHA_CAPACITY_GATE_SRC,
@@ -83,6 +85,8 @@ const englishNotTaken = checked(ScalarPenaltySchema, ENGLISH_NOT_TAKEN_PENALTY_S
 const englishBandDelta = checked(ScalarPenaltySchema, ENGLISH_BAND_DELTA_POINTS_SRC, "ENGLISH_BAND_DELTA_POINTS");
 const typicalYearly = checked(TypicalYearlySchema, TYPICAL_YEARLY_USD_SRC, "TYPICAL_YEARLY_USD");
 const dhaLiving = checked(DhaLivingSchema, AU_DHA_LIVING_CAPACITY_AUD_SRC, "AU_DHA_LIVING_CAPACITY_AUD");
+const dhaPartner = checked(DhaLivingSchema, AU_DHA_PARTNER_CAPACITY_AUD_SRC, "AU_DHA_PARTNER_CAPACITY_AUD");
+const dhaChild = checked(DhaLivingSchema, AU_DHA_CHILD_CAPACITY_AUD_SRC, "AU_DHA_CHILD_CAPACITY_AUD");
 const repTuition = checked(RepresentativeTuitionSchema, AU_REPRESENTATIVE_TUITION_AUD_SRC, "AU_REPRESENTATIVE_TUITION_AUD");
 const capacityGate = checked(DhaCapacityGateSchema, AU_DHA_CAPACITY_GATE_SRC, "AU_DHA_CAPACITY_GATE");
 const dimWeights = checked(DimensionWeightsSchema, DIMENSION_WEIGHTS_SRC, "DIMENSION_WEIGHTS");
@@ -108,6 +112,8 @@ export const TYPICAL_YEARLY_USD: Readonly<Record<Destination, { min: number; max
   typicalYearly.value,
 );
 export const AU_DHA_LIVING_CAPACITY_AUD = dhaLiving.value;
+export const AU_DHA_PARTNER_CAPACITY_AUD = dhaPartner.value;
+export const AU_DHA_CHILD_CAPACITY_AUD = dhaChild.value;
 export const AU_REPRESENTATIVE_TUITION_AUD = repTuition.value;
 export const AU_DHA_CAPACITY_GATE = Object.freeze(capacityGate.value);
 export const DIMENSION_WEIGHTS = Object.freeze(dimWeights.value);
@@ -119,7 +125,9 @@ export const PROFILE_STRENGTH_POINTS = Object.freeze(profileStrength.value);
  * config-v2: financial dimension now consumes AU_DHA_LIVING_CAPACITY_AUD +
  * AU_REPRESENTATIVE_TUITION_AUD via the Australia DHA capacity gate.
  * config-v3: visa dimension now consumes ENGLISH_VISA_FLOOR_BY_DEST (the DHA
- * competent-English floor), distinct from the course-admission threshold.
+ * competent-English floor), distinct from the course-admission threshold; the
+ * financial dimension now consumes AU_DHA_PARTNER_CAPACITY_AUD +
+ * AU_DHA_CHILD_CAPACITY_AUD — declared dependents raise the DHA capacity floor.
  */
 export const CONFIG_VERSION = "config-v3";
 
@@ -137,6 +145,8 @@ export const CONFIG_PROVENANCE: Readonly<Record<string, Provenance>> = Object.fr
   ENGLISH_BAND_DELTA_POINTS: englishBandDelta.provenance,
   TYPICAL_YEARLY_USD: typicalYearly.provenance,
   AU_DHA_LIVING_CAPACITY_AUD: dhaLiving.provenance,
+  AU_DHA_PARTNER_CAPACITY_AUD: dhaPartner.provenance,
+  AU_DHA_CHILD_CAPACITY_AUD: dhaChild.provenance,
   AU_REPRESENTATIVE_TUITION_AUD: repTuition.provenance,
   AU_DHA_CAPACITY_GATE: capacityGate.provenance,
   DIMENSION_WEIGHTS: dimWeights.provenance,

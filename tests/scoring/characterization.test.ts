@@ -25,6 +25,13 @@ import type { AssessmentResult, Currency, StudentProfile } from "@/lib/scoring/t
  * `long-gap-below-english` (Australia, IELTS 6.0) — its visa dimension rises and
  * its factor is relabelled; the verdict stays reach (financial gated to 29).
  *
+ * RULE_VERSION v0.3.0 / config-v3 also added dependents → DHA capacity
+ * (lib/scoring/financial.ts): a declared partner/children raise the visa's
+ * financial-capacity floor. No pre-existing fixture carries dependents (so none
+ * moved); the `dependents-alone-clears` / `dependents-partner-capped` pair below
+ * isolates the effect — identical profiles whose only difference, a partner,
+ * drops an otherwise-strong Australia verdict to possible.
+ *
  * Determinism: the only time-dependent input is the graduation gap
  * (`computeGapYears` reads `new Date()`). Each profile's `graduationYear` is
  * expressed relative to the current year, so the *gap* — and therefore the whole
@@ -48,15 +55,16 @@ interface Case {
   profile: StudentProfile;
 }
 
-// A 14-profile matrix spanning: every education level; field-competitiveness
+// A 16-profile matrix spanning: every education level; field-competitiveness
 // extremes (0.95 CS/data-science ↔ 0.70 arts/hospitality); funding extremes
 // (0.95 self-funded ↔ 0.55 scholarship-dependent); currencies NPR/AUD/USD + one
 // out-of-enum (EUR passthrough); gaps 0/1/2/6; English not-taken/booked/below/at/
 // 7.0/7.5+; germany (6.0 threshold) and not-sure destinations; the Australia DHA
 // capacity gate (strong-clear clears it; possible-mid clears with a positive
-// factor; several AU cases fall below it); and canada profiles straddling every
+// factor; several AU cases fall below it); canada profiles straddling every
 // verdict.ts cutoff (72/71 strong↔possible, 50/49 possible↔reach, 30/29
-// min-dimension floor) so one-point drift flips a verdict.
+// min-dimension floor) so one-point drift flips a verdict; and a dependents pair
+// (alone vs partner, otherwise identical) isolating the B2 capacity-floor lift.
 const CASES: Case[] = [
   {
     name: "strong-clear",
@@ -335,6 +343,47 @@ const CASES: Case[] = [
       goal: "highest-ranked",
     },
   },
+  {
+    name: "dependents-alone-clears",
+    note: "AU masters/CS(0.95)/self-funded/IELTS 7.5/gap 0; 52k USD clears the alone DHA capacity floor (≈49.5k) → strong; sibling of dependents-partner-capped (identical but applying alone)",
+    profile: {
+      homeCountry: "Nepal",
+      educationLevel: "masters",
+      gradeSystem: "percentage-nepal",
+      grade: 86,
+      fieldOfStudy: "computer-science",
+      graduationYear: gradYear(0),
+      gapReasons: [],
+      englishStatus: "taken",
+      englishScore: 7.5,
+      destination: "australia",
+      budget: 52000,
+      budgetCurrency: "USD",
+      fundingSource: "self-funded",
+      goal: "permanent-residency",
+    },
+  },
+  {
+    name: "dependents-partner-capped",
+    note: "identical to dependents-alone-clears but bringing a partner: the DHA floor rises to ≈56.4k USD, so 52k now falls short → financial capped at 49 (min-dim <50) → strong drops to possible; isolates the B2 dependents effect",
+    profile: {
+      homeCountry: "Nepal",
+      educationLevel: "masters",
+      gradeSystem: "percentage-nepal",
+      grade: 86,
+      fieldOfStudy: "computer-science",
+      graduationYear: gradYear(0),
+      gapReasons: [],
+      englishStatus: "taken",
+      englishScore: 7.5,
+      destination: "australia",
+      budget: 52000,
+      budgetCurrency: "USD",
+      fundingSource: "self-funded",
+      goal: "permanent-residency",
+      dependents: { partner: true, children: 0 },
+    },
+  },
 ];
 
 function compute(profile: StudentProfile): GoldenOutput {
@@ -400,5 +449,19 @@ describe("scoring characterization goldens", () => {
     expect(at("reach-min-dimension").verdict).toBe("reach");
     expect(minDim(at("possible-min-dimension"))).toBe(30);
     expect(at("possible-min-dimension").verdict).not.toBe("reach");
+  });
+
+  it("isolates the B2 dependents effect: a partner drops an otherwise-strong AU profile to possible", () => {
+    if (WRITE) return;
+    const alone = ACTUAL["dependents-alone-clears"]!;
+    const partner = ACTUAL["dependents-partner-capped"]!;
+    expect(alone.verdict).toBe("strong");
+    expect(partner.verdict).toBe("possible");
+    // The partner changes ONLY the financial dimension (the raised capacity floor);
+    // every other dimension is identical, so the band drop is attributable to B2.
+    expect(partner.dimensions.financial.value).toBe(49);
+    expect(alone.dimensions.academic).toEqual(partner.dimensions.academic);
+    expect(alone.dimensions.visa).toEqual(partner.dimensions.visa);
+    expect(alone.dimensions.profileStrength).toEqual(partner.dimensions.profileStrength);
   });
 });

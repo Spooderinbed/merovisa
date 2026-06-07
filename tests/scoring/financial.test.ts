@@ -129,3 +129,63 @@ describe("scoreFinancial — DHA capacity gate (Australia)", () => {
     expect(budgetFactor?.source).toBeUndefined();
   });
 });
+
+// B2 — dependents raise the DHA financial-capacity floor (Australia). The gov
+// Subclass 500 figures already exist in au-cost-of-living.ts: partner +AUD 10,394,
+// each child +AUD 4,449. Base floor 74,210 AUD ≈ 49,473 USD (÷1.5); + partner →
+// 84,604 AUD ≈ 56,403 USD; + each child → +4,449 AUD (≈ +2,966 USD). Applying
+// alone (dependents omitted) must be byte-identical to today.
+describe("scoreFinancial — dependents raise the DHA capacity floor (Australia)", () => {
+  const au: StudentProfile = {
+    ...baseProfile,
+    destination: "australia",
+    budgetCurrency: "USD",
+    fundingSource: "self-funded",
+  };
+  const dhaFactor = (f: { label: string; detail: string }) => /capacit|DHA/i.test(f.label + f.detail);
+
+  it("treats applying alone as identical to omitting dependents (zero is a no-op)", () => {
+    const omitted = scoreFinancial({ ...au, budget: 52000 });
+    const alone = scoreFinancial({ ...au, budget: 52000, dependents: { partner: false, children: 0 } });
+    expect(alone).toEqual(omitted);
+  });
+
+  it("a partner raises the floor: a budget that clears alone is capped to 49 with a partner", () => {
+    // 52,000 USD clears the 49,473 alone floor but falls under the 56,403 with-partner floor.
+    expect(scoreFinancial({ ...au, budget: 52000 }).value).toBeGreaterThanOrEqual(50);
+    const withPartner = scoreFinancial({ ...au, budget: 52000, dependents: { partner: true, children: 0 } });
+    expect(withPartner.value).toBe(49);
+    expect(withPartner.factors.some((f) => f.influence === "risk" && dhaFactor(f))).toBe(true);
+  });
+
+  it("each child scales the floor: a budget clearing with one child caps with two", () => {
+    expect(
+      scoreFinancial({ ...au, budget: 54000, dependents: { partner: false, children: 1 } }).value,
+    ).toBeGreaterThanOrEqual(50);
+    expect(
+      scoreFinancial({ ...au, budget: 54000, dependents: { partner: false, children: 2 } }).value,
+    ).toBe(49);
+  });
+
+  it("shifts the whole gate: a partner can push a block-strong budget down to a forced reach", () => {
+    // 40,000 USD: alone it's above the 37,105 reach cliff (→ 49); a partner lifts
+    // the reach cliff to 42,302, so 40,000 now forces reach (→ 29).
+    expect(scoreFinancial({ ...au, budget: 40000 }).value).toBe(49);
+    expect(scoreFinancial({ ...au, budget: 40000, dependents: { partner: true, children: 0 } }).value).toBe(29);
+  });
+
+  it("credits the family floor honestly in the cleared capacity factor", () => {
+    const f = scoreFinancial({ ...au, budget: 90000, dependents: { partner: true, children: 0 } }).factors.find(
+      (x) => x.influence === "positive" && dhaFactor(x),
+    );
+    expect(f).toBeDefined();
+    expect(f!.detail).toMatch(/84,604/); // the raised floor (74,210 + 10,394 partner)
+    expect(f!.detail).toMatch(/family/i);
+  });
+
+  it("does not mention family in a no-dependents factor (base output stays byte-identical)", () => {
+    const f = scoreFinancial({ ...au, budget: 90000 }).factors.find((x) => x.influence === "positive" && dhaFactor(x));
+    expect(f!.detail).toMatch(/74,210/);
+    expect(f!.detail).not.toMatch(/family/i);
+  });
+});

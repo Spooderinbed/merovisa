@@ -32,6 +32,8 @@ import {
 } from "@/lib/data/policy/english-thresholds";
 import {
   AU_DHA_LIVING_CAPACITY_AUD as AU_DHA_LIVING_CAPACITY_AUD_SRC,
+  AU_DHA_PARTNER_CAPACITY_AUD as AU_DHA_PARTNER_CAPACITY_AUD_SRC,
+  AU_DHA_CHILD_CAPACITY_AUD as AU_DHA_CHILD_CAPACITY_AUD_SRC,
   TYPICAL_YEARLY_USD as TYPICAL_YEARLY_USD_SRC,
   AU_REPRESENTATIVE_TUITION_AUD as AU_REPRESENTATIVE_TUITION_AUD_SRC,
   AU_DHA_CAPACITY_GATE as AU_DHA_CAPACITY_GATE_SRC,
@@ -66,6 +68,9 @@ describe("scoring config — literal pins", () => {
     expect(Config.TYPICAL_YEARLY_USD.australia).toEqual({ min: 30000, max: 55000 });
     expect(Config.TYPICAL_YEARLY_USD.germany).toEqual({ min: 12000, max: 22000 });
     expect(Config.AU_DHA_LIVING_CAPACITY_AUD).toBe(29_710);
+    // DHA dependent-capacity figures (B2) — declared dependents raise the floor.
+    expect(Config.AU_DHA_PARTNER_CAPACITY_AUD).toBe(10_394);
+    expect(Config.AU_DHA_CHILD_CAPACITY_AUD).toBe(4_449);
     // DHA capacity gate inputs (Australia financial dimension). Changing either
     // shifts verdicts → regenerate the characterization golden + bump CONFIG_VERSION.
     expect(Config.AU_REPRESENTATIVE_TUITION_AUD).toBe(44_500);
@@ -119,6 +124,8 @@ describe("scoring config — schema validity", () => {
     expect(ScalarPenaltySchema.safeParse(ENGLISH_BAND_DELTA_POINTS_SRC).success).toBe(true);
     expect(TypicalYearlySchema.safeParse(TYPICAL_YEARLY_USD_SRC).success).toBe(true);
     expect(DhaLivingSchema.safeParse(AU_DHA_LIVING_CAPACITY_AUD_SRC).success).toBe(true);
+    expect(DhaLivingSchema.safeParse(AU_DHA_PARTNER_CAPACITY_AUD_SRC).success).toBe(true);
+    expect(DhaLivingSchema.safeParse(AU_DHA_CHILD_CAPACITY_AUD_SRC).success).toBe(true);
     expect(RepresentativeTuitionSchema.safeParse(AU_REPRESENTATIVE_TUITION_AUD_SRC).success).toBe(true);
     expect(DhaCapacityGateSchema.safeParse(AU_DHA_CAPACITY_GATE_SRC).success).toBe(true);
     expect(DimensionWeightsSchema.safeParse(DIMENSION_WEIGHTS_SRC).success).toBe(true);
@@ -156,6 +163,14 @@ describe("scoring config — provenance discipline", () => {
     const p = Config.CONFIG_PROVENANCE.ENGLISH_VISA_FLOOR_BY_DEST!;
     expect(p.findingRefs).toContain("J1.003");
     expect(p.source).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
+  });
+
+  it("the dependent-capacity figures are sourced to their DHA findings (B2)", () => {
+    const partner = Config.CONFIG_PROVENANCE.AU_DHA_PARTNER_CAPACITY_AUD!;
+    const child = Config.CONFIG_PROVENANCE.AU_DHA_CHILD_CAPACITY_AUD!;
+    expect(partner.findingRefs).toContain("B.003");
+    expect(child.findingRefs).toContain("B.004");
+    expect(partner.source).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
   });
 
   it("exposes a config version", () => {

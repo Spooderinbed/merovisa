@@ -29,6 +29,9 @@ export const ProfileSchema = z
     budgetCurrency: z.enum(CURRENCIES),
     fundingSource: z.enum(FUNDING_SOURCES),
     goal: z.enum(GOALS),
+    dependents: z
+      .object({ partner: z.boolean(), children: z.number().int().min(0).max(10) })
+      .optional(),
   })
   .refine(
     (data) => {
