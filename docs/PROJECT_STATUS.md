@@ -1,10 +1,10 @@
 # MyVisa — project status & phase log
 
-**Snapshot:** 2026-06-07, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B1 visa-English floor merged
-**Tests:** 620 passing across 155 test files
+**Snapshot:** 2026-06-07, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity) merged
+**Tests:** 638 passing across 156 test files
 **Typecheck:** clean
 **Build:** clean (27 routes including `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
-**Code surface:** 25 files in `app/`, 53 in `lib/`, 77 in `components/`, 127 in `tests/`, 5 SQL migrations applied
+**Code surface:** 25 files in `app/`, 53 in `lib/`, 77 in `components/`, 128 in `tests/`, 5 SQL migrations applied
 **Branch state:** pushed to `origin/master` (the prior local-only preference was lifted on 2026-06-07 at user request)
 
 ---
@@ -71,9 +71,9 @@ Two layers feed verdicts: (a) the **production scoring path** — `lib/scoring/*
 - **Roadmap corrections (2026-06-07):** (a) **visa-grant-rate into the scorer — won't do.** `visa-outcomes.ts` deliberately documents "no scorer reads it… shown as a range, never a single number"; it's already surfaced honestly (banner + slice 3). Force-wiring it would break that intentional cohort-not-odds decision. (b) **field-of-study-indexed tuition — not worth it now.** Only 6/12 fields have program data and the 6 missing are the cheap fields that'd fall back to the *higher* median, so it wouldn't fix the over-gating it targets; the single 44,500 median stands.
 - **Phase B — recalibration epoch (`v0.3.0` / `config-v3`).** Spec: `docs/superpowers/specs/2026-06-07-phase-b-recalibration-epoch-design.md`. Approved to ship B1 first, then B2 as a fast-follow on the same version line.
   - **B1 — visa English floor (merged 2026-06-07, `6ff6440`).** New gov-sourced `ENGLISH_VISA_FLOOR_BY_DEST` (australia 6.0, finding J1.003) distinct from the 6.5 course threshold; `visa.ts` applies a 3-band rule — reward ≥6.5, **no penalty in [6.0, 6.5)** (the visa floor is met), full threshold-anchored penalty <6.0. Factor relabelled (neutral "meets the DHA visa floor" / risk "below the floor") with the DHA source attached. `RULE_VERSION v0.2.0→v0.3.0`, `CONFIG_VERSION config-v2→config-v3`; golden regenerated — only `long-gap-below-english` moved (visa 48→53, factor relabel, weighted 49→50, **verdict still reach**); every other fixture unchanged but for the version stamp. Adversarial floor mutation trips 4 guards.
-  - **B2 — dependents → DHA capacity (next).** `dependents?: {partner, children}` on `StudentProfile`, collected via an optional control on the budget step; the financial gate adds the already-sourced partner (+10,394) / child (+4,449) capacity so bringing family honestly raises the funds bar. Wizard-UX + schema change; same `v0.3.0` line.
+  - **B2 — dependents → DHA capacity (merged 2026-06-07, `9030201`).** `StudentProfile` gains optional `dependents {partner, children}`, collected via a compact optional control on the budget step (Just me / Partner / Partner + children, default none, AU-only — no new step, to protect the funnel) and Zod-validated (children int 0–10). The financial gate raises the capacity floor by the gov-sourced partner (+AUD 10,394, B.003) / child (+AUD 4,449, B.004) figures before the existing caps; the cleared-factor breakdown credits the family floor so the itemised AUD never contradicts the raised total. Same `v0.3.0` / `config-v3` line (re-exports only, no new bump). Golden: a new `dependents-alone-clears` / `dependents-partner-capped` pair isolates the effect — identical but for a partner, which drops an otherwise-strong AU verdict to possible (financial 85→49); no pre-existing fixture carries dependents so none moved. Adversarial zeroing of the partner figure trips 6 guards across 3 files. Browser-verified: the control renders/works on the live budget step, doesn't gate completion, zero console errors. **School costs (13,502) deferred** (need child ages); the signed-in `family.situation` → scored-profile mapping is a noted follow-up.
 - **FX-rates deferred (won't do this epoch):** `toUsd` runs *every* budget through `FX_RATES`, so re-sourcing the volatile NPR/AUD rates is wide-blast, low-value churn; the current ~135 NPR / ~1.5 AUD are roughly right — document the heuristic instead.
-- **Open backlog:** Phase B2 (above); `/matches` sourced-data consolidation (single source of truth); trust-sensitive findings (agent fees/KPIs, grad salaries — not sourced, needs caveats); pre-existing ESLint debt.
+- **Open backlog:** `/matches` sourced-data consolidation (single source of truth); the signed-in `family.situation` → scored-profile mapping (B2 follow-up); trust-sensitive findings (agent fees/KPIs, grad salaries — not sourced, needs caveats); pre-existing ESLint debt.
 
 ---
 
