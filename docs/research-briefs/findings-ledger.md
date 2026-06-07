@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=234 · pending=880
+**Status:** used=264 · pending=850
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -570,33 +570,33 @@
 | E.039 | E | practitioner | data | G26 | pending | lib/data/programs seed (+ course-career) | KIEC says high-demand courses for Nepali students in Australia in 2026 include early childhood education. |
 | E.040 | E | practitioner | data | G26 | pending | lib/data/programs seed (+ course-career) | KIEC says high-demand courses for Nepali students in Australia in 2026 include selected TAFE trades. |
 | E.041 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | IDP says Australia offers Nepalese students diverse courses across business, engineering, humanities and lang… |
-| E.042 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science has a duration of 3 years. |
-| E.043 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science has a 2026 annual fee of AUD 42,240. |
+| E.042 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science has a duration of 3 years. |
+| E.043 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science has a 2026 annual fee of AUD 42,240. |
 | E.044 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science requires IELTS 6.5 with no band below 6.0. |
 | E.045 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Computer Science lists a minimum average score of 65%. |
-| E.046 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Data Science has a duration of 2 years. |
-| E.047 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Data Science has a 2026 annual fee of AUD 43,200. |
+| E.046 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Data Science has a duration of 2 years. |
+| E.047 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Data Science has a 2026 annual fee of AUD 43,200. |
 | E.048 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Data Science requires IELTS 6.5 with no band below 6.0. |
 | E.049 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Deakin Master of Data Science shows an estimated tuition fee of AUD 34,400 for 1 year full-time. |
 | E.050 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | Deakin Master of Data Science requires IELTS 6.5 with no band below 6.0. |
-| E.051 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Information Technology has a duration of 2 years. |
+| E.051 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Information Technology has a duration of 2 years. |
 | E.052 | E | primary | data | G27 | pending | lib/data/programs seed (+ course-career) | RMIT Master of Information Technology has a 2026 annual fee of AUD 43,200 in the RMIT International Course Gu… |
 | E.053 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Information Technology lists a minimum average score of 2.0. |
-| E.054 | E | primary | data | G27 | pending | lib/data/programs seed (+ course-career) | The RMIT Master of Information Technology course page shows an international annual fee of AUD 44,160 for 202… |
-| E.055 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Cyber Security has a duration of 2 years. |
-| E.056 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Cyber Security has a 2026 annual fee of AUD 43,200. |
-| E.057 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology has a duration of 3 years. |
-| E.058 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology has a 2026 annual fee of AUD 42,240. |
+| E.054 | E | primary | data | G27 | used | lib/data/programs seed (+ course-career) | The RMIT Master of Information Technology course page shows an international annual fee of AUD 44,160 for 202… |
+| E.055 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Cyber Security has a duration of 2 years. |
+| E.056 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Cyber Security has a 2026 annual fee of AUD 43,200. |
+| E.057 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology has a duration of 3 years. |
+| E.058 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology has a 2026 annual fee of AUD 42,240. |
 | E.059 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Information Technology lists a minimum average score of 65%. |
-| E.060 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business has a duration of 3 years. |
-| E.061 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business has a 2026 annual fee of AUD 45,120. |
+| E.060 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business has a duration of 3 years. |
+| E.061 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business has a 2026 annual fee of AUD 45,120. |
 | E.062 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Business lists a minimum average score of 65%. |
-| E.063 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Professional Accounting has a duration of 2 years. |
-| E.064 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Professional Accounting has a 2026 annual fee of AUD 49,920. |
-| E.065 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Business Administration has a duration of 2 years. |
-| E.066 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Business Administration has a 2026 annual fee of AUD 49,920. |
-| E.067 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Project Management has a duration of 2 years. |
-| E.068 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Project Management has a 2026 annual fee of AUD 50,880. |
+| E.063 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Professional Accounting has a duration of 2 years. |
+| E.064 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Professional Accounting has a 2026 annual fee of AUD 49,920. |
+| E.065 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Business Administration has a duration of 2 years. |
+| E.066 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Business Administration has a 2026 annual fee of AUD 49,920. |
+| E.067 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Project Management has a duration of 2 years. |
+| E.068 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Project Management has a 2026 annual fee of AUD 50,880. |
 | E.069 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Civil and Infrastructure) (Honours) has a duration of 4 years. |
 | E.070 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Civil and Infrastructure) (Honours) has a 2026 annual fee of AUD 47,040. |
 | E.071 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Civil Engineering) has a duration of 2 years. |
@@ -609,19 +609,19 @@
 | E.078 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Engineering (Mechanical Engineering) (Honours) has a 2026 annual fee of AUD 47,040. |
 | E.079 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Mechanical Engineering) has a duration of 2 years. |
 | E.080 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Engineering (Mechanical Engineering) has a 2026 annual fee of AUD 48,000. |
-| E.081 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing has a duration of 2 years. |
-| E.082 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing has a 2026 annual fee of AUD 19,250. |
+| E.081 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing has a duration of 2 years. |
+| E.082 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing has a 2026 annual fee of AUD 19,250. |
 | E.083 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Diploma of Nursing requires IELTS 7.0 with no band below 7.0. |
-| E.084 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Nursing has a duration of 3 years. |
-| E.085 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Nursing has a 2026 annual fee of AUD 42,240. |
+| E.084 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Nursing has a duration of 3 years. |
+| E.085 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Nursing has a 2026 annual fee of AUD 42,240. |
 | E.086 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Nursing requires IELTS 7.0 with no band below 7.0. |
 | E.087 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | Deakin Master of Nursing requires IELTS 7.0 with no band below 6.5. |
 | E.088 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | Deakin Master of Advanced Nursing requires IELTS 6.5 with no band below 6.0. |
-| E.089 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Graduate Diploma in Early Childhood Education has a duration of 1 year. |
-| E.090 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Graduate Diploma in Early Childhood Education has a 2026 annual fee of AUD 39,360. |
+| E.089 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Graduate Diploma in Early Childhood Education has a duration of 1 year. |
+| E.090 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Graduate Diploma in Early Childhood Education has a 2026 annual fee of AUD 39,360. |
 | E.091 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Graduate Diploma in Early Childhood Education requires IELTS 7.0 with no band below 6.5. |
-| E.092 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) has a duration of 4 years. |
-| E.093 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) has a 2026 annual fee of AUD 34,560. |
+| E.092 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) has a duration of 4 years. |
+| E.093 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) has a 2026 annual fee of AUD 34,560. |
 | E.094 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) requires IELTS 7.5. |
 | E.095 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS 6.5. |
 | E.096 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS writing 6.0. |
@@ -638,15 +638,15 @@
 | E.107 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS writing 7.0. |
 | E.108 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy is accredited by the Australian Pharmacy Council. |
 | E.109 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy is approved by the Pharmacy Board of Australia as a qualification leading to pharmacis… |
-| E.110 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) has a duration of 4 years. |
-| E.111 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) has a 2026 annual fee of AUD 48,000. |
+| E.110 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) has a duration of 4 years. |
+| E.111 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) has a 2026 annual fee of AUD 48,000. |
 | E.112 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) requires IELTS overall 7.0. |
 | E.113 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) requires no IELTS band below 6.5. |
 | E.114 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Social Work (Honours) has a duration of 4 years. |
 | E.115 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Social Work (Honours) requires IELTS overall 7.0. |
 | E.116 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Social Work (Honours) requires no IELTS band below 7.0. |
-| E.117 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Social Work has a duration of 2 years. |
-| E.118 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Social Work has a 2026 annual fee of AUD 39,360. |
+| E.117 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Social Work has a duration of 2 years. |
+| E.118 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Master of Social Work has a 2026 annual fee of AUD 39,360. |
 | E.119 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Social Work requires IELTS overall 7.0. |
 | E.120 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Master of Social Work requires no IELTS band below 7.0. |
 | E.121 | E | primary | process | G28 | pending | lib/data/programs seed (+ course-career) | The University of Melbourne says overseas grades are assessed based on institution accreditation. |

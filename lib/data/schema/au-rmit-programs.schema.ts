@@ -11,7 +11,7 @@ const AuRmitProgramSchema = z.object({
   id: z.string().min(1),
   provider: z.literal("RMIT University"),
   programName: z.string().min(1),
-  level: z.enum(["bachelor", "master"]),
+  level: z.enum(["bachelor", "master", "diploma", "graduate-diploma"]),
   tuitionAudPerYear: z.number().positive(),
   durationYears: z.number().positive(),
   fieldOfStudy: z.string().min(1).optional(),

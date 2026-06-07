@@ -384,7 +384,7 @@ export interface AuRmitProgram extends Provenanced {
   id: string; // slug, e.g. "be-civil-infrastructure-honours"
   provider: "RMIT University"; // fixed provider literal
   programName: string; // full program name as the finding states it
-  level: "bachelor" | "master";
+  level: "bachelor" | "master" | "diploma" | "graduate-diploma";
   tuitionAudPerYear: number; // 2026 annual international fee, AUD
   durationYears: number; // standard full-time duration, years
   fieldOfStudy?: string; // free-form discipline label (NOT the scoring FieldOfStudy enum)
