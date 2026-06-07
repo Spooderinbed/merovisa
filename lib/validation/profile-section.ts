@@ -65,6 +65,7 @@ const ImmigrationPatch = z.object({
 });
 const FamilyPatch = z.object({
   situation: z.enum(["alone","spouse","spouse-and-kids","other"]).optional(),
+  children: z.number().int().min(0).max(10).optional(),
 });
 const CareerPatch = z.object({
   goal: z.enum(GOALS).optional(),

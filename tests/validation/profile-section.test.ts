@@ -60,6 +60,12 @@ describe("ProfileSectionPatchBodySchema — other sections", () => {
     [{ section: "immigration", patch: { refusals: "many" } }, false],
     [{ section: "family", patch: { situation: "alone" } }, true],
     [{ section: "family", patch: { situation: "spouse++" } }, false],
+    [{ section: "family", patch: { situation: "spouse-and-kids", children: 2 } }, true],
+    [{ section: "family", patch: { children: 0 } }, true],
+    [{ section: "family", patch: { children: 10 } }, true],
+    [{ section: "family", patch: { children: 11 } }, false],
+    [{ section: "family", patch: { children: -1 } }, false],
+    [{ section: "family", patch: { children: 1.5 } }, false],
     [{ section: "career", patch: { goal: "permanent-residency" } }, true],
     [{ section: "career", patch: { goal: "rich" } }, false],
     [{ section: "scholarships", patch: { profile: ["merit", "minority"] } }, true],
@@ -73,4 +79,17 @@ describe("ProfileSectionPatchBodySchema — other sections", () => {
       expect(ProfileSectionPatchBodySchema.safeParse(body).success).toBe(expected);
     });
   }
+});
+
+describe("FamilyPatch — child count", () => {
+  it("preserves an in-range child count through the envelope (not stripped)", () => {
+    const r = ProfileSectionPatchBodySchema.safeParse({
+      section: "family",
+      patch: { situation: "spouse-and-kids", children: 3 },
+    });
+    expect(r.success).toBe(true);
+    if (r.success && r.data.section === "family") {
+      expect(r.data.patch.children).toBe(3);
+    }
+  });
 });

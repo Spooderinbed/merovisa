@@ -56,7 +56,7 @@ describe("sectionsToStudentProfile", () => {
       expect(deps("spouse")).toEqual({ partner: true, children: 0 });
     });
 
-    test("spouse-and-kids → a partner plus one child (count not captured by the enum)", () => {
+    test("spouse-and-kids with no count keeps the conservative one-child floor (legacy rows)", () => {
       expect(deps("spouse-and-kids")).toEqual({ partner: true, children: 1 });
     });
 
@@ -71,6 +71,31 @@ describe("sectionsToStudentProfile", () => {
     test("an unset family section leaves dependents undefined", () => {
       expect(sectionsToStudentProfile({}).dependents).toBeUndefined();
       expect(sectionsToStudentProfile({ family: {} }).dependents).toBeUndefined();
+    });
+
+    // Child-count field — the signed-in editor now captures a real count, so the
+    // mapping reads it instead of flooring spouse-and-kids at exactly one child.
+    test("spouse-and-kids honours an explicit child count", () => {
+      expect(sectionsToStudentProfile({ family: { situation: "spouse-and-kids", children: 3 } }).dependents).toEqual({
+        partner: true,
+        children: 3,
+      });
+    });
+
+    test("spouse-and-kids floors a contradictory zero count at one child", () => {
+      // The situation already asserts ≥1 child; never count fewer than the floor.
+      expect(sectionsToStudentProfile({ family: { situation: "spouse-and-kids", children: 0 } }).dependents).toEqual({
+        partner: true,
+        children: 1,
+      });
+    });
+
+    test("a stale child count is inert when the situation isn't spouse-and-kids", () => {
+      // situation gates whether children count at all; a leftover count on `spouse` is ignored.
+      expect(sectionsToStudentProfile({ family: { situation: "spouse", children: 5 } }).dependents).toEqual({
+        partner: true,
+        children: 0,
+      });
     });
   });
 });

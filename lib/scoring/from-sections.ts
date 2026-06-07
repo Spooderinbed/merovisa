@@ -1,21 +1,23 @@
 import type { StudentProfile } from "./types";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
-type FamilySituation = NonNullable<ProfileSections["family"]>["situation"];
+type FamilySection = NonNullable<ProfileSections["family"]>;
 
 /**
- * Map the signed-in `family.situation` enum onto the scored `dependents` signal,
- * so a re-score honours the DHA capacity floor the wizard already collects for
- * anonymous users. The enum carries no child *count*, so `spouse-and-kids` takes
- * a conservative one-child floor (consistent with the gate's bias against falsely
- * over-failing); `other` is ambiguous, so it doesn't raise the floor on a guess.
+ * Map the signed-in `family` section onto the scored `dependents` signal, so a
+ * re-score honours the DHA capacity floor the wizard already collects for
+ * anonymous users. `situation` gates whether a partner/children count at all;
+ * `children` carries the real count when the editor captured it. `spouse-and-kids`
+ * floors at one child — the situation already asserts ≥1, so a contradictory zero
+ * and legacy rows that predate the count field fall back to it. `other` is
+ * ambiguous, so it doesn't raise the floor on a guess.
  */
-function dependentsFromFamily(situation: FamilySituation): StudentProfile["dependents"] {
-  switch (situation) {
+function dependentsFromFamily(family: FamilySection | undefined): StudentProfile["dependents"] {
+  switch (family?.situation) {
     case "spouse":
       return { partner: true, children: 0 };
     case "spouse-and-kids":
-      return { partner: true, children: 1 };
+      return { partner: true, children: Math.max(1, family?.children ?? 1) };
     default:
       return undefined; // alone / other / unset → applying alone
   }
@@ -51,6 +53,6 @@ export function sectionsToStudentProfile(sections: ProfileSections): StudentProf
     budgetCurrency: finance?.currency ?? "NPR",
     fundingSource: finance?.source ?? "self-funded",
     goal: career?.goal ?? "permanent-residency",
-    dependents: dependentsFromFamily(sections.family?.situation),
+    dependents: dependentsFromFamily(sections.family),
   };
 }
