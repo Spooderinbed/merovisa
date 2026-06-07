@@ -38,7 +38,6 @@ describe("upsertProfile", () => {
 
 describe("patchProfileSection", () => {
   it("merges into sections[key] and updates completeness in one go", async () => {
-    const existingRow = { sections: { personal: { name: "Old" }, academic: { gradePercent: 70 } } };
     // fakeSupabase returns the same result for all calls including getProfile (maybeSingle)
     // and the update+select (then/builder). Return an array so the update looks like it matched a row.
     const { client, calls } = fakeSupabase({ data: [{ id: "p1" }], error: null });

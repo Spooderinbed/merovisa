@@ -15,7 +15,7 @@ import { composeScoresForAllDestinations } from "@/lib/scoring/multi-destination
 
 describe("composeScoresForAllDestinations", () => {
   it("runs runAssessment once per destination", () => {
-    const base: any = { grade: 72 };
+    const base = { grade: 72 } as unknown as Parameters<typeof composeScoresForAllDestinations>[0];
     const out = composeScoresForAllDestinations(base, [
       "australia",
       "canada",
@@ -25,6 +25,6 @@ describe("composeScoresForAllDestinations", () => {
   });
 
   it("returns empty object when no destinations given", () => {
-    expect(composeScoresForAllDestinations({} as any, [])).toEqual({});
+    expect(composeScoresForAllDestinations({} as unknown as Parameters<typeof composeScoresForAllDestinations>[0], [])).toEqual({});
   });
 });

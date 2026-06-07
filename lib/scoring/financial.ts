@@ -1,4 +1,4 @@
-import type { DimensionScore, Destination, FundingSource, StudentProfile, Currency } from "./types";
+import type { DimensionScore, Destination, StudentProfile, Currency } from "./types";
 import {
   TYPICAL_YEARLY_USD,
   FUNDING_RELIABILITY,

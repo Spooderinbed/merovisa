@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
-const { claimAssessment, upsertProfile, getProfile, update, select, from } = vi.hoisted(() => {
+const { claimAssessment, upsertProfile, getProfile, from } = vi.hoisted(() => {
   const claimAssessment = vi.fn();
   const upsertProfile = vi.fn();
   const getProfile = vi.fn();

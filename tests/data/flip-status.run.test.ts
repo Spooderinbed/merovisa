@@ -115,7 +115,6 @@ describe("flip-status derives the used set from code", () => {
   if (WRITE) {
     it("rewrites findings JSONL to match code refs (FLIP_STATUS=1)", () => {
       const filesWritten = applyChanges(changedById);
-      // eslint-disable-next-line no-console
       console.log(
         `flip-status: files=${filesWritten} promoted=${report.promoted.length} ` +
           `demoted=${report.demoted.length} rewired=${report.rewired.length} ` +

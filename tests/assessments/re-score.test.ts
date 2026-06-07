@@ -19,7 +19,7 @@ describe("reScoreAssessment", () => {
   const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
   const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq1 });
   const mockFrom = vi.fn().mockReturnValue({ update: mockUpdate });
-  const fakeDb = { from: mockFrom } as any;
+  const fakeDb = { from: mockFrom } as unknown as Parameters<typeof reScoreAssessment>[0];
 
   beforeEach(() => {
     vi.clearAllMocks();
