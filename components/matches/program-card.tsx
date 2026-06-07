@@ -12,6 +12,16 @@ const VERDICT_LABEL = {
   reach: "Reach",
 } as const;
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** ISO date ("2026-06-04") → "Jun 2026"; "" for anything unparseable. No Date() — keeps it deterministic. */
+function freshness(iso: string): string {
+  const [year, month] = iso.split("-");
+  const name = MONTHS[Number(month) - 1];
+  if (!year || !name) return "";
+  return `${name} ${year}`;
+}
+
 export function ProgramCard({
   match,
   isShortlisted,
@@ -20,6 +30,12 @@ export function ProgramCard({
   isShortlisted: boolean;
 }) {
   const { program: p, university: u, verdict, reasons } = match;
+  const isEstimated = p.dataQuality === "derived";
+  const qualityWord = isEstimated ? "Estimated" : "Verified";
+  const checked = freshness(p.lastVerified);
+  const provenance = checked ? `${qualityWord} · checked ${checked}` : qualityWord;
+  const linkLabel = isEstimated ? "Provider site" : "Source";
+  const provenanceTone = isEstimated ? "text-ink-soft" : "text-ink-faint";
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -58,15 +74,20 @@ export function ProgramCard({
           </li>
         ))}
       </ul>
-      <footer className="flex items-center justify-between">
-        <a
-          href={p.source}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[12.5px] text-primary hover:underline"
-        >
-          Source ↗
-        </a>
+      <footer className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col gap-0.5">
+          <span className={`font-mono text-[11px] uppercase tracking-wide ${provenanceTone}`}>
+            {provenance}
+          </span>
+          <a
+            href={p.source}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[12.5px] text-primary hover:underline"
+          >
+            {linkLabel} ↗
+          </a>
+        </div>
         <ShortlistButton programId={p.id} initialStatus={isShortlisted ? "shortlisted" : null} />
       </footer>
     </article>

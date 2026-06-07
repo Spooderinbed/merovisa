@@ -50,4 +50,21 @@ describe("ProgramCard", () => {
     render(<ProgramCard match={m} isShortlisted />);
     expect(screen.getByRole("button", { name: /Shortlisted/i })).toBeInTheDocument();
   });
+
+  it("labels a verified (primary) program and cites the source", () => {
+    render(<ProgramCard match={m} isShortlisted={false} />);
+    expect(screen.getByText(/Verified/i)).toBeInTheDocument();
+    expect(screen.getByText(/checked Jan 2026/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Source/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Provider site/i })).not.toBeInTheDocument();
+  });
+
+  it("labels a derived program as estimated and softens the link to the provider site", () => {
+    const derived: MatchResult = { ...m, program: { ...m.program, dataQuality: "derived" } };
+    render(<ProgramCard match={derived} isShortlisted={false} />);
+    expect(screen.getByText(/Estimated/i)).toBeInTheDocument();
+    expect(screen.getByText(/checked Jan 2026/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Provider site/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Verified/i)).not.toBeInTheDocument();
+  });
 });
