@@ -1,7 +1,7 @@
 # MyVisa — project status & phase log
 
-**Snapshot:** 2026-06-07, scorer-wiring slice 1 (DHA financial-capacity gate) merged
-**Tests:** 597 passing across 153 test files
+**Snapshot:** 2026-06-07, scorer-wiring slices 1–3 (DHA gate + provenance UI + corridor context) merged
+**Tests:** 602 passing across 153 test files
 **Typecheck:** clean
 **Build:** clean (27 routes including `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
 **Code surface:** 25 files in `app/`, 52 in `lib/`, 76 in `components/`, 125 in `tests/`, 5 SQL migrations applied
@@ -65,7 +65,11 @@
 Two layers feed verdicts: (a) the **production scoring path** — `lib/scoring/*` reads sourced config via `lib/data/scoring-config.ts` (from `lib/data/policy/*`); the per-program `/matches` path reads `lib/programs/seed.ts` (15 unis, 64 programs) via Supabase; and (b) the **reconciled fact layer** `lib/data/source/*` — ~342 atomic findings turned into typed, sourced, machine-checked modules (registry-driven, guarded by `docs/research-briefs/_tools/reconcile.js`). Most of (b) is reference-only; wiring a fact into (a) is verdict-changing.
 
 - **Scorer-wiring slice 1 — DHA financial-capacity gate (merged 2026-06-07).** Spec: `docs/superpowers/specs/2026-06-07-dha-financial-capacity-gate-design.md`. The financial dimension now gates a Nepal→Australia budget against the government DHA capacity floor (living 29,710 + representative tuition 44,500 ≈ AUD 74,210 ≈ USD 49,473) instead of only the internal-heuristic cost band: below the floor caps financial at 49 (blocks "strong"); below 0.75× forces "reach". AU-only; non-AU unchanged. `RULE_VERSION v0.1.0→v0.2.0`, `CONFIG_VERSION config-v1→config-v2`; characterization golden regenerated (boundary-straddle fixtures relocated to `canada` to isolate verdict.ts cutoffs from the gate). **Known design note:** the cap makes AU financial values 30–48 unreachable (a deliberate dead-zone). **Deferred fast-follows:** travel/airfare in the floor; field-of-study-indexed tuition; dependents (needs a profile-schema field).
-- **Open scorer-wiring backlog:** see the roadmap — visa-grant-rate into the visa dimension (trust-sensitive), provenance surfaced in results UI, `/matches` sourced-data consolidation, etc.
+- **Slice 2 — provenance under verdicts (merged 2026-06-07).** Optional `source` on the `DimensionScore` factor type; the financial capacity factor carries the DHA gov source (`immi.homeaffairs.gov.au` · verified date), rendered by a new `SourceLine` under sourced factors. Heuristic-backed factors show nothing. Additive/explainability only — no verdict, score, or version change; golden regenerated for the new optional field. Browser-verified end-to-end.
+- **Slice 3 — corridor context on the results page (merged 2026-06-07).** The anonymous results page now renders the existing `PolicyBanner` (AL3, DHA floor, the DHA grant-rate range) after the factor breakdown, matching `/matches`. Pure additive UI; no scorer/golden change.
+- **Roadmap corrections (2026-06-07):** (a) **visa-grant-rate into the scorer — won't do.** `visa-outcomes.ts` deliberately documents "no scorer reads it… shown as a range, never a single number"; it's already surfaced honestly (banner + slice 3). Force-wiring it would break that intentional cohort-not-odds decision. (b) **field-of-study-indexed tuition — not worth it now.** Only 6/12 fields have program data and the 6 missing are the cheap fields that'd fall back to the *higher* median, so it wouldn't fix the over-gating it targets; the single 44,500 median stands.
+- **Next designed slice (A4):** distinguish the DHA *visa* English floor (IELTS 6.0 each band, sourced) from the *course* threshold (6.5) in the visa dimension, so visa-valid 6.0–6.4 English isn't over-penalised. Verdict-changing with a broad recalibration effect — wants a short design pass first.
+- **Open backlog:** A4 (above); total cost-to-apply context (visa charge + Nepal fees); `/matches` sourced-data consolidation; dependents profile-schema field; pre-existing FX-rates (`internal-heuristic`) + ESLint debt.
 
 ---
 
