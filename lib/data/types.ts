@@ -471,3 +471,22 @@ export interface AuScholarship extends Provenanced {
   source: string; // funder page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Nepal-side English-test logistics: where an applicant can sit a given test in
+ * Nepal and what it costs locally. One record per operator+test (e.g. IELTS via
+ * the British Council vs IDP), carrying the number of Nepal locations, the named
+ * locations, and any locally-quoted sitting fee. Distinct from au-english-tests,
+ * which records the Australia-side DHA acceptance of each test. Fact-only — no
+ * scorer reads it; machine-checked against the findings.
+ */
+export interface NepalEnglishTestCentre extends Provenanced {
+  id: string; // slug, e.g. "ielts-british-council"
+  operator: string; // who administers the centres (British Council, IDP Education Nepal)
+  test: string; // the English test offered (e.g. "IELTS")
+  locationCount?: number; // number of test locations/centres in Nepal
+  locations?: string[]; // the named Nepal locations (sourced detail)
+  computerDeliveredFeeNpr?: number; // computer-delivered sitting fee in Nepal, NPR
+  source: string; // official test-provider page URL
+  lastVerified?: string; // ISO date
+}

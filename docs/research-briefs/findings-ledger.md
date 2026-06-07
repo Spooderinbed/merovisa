@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=298 · pending=816
+**Status:** used=301 · pending=813
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1104,14 +1104,14 @@
 | J1.008 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | LANGUAGECERT Academic is accepted by the Australian Department of Home Affairs for visa English proficiency (… |
 | J1.009 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Michigan English Test (MET) is accepted by the Australian Department of Home Affairs as evidence of English p… |
 | J1.010 | J1 | practitioner | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Duolingo English Test is not accepted by the Australian Department of Home Affairs for student visa (subclass… |
-| J1.011 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | British Council offers IELTS tests in nine Nepal locations: Banepa, Biratnagar, Birtamode, Butwal, Chitwan, G… |
-| J1.012 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | IDP Education Nepal operates four IELTS test centres: Biratnagar, Chitwan (Bharatpur), Pokhara, and Kathmandu |
+| J1.011 | J1 | practitioner | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | British Council offers IELTS tests in nine Nepal locations: Banepa, Biratnagar, Birtamode, Butwal, Chitwan, G… |
+| J1.012 | J1 | practitioner | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | IDP Education Nepal operates four IELTS test centres: Biratnagar, Chitwan (Bharatpur), Pokhara, and Kathmandu |
 | J1.013 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | Alfa Beta Institute (Kathmandu) is the only PTE Academic test centre in Nepal |
 | J1.014 | J1 | anecdotal | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT (in-person) is offered at authorized test centres in Nepal, including Kathmandu, Lalitpur, and Chit… |
 | J1.015 | J1 | anecdotal | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT exam fee in Nepal is USD 180 (approximately NPR 23,967) |
 | J1.016 | J1 | practitioner | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | The TOEFL iBT Home Edition (online-from-home) is not accepted by the Australian Department of Home Affairs fo… |
 | J1.017 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | TOEFL iBT (in-person) is recognized by 100% of Australian universities and accepted for Australian visa purpo… |
-| J1.018 | J1 | practitioner | data |  | pending | lib/data/source/nepal.ts tests (+ scholarships) | The fee for IELTS Academic (on computer) at the IDP Biratnagar test centre is NPR 36,000 (2026) |
+| J1.018 | J1 | practitioner | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | The fee for IELTS Academic (on computer) at the IDP Biratnagar test centre is NPR 36,000 (2026) |
 | J2.001 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarship recipients receive full tuition fees paid by the Australian government |
 | J2.002 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarship recipients receive return economy air travel between Nepal and Australia |
 | J2.003 | J2 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Australia Awards Scholarship includes a contribution to living expenses (stipend) for recipients |

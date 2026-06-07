@@ -50,6 +50,8 @@ import { AU_TEMPORARY_GRADUATE_VISA } from "@/lib/data/source/au-temporary-gradu
 import { AuTemporaryGraduateVisaSchema } from "@/lib/data/schema/au-temporary-graduate-visa.schema";
 import { AU_SCHOLARSHIPS } from "@/lib/data/source/au-scholarships";
 import { AuScholarshipsSchema } from "@/lib/data/schema/au-scholarships.schema";
+import { NEPAL_ENGLISH_TEST_CENTRES } from "@/lib/data/source/nepal-english-test-centres";
+import { NepalEnglishTestCentresSchema } from "@/lib/data/schema/nepal-english-test-centres.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -412,5 +414,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-scholarships",
     subRecordKeys: [],
     recordInterface: "AuScholarship",
+  },
+  {
+    // Nepal-side IELTS test-centre logistics (English-tests & scholarships
+    // category J), from the official IELTS administrators: the British Council
+    // (nine locations) and IDP (four centres + the NPR 36,000 computer-delivered
+    // fee). locationCount is the gate-checked scalar; the named locations ride as
+    // sourced detail. PTE/TOEFL deferred pending test-owner sources. Fact-only.
+    category: "J",
+    exportName: "NEPAL_ENGLISH_TEST_CENTRES",
+    data: NEPAL_ENGLISH_TEST_CENTRES,
+    schema: NepalEnglishTestCentresSchema,
+    recordLabel: "nepal-english-test-centres",
+    subRecordKeys: [],
+    recordInterface: "NepalEnglishTestCentre",
   },
 ];
