@@ -577,3 +577,24 @@ export interface AuVisaFact extends Provenanced {
   source: string; // DHA page / form URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Pathway-college programs that lead into an Australian university — diploma and
+ * foundation courses run by the universities' pathway colleges (e.g. UTS College,
+ * Deakin College, Taylors). Each record carries the international tuition and the
+ * standard (and where offered, accelerated) duration in months. Distinct from the
+ * degree-program modules: these are the pre-degree pathway step. Fact-only
+ * reference — no scorer reads it; machine-checked against the findings.
+ */
+export interface AuPathwayProgram extends Provenanced {
+  id: string; // slug, e.g. "uts-college-diploma-information-technology"
+  college: string; // delivering pathway college
+  programName: string; // program name as published
+  type: "diploma" | "foundation";
+  leadsTo?: string; // the university this pathway feeds into
+  tuitionAud?: number; // international tuition, AUD
+  durationMonths?: number; // standard duration, months
+  acceleratedDurationMonths?: number; // accelerated-track duration, months (where offered)
+  source: string; // college program page URL
+  lastVerified?: string; // ISO date
+}

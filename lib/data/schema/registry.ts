@@ -60,6 +60,8 @@ import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric
 import { AuHealthBiometricFactsSchema } from "@/lib/data/schema/au-health-biometric-facts.schema";
 import { AU_VISA_FACTS } from "@/lib/data/source/au-visa-facts";
 import { AuVisaFactsSchema } from "@/lib/data/schema/au-visa-facts.schema";
+import { AU_PATHWAY_PROGRAMS } from "@/lib/data/source/au-pathway-programs";
+import { AuPathwayProgramsSchema } from "@/lib/data/schema/au-pathway-programs.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -497,5 +499,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-visa-facts",
     subRecordKeys: [],
     recordInterface: "AuVisaFact",
+  },
+  {
+    // Pathway-college programs leading into an Australian university (providers
+    // category D): UTS College and Deakin College Diplomas of IT (tuition +
+    // standard/accelerated durations) and the University of Sydney Foundation
+    // Program via Taylors (duration). The pre-degree pathway step, distinct from
+    // the degree-program modules. Each present value reconciles to its own
+    // finding. Fact-only: no scorer reads it. Record array.
+    category: "D",
+    exportName: "AU_PATHWAY_PROGRAMS",
+    data: AU_PATHWAY_PROGRAMS,
+    schema: AuPathwayProgramsSchema,
+    recordLabel: "au-pathway-programs",
+    subRecordKeys: [],
+    recordInterface: "AuPathwayProgram",
   },
 ];

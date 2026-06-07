@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=331 · pending=783
+**Status:** used=336 · pending=778
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -472,16 +472,16 @@
 | D.061 | D | primary | data |  | used | supabase seed_universities migration | Trinity College’s 2026 Standard or Comprehensive Foundation Studies English minimum is IELTS 6.0 with no band… |
 | D.062 | D | primary | data |  | used | supabase seed_universities migration | Trinity College Foundation Studies says there is no application fee. |
 | D.063 | D | primary | data |  | used | supabase seed_universities migration | Navitas Australia Pty Limited trading as Taylors College uses CRICOS provider code 01682E. |
-| D.064 | D | primary | data |  | pending | supabase seed_universities migration | The University of Sydney Foundation Program Standard Intensive spans 9 months. |
+| D.064 | D | primary | data |  | used | supabase seed_universities migration | The University of Sydney Foundation Program Standard Intensive spans 9 months. |
 | D.065 | D | primary | data |  | pending | supabase seed_universities migration | Taylors College says 90% of University of Sydney Foundation Program graduates received offers to the Universi… |
 | D.066 | D | primary | data |  | used | supabase seed_universities migration | UNSW College uses CRICOS provider code 01020K for its Applied Degrees, Foundation Studies, Academic English, … |
 | D.067 | D | primary | data |  | used | supabase seed_universities migration | UNSW College says UNSW Diplomas are delivered on behalf of UNSW Sydney under CRICOS provider code 00098G. |
 | D.068 | D | primary | data |  | used | supabase seed_universities migration | Deakin College uses CRICOS provider code 01590J. |
-| D.069 | D | primary | data |  | pending | supabase seed_universities migration | Deakin College lists the 2026 international fee for its Diploma of Information Technology as A$37,600. |
+| D.069 | D | primary | data |  | used | supabase seed_universities migration | Deakin College lists the 2026 international fee for its Diploma of Information Technology as A$37,600. |
 | D.070 | D | primary | data |  | used | supabase seed_universities migration | UTS College uses CRICOS provider code 00859D. |
-| D.071 | D | primary | data |  | pending | supabase seed_universities migration | UTS College lists the international fee for its Diploma of Information Technology as A$39,000. |
-| D.072 | D | primary | data |  | pending | supabase seed_universities migration | UTS College lists a 12-month standard duration for its Diploma of Information Technology. |
-| D.073 | D | primary | data |  | pending | supabase seed_universities migration | UTS College lists an 8-month accelerated duration for its Diploma of Information Technology. |
+| D.071 | D | primary | data |  | used | supabase seed_universities migration | UTS College lists the international fee for its Diploma of Information Technology as A$39,000. |
+| D.072 | D | primary | data |  | used | supabase seed_universities migration | UTS College lists a 12-month standard duration for its Diploma of Information Technology. |
+| D.073 | D | primary | data |  | used | supabase seed_universities migration | UTS College lists an 8-month accelerated duration for its Diploma of Information Technology. |
 | D.074 | D | primary | data |  | used | supabase seed_universities migration | La Trobe College Australia uses CRICOS code 03312D. |
 | D.075 | D | primary | data |  | used | supabase seed_universities migration | Curtin College uses CRICOS provider code 02042G. |
 | D.076 | D | primary | data |  | used | supabase seed_universities migration | Western Sydney University International College uses CRICOS provider code 03663C. |
