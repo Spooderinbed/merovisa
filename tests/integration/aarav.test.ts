@@ -46,7 +46,7 @@ describe("Aarav persona", () => {
 
   it("reports a rule version and ISO timestamp", () => {
     const result = runAssessment(aarav);
-    expect(result.ruleVersion).toBe("v0.2.0");
+    expect(result.ruleVersion).toBe("v0.3.0");
     expect(Date.parse(result.computedAt)).not.toBeNaN();
   });
 });

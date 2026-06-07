@@ -26,6 +26,32 @@ export const ENGLISH_THRESHOLD_BY_DEST: Sourced<Record<Destination, number>> = {
   },
 };
 
+/**
+ * The DHA "competent English" floor for the Subclass 500 student visa, as an
+ * IELTS band in each component — distinct from (and below) the course-admission
+ * thresholds above. Sourced from the DHA specified-instrument list (finding
+ * J1.003); admissions often require 6.5+, but the *visa* only needs 6.0, so a
+ * visa-valid 6.0–6.4 should not be scored as a shortfall. Only Australia is wired
+ * into scoring today; the other corridors mirror the same floor until they ship.
+ */
+export const ENGLISH_VISA_FLOOR_BY_DEST: Sourced<Record<Destination, number>> = {
+  value: {
+    australia: 6.0,
+    canada: 6.0,
+    uk: 6.0,
+    germany: 6.0,
+    usa: 6.0,
+    ireland: 6.0,
+    "not-sure": 6.0,
+  },
+  provenance: {
+    findingRefs: ["J1.003"],
+    source: "https://immi.homeaffairs.gov.au/visa-eligibility/international",
+    lastVerified: "2026-06-07",
+    note: "DHA competent-English floor: IELTS 6.0 in each component for the Subclass 500 visa (admissions often require 6.5+).",
+  },
+};
+
 export const GAP_REASON_WEIGHT: Sourced<Record<GapReason, number>> = {
   value: {
     worked: 0.9,

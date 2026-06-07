@@ -75,6 +75,8 @@ describe("scoring config — literal pins", () => {
   it("visa tables", () => {
     expect(Config.ENGLISH_THRESHOLD_BY_DEST.australia).toBe(6.5);
     expect(Config.ENGLISH_THRESHOLD_BY_DEST.germany).toBe(6.0);
+    // DHA visa English floor (B1) — distinct from the course threshold above.
+    expect(Config.ENGLISH_VISA_FLOOR_BY_DEST.australia).toBe(6.0);
     expect(Config.GAP_REASON_WEIGHT.worked).toBe(0.9);
     expect(Config.GAP_REASON_WEIGHT["health-family"]).toBe(0.5);
     expect(Config.GAP_PENALTIES).toEqual({ none: 8, upTo2: -6, upTo5: -14, beyond: -22 });
@@ -147,6 +149,12 @@ describe("scoring config — provenance discipline", () => {
     const p = Config.CONFIG_PROVENANCE.AU_DHA_LIVING_CAPACITY_AUD!;
     expect(p.findingRefs).toContain("A.015");
     expect(p.effectiveDate).toBe("2024-05-10");
+    expect(p.source).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
+  });
+
+  it("the visa English floor is genuinely sourced to the DHA competent-English finding", () => {
+    const p = Config.CONFIG_PROVENANCE.ENGLISH_VISA_FLOOR_BY_DEST!;
+    expect(p.findingRefs).toContain("J1.003");
     expect(p.source).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
   });
 

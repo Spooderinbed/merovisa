@@ -8,7 +8,9 @@ import { DIMENSION_WEIGHTS, CONFIG_VERSION } from "@/lib/data/scoring-config";
 
 // v0.2.0: financial dimension applies the Australia DHA capacity gate (a budget
 // below the visa's financial-capacity floor caps the dimension into 'possible'/'reach').
-const RULE_VERSION = "v0.2.0";
+// v0.3.0: visa dimension applies the DHA visa English floor — a visa-valid IELTS
+// 6.0–6.4 is no longer penalised as a course-threshold shortfall.
+const RULE_VERSION = "v0.3.0";
 
 export function runAssessment(profile: StudentProfile): AssessmentResult {
   const academic = scoreAcademic(profile);

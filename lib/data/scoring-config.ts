@@ -16,6 +16,7 @@ import { FUNDING_RELIABILITY as FUNDING_RELIABILITY_SRC } from "./policy/funding
 import { FX_RATES as FX_RATES_SRC } from "./policy/fx-rates";
 import {
   ENGLISH_THRESHOLD_BY_DEST as ENGLISH_THRESHOLD_BY_DEST_SRC,
+  ENGLISH_VISA_FLOOR_BY_DEST as ENGLISH_VISA_FLOOR_BY_DEST_SRC,
   GAP_REASON_WEIGHT as GAP_REASON_WEIGHT_SRC,
   GAP_PENALTIES as GAP_PENALTIES_SRC,
   ENGLISH_NOT_TAKEN_PENALTY as ENGLISH_NOT_TAKEN_PENALTY_SRC,
@@ -75,6 +76,7 @@ const fieldComp = checked(FieldCompetitivenessSchema, FIELD_COMPETITIVENESS_SRC,
 const levelBonus = checked(LevelBonusSchema, LEVEL_BONUS_SRC, "LEVEL_BONUS");
 const fundingRel = checked(FundingReliabilitySchema, FUNDING_RELIABILITY_SRC, "FUNDING_RELIABILITY");
 const englishThreshold = checked(EnglishThresholdSchema, ENGLISH_THRESHOLD_BY_DEST_SRC, "ENGLISH_THRESHOLD_BY_DEST");
+const englishVisaFloor = checked(EnglishThresholdSchema, ENGLISH_VISA_FLOOR_BY_DEST_SRC, "ENGLISH_VISA_FLOOR_BY_DEST");
 const gapReasonWeight = checked(GapReasonWeightSchema, GAP_REASON_WEIGHT_SRC, "GAP_REASON_WEIGHT");
 const gapPenalties = checked(GapPenaltiesSchema, GAP_PENALTIES_SRC, "GAP_PENALTIES");
 const englishNotTaken = checked(ScalarPenaltySchema, ENGLISH_NOT_TAKEN_PENALTY_SRC, "ENGLISH_NOT_TAKEN_PENALTY");
@@ -97,6 +99,7 @@ export const FX_RATES: Readonly<Partial<Record<Currency, number>>> = Object.free
   Object.fromEntries(fxEntries.map(([cur, s]) => [cur, s.value])) as Partial<Record<Currency, number>>,
 );
 export const ENGLISH_THRESHOLD_BY_DEST: Readonly<Record<Destination, number>> = Object.freeze(englishThreshold.value);
+export const ENGLISH_VISA_FLOOR_BY_DEST: Readonly<Record<Destination, number>> = Object.freeze(englishVisaFloor.value);
 export const GAP_REASON_WEIGHT: Readonly<Record<GapReason, number>> = Object.freeze(gapReasonWeight.value);
 export const GAP_PENALTIES = Object.freeze(gapPenalties.value);
 export const ENGLISH_NOT_TAKEN_PENALTY = englishNotTaken.value;
@@ -115,8 +118,10 @@ export const PROFILE_STRENGTH_POINTS = Object.freeze(profileStrength.value);
  * Bump when any sourced value changes; stamped onto results.
  * config-v2: financial dimension now consumes AU_DHA_LIVING_CAPACITY_AUD +
  * AU_REPRESENTATIVE_TUITION_AUD via the Australia DHA capacity gate.
+ * config-v3: visa dimension now consumes ENGLISH_VISA_FLOOR_BY_DEST (the DHA
+ * competent-English floor), distinct from the course-admission threshold.
  */
-export const CONFIG_VERSION = "config-v2";
+export const CONFIG_VERSION = "config-v3";
 
 /** name → provenance, for explainability ("what backs this number?"). */
 export const CONFIG_PROVENANCE: Readonly<Record<string, Provenance>> = Object.freeze({
@@ -125,6 +130,7 @@ export const CONFIG_PROVENANCE: Readonly<Record<string, Provenance>> = Object.fr
   FUNDING_RELIABILITY: fundingRel.provenance,
   FX_RATES: fxEntries[0]![1].provenance,
   ENGLISH_THRESHOLD_BY_DEST: englishThreshold.provenance,
+  ENGLISH_VISA_FLOOR_BY_DEST: englishVisaFloor.provenance,
   GAP_REASON_WEIGHT: gapReasonWeight.provenance,
   GAP_PENALTIES: gapPenalties.provenance,
   ENGLISH_NOT_TAKEN_PENALTY: englishNotTaken.provenance,

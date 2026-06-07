@@ -3,9 +3,11 @@ import { computeGapYears } from "./gap";
 import {
   GAP_REASON_WEIGHT,
   ENGLISH_THRESHOLD_BY_DEST,
+  ENGLISH_VISA_FLOOR_BY_DEST,
   GAP_PENALTIES,
   ENGLISH_NOT_TAKEN_PENALTY,
   ENGLISH_BAND_DELTA_POINTS,
+  CONFIG_PROVENANCE,
 } from "@/lib/data/scoring-config";
 
 export function scoreVisa(profile: StudentProfile): DimensionScore {
@@ -31,11 +33,17 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
     score += (avgWeight - 0.7) * 25;
   }
 
-  // English adjustment if a score was taken.
+  // English adjustment. The DHA *visa* floor (e.g. IELTS 6.0) is distinct from the
+  // *course* threshold (6.5): a visa-valid score in [floor, threshold) is neither
+  // rewarded nor penalised; above the threshold earns the per-band bonus, and only
+  // below the visa floor is a real risk (the same threshold-anchored curve as before).
   const threshold = ENGLISH_THRESHOLD_BY_DEST[profile.destination];
+  const visaFloor = ENGLISH_VISA_FLOOR_BY_DEST[profile.destination];
   if (profile.englishStatus === "taken" && profile.englishScore !== undefined) {
-    const englishDelta = profile.englishScore - threshold;
-    score += englishDelta * ENGLISH_BAND_DELTA_POINTS;
+    if (profile.englishScore >= threshold || profile.englishScore < visaFloor) {
+      score += (profile.englishScore - threshold) * ENGLISH_BAND_DELTA_POINTS;
+    }
+    // [visaFloor, threshold): meets the visa floor → no adjustment.
   } else if (profile.englishStatus === "not-taken") {
     score += ENGLISH_NOT_TAKEN_PENALTY;
   }
@@ -74,17 +82,29 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
   }
 
   if (profile.englishStatus === "taken" && profile.englishScore !== undefined) {
+    const floorProv = CONFIG_PROVENANCE.ENGLISH_VISA_FLOOR_BY_DEST;
+    const floorUrl = floorProv?.source;
+    const floorSource = floorUrl ? { url: floorUrl, lastVerified: floorProv?.lastVerified } : undefined;
+    const ielts = `IELTS ${profile.englishScore.toFixed(1)}`;
     if (profile.englishScore >= threshold) {
       factors.push({
-        label: `IELTS ${profile.englishScore.toFixed(1)}`,
+        label: ielts,
         influence: "positive",
         detail: `Meets the ${threshold} threshold for ${profile.destination}.`,
       });
+    } else if (profile.englishScore >= visaFloor) {
+      factors.push({
+        label: ielts,
+        influence: "neutral",
+        detail: `Meets the DHA visa floor (${visaFloor.toFixed(1)}); below the ${threshold} course preference.`,
+        source: floorSource,
+      });
     } else {
       factors.push({
-        label: `IELTS ${profile.englishScore.toFixed(1)}`,
+        label: ielts,
         influence: "risk",
-        detail: `Below the ${threshold} threshold for ${profile.destination}.`,
+        detail: `Below the DHA visa floor (${visaFloor.toFixed(1)}) for ${profile.destination}.`,
+        source: floorSource,
       });
     }
   } else if (profile.englishStatus === "not-taken") {

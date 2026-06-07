@@ -19,6 +19,12 @@ import type { AssessmentResult, Currency, StudentProfile } from "@/lib/scoring/t
  * verdict.ts cutoffs from the AU gate; the gate itself is covered by
  * tests/scoring/financial.test.ts and by the Australia cases in this matrix.
  *
+ * RULE_VERSION v0.3.0 / config-v3 added the DHA visa English floor
+ * (lib/scoring/visa.ts): a visa-valid IELTS 6.0–6.4 is no longer penalised as a
+ * course-threshold shortfall. The only matrix case affected is
+ * `long-gap-below-english` (Australia, IELTS 6.0) — its visa dimension rises and
+ * its factor is relabelled; the verdict stays reach (financial gated to 29).
+ *
  * Determinism: the only time-dependent input is the graduation gap
  * (`computeGapYears` reads `new Date()`). Each profile's `graduationYear` is
  * expressed relative to the current year, so the *gap* — and therefore the whole
@@ -292,7 +298,7 @@ const CASES: Case[] = [
   },
   {
     name: "long-gap-below-english",
-    note: "6-year gap (>5 bucket, −22) part-mitigated by health-family + IELTS 6.0 below the 6.5 threshold (visa −5, risk factor); nursing(0.85); USD budget below the AU DHA capacity floor → financial gated to 29",
+    note: "6-year gap (>5 bucket, −22) part-mitigated by health-family + IELTS 6.0 meets the DHA visa floor (no penalty, neutral factor); nursing(0.85); USD budget below the AU DHA capacity floor → financial gated to 29 → reach",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",

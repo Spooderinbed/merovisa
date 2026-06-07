@@ -73,8 +73,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "strong-boundary": {
     "verdict": "strong",
@@ -120,8 +120,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "possible-boundary-high": {
     "verdict": "possible",
@@ -167,8 +167,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "possible-mid": {
     "verdict": "possible",
@@ -234,8 +234,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "possible-boundary-low": {
     "verdict": "possible",
@@ -286,8 +286,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "reach-weighted-boundary": {
     "verdict": "reach",
@@ -338,8 +338,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "reach-min-dimension": {
     "verdict": "reach",
@@ -390,8 +390,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "possible-min-dimension": {
     "verdict": "possible",
@@ -442,8 +442,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "germany-threshold": {
     "verdict": "possible",
@@ -495,8 +495,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "not-sure-destination": {
     "verdict": "strong",
@@ -563,8 +563,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "higher-secondary-no-english": {
     "verdict": "reach",
@@ -625,8 +625,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "unknown-currency-passthrough": {
     "verdict": "strong",
@@ -688,12 +688,12 @@
         ]
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "long-gap-below-english": {
     "verdict": "reach",
-    "weighted": 49,
+    "weighted": 50,
     "dimensions": {
       "academic": {
         "value": 56,
@@ -725,7 +725,7 @@
         ]
       },
       "visa": {
-        "value": 48,
+        "value": 53,
         "factors": [
           {
             "label": "6-year gap",
@@ -734,8 +734,12 @@
           },
           {
             "label": "IELTS 6.0",
-            "influence": "risk",
-            "detail": "Below the 6.5 threshold for australia."
+            "influence": "neutral",
+            "detail": "Meets the DHA visa floor (6.0); below the 6.5 course preference.",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/visa-eligibility/international",
+              "lastVerified": "2026-06-07"
+            }
           }
         ]
       },
@@ -744,8 +748,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   },
   "booked-english-aud": {
     "verdict": "possible",
@@ -795,7 +799,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.2.0",
-    "configVersion": "config-v2"
+    "ruleVersion": "v0.3.0",
+    "configVersion": "config-v3"
   }
 }
