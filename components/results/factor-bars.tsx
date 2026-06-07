@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AssessmentResult, DimensionScore } from "@/lib/scoring/types";
 import { cn } from "@/lib/utils";
 import { bandLabel } from "@/lib/scoring/band";
+import { SourceLine } from "./source-line";
 
 const DIMENSION_META = [
   { key: "academic", label: "Academic fit" },
@@ -50,6 +51,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
                   <li key={i} className="flex flex-col text-[15px]">
                     <span className={cn("font-medium", INFLUENCE_CLS[f.influence])}>{f.label}</span>
                     <span className="text-ink-soft">{f.detail}</span>
+                    {f.source ? <SourceLine url={f.source.url} lastVerified={f.source.lastVerified} /> : null}
                   </li>
                 ))}
               </ul>

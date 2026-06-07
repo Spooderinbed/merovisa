@@ -98,6 +98,12 @@ export interface DimensionScore {
     label: string;
     influence: "positive" | "neutral" | "risk";
     detail: string;
+    /**
+     * Optional external source backing this factor, surfaced in the UI for trust
+     * attribution. Present only where the factor cites a genuine primary/gov
+     * source (e.g. the DHA capacity figure) — heuristic-backed factors omit it.
+     */
+    source?: { url: string; lastVerified?: string };
   }>;
 }
 

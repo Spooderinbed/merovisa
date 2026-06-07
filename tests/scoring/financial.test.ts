@@ -112,4 +112,20 @@ describe("scoreFinancial — DHA capacity gate (Australia)", () => {
     expect(scoreFinancial({ ...au, budget: 37200 }).value).toBe(49);
     expect(scoreFinancial({ ...au, budget: 37000 }).value).toBe(29);
   });
+
+  it("attaches the DHA government source to the capacity factor (every band)", () => {
+    for (const budget of [60000, 42500, 30000]) {
+      const f = scoreFinancial({ ...au, budget }).factors.find(dhaFactor);
+      expect(f, `budget ${budget}`).toBeDefined();
+      expect(f!.source?.url).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
+      expect(f!.source?.lastVerified).toBe("2026-06-07");
+    }
+  });
+
+  it("does not attach a source to the heuristic budget-range factor", () => {
+    const budgetFactor = scoreFinancial({ ...au, budget: 60000 }).factors.find((f) =>
+      /typical range/i.test(f.label),
+    );
+    expect(budgetFactor?.source).toBeUndefined();
+  });
 });

@@ -6,6 +6,7 @@ import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_REPRESENTATIVE_TUITION_AUD,
   AU_DHA_CAPACITY_GATE,
+  CONFIG_PROVENANCE,
 } from "@/lib/data/scoring-config";
 
 const DESTINATION_LABEL: Record<Destination, string> = {
@@ -70,11 +71,16 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
     const fxAud = FX_RATES.AUD ?? 1;
     const capacityUsd = capacityAud / fxAud;
     const capacityLabel = `~AUD ${capacityAud.toLocaleString()}`;
+    // Trust attribution: the gov DHA figure backs this factor; surface its source.
+    const dhaProv = CONFIG_PROVENANCE.AU_DHA_LIVING_CAPACITY_AUD;
+    const dhaUrl = dhaProv?.source;
+    const source = dhaUrl ? { url: dhaUrl, lastVerified: dhaProv?.lastVerified } : undefined;
     if (budgetUsd >= capacityUsd) {
       factors.push({
         label: "Meets DHA financial-capacity requirement",
         influence: "positive",
         detail: `Budget covers the ${capacityLabel} the student visa expects (AUD ${AU_DHA_LIVING_CAPACITY_AUD.toLocaleString()} living + AUD ${AU_REPRESENTATIVE_TUITION_AUD.toLocaleString()} first-year tuition).`,
+        source,
       });
     } else if (budgetUsd >= capacityUsd * AU_DHA_CAPACITY_GATE.reachRatio) {
       value = Math.min(value, AU_DHA_CAPACITY_GATE.blockStrongCap);
@@ -82,6 +88,7 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
         label: "Below DHA financial-capacity requirement",
         influence: "risk",
         detail: `Short of the ${capacityLabel} the student visa expects (12-month living + first-year tuition) — show more provable funds to strengthen the case.`,
+        source,
       });
     } else {
       value = Math.min(value, AU_DHA_CAPACITY_GATE.forceReachCap);
@@ -89,6 +96,7 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
         label: "Well below DHA financial-capacity requirement",
         influence: "risk",
         detail: `Far short of the ${capacityLabel} the student visa expects — a major risk on financial capacity.`,
+        source,
       });
     }
   }

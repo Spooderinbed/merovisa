@@ -20,4 +20,33 @@ describe("FactorBars", () => {
     await userEvent.click(screen.getByRole("button", { name: /Academic fit/ }));
     expect(screen.getByText("72% clears typical bars")).toBeInTheDocument();
   });
+
+  it("renders a source attribution line for a factor that carries a source", async () => {
+    const url = "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196";
+    const withSource: AssessmentResult["dimensions"] = {
+      ...dimensions,
+      financial: {
+        value: 49,
+        factors: [
+          {
+            label: "Below DHA financial-capacity requirement",
+            influence: "risk",
+            detail: "Short of the visa requirement.",
+            source: { url, lastVerified: "2026-06-07" },
+          },
+        ],
+      },
+    };
+    render(<FactorBars dimensions={withSource} />);
+    await userEvent.click(screen.getByRole("button", { name: /Financial readiness/ }));
+    expect(screen.getByText(/verified 2026-06-07/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "immi.homeaffairs.gov.au" });
+    expect(link).toHaveAttribute("href", url);
+  });
+
+  it("omits the source line for heuristic factors", async () => {
+    render(<FactorBars dimensions={dimensions} />);
+    await userEvent.click(screen.getByRole("button", { name: /Academic fit/ }));
+    expect(screen.queryByText(/verified/)).toBeNull();
+  });
 });

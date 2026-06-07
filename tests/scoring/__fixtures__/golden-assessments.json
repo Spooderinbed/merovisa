@@ -29,7 +29,11 @@
           {
             "label": "Meets DHA financial-capacity requirement",
             "influence": "positive",
-            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition)."
+            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition).",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
           },
           {
             "label": "Self-funded",
@@ -191,7 +195,11 @@
           {
             "label": "Meets DHA financial-capacity requirement",
             "influence": "positive",
-            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition)."
+            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition).",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
           },
           {
             "label": "Education loan",
@@ -583,7 +591,11 @@
           {
             "label": "Well below DHA financial-capacity requirement",
             "influence": "risk",
-            "detail": "Far short of the ~AUD 74,210 the student visa expects — a major risk on financial capacity."
+            "detail": "Far short of the ~AUD 74,210 the student visa expects — a major risk on financial capacity.",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
           }
         ]
       },
@@ -704,7 +716,11 @@
           {
             "label": "Well below DHA financial-capacity requirement",
             "influence": "risk",
-            "detail": "Far short of the ~AUD 74,210 the student visa expects — a major risk on financial capacity."
+            "detail": "Far short of the ~AUD 74,210 the student visa expects — a major risk on financial capacity.",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
           }
         ]
       },
@@ -756,7 +772,11 @@
           {
             "label": "Below DHA financial-capacity requirement",
             "influence": "risk",
-            "detail": "Short of the ~AUD 74,210 the student visa expects (12-month living + first-year tuition) — show more provable funds to strengthen the case."
+            "detail": "Short of the ~AUD 74,210 the student visa expects (12-month living + first-year tuition) — show more provable funds to strengthen the case.",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
           }
         ]
       },
