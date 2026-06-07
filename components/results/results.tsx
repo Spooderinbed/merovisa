@@ -4,6 +4,7 @@ import { useRef } from "react";
 import type { AssessmentPayload } from "@/lib/results/types";
 import { VerdictCard } from "./verdict-card";
 import { FactorBars } from "./factor-bars";
+import { PolicyBanner } from "@/components/matches/policy-banner";
 import { IntakeTimingCard } from "./intake-timing";
 import { UniversityMatches } from "./university-matches";
 import { GatedTeasers } from "./gated-teasers";
@@ -29,6 +30,9 @@ export function Results({
     <div className="mx-auto flex w-full max-w-narrow flex-col gap-6 px-5 py-10">
       <VerdictCard verdict={payload.result.verdict} />
       <FactorBars dimensions={payload.result.dimensions} />
+      {/* Honest corridor context behind the verdict — the same sourced figures
+          the matches page shows (grant rate as a cohort range, AL3, DHA floor). */}
+      <PolicyBanner />
       <IntakeTimingCard intake={payload.intake} />
       <UniversityMatches
         matches={payload.matches}

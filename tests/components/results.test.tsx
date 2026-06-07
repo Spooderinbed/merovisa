@@ -31,4 +31,11 @@ describe("Results", () => {
     expect(screen.getByText(/Profile accuracy/i)).toBeInTheDocument();
     expect(screen.getByText(/expires in 3 days/i)).toBeInTheDocument();
   });
+
+  it("surfaces the sourced corridor policy context (grant rate, DHA floor)", () => {
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    render(<Results payload={payload} />);
+    expect(screen.getByText(/Current policy/i)).toBeInTheDocument();
+    expect(screen.getByText(/grant rate/i)).toBeInTheDocument();
+  });
 });
