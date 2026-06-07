@@ -1,10 +1,10 @@
 # MyVisa — project status & phase log
 
-**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist is the remaining Phase 5 piece)
-**Tests:** 662 passing across 157 test files
+**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist now shipped too, 2026-06-08)
+**Tests:** 690 passing across 161 test files
 **Typecheck:** clean
 **Build:** clean (27 routes including `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
-**Code surface:** 25 files in `app/`, 53 in `lib/`, 77 in `components/`, 128 in `tests/`, 9 SQL migrations applied
+**Code surface:** 26 files in `app/`, 55 in `lib/`, 81 in `components/`, 132 in `tests/`, 9 SQL migrations applied
 **Branch state:** pushed to `origin/master` (the prior local-only preference was lifted on 2026-06-07 at user request)
 
 ---
@@ -22,10 +22,11 @@
 | `/assess` for signed-in users | Server-side interstitial: "you have an active assessment from X" → Refresh or Open dashboard. `?new=1` bypass for new destination |
 | `/dashboard` | Greeting, snapshot card (verdict + factor bars), prompt card (IELTS/profile-incomplete/all-caught-up), journey timeline (5 steps), stats row (Universities from shortlist count, Profile %, Checklist/Scholarships dashes), recent updates empty state |
 | `/profile` | Header with name + email, completeness ring, 13 section accordions each with inline editor: name/age/intake, destination, academic, intended-study, english, gap, work, finance, immigration, family, career, scholarships, deal-breakers |
-| `/matches` | Tabs (Universities/Scholarships/Cost estimate), policy banner (Nepal AL3 + AUD 29,710), Strong/Possible/Reach groups, ProgramCard with verdict pill + tuition + IELTS/grade min + intakes + reasons + Source link + Shortlist toggle |
+| `/matches` | Tabs (Universities/Scholarships/Cost estimate), policy banner (Nepal AL3 + AUD 29,710), Strong/Possible/Reach groups, ProgramCard with verdict pill + tuition + IELTS/grade min + intakes + reasons + Source link + Document-checklist link + Shortlist toggle |
 | `/plan` | Impact-ranked (High/Medium/Low) action items with Done/Dismiss/Undo, closed items collapse, regenerates on profile change |
 | `/documents` | **Phase 5 — shipped & live.** Auth-gated documents vault: upload / list / view / delete photos of visa-ready documents, organised by a typed taxonomy (`DOCUMENT_META` → Identity/Academic/Financial/Visa groups). Reached from the work/english/finance profile editors. Service-role-only RLS. |
-| Stub (`/guide`) | "Coming soon — landing in Phase 6" with back-to-dashboard CTA. (`/checklist` now `redirect()`s to `/documents`; the **per-program checklist** is the remaining Phase 5 piece) |
+| `/checklist` | **Phase 5 — shipped 2026-06-08.** Landing lists shortlisted programs → each program's `/checklist/[programId]` view. Rule-derived generator maps a program's requirements → vault documents, split by stage (what you need **now** / **after your offer**), have/missing from uploads, financial items keyed to funding source, DHA-sourced funds note. Reached from each ProgramCard + the dashboard Documents stat. |
+| Stub (`/guide`) | "Coming soon — landing in Phase 6" with back-to-dashboard CTA. |
 | `/api/profile/section` | Zod-validated PATCH for any of 13 sections, auth-gated, invalidates plan after save (try/catch protected) |
 | `/api/assess` | Anonymous path persists with 3-day TTL; signed-in path persists as owner, sets `is_primary` if none, bootstraps profile if missing, invalidates plan |
 | `/api/shortlist`, `/api/plan/action` | Auth-gated POST endpoints with admin client writes via service role |
@@ -55,8 +56,8 @@
 
 ### ✅ Phase 5 (documents) — shipped & live, ⚠️ never smoked
 
-- **Shipped:** `documents` table + an upload/view/delete flow (the original `checklist_items` + OCR design was simplified away — see `simplify_documents_drop_ocr_columns`), the `/documents` vault page, three `/api/documents/*` routes, `lib/documents/{repo,types}.ts`, service-role-only RLS (`fix_documents_rls_service_role_only`). The typed taxonomy (`DOCUMENT_META`) already groups document kinds into Identity/Academic/Financial/Visa. _(Storage-vs-table internals to be confirmed when the checklist slice builds on it.)_
-- **Remaining (the documents/checklist slice):** the **per-program checklist** — a `/checklist/[programId]` view mapping a specific program's requirements → the documents you need (today `/checklist` just `redirect()`s to the generic vault). The dashboard "Documents" stat already points at `/checklist`.
+- **Shipped:** `documents` table + an upload/view/delete flow (the original `checklist_items` + OCR design was simplified away — see `simplify_documents_drop_ocr_columns`), the `/documents` vault page, three `/api/documents/*` routes, `lib/documents/{repo,types}.ts`, service-role-only RLS (`fix_documents_rls_service_role_only`). The typed taxonomy (`DOCUMENT_META`) already groups document kinds into Identity/Academic/Financial/Visa. (Confirmed: real Supabase Storage — signed URLs, magic-byte validation, 5 MB image cap, rate-limited; an upload auto-flips the profile flag + re-scores + invalidates the plan.)
+- **Per-program checklist — shipped 2026-06-08.** Spec `docs/superpowers/specs/2026-06-08-per-program-checklist-design.md`, plan `docs/superpowers/plans/2026-06-08-per-program-checklist.md`. A pure rule-derived generator (`lib/checklist/generator.ts` — no migration, no scoring touched) turns a program + profile + uploaded kinds into stage-grouped (`now` / `after-offer`) checklist items; financial items derive from the profile funding source; scholarship/AHPRA are informational (`kind: null`) items; the DHA funds note carries a `SourceLine`. `/checklist/[programId]` page + `/checklist` landing + a ProgramCard link. Upload-from-checklist is a deep-link to the vault (clarity over upload UX, per the user's guard). 29 new tests; goldens byte-identical. **Signed-in page is OAuth-gated → never smoked.**
 
 ### 🚫 Not built yet
 
@@ -383,11 +384,11 @@ supabase/migrations/
 
 ## What to do next — recommended order
 
-_(Reconciled 2026-06-08. Lint cleanup ✓ done (`3c8810c`). Phase A/B scorer-wiring ✓ done. Phase 5 documents vault ✓ shipped & live. Center of gravity is now **release-readiness for the Nepal→Australia journey**, framed by the five student questions below.)_
+_(Reconciled 2026-06-08. Lint cleanup ✓ done (`3c8810c`). Phase A/B scorer-wiring ✓ done. Phase 5 documents vault + per-program checklist ✓ shipped. Center of gravity is now **release-readiness for the Nepal→Australia journey**, framed by the five student questions below.)_
 
 **Definition of "Nepal→Australia complete"** — a real student can answer: (1) can I apply? (2) what's my biggest risk? (3) what money + documents do I need? (4) which programs are realistic? (5) what do I do next?
 
-1. **Documents/checklist slice (next — design-gated).** Build the per-program checklist (`/checklist/[programId]`) that maps a program's requirements → the documents in the vault — the missing half of "money + documents." Brainstorm → spec → plan → TDD before any code.
+1. ~~Documents/checklist slice~~ ✓ **shipped 2026-06-08** — per-program `/checklist/[programId]` + landing, rule-derived generator, 29 tests, no migration/scoring touched. The "money + documents" question is now answered program-by-program. (Possible follow-ons, not scheduled: checklist completeness on the dashboard; an anonymous "what you'll need" preview.)
 2. **Manual smoke (deferred at user's choice 2026-06-08).** Signed-in flows still haven't been clicked through since Phase 0 — the standing #1 risk. The anonymous flow can be browser-verified headlessly; the signed-in half needs a real OAuth session (user-driven) or a throwaway dev session seam.
 3. **Ledger by slice (later).** Integrate remaining `lib/data/source/*` findings per-slice, tagging each used / rejected:&lt;reason&gt; / use-later / needs-human-call — not row-by-row.
 4. **Housekeeping (low priority).** Promote the Phase 3/4 plans to standalone MDs; hotfix the `private.set_updated_at` `search_path` WARN advisor (`alter function private.set_updated_at() set search_path = '';`).
