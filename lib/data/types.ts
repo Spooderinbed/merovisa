@@ -553,3 +553,26 @@ export interface AuHealthBiometricFact extends Provenanced {
   source: string; // DHA / Services Australia / official-contractor URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Miscellaneous sourced facts for Australian visas outside the dedicated modules
+ * — the Student Guardian (590) application charge, the Visitor (600) tourist
+ * maximum stay / Sponsored Family work rights and security bond, and the
+ * skilled-temporary category processing median. Each record is one labeled fact:
+ * a scalar (`value`, with a `unit`), a boolean (`value`, e.g. a work right), or a
+ * money/duration range (`minValue`/`maxValue`). Fact-only reference — no scorer
+ * reads it; machine-checked against the findings.
+ */
+export interface AuVisaFact extends Provenanced {
+  id: string; // slug, e.g. "subclass-590-application-charge"
+  subclass?: string; // DHA subclass code where the fact is subclass-specific
+  category: string; // human grouping, e.g. "Student Guardian visa (590)"
+  kind: "application-charge" | "processing-time" | "stay-period" | "security-bond" | "work-right";
+  label: string; // human description of the fact
+  value?: number | boolean; // scalar facts (a number, or a boolean for a work right)
+  minValue?: number; // range lower bound (e.g. a security-bond floor)
+  maxValue?: number; // range upper bound
+  unit?: string; // unit for numeric/range facts; omitted for booleans
+  source: string; // DHA page / form URL
+  lastVerified?: string; // ISO date
+}

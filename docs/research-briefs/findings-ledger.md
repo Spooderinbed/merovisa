@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=322 · pending=792
+**Status:** used=327 · pending=787
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -299,7 +299,7 @@
 | C.032 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA student-visa processing priorities, Priority 2 applications are aimed to commence within 5 to 8 wee… |
 | C.033 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA student-visa processing priorities, Priority 3 applications are aimed to commence within 9 to 12 we… |
 | C.034 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 590 Student Guardian visa allows a person to visit Australia for up to 5 years to support a chil… |
-| C.035 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 590 Student Guardian visa base application charge is from AUD2,000.00. |
+| C.035 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 590 Student Guardian visa base application charge is from AUD2,000.00. |
 | C.036 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If a guardian is applying to accompany and care for a student under 18, the guardian must prove enough money … |
 | C.037 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA says a current bank statement is an example of a document that can be attached to prove Subclass 590 fina… |
 | C.038 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Temporary Graduate visa remains Subclass 485 in current DHA materials. |
@@ -321,7 +321,7 @@
 | C.054 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skills in Demand visa requires the primary applicant to meet minimum English-language standards unless an… |
 | C.055 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skills in Demand visa Labour Agreement stream says the holder can have their employer sponsor them for pe… |
 | C.056 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The skilled occupation list page includes the Skills in Demand visa Core Skills stream. |
-| C.057 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Skilled temporary visa category was 63 days in April 2026. |
+| C.057 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Skilled temporary visa category was 63 days in April 2026. |
 | C.058 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Skilled Work Regional visa is Subclass 491. |
 | C.059 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa lets the holder stay in Australia for 5 years. |
 | C.060 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 491 visa base application charge is from AUD4,910.00. |
@@ -341,12 +341,12 @@
 | C.074 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA name of Subclass 858 is National Innovation visa. |
 | C.075 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The National Innovation visa is a permanent visa for exceptionally talented migrants from across the world. |
 | C.076 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | An invitation is needed to apply for the National Innovation visa. |
-| C.077 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Visitor visa Tourist stream for offshore applicants lets a person visit Australia for up to 12 months as … |
+| C.077 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Visitor visa Tourist stream for offshore applicants lets a person visit Australia for up to 12 months as … |
 | C.078 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Visitor visa category was less than 1 day in April 2026. |
 | C.079 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Subclass 600 applicants are told to include documents proving they have enough money to support themselves du… |
 | C.080 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Form 1149 says a sponsor for the Subclass 600 Sponsored Family stream must be an Australian citizen or perman… |
-| C.081 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Form 1149 says holders of Subclass 600 Sponsored Family stream visitor visas are not permitted to work in Aus… |
-| C.082 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Form 1149 says a Sponsored Family stream security bond is generally between AUD5,000 and AUD15,000 per person. |
+| C.081 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Form 1149 says holders of Subclass 600 Sponsored Family stream visitor visas are not permitted to work in Aus… |
+| C.082 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Form 1149 says a Sponsored Family stream security bond is generally between AUD5,000 and AUD15,000 per person. |
 | C.083 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Outside Australia, an applicant must be examined by one of DHA’s approved panel physicians or clinics. |
 | C.084 | C | primary | contact | G22 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s Nepal location page surfaced IOM Medical Damak as a panel physician location. |
 | C.085 | C | primary | contact | G22 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s Nepal location page surfaced Australia and New Zealand Immigration Examination Center as a Nepal panel … |

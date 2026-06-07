@@ -58,6 +58,8 @@ import { AU_SKILLED_VISA_DIRECTORY } from "@/lib/data/source/au-skilled-visa-dir
 import { AuSkilledVisaDirectorySchema } from "@/lib/data/schema/au-skilled-visa-directory.schema";
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 import { AuHealthBiometricFactsSchema } from "@/lib/data/schema/au-health-biometric-facts.schema";
+import { AU_VISA_FACTS } from "@/lib/data/source/au-visa-facts";
+import { AuVisaFactsSchema } from "@/lib/data/schema/au-visa-facts.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -480,5 +482,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-health-biometric-facts",
     subRecordKeys: [],
     recordInterface: "AuHealthBiometricFact",
+  },
+  {
+    // Miscellaneous DHA visa facts outside the dedicated modules (visa-conditions
+    // category C): the Student Guardian (590) application charge, the skilled-
+    // temporary processing median, and the Visitor (600) tourist max stay,
+    // Sponsored Family work right (boolean) and security bond (a money range via
+    // the {min,max} matcher). One labeled fact per record. Fact-only: no scorer
+    // reads it. Record array.
+    category: "C",
+    exportName: "AU_VISA_FACTS",
+    data: AU_VISA_FACTS,
+    schema: AuVisaFactsSchema,
+    recordLabel: "au-visa-facts",
+    subRecordKeys: [],
+    recordInterface: "AuVisaFact",
   },
 ];
