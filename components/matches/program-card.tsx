@@ -87,6 +87,9 @@ export function ProgramCard({
           >
             {linkLabel} ↗
           </a>
+          <a href={`/checklist/${p.id}`} className="text-[12.5px] text-primary hover:underline">
+            Document checklist →
+          </a>
         </div>
         <ShortlistButton programId={p.id} initialStatus={isShortlisted ? "shortlisted" : null} />
       </footer>

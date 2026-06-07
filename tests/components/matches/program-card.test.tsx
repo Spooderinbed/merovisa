@@ -67,4 +67,9 @@ describe("ProgramCard", () => {
     expect(screen.getByRole("link", { name: /Provider site/i })).toBeInTheDocument();
     expect(screen.queryByText(/Verified/i)).not.toBeInTheDocument();
   });
+
+  it("links to the program's document checklist", () => {
+    render(<ProgramCard match={m} isShortlisted={false} />);
+    expect(screen.getByRole("link", { name: /Document checklist/i })).toHaveAttribute("href", "/checklist/p1");
+  });
 });
