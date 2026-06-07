@@ -27,6 +27,11 @@
             "detail": "Comfortably covers Australia costs."
           },
           {
+            "label": "Meets DHA financial-capacity requirement",
+            "influence": "positive",
+            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition)."
+          },
+          {
             "label": "Self-funded",
             "influence": "positive",
             "detail": "Strongest funding signal for visa officers."
@@ -64,8 +69,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "strong-boundary": {
     "verdict": "strong",
@@ -111,8 +116,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "possible-boundary-high": {
     "verdict": "possible",
@@ -158,12 +163,12 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "possible-mid": {
     "verdict": "possible",
-    "weighted": 65,
+    "weighted": 70,
     "dimensions": {
       "academic": {
         "value": 53,
@@ -176,12 +181,17 @@
         ]
       },
       "financial": {
-        "value": 59,
+        "value": 78,
         "factors": [
           {
-            "label": "Budget below typical range",
-            "influence": "risk",
-            "detail": "Typical year in Australia costs USD 30,000–55,000."
+            "label": "Budget within typical range",
+            "influence": "neutral",
+            "detail": "Aligned with typical Australia costs."
+          },
+          {
+            "label": "Meets DHA financial-capacity requirement",
+            "influence": "positive",
+            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition)."
           },
           {
             "label": "Education loan",
@@ -216,8 +226,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "possible-boundary-low": {
     "verdict": "possible",
@@ -239,7 +249,7 @@
           {
             "label": "Budget below typical range",
             "influence": "risk",
-            "detail": "Typical year in Australia costs USD 30,000–55,000."
+            "detail": "Typical year in Canada costs USD 25,000–45,000."
           },
           {
             "label": "Scholarship-dependent funding",
@@ -268,8 +278,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "reach-weighted-boundary": {
     "verdict": "reach",
@@ -286,12 +296,12 @@
         ]
       },
       "financial": {
-        "value": 41,
+        "value": 43,
         "factors": [
           {
             "label": "Budget below typical range",
             "influence": "risk",
-            "detail": "Typical year in Australia costs USD 30,000–55,000."
+            "detail": "Typical year in Canada costs USD 25,000–45,000."
           },
           {
             "label": "Scholarship-dependent funding",
@@ -320,8 +330,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "reach-min-dimension": {
     "verdict": "reach",
@@ -343,7 +353,7 @@
           {
             "label": "Budget below typical range",
             "influence": "risk",
-            "detail": "Typical year in Australia costs USD 30,000–55,000."
+            "detail": "Typical year in Canada costs USD 25,000–45,000."
           },
           {
             "label": "Scholarship-dependent funding",
@@ -363,7 +373,7 @@
           {
             "label": "IELTS 7.0",
             "influence": "positive",
-            "detail": "Meets the 6.5 threshold for australia."
+            "detail": "Meets the 6.5 threshold for canada."
           }
         ]
       },
@@ -372,8 +382,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "possible-min-dimension": {
     "verdict": "possible",
@@ -395,7 +405,7 @@
           {
             "label": "Budget below typical range",
             "influence": "risk",
-            "detail": "Typical year in Australia costs USD 30,000–55,000."
+            "detail": "Typical year in Canada costs USD 25,000–45,000."
           },
           {
             "label": "Scholarship-dependent funding",
@@ -415,7 +425,7 @@
           {
             "label": "IELTS 7.0",
             "influence": "positive",
-            "detail": "Meets the 6.5 threshold for australia."
+            "detail": "Meets the 6.5 threshold for canada."
           }
         ]
       },
@@ -424,8 +434,8 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "germany-threshold": {
     "verdict": "possible",
@@ -477,8 +487,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "not-sure-destination": {
     "verdict": "strong",
@@ -545,12 +555,12 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "higher-secondary-no-english": {
-    "verdict": "possible",
-    "weighted": 64,
+    "verdict": "reach",
+    "weighted": 54,
     "dimensions": {
       "academic": {
         "value": 52,
@@ -563,12 +573,17 @@
         ]
       },
       "financial": {
-        "value": 71,
+        "value": 29,
         "factors": [
           {
             "label": "Budget within typical range",
             "influence": "neutral",
             "detail": "Aligned with typical Australia costs."
+          },
+          {
+            "label": "Well below DHA financial-capacity requirement",
+            "influence": "risk",
+            "detail": "Far short of the ~AUD 74,210 the student visa expects — a major risk on financial capacity."
           }
         ]
       },
@@ -598,8 +613,8 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "unknown-currency-passthrough": {
     "verdict": "strong",
@@ -661,12 +676,12 @@
         ]
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "long-gap-below-english": {
-    "verdict": "possible",
-    "weighted": 58,
+    "verdict": "reach",
+    "weighted": 49,
     "dimensions": {
       "academic": {
         "value": 56,
@@ -679,12 +694,17 @@
         ]
       },
       "financial": {
-        "value": 66,
+        "value": 29,
         "factors": [
           {
             "label": "Budget within typical range",
             "influence": "neutral",
             "detail": "Aligned with typical Australia costs."
+          },
+          {
+            "label": "Well below DHA financial-capacity requirement",
+            "influence": "risk",
+            "detail": "Far short of the ~AUD 74,210 the student visa expects — a major risk on financial capacity."
           }
         ]
       },
@@ -708,12 +728,12 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   },
   "booked-english-aud": {
     "verdict": "possible",
-    "weighted": 67,
+    "weighted": 62,
     "dimensions": {
       "academic": {
         "value": 61,
@@ -726,12 +746,17 @@
         ]
       },
       "financial": {
-        "value": 70,
+        "value": 49,
         "factors": [
           {
             "label": "Budget within typical range",
             "influence": "neutral",
             "detail": "Aligned with typical Australia costs."
+          },
+          {
+            "label": "Below DHA financial-capacity requirement",
+            "influence": "risk",
+            "detail": "Short of the ~AUD 74,210 the student visa expects (12-month living + first-year tuition) — show more provable funds to strengthen the case."
           }
         ]
       },
@@ -750,7 +775,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.1.0",
-    "configVersion": "config-v1"
+    "ruleVersion": "v0.2.0",
+    "configVersion": "config-v2"
   }
 }

@@ -1,5 +1,12 @@
 import type { DimensionScore, Destination, FundingSource, StudentProfile, Currency } from "./types";
-import { TYPICAL_YEARLY_USD, FUNDING_RELIABILITY, FX_RATES } from "@/lib/data/scoring-config";
+import {
+  TYPICAL_YEARLY_USD,
+  FUNDING_RELIABILITY,
+  FX_RATES,
+  AU_DHA_LIVING_CAPACITY_AUD,
+  AU_REPRESENTATIVE_TUITION_AUD,
+  AU_DHA_CAPACITY_GATE,
+} from "@/lib/data/scoring-config";
 
 const DESTINATION_LABEL: Record<Destination, string> = {
   australia: "Australia",
@@ -28,7 +35,7 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
   const baseFromBudget = 70 + (ratio - 1) * 35;
   const reliability = FUNDING_RELIABILITY[profile.fundingSource];
   const reliabilityAdjustment = (reliability - 0.8) * 50;
-  const value = Math.max(0, Math.min(100, Math.round(baseFromBudget + reliabilityAdjustment)));
+  let value = Math.max(0, Math.min(100, Math.round(baseFromBudget + reliabilityAdjustment)));
 
   const factors: DimensionScore["factors"] = [];
 
@@ -50,6 +57,40 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
       influence: "neutral",
       detail: `Aligned with typical ${DESTINATION_LABEL[profile.destination]} costs.`,
     });
+  }
+
+  // DHA financial-capacity gate (Australia). The Subclass 500 visa is decided
+  // against a financial-capacity floor — 12 months' living + first-year tuition —
+  // so a budget below it is a real visa risk regardless of how it compares to the
+  // typical-cost heuristic. The caps land just under verdict.ts's min-dimension
+  // thresholds (50 blocks "strong", 30 forces "reach"), reusing those floors
+  // rather than inventing new verdict logic. The gate only ever lowers the score.
+  if (profile.destination === "australia") {
+    const capacityAud = AU_DHA_LIVING_CAPACITY_AUD + AU_REPRESENTATIVE_TUITION_AUD;
+    const fxAud = FX_RATES.AUD ?? 1;
+    const capacityUsd = capacityAud / fxAud;
+    const capacityLabel = `~AUD ${capacityAud.toLocaleString()}`;
+    if (budgetUsd >= capacityUsd) {
+      factors.push({
+        label: "Meets DHA financial-capacity requirement",
+        influence: "positive",
+        detail: `Budget covers the ${capacityLabel} the student visa expects (AUD ${AU_DHA_LIVING_CAPACITY_AUD.toLocaleString()} living + AUD ${AU_REPRESENTATIVE_TUITION_AUD.toLocaleString()} first-year tuition).`,
+      });
+    } else if (budgetUsd >= capacityUsd * AU_DHA_CAPACITY_GATE.reachRatio) {
+      value = Math.min(value, AU_DHA_CAPACITY_GATE.blockStrongCap);
+      factors.push({
+        label: "Below DHA financial-capacity requirement",
+        influence: "risk",
+        detail: `Short of the ${capacityLabel} the student visa expects (12-month living + first-year tuition) — show more provable funds to strengthen the case.`,
+      });
+    } else {
+      value = Math.min(value, AU_DHA_CAPACITY_GATE.forceReachCap);
+      factors.push({
+        label: "Well below DHA financial-capacity requirement",
+        influence: "risk",
+        detail: `Far short of the ${capacityLabel} the student visa expects — a major risk on financial capacity.`,
+      });
+    }
   }
 
   if (profile.fundingSource === "scholarship-dependent") {

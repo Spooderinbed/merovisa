@@ -61,7 +61,9 @@ describe("runAssessment", () => {
       ...baseProfile,
       grade: 85,
       englishScore: 7.5,
-      budget: 6500000,
+      // ≈51.9k USD — clears the AU DHA capacity floor (≈49.5k USD); a genuinely
+      // strong Australia profile must be able to show the visa's financial capacity.
+      budget: 7000000,
       fundingSource: "self-funded",
       educationLevel: "masters",
       graduationYear: new Date().getFullYear(),

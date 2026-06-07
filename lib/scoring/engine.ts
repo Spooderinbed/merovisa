@@ -6,7 +6,9 @@ import { scoreProfileStrength } from "./profile-strength";
 import { mapVerdict } from "./verdict";
 import { DIMENSION_WEIGHTS, CONFIG_VERSION } from "@/lib/data/scoring-config";
 
-const RULE_VERSION = "v0.1.0";
+// v0.2.0: financial dimension applies the Australia DHA capacity gate (a budget
+// below the visa's financial-capacity floor caps the dimension into 'possible'/'reach').
+const RULE_VERSION = "v0.2.0";
 
 export function runAssessment(profile: StudentProfile): AssessmentResult {
   const academic = scoreAcademic(profile);

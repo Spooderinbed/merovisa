@@ -24,6 +24,8 @@ import {
 import {
   AU_DHA_LIVING_CAPACITY_AUD as AU_DHA_LIVING_CAPACITY_AUD_SRC,
   TYPICAL_YEARLY_USD as TYPICAL_YEARLY_USD_SRC,
+  AU_REPRESENTATIVE_TUITION_AUD as AU_REPRESENTATIVE_TUITION_AUD_SRC,
+  AU_DHA_CAPACITY_GATE as AU_DHA_CAPACITY_GATE_SRC,
 } from "./policy/au-cost-of-living";
 import {
   DIMENSION_WEIGHTS as DIMENSION_WEIGHTS_SRC,
@@ -41,6 +43,8 @@ import {
   ScalarPenaltySchema,
   TypicalYearlySchema,
   DhaLivingSchema,
+  RepresentativeTuitionSchema,
+  DhaCapacityGateSchema,
   DimensionWeightsSchema,
   VerdictCutoffsSchema,
   ProfileStrengthPointsSchema,
@@ -77,6 +81,8 @@ const englishNotTaken = checked(ScalarPenaltySchema, ENGLISH_NOT_TAKEN_PENALTY_S
 const englishBandDelta = checked(ScalarPenaltySchema, ENGLISH_BAND_DELTA_POINTS_SRC, "ENGLISH_BAND_DELTA_POINTS");
 const typicalYearly = checked(TypicalYearlySchema, TYPICAL_YEARLY_USD_SRC, "TYPICAL_YEARLY_USD");
 const dhaLiving = checked(DhaLivingSchema, AU_DHA_LIVING_CAPACITY_AUD_SRC, "AU_DHA_LIVING_CAPACITY_AUD");
+const repTuition = checked(RepresentativeTuitionSchema, AU_REPRESENTATIVE_TUITION_AUD_SRC, "AU_REPRESENTATIVE_TUITION_AUD");
+const capacityGate = checked(DhaCapacityGateSchema, AU_DHA_CAPACITY_GATE_SRC, "AU_DHA_CAPACITY_GATE");
 const dimWeights = checked(DimensionWeightsSchema, DIMENSION_WEIGHTS_SRC, "DIMENSION_WEIGHTS");
 const verdictCutoffs = checked(VerdictCutoffsSchema, VERDICT_CUTOFFS_SRC, "VERDICT_CUTOFFS");
 const profileStrength = checked(ProfileStrengthPointsSchema, PROFILE_STRENGTH_POINTS_SRC, "PROFILE_STRENGTH_POINTS");
@@ -99,12 +105,18 @@ export const TYPICAL_YEARLY_USD: Readonly<Record<Destination, { min: number; max
   typicalYearly.value,
 );
 export const AU_DHA_LIVING_CAPACITY_AUD = dhaLiving.value;
+export const AU_REPRESENTATIVE_TUITION_AUD = repTuition.value;
+export const AU_DHA_CAPACITY_GATE = Object.freeze(capacityGate.value);
 export const DIMENSION_WEIGHTS = Object.freeze(dimWeights.value);
 export const VERDICT_CUTOFFS = Object.freeze(verdictCutoffs.value);
 export const PROFILE_STRENGTH_POINTS = Object.freeze(profileStrength.value);
 
-/** Bump when any sourced value changes; stamped onto results in Phase 6. */
-export const CONFIG_VERSION = "config-v1";
+/**
+ * Bump when any sourced value changes; stamped onto results.
+ * config-v2: financial dimension now consumes AU_DHA_LIVING_CAPACITY_AUD +
+ * AU_REPRESENTATIVE_TUITION_AUD via the Australia DHA capacity gate.
+ */
+export const CONFIG_VERSION = "config-v2";
 
 /** name → provenance, for explainability ("what backs this number?"). */
 export const CONFIG_PROVENANCE: Readonly<Record<string, Provenance>> = Object.freeze({
@@ -119,6 +131,8 @@ export const CONFIG_PROVENANCE: Readonly<Record<string, Provenance>> = Object.fr
   ENGLISH_BAND_DELTA_POINTS: englishBandDelta.provenance,
   TYPICAL_YEARLY_USD: typicalYearly.provenance,
   AU_DHA_LIVING_CAPACITY_AUD: dhaLiving.provenance,
+  AU_REPRESENTATIVE_TUITION_AUD: repTuition.provenance,
+  AU_DHA_CAPACITY_GATE: capacityGate.provenance,
   DIMENSION_WEIGHTS: dimWeights.provenance,
   VERDICT_CUTOFFS: verdictCutoffs.provenance,
   PROFILE_STRENGTH_POINTS: profileStrength.provenance,

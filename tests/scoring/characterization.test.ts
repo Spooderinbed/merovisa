@@ -8,10 +8,16 @@ import type { AssessmentResult, Currency, StudentProfile } from "@/lib/scoring/t
  * Characterization lock (Plan Phase 3).
  *
  * Pins the *current* deterministic output of `runAssessment` across a profile
- * matrix so the Phase 4-5 scoring-config refactor is provably behaviour-preserving
- * (Option 3a = zero verdict delta). Any drift in a dimension value, factor array,
- * weighted total, or verdict — including a one-point shift across a band cutoff —
- * makes a golden mismatch.
+ * matrix. Any drift in a dimension value, factor array, weighted total, or verdict
+ * — including a one-point shift across a band cutoff — makes a golden mismatch.
+ *
+ * RULE_VERSION v0.2.0 / config-v2 introduced the Australia DHA financial-capacity
+ * gate (lib/scoring/financial.ts): a budget below the visa's capacity floor caps
+ * the financial dimension into 'possible'/'reach'. That is an INTENDED verdict
+ * change, so this golden was regenerated for it. The verdict.ts boundary-straddle
+ * fixtures below sit on `canada` (an un-gated destination) so they isolate the
+ * verdict.ts cutoffs from the AU gate; the gate itself is covered by
+ * tests/scoring/financial.test.ts and by the Australia cases in this matrix.
  *
  * Determinism: the only time-dependent input is the graduation gap
  * (`computeGapYears` reads `new Date()`). Each profile's `graduationYear` is
@@ -40,9 +46,11 @@ interface Case {
 // extremes (0.95 CS/data-science ↔ 0.70 arts/hospitality); funding extremes
 // (0.95 self-funded ↔ 0.55 scholarship-dependent); currencies NPR/AUD/USD + one
 // out-of-enum (EUR passthrough); gaps 0/1/2/6; English not-taken/booked/below/at/
-// 7.0/7.5+; germany (6.0 threshold) and not-sure destinations; and profiles
-// straddling every verdict.ts cutoff (72/71 strong↔possible, 50/49 possible↔reach,
-// 30/29 min-dimension floor) so one-point drift flips a verdict.
+// 7.0/7.5+; germany (6.0 threshold) and not-sure destinations; the Australia DHA
+// capacity gate (strong-clear clears it; possible-mid clears with a positive
+// factor; several AU cases fall below it); and canada profiles straddling every
+// verdict.ts cutoff (72/71 strong↔possible, 50/49 possible↔reach, 30/29
+// min-dimension floor) so one-point drift flips a verdict.
 const CASES: Case[] = [
   {
     name: "strong-clear",
@@ -106,7 +114,7 @@ const CASES: Case[] = [
   },
   {
     name: "possible-mid",
-    note: "comfortably possible; gap 2 explained by work, IELTS at threshold, NPR budget just under range, education-loan, hospitality(0.70)",
+    note: "comfortably possible; gap 2 explained by work, IELTS at threshold, NPR budget clears the AU DHA capacity floor (positive factor), education-loan, hospitality(0.70)",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",
@@ -118,7 +126,7 @@ const CASES: Case[] = [
       englishStatus: "taken",
       englishScore: 6.5,
       destination: "australia",
-      budget: 4000000,
+      budget: 7000000, // NPR ≈ 51.9k USD — clears the AU DHA capacity floor (≈49.5k USD)
       budgetCurrency: "NPR",
       fundingSource: "education-loan",
       goal: "fastest-admission",
@@ -126,7 +134,7 @@ const CASES: Case[] = [
   },
   {
     name: "possible-boundary-low",
-    note: "weighted at the 50 possible floor (min-dim ≥ 30) → possible; drift down flips to reach; gap 6 preparing, not-taken, arts",
+    note: "weighted at the 50 possible floor (min-dim ≥ 30) → possible; drift down flips to reach; gap 6 preparing, not-taken, arts; canada (un-gated) so this pins verdict.ts, not the AU gate",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",
@@ -136,8 +144,8 @@ const CASES: Case[] = [
       graduationYear: gradYear(6),
       gapReasons: ["preparing"],
       englishStatus: "not-taken",
-      destination: "australia",
-      budget: 3300000,
+      destination: "canada",
+      budget: 2700000, // NPR = 20,000 USD; sibling of reach-weighted-boundary (grade −1)
       budgetCurrency: "NPR",
       fundingSource: "scholarship-dependent",
       goal: "lowest-cost",
@@ -145,7 +153,7 @@ const CASES: Case[] = [
   },
   {
     name: "reach-weighted-boundary",
-    note: "weighted one below the possible floor (49, min-dim ≥ 30) → reach; drift up flips to possible; sibling of possible-boundary-low",
+    note: "weighted one below the possible floor (49, min-dim ≥ 30) → reach; drift up flips to possible; sibling of possible-boundary-low (same budget, grade −1); canada (un-gated)",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",
@@ -155,8 +163,8 @@ const CASES: Case[] = [
       graduationYear: gradYear(6),
       gapReasons: ["preparing"],
       englishStatus: "not-taken",
-      destination: "australia",
-      budget: 3050000,
+      destination: "canada",
+      budget: 2700000, // NPR = 20,000 USD; same budget as possible-boundary-low, 1 grade lower
       budgetCurrency: "NPR",
       fundingSource: "scholarship-dependent",
       goal: "lowest-cost",
@@ -164,7 +172,7 @@ const CASES: Case[] = [
   },
   {
     name: "reach-min-dimension",
-    note: "financial dim at 29 (<30) forces reach regardless of weighted; tiny USD budget + scholarship-dependent",
+    note: "financial dim at 29 (<30) forces reach regardless of weighted; tiny budget + scholarship-dependent; canada (un-gated) so financial 29 comes from the heuristic, not the AU cap",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",
@@ -175,8 +183,8 @@ const CASES: Case[] = [
       gapReasons: [],
       englishStatus: "taken",
       englishScore: 7.0,
-      destination: "australia",
-      budget: 7400,
+      destination: "canada",
+      budget: 6500,
       budgetCurrency: "USD",
       fundingSource: "scholarship-dependent",
       goal: "highest-ranked",
@@ -184,7 +192,7 @@ const CASES: Case[] = [
   },
   {
     name: "possible-min-dimension",
-    note: "financial dim at exactly 30 (the min-dim floor) → not forced to reach; sibling of reach-min-dimension",
+    note: "financial dim at exactly 30 (the min-dim floor) → not forced to reach; sibling of reach-min-dimension; canada (un-gated)",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",
@@ -195,8 +203,8 @@ const CASES: Case[] = [
       gapReasons: [],
       englishStatus: "taken",
       englishScore: 7.0,
-      destination: "australia",
-      budget: 8600,
+      destination: "canada",
+      budget: 7500,
       budgetCurrency: "USD",
       fundingSource: "scholarship-dependent",
       goal: "highest-ranked",
@@ -244,7 +252,7 @@ const CASES: Case[] = [
   },
   {
     name: "higher-secondary-no-english",
-    note: "higher-secondary level (academic −5, profile-strength base only) + no English test (visa −8, risk factor) + arts(0.70) + NPR within range",
+    note: "higher-secondary level (academic −5, profile-strength base only) + no English test (visa −8, risk factor) + arts(0.70); NPR budget falls just below the AU DHA capacity floor → financial gated to 29 → reach",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "higher-secondary",
@@ -284,7 +292,7 @@ const CASES: Case[] = [
   },
   {
     name: "long-gap-below-english",
-    note: "6-year gap (>5 bucket, −22) part-mitigated by health-family + IELTS 6.0 below the 6.5 threshold (visa −5, risk factor); nursing(0.85)",
+    note: "6-year gap (>5 bucket, −22) part-mitigated by health-family + IELTS 6.0 below the 6.5 threshold (visa −5, risk factor); nursing(0.85); USD budget below the AU DHA capacity floor → financial gated to 29",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",
@@ -304,7 +312,7 @@ const CASES: Case[] = [
   },
   {
     name: "booked-english-aud",
-    note: "englishStatus 'booked' (neither taken nor not-taken → no visa english adjustment) + AUD currency (FX /1.5) + gap 2 retook-exams (reason not work/venture → risk factor) + mixed",
+    note: "englishStatus 'booked' (neither taken nor not-taken → no visa english adjustment) + AUD currency (FX /1.5) + gap 2 retook-exams (reason not work/venture → risk factor) + mixed; AUD 60k ≈ 40k USD sits in the AU gate's block-strong band → financial capped at 49",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",

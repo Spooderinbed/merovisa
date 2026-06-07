@@ -43,6 +43,14 @@ export const GapPenaltiesSchema = sourced(
 export const ScalarPenaltySchema = sourced(z.number());
 export const TypicalYearlySchema = sourced(rangeRecord);
 export const DhaLivingSchema = sourced(z.number());
+export const RepresentativeTuitionSchema = sourced(z.number().positive());
+export const DhaCapacityGateSchema = sourced(
+  z.object({
+    reachRatio: z.number().min(0).max(1),
+    blockStrongCap: z.number().min(0).max(100),
+    forceReachCap: z.number().min(0).max(100),
+  }),
+);
 /** Grant rate (%) by application cohort, each bound cited to its finding. Named fields (not min/max) so the offshore/onshore meaning survives a quarter where the two invert. */
 export const GrantRateCohortsSchema = sourced(
   z.object({ offshore: z.number().min(0).max(100), onshore: z.number().min(0).max(100) }),

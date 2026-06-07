@@ -15,7 +15,10 @@ describe("Aarav persona", () => {
     englishStatus: "taken",
     englishScore: 7.0,
     destination: "australia",
-    budget: 4500000,
+    // ≈40k USD — close to, but short of, the AU DHA financial-capacity floor
+    // (≈49.5k USD). The gate caps financial at 49, which keeps a realistic CS
+    // applicant out of 'strong' but firmly in 'possible': viable, needs more funds.
+    budget: 5400000,
     budgetCurrency: "NPR",
     fundingSource: "education-loan",
     goal: "permanent-residency",
@@ -43,7 +46,7 @@ describe("Aarav persona", () => {
 
   it("reports a rule version and ISO timestamp", () => {
     const result = runAssessment(aarav);
-    expect(result.ruleVersion).toBe("v0.1.0");
+    expect(result.ruleVersion).toBe("v0.2.0");
     expect(Date.parse(result.computedAt)).not.toBeNaN();
   });
 });

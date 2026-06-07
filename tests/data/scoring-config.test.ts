@@ -11,6 +11,8 @@ import {
   ScalarPenaltySchema,
   TypicalYearlySchema,
   DhaLivingSchema,
+  RepresentativeTuitionSchema,
+  DhaCapacityGateSchema,
   DimensionWeightsSchema,
   VerdictCutoffsSchema,
   ProfileStrengthPointsSchema,
@@ -31,6 +33,8 @@ import {
 import {
   AU_DHA_LIVING_CAPACITY_AUD as AU_DHA_LIVING_CAPACITY_AUD_SRC,
   TYPICAL_YEARLY_USD as TYPICAL_YEARLY_USD_SRC,
+  AU_REPRESENTATIVE_TUITION_AUD as AU_REPRESENTATIVE_TUITION_AUD_SRC,
+  AU_DHA_CAPACITY_GATE as AU_DHA_CAPACITY_GATE_SRC,
 } from "@/lib/data/policy/au-cost-of-living";
 import {
   DIMENSION_WEIGHTS as DIMENSION_WEIGHTS_SRC,
@@ -62,6 +66,10 @@ describe("scoring config — literal pins", () => {
     expect(Config.TYPICAL_YEARLY_USD.australia).toEqual({ min: 30000, max: 55000 });
     expect(Config.TYPICAL_YEARLY_USD.germany).toEqual({ min: 12000, max: 22000 });
     expect(Config.AU_DHA_LIVING_CAPACITY_AUD).toBe(29_710);
+    // DHA capacity gate inputs (Australia financial dimension). Changing either
+    // shifts verdicts → regenerate the characterization golden + bump CONFIG_VERSION.
+    expect(Config.AU_REPRESENTATIVE_TUITION_AUD).toBe(44_500);
+    expect(Config.AU_DHA_CAPACITY_GATE).toEqual({ reachRatio: 0.75, blockStrongCap: 49, forceReachCap: 29 });
   });
 
   it("visa tables", () => {
@@ -109,6 +117,8 @@ describe("scoring config — schema validity", () => {
     expect(ScalarPenaltySchema.safeParse(ENGLISH_BAND_DELTA_POINTS_SRC).success).toBe(true);
     expect(TypicalYearlySchema.safeParse(TYPICAL_YEARLY_USD_SRC).success).toBe(true);
     expect(DhaLivingSchema.safeParse(AU_DHA_LIVING_CAPACITY_AUD_SRC).success).toBe(true);
+    expect(RepresentativeTuitionSchema.safeParse(AU_REPRESENTATIVE_TUITION_AUD_SRC).success).toBe(true);
+    expect(DhaCapacityGateSchema.safeParse(AU_DHA_CAPACITY_GATE_SRC).success).toBe(true);
     expect(DimensionWeightsSchema.safeParse(DIMENSION_WEIGHTS_SRC).success).toBe(true);
     expect(VerdictCutoffsSchema.safeParse(VERDICT_CUTOFFS_SRC).success).toBe(true);
     expect(ProfileStrengthPointsSchema.safeParse(PROFILE_STRENGTH_POINTS_SRC).success).toBe(true);
