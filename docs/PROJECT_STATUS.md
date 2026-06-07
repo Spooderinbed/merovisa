@@ -1,10 +1,10 @@
 # MyVisa — project status & phase log
 
-**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged
+**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist is the remaining Phase 5 piece)
 **Tests:** 662 passing across 157 test files
 **Typecheck:** clean
 **Build:** clean (27 routes including `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
-**Code surface:** 25 files in `app/`, 53 in `lib/`, 77 in `components/`, 128 in `tests/`, 5 SQL migrations applied
+**Code surface:** 25 files in `app/`, 53 in `lib/`, 77 in `components/`, 128 in `tests/`, 9 SQL migrations applied
 **Branch state:** pushed to `origin/master` (the prior local-only preference was lifted on 2026-06-07 at user request)
 
 ---
@@ -24,7 +24,8 @@
 | `/profile` | Header with name + email, completeness ring, 13 section accordions each with inline editor: name/age/intake, destination, academic, intended-study, english, gap, work, finance, immigration, family, career, scholarships, deal-breakers |
 | `/matches` | Tabs (Universities/Scholarships/Cost estimate), policy banner (Nepal AL3 + AUD 29,710), Strong/Possible/Reach groups, ProgramCard with verdict pill + tuition + IELTS/grade min + intakes + reasons + Source link + Shortlist toggle |
 | `/plan` | Impact-ranked (High/Medium/Low) action items with Done/Dismiss/Undo, closed items collapse, regenerates on profile change |
-| Stubs (`/checklist`, `/guide`) | "Coming soon — landing in Phase 5/6" with back-to-dashboard CTA |
+| `/documents` | **Phase 5 — shipped & live.** Auth-gated documents vault: upload / list / view / delete photos of visa-ready documents, organised by a typed taxonomy (`DOCUMENT_META` → Identity/Academic/Financial/Visa groups). Reached from the work/english/finance profile editors. Service-role-only RLS. |
+| Stub (`/guide`) | "Coming soon — landing in Phase 6" with back-to-dashboard CTA. (`/checklist` now `redirect()`s to `/documents`; the **per-program checklist** is the remaining Phase 5 piece) |
 | `/api/profile/section` | Zod-validated PATCH for any of 13 sections, auth-gated, invalidates plan after save (try/catch protected) |
 | `/api/assess` | Anonymous path persists with 3-day TTL; signed-in path persists as owner, sets `is_primary` if none, bootstraps profile if missing, invalidates plan |
 | `/api/shortlist`, `/api/plan/action` | Auth-gated POST endpoints with admin client writes via service role |
@@ -37,7 +38,6 @@
 | **No manual smoke since Phase 0.** Signed-in flows pass tests but have never been clicked through with real Google OAuth. Highest-risk: profile editors saving correctly to DB, dashboard rendering with real data, shortlist persisting across sessions, plan regenerating on profile edit. | All `(app)/*` routes | **High** — biggest unknown |
 | `destination_id` rendered raw (e.g. "australia" not "Australia") | `components/dashboard/snapshot-card.tsx`, `components/assess/assess-interstitial.tsx` | Minor UX |
 | Day-of-week greeting uses server time, not user TZ | `app/(app)/dashboard/page.tsx` `partOfDay()` | Minor UX |
-| 195 ESLint errors | ~185 in gitignored `claudedesign/`; the rest are: inner `Btn` component in `MatchesTabs` (react-hooks/static-components), 2× `any` in `tests/scoring/multi-destination.test.ts`, 2× unused destructures in `tests/assessments/claim.test.ts` | Low; cleanup task |
 | `private.set_updated_at` trigger function has mutable `search_path` | Supabase advisor WARN, present since Phase 1.5 migration | Low; harden in a follow-up migration |
 | `patchProfileSection` race condition | Two parallel PATCHes to same user lose one update (read-modify-write with no row-version) | Low for single-tab use; fix before enabling autosave |
 | `userEnglishBand = userEnglishOverall` proxy in match compute | Per-band scoring not accurate until IELTS report upload (Phase 5) | Designed limitation |
@@ -49,13 +49,17 @@
 
 ### 🔬 Verified via Supabase MCP (not just code)
 
-- 5 migrations applied to live project `obfvrxixtautamflzxzq`: `init_assessments_and_leads`, `add_profiles_evolve_assessments`, `add_programs_universities_state`, `seed_universities_and_programs`, `add_plan_items`
+- 9 migrations applied to live project `obfvrxixtautamflzxzq` (re-verified via MCP 2026-06-08): the original 5 (`init_assessments_and_leads`, `add_profiles_evolve_assessments`, `add_programs_universities_state`, `seed_universities_and_programs`, `add_plan_items`) **plus 4 since:** `add_documents`, `simplify_documents_drop_ocr_columns`, `normalize_profile_enums`, `fix_documents_rls_service_role_only`
 - 15 universities + 64 programs seeded into live DB
 - Security advisors: no new ERROR-level. Pre-existing WARN: `auth_leaked_password_protection` (project-level), `function_search_path_mutable` on `private.set_updated_at`. Pre-existing INFO: `rls_enabled_no_policy` on `public.leads`
 
+### ✅ Phase 5 (documents) — shipped & live, ⚠️ never smoked
+
+- **Shipped:** `documents` table + an upload/view/delete flow (the original `checklist_items` + OCR design was simplified away — see `simplify_documents_drop_ocr_columns`), the `/documents` vault page, three `/api/documents/*` routes, `lib/documents/{repo,types}.ts`, service-role-only RLS (`fix_documents_rls_service_role_only`). The typed taxonomy (`DOCUMENT_META`) already groups document kinds into Identity/Academic/Financial/Visa. _(Storage-vs-table internals to be confirmed when the checklist slice builds on it.)_
+- **Remaining (the documents/checklist slice):** the **per-program checklist** — a `/checklist/[programId]` view mapping a specific program's requirements → the documents you need (today `/checklist` just `redirect()`s to the generic vault). The dashboard "Documents" stat already points at `/checklist`.
+
 ### 🚫 Not built yet
 
-- Phase 5: `documents` + `checklist_items` tables, Supabase Storage bucket + RLS, signed-upload URL flow, `/checklist/[programId]` page with section grouping (Identity/Academic/Financial/Visa), document upload affordance per item, dashboard Checklist stat
 - Phase 6: `guide_threads` + `guide_messages` tables, `private.owns_thread()` security-definer helper, `/guide` page with SSE-streamed chat, Anthropic SDK integration with prompt caching. **Blocks at runtime without `ANTHROPIC_API_KEY` set in `.env.local`.**
 
 ---
@@ -379,11 +383,14 @@ supabase/migrations/
 
 ## What to do next — recommended order
 
-1. **Manual smoke first.** Run `npm run dev`, sign in with Google, verify: dashboard renders with your real data; profile editors save; matches page loads with shortlist toggle; plan items appear after editing a field. This is the highest-value step you can take right now because it'll surface anything tests + types missed.
-2. **Promote Phase 3 + Phase 4 plans to MD files** (cleanup; data already in this file).
-3. **Lint cleanup pass.** Add `.eslintignore` for `claudedesign/` (kills ~185 errors); fix the inner `Btn` in `MatchesTabs` (lift to a top-level component); annotate `any` in `multi-destination.test.ts`; drop unused destructures in `claim.test.ts`. Should bring lint to clean.
-4. **Hotfix the WARN advisor.** One-line migration: `alter function private.set_updated_at() set search_path = '';`. Quiets Supabase advisor.
-5. **Phase 5 or Phase 6** — your call. Phase 5 is bigger but unblocked. Phase 6 is smaller but needs `ANTHROPIC_API_KEY` set before it functions.
+_(Reconciled 2026-06-08. Lint cleanup ✓ done (`3c8810c`). Phase A/B scorer-wiring ✓ done. Phase 5 documents vault ✓ shipped & live. Center of gravity is now **release-readiness for the Nepal→Australia journey**, framed by the five student questions below.)_
+
+**Definition of "Nepal→Australia complete"** — a real student can answer: (1) can I apply? (2) what's my biggest risk? (3) what money + documents do I need? (4) which programs are realistic? (5) what do I do next?
+
+1. **Documents/checklist slice (next — design-gated).** Build the per-program checklist (`/checklist/[programId]`) that maps a program's requirements → the documents in the vault — the missing half of "money + documents." Brainstorm → spec → plan → TDD before any code.
+2. **Manual smoke (deferred at user's choice 2026-06-08).** Signed-in flows still haven't been clicked through since Phase 0 — the standing #1 risk. The anonymous flow can be browser-verified headlessly; the signed-in half needs a real OAuth session (user-driven) or a throwaway dev session seam.
+3. **Ledger by slice (later).** Integrate remaining `lib/data/source/*` findings per-slice, tagging each used / rejected:&lt;reason&gt; / use-later / needs-human-call — not row-by-row.
+4. **Housekeeping (low priority).** Promote the Phase 3/4 plans to standalone MDs; hotfix the `private.set_updated_at` `search_path` WARN advisor (`alter function private.set_updated_at() set search_path = '';`).
 
 ---
 
@@ -391,4 +398,4 @@ supabase/migrations/
 
 - **Two real bugs slipped past per-task verification and were caught only by whole-branch review** (Phase 1.5 signed-in refresh, Phase 1.5 callback claim-fail 404). Adding `npm run typecheck` to each task's TDD loop would have caught the typed mismatches earlier; adding a behavioral integration test in the review pass might have caught the UI regression. Worth budgeting more time for review on Phase 5+ where Storage + signed URLs add new failure surfaces.
 - **No phase has been clicked through.** Every phase passes its test suite, but the actual signed-in user experience hasn't been exercised end-to-end since Phase 0. Tests verify isolated behavior; they don't verify whether the dashboard actually feels right or whether the shortlist toggle actually round-trips against the live RLS policy.
-- **Master is 92 commits ahead of `origin/master`.** Nothing has been pushed. The branch protection rule that would normally catch broken-master-on-remote isn't in play. If your laptop dies, the work is lost.
+- ~~Master is 92 commits ahead of `origin/master`; nothing pushed.~~ **Resolved 2026-06-07:** the local-only preference was lifted; master now branches → ff-merges → pushes every slice and is in sync with `origin/master`.
