@@ -401,3 +401,29 @@ export interface AuCricosCode extends Provenanced {
   source: string; // canonical CRICOS register URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A non-RMIT Australian university program offered to international students
+ * (programs category E). A deliberately generic shape — every detail field is
+ * optional — so heterogeneous providers (each finding-set states a different
+ * mix of program CRICOS code, tuition, inline IELTS minimum, or accreditation)
+ * share one module. RMIT keeps its own dedicated AuRmitProgram module. Each
+ * present field is sourced from its own finding and reconciled like any leaf.
+ */
+export interface AuUniversityProgram extends Provenanced {
+  id: string; // slug, e.g. "uts-master-of-pharmacy"
+  provider: string; // university name as the finding states it
+  programName: string; // full program name, incl. delivery mode where relevant
+  level: "bachelor" | "master" | "diploma" | "graduate-diploma";
+  cricosCode?: string; // program/course CRICOS code (five digits + a letter), where the finding gives one
+  firstYearTuitionAud?: number; // 2026 indicative first-year international fee, AUD
+  totalTuitionAud?: number; // 2026 indicative whole-program international fee, AUD
+  durationYears?: number; // standard full-time duration, years
+  fieldOfStudy?: string; // free-form discipline label (NOT the scoring FieldOfStudy enum)
+  test?: "IELTS"; // English test, where the program states an inline requirement
+  overallMin?: number; // IELTS overall band
+  perBandMin?: number; // IELTS per-subtest floor
+  accreditingBody?: string; // professional accreditation authority, where stated
+  source: string; // provider page URL
+  lastVerified?: string; // ISO date
+}

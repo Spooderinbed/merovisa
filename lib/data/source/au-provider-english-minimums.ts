@@ -55,4 +55,32 @@ export const AU_PROVIDER_ENGLISH_MINIMUMS: AuProviderEnglishMinimum[] = [
     lastVerified: "2026-06-05",
     provenance: { findingRefs: ["D.113"], note: "IELTS 6.5 overall, minimum 6.0 in each subtest; course exceptions apply." },
   },
+  {
+    id: "unimelb-master-of-education",
+    provider: "University of Melbourne Master of Education",
+    test: "IELTS",
+    overallMin: 6.5,
+    perBandMin: 6.0,
+    appliesTo: "Master of Education (graduate coursework, on-campus)",
+    source: "https://study.unimelb.edu.au/find/courses/graduate/master-of-education/entry-requirements/",
+    lastVerified: "2026-06-07",
+    provenance: {
+      findingRefs: ["E.095", "E.096", "E.097", "E.098", "E.099"],
+      note: "IELTS 6.5 overall with no subtest band below 6.0.",
+    },
+  },
+  {
+    id: "torrens-general",
+    provider: "Torrens University Australia",
+    test: "IELTS",
+    overallMin: 6.5,
+    perBandMin: 6.0,
+    appliesTo: "general entry for Nepalese applicants",
+    source: "https://www.torrens.edu.au/studying-with-us/international-students/studying-in-australia/nepal",
+    lastVerified: "2026-06-07",
+    provenance: {
+      findingRefs: ["E.030"],
+      note: "IELTS 6.5 overall, no band below 6.0; individual courses may require higher.",
+    },
+  },
 ];

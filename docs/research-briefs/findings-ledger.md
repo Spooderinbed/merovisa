@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=264 · pending=850
+**Status:** used=284 · pending=830
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -558,12 +558,12 @@
 | E.027 | E | primary | data | G25 | pending | lib/data/programs seed (+ course-career) | Torrens University lists Master of Business Administration (Advanced) as a top course for Nepalese students. |
 | E.028 | E | primary | data | G25 | pending | lib/data/programs seed (+ course-career) | Torrens University lists Bachelor of Information Technology as a top course for Nepalese students. |
 | E.029 | E | primary | data | G25 | pending | lib/data/programs seed (+ course-career) | Torrens University lists Master of Public Health (Advanced) as a top course for Nepalese students. |
-| E.030 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | Torrens University says the general IELTS minimum for Nepalese applicants is 6.5 with no band less than 6.0. |
-| E.031 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Torrens University Bachelor of Business has CRICOS code 090275E. |
-| E.032 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Torrens University Master of Information Technology (Advanced) has CRICOS code 107045J. |
-| E.033 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Torrens University Master of Business Administration (Advanced) has CRICOS code 088149G. |
-| E.034 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Torrens University Bachelor of Information Technology has CRICOS code 108468M. |
-| E.035 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Torrens University Master of Public Health (Advanced) has CRICOS code 095594E. |
+| E.030 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | Torrens University says the general IELTS minimum for Nepalese applicants is 6.5 with no band less than 6.0. |
+| E.031 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | Torrens University Bachelor of Business has CRICOS code 090275E. |
+| E.032 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | Torrens University Master of Information Technology (Advanced) has CRICOS code 107045J. |
+| E.033 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | Torrens University Master of Business Administration (Advanced) has CRICOS code 088149G. |
+| E.034 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | Torrens University Bachelor of Information Technology has CRICOS code 108468M. |
+| E.035 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | Torrens University Master of Public Health (Advanced) has CRICOS code 095594E. |
 | E.036 | E | practitioner | data | G26 | pending | lib/data/programs seed (+ course-career) | KIEC says high-demand courses for Nepali students in Australia in 2026 include nursing and allied health. |
 | E.037 | E | practitioner | data | G26 | pending | lib/data/programs seed (+ course-career) | KIEC says high-demand courses for Nepali students in Australia in 2026 include IT. |
 | E.038 | E | practitioner | data | G26 | pending | lib/data/programs seed (+ course-career) | KIEC says high-demand courses for Nepali students in Australia in 2026 include engineering. |
@@ -623,20 +623,20 @@
 | E.092 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) has a duration of 4 years. |
 | E.093 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) has a 2026 annual fee of AUD 34,560. |
 | E.094 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | RMIT Bachelor of Education (Primary and Early Childhood Education) requires IELTS 7.5. |
-| E.095 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS 6.5. |
-| E.096 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS writing 6.0. |
-| E.097 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS speaking 6.0. |
-| E.098 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS reading 6.0. |
-| E.099 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS listening 6.0. |
-| E.100 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education (Online) has a 2026 indicative first-year fee of AUD 27,000. |
-| E.101 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy has a 2026 indicative first-year tuition fee of AUD 38,100. |
-| E.102 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy has a 2026 indicative total tuition fee of AUD 98,718. |
-| E.103 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS overall 7.0. |
-| E.104 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS listening 7.0. |
-| E.105 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS speaking 7.0. |
-| E.106 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS reading 7.0. |
-| E.107 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS writing 7.0. |
-| E.108 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy is accredited by the Australian Pharmacy Council. |
+| E.095 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS 6.5. |
+| E.096 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS writing 6.0. |
+| E.097 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS speaking 6.0. |
+| E.098 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS reading 6.0. |
+| E.099 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education requires IELTS listening 6.0. |
+| E.100 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | The University of Melbourne Master of Education (Online) has a 2026 indicative first-year fee of AUD 27,000. |
+| E.101 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy has a 2026 indicative first-year tuition fee of AUD 38,100. |
+| E.102 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy has a 2026 indicative total tuition fee of AUD 98,718. |
+| E.103 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS overall 7.0. |
+| E.104 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS listening 7.0. |
+| E.105 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS speaking 7.0. |
+| E.106 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS reading 7.0. |
+| E.107 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy requires IELTS writing 7.0. |
+| E.108 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy is accredited by the Australian Pharmacy Council. |
 | E.109 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy is approved by the Pharmacy Board of Australia as a qualification leading to pharmacis… |
 | E.110 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) has a duration of 4 years. |
 | E.111 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | RMIT Bachelor of Pharmacy (Honours) has a 2026 annual fee of AUD 48,000. |

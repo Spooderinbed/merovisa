@@ -44,6 +44,8 @@ import { AU_RMIT_PROGRAMS } from "@/lib/data/source/au-rmit-programs";
 import { AuRmitProgramsSchema } from "@/lib/data/schema/au-rmit-programs.schema";
 import { AU_CRICOS_CODES } from "@/lib/data/source/au-cricos-codes";
 import { AuCricosCodesSchema } from "@/lib/data/schema/au-cricos-codes.schema";
+import { AU_UNIVERSITY_PROGRAMS } from "@/lib/data/source/au-university-programs";
+import { AuUniversityProgramsSchema } from "@/lib/data/schema/au-university-programs.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -360,5 +362,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-cricos-codes",
     subRecordKeys: [],
     recordInterface: "AuCricosCode",
+  },
+  {
+    // Non-RMIT Australian university programs (programs category E): UTS Master
+    // of Pharmacy (tuition + inline IELTS + accreditation), Melbourne's online
+    // Master of Education (tuition), and Torrens programs by course CRICOS code.
+    // Generic record (detail fields optional); each present value reconciles to
+    // its own finding. Fact-only: no scorer reads it. Record array.
+    category: "E",
+    exportName: "AU_UNIVERSITY_PROGRAMS",
+    data: AU_UNIVERSITY_PROGRAMS,
+    schema: AuUniversityProgramsSchema,
+    recordLabel: "au-university-programs",
+    subRecordKeys: [],
+    recordInterface: "AuUniversityProgram",
   },
 ];
