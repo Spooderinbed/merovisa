@@ -38,4 +38,11 @@ describe("Results", () => {
     expect(screen.getByText(/Current policy/i)).toBeInTheDocument();
     expect(screen.getByText(/grant rate/i)).toBeInTheDocument();
   });
+
+  it("shows the sourced cost-to-apply breakdown", () => {
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    render(<Results payload={payload} />);
+    expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /AUD 2,000/ })).toBeInTheDocument();
+  });
 });

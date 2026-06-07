@@ -37,6 +37,7 @@ describe("/matches page", () => {
     render(ui);
     expect(screen.getByText(/Where your profile fits today/i)).toBeInTheDocument();
     expect(screen.getByText(/29,710/)).toBeInTheDocument();
+    expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
     expect(screen.getByText(/No programs found yet/i)).toBeInTheDocument();
   });
 

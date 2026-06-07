@@ -5,6 +5,7 @@ import type { AssessmentPayload } from "@/lib/results/types";
 import { VerdictCard } from "./verdict-card";
 import { FactorBars } from "./factor-bars";
 import { PolicyBanner } from "@/components/matches/policy-banner";
+import { CostToApply } from "./cost-to-apply";
 import { IntakeTimingCard } from "./intake-timing";
 import { UniversityMatches } from "./university-matches";
 import { GatedTeasers } from "./gated-teasers";
@@ -33,6 +34,9 @@ export function Results({
       {/* Honest corridor context behind the verdict — the same sourced figures
           the matches page shows (grant rate as a cohort range, AL3, DHA floor). */}
       <PolicyBanner />
+      {/* Sourced out-of-pocket application costs (visa + Nepal-side fees), each
+          figure one click from its origin. No engine input — informational. */}
+      <CostToApply />
       <IntakeTimingCard intake={payload.intake} />
       <UniversityMatches
         matches={payload.matches}

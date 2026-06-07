@@ -11,6 +11,7 @@ import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { MatchesTabs } from "@/components/matches/matches-tabs";
 import { VerdictGroup } from "@/components/matches/verdict-group";
 import { PolicyBanner } from "@/components/matches/policy-banner";
+import { CostToApply } from "@/components/results/cost-to-apply";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
 export default async function MatchesPage() {
@@ -78,6 +79,7 @@ export default async function MatchesPage() {
         </p>
       </header>
       <PolicyBanner />
+      <CostToApply />
       <MatchesTabs
         universities={universitiesPanel}
         scholarships={scholarshipsPanel}
