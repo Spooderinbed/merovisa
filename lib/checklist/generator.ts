@@ -10,6 +10,7 @@ import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
 import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
+import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -73,6 +74,15 @@ const HEALTH_EXAM_SOURCE = AU_HEALTH_EXAM.find((r) => r.id === "mhd-before-lodgi
 const MEDICAL_NOTE =
   `DHA may request a health examination as part of your application. ${HEALTH_EXAM_PROCESS} ` +
   `Results are generally valid for ${HEALTH_EXAM_VALIDITY.value} ${HEALTH_EXAM_VALIDITY.unit} — ${HEALTH_EXAM_UNDERTAKING}`;
+
+const BIOMETRICS_LETTER = AU_BIOMETRICS.find((r) => r.id === "immi-app-biometrics-letter")!; // A.031
+// Participation framed from C.123 (boolean — stated, not interpolated); the fee value +
+// the item SourceLine come from C.127 (the most concrete/falsifiable claim — see the guard below).
+const BIOMETRICS_FEE = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "vfs-kathmandu-biometric-collection-fee")!; // C.127
+const BIOMETRICS_NOTE =
+  `Nepal takes part in Australia's biometrics program, so you'll give biometrics as part of your visa application. ` +
+  `Expect a VFS Global collection fee of about ${BIOMETRICS_FEE.unit} ${Number(BIOMETRICS_FEE.value).toLocaleString()} at the Kathmandu centre. ` +
+  `${BIOMETRICS_LETTER.summary}`;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -222,6 +232,20 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     group: "visa", stage: "after-offer", requirement: "required",
     note: MEDICAL_NOTE,
     source: { url: HEALTH_EXAM_SOURCE.source, lastVerified: HEALTH_EXAM_SOURCE.lastVerified },
+  });
+  add({
+    key: "biometrics",
+    kind: null,
+    label: "Biometrics letter",
+    group: "visa",
+    stage: "after-offer",
+    requirement: "required",
+    note: BIOMETRICS_NOTE,
+    // SOURCE-DISPLAY GUARD: the note carries three claims from two modules, but the
+    // SourceLine shows one URL — point it at the most concrete/falsifiable claim, the
+    // C.127 VFS Kathmandu fee/biometrics page, NOT A.031's Immi App page. A.031 stays
+    // reconcile-backed via AU_BIOMETRICS (findingRefs), independent of the rendered URL.
+    source: { url: BIOMETRICS_FEE.source, lastVerified: BIOMETRICS_FEE.lastVerified },
   });
 
   return items;

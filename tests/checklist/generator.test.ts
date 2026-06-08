@@ -205,4 +205,19 @@ describe("generateChecklist", () => {
     expect(med?.note).toContain("12 months");
     expect(med?.source?.url).toContain("immi.homeaffairs.gov.au");
   });
+
+  it("adds the after-offer biometrics info item; SourceLine points at the C.127 fee page, not A.031 (A.031 + reuse C.123/C.127)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const bio = byKey(items, "biometrics");
+    expect(bio).toMatchObject({
+      kind: null, status: "info", group: "visa", stage: "after-offer", requirement: "required",
+      label: "Biometrics letter",
+    });
+    expect(bio?.note).toContain("biometrics program");
+    expect(bio?.note).toContain("NPR");
+    expect(bio?.note).toMatch(/2[,.]?365/); // locale-tolerant (matches the 29,710 assertions)
+    expect(bio?.note).toContain("AUI");
+    // source-display guard: the visible SourceLine is the fee/biometrics page (C.127), not A.031's Immi App page
+    expect(bio?.source?.url).toContain("vfsglobal.com");
+  });
 });
