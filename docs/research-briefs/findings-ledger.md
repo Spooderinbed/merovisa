@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=386 · pending=728
+**Status:** used=390 · pending=724
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -40,12 +40,12 @@
 | A.030 | A | primary | contact | G3 | pending | lib/documents/types.ts (+ plan rules) | DHA lists Pokhara as an Australian Biometrics Collection Centre location in Nepal. |
 | A.031 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Australian Immi App requires a biometrics letter with a Visa Lodgement Number that starts with AUI. |
 | A.032 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s published median processing time for Student visas was 28 days in April 2026. |
-| A.033 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The My Health Declarations service lets eligible applicants complete health examinations before submitting th… |
+| A.033 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The My Health Declarations service lets eligible applicants complete health examinations before submitting th… |
 | A.034 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Health examination results are generally valid for 12 months. |
-| A.035 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | If DHA asks the applicant to sign a health undertaking, the health-assessment validity is 6 months. |
-| A.036 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Outside Australia, health examinations must be done by one of DHA’s approved panel physicians or clinics. |
+| A.035 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | If DHA asks the applicant to sign a health undertaking, the health-assessment validity is 6 months. |
+| A.036 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Outside Australia, health examinations must be done by one of DHA’s approved panel physicians or clinics. |
 | A.037 | A | primary | contact |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s Nepal panel-physician list includes Nepal Mediciti Hospital - Mediciti International Medical Examinatio… |
-| A.038 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Form 26 states that the costs of health examinations are paid directly to the panel physician or clinic by th… |
+| A.038 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Form 26 states that the costs of health examinations are paid directly to the panel physician or clinic by th… |
 | A.039 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | DHA says applicants might need a police certificate from each country where they spent 12 months or more in t… |
 | A.040 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants must attach a copy of their passport. |
 | A.041 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their birth certific… |
