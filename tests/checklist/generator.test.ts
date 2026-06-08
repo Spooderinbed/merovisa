@@ -183,4 +183,17 @@ describe("generateChecklist", () => {
     expect(noc?.note).toContain("original documents");
     expect(noc?.source?.url).toContain("moest.gov.np");
   });
+
+  it("adds the document-preparation info item with translation + scoped certified-copy guidance (A.026–A.028, A.041–A.042)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const prep = byKey(items, "doc-preparation");
+    expect(prep).toMatchObject({
+      kind: null, status: "info", group: "identity", stage: "now", requirement: "required",
+      label: "Translations & certified copies",
+    });
+    expect(prep?.note).toContain("translated into English");
+    expect(prep?.note).toContain("outside Australia");
+    expect(prep?.note).toContain("certified copies of some identity documents");
+    expect(prep?.source?.url).toContain("immi.homeaffairs.gov.au");
+  });
 });

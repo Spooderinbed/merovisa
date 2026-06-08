@@ -7,6 +7,7 @@ import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-
 import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
+import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -55,6 +56,14 @@ const NOC_NOTE =
   "and your bank needs it before releasing tuition or living expenses. " +
   `The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ${NOC_STEPS}`;
 
+const DOC_PREP = AU_DOCUMENT_PREPARATION;
+const DOC_PREP_PRIMARY = DOC_PREP.find((r) => r.id === "translate-non-english")!; // DHA popular-questions → item source
+const TRANSLATION_RULES = DOC_PREP.filter((r) => r.kind === "translation-rule").map((r) => r.summary).join(" ");
+const CERTIFIED_COPIES = DOC_PREP.filter((r) => r.kind === "certified-copy").map((r) => r.summary);
+const DOC_PREP_NOTE =
+  `${TRANSLATION_RULES} DHA also asks for certified copies of some identity documents, ` +
+  `including your ${oxfordAnd(CERTIFIED_COPIES)}.`;
+
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
   return uploaded.has(kind) ? "have" : "missing";
@@ -71,6 +80,16 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
   add({ key: "passport", kind: "passport", label: "Passport bio page", group: "identity", stage: "now", requirement: "required" });
   add({ key: "national-id", kind: "national-id", label: "Citizenship / National ID", group: "identity", stage: "now", requirement: "required" });
   add({ key: "birth-certificate", kind: "birth-certificate", label: "Birth certificate", group: "identity", stage: "now", requirement: "recommended" });
+  add({
+    key: "doc-preparation",
+    kind: null,
+    label: "Translations & certified copies",
+    group: "identity",
+    stage: "now",
+    requirement: "required",
+    note: DOC_PREP_NOTE,
+    source: { url: DOC_PREP_PRIMARY.source, lastVerified: DOC_PREP_PRIMARY.lastVerified },
+  });
 
   // ACADEMIC (now, by level)
   if (program.level === "bachelors") {
