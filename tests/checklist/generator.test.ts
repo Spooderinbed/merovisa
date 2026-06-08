@@ -131,4 +131,23 @@ describe("generateChecklist", () => {
       expect(byKey(items, k)?.requirement).toBe("required");
     }
   });
+
+  it("sources the CoE item from DHA and states you need it for the visa", () => {
+    const coe = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "coe");
+    expect(coe?.note).toContain("student visa application");
+    expect(coe?.source?.url).toContain("immi.homeaffairs.gov.au");
+  });
+
+  it("enriches the OSHC item with start timing + full duration and sources it", () => {
+    const oshc = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "oshc");
+    expect(oshc?.note).toContain("at least a week");
+    expect(oshc?.note?.toLowerCase()).toContain("full");
+    expect(oshc?.source?.url).toContain("immi.homeaffairs.gov.au");
+  });
+
+  it("states travel in the financial coverage note (still names the DHA figure)", () => {
+    const bank = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "fin-bank");
+    expect(bank?.note?.toLowerCase()).toContain("travel");
+    expect(bank?.note).toMatch(/29[,.]?710/);
+  });
 });
