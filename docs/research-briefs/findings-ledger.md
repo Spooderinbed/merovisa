@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=381 · pending=733
+**Status:** used=386 · pending=728
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -33,9 +33,9 @@
 | A.023 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | DHA requires evidence of an approved English-language test score unless the applicant falls within an exempti… |
 | A.024 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s March 2024 student-visa change notice says the minimum IELTS score for a Student visa increased from 5.… |
 | A.025 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s English-language requirements page says test results from tests taken on or before 6 August 2025 can st… |
-| A.026 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The DHA popular-questions page states that all documents not in English must be translated into English. |
-| A.027 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The DHA popular-questions page states that both the original non-English document and the translated document… |
-| A.028 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | If a translator is outside Australia, DHA asks for the translator’s full name, address, phone number and qual… |
+| A.026 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The DHA popular-questions page states that all documents not in English must be translated into English. |
+| A.027 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The DHA popular-questions page states that both the original non-English document and the translated document… |
+| A.028 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | If a translator is outside Australia, DHA asks for the translator’s full name, address, phone number and qual… |
 | A.029 | A | primary | contact | G3 | pending | lib/documents/types.ts (+ plan rules) | DHA lists Kathmandu as an Australian Biometrics Collection Centre location in Nepal. |
 | A.030 | A | primary | contact | G3 | pending | lib/documents/types.ts (+ plan rules) | DHA lists Pokhara as an Australian Biometrics Collection Centre location in Nepal. |
 | A.031 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Australian Immi App requires a biometrics letter with a Visa Lodgement Number that starts with AUI. |
@@ -48,8 +48,8 @@
 | A.038 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Form 26 states that the costs of health examinations are paid directly to the panel physician or clinic by th… |
 | A.039 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | DHA says applicants might need a police certificate from each country where they spent 12 months or more in t… |
 | A.040 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants must attach a copy of their passport. |
-| A.041 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their birth certific… |
-| A.042 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their national ident… |
+| A.041 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their birth certific… |
+| A.042 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their national ident… |
 | A.043 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says the first step for an ordinary e-passport is to complete the online pre-enro… |
 | A.044 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says the applicant chooses the enrolment centre and appointment date and time dur… |
 | A.045 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | After submitting the pre-enrolment form, the applicant receives a copy with a barcode and QR code. |
