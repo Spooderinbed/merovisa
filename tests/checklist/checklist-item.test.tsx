@@ -30,3 +30,26 @@ describe("ChecklistItem", () => {
     expect(screen.queryByRole("link", { name: /Upload/i })).not.toBeInTheDocument();
   });
 });
+
+describe("ChecklistItem info chips (Step/Note)", () => {
+  const info: Item = {
+    key: "x", kind: null, label: "X", group: "visa", stage: "after-offer",
+    requirement: "required", status: "info",
+  };
+  it("renders a Step chip and no requirement pill for a step info item (police-certificate shape)", () => {
+    render(<ul><ChecklistItem item={{ ...info, infoKind: "step", requirement: "recommended" }} /></ul>);
+    expect(screen.getByText("Step")).toBeInTheDocument();
+    expect(screen.queryByText("Recommended")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bring this")).not.toBeInTheDocument();
+  });
+  it("renders a Note chip for a note info item", () => {
+    render(<ul><ChecklistItem item={{ ...info, infoKind: "note" }} /></ul>);
+    expect(screen.getByText("Note")).toBeInTheDocument();
+    expect(screen.queryByText("Bring this")).not.toBeInTheDocument();
+  });
+  it("still shows the Recommended pill on a recommended document item", () => {
+    render(<ul><ChecklistItem item={{ ...info, kind: "birth-certificate", status: "missing", requirement: "recommended" }} /></ul>);
+    expect(screen.getByText("Needed")).toBeInTheDocument();
+    expect(screen.getByText("Recommended")).toBeInTheDocument();
+  });
+});

@@ -112,6 +112,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     group: "identity",
     stage: "now",
     requirement: "required",
+    infoKind: "note",
     note: DOC_PREP_NOTE,
     source: { url: DOC_PREP_PRIMARY.source, lastVerified: DOC_PREP_PRIMARY.lastVerified },
   });
@@ -150,7 +151,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     source: program.source ? { url: program.source, lastVerified: program.lastVerified || undefined } : undefined,
   });
   if (isNursing) {
-    add({ key: "ahpra", kind: null, label: "AHPRA registration", group: "academic", stage: "now", requirement: "required", note: "Nursing programs require registration with the Australian Health Practitioner Regulation Agency (AHPRA)." });
+    add({ key: "ahpra", kind: null, label: "AHPRA registration", group: "academic", stage: "now", requirement: "required", infoKind: "note", note: "Nursing programs require registration with the Australian Health Practitioner Regulation Agency (AHPRA)." });
   }
 
   // FINANCIAL (now, by funding source)
@@ -166,6 +167,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
       key, kind, label, group: "financial", stage: "now", requirement,
       note: isFirstRequired ? financeNote : undefined,
       source: isFirstRequired ? DHA_SOURCE : undefined,
+      infoKind: kind === null ? "note" : undefined,
     });
   };
   switch (sections.finance?.source) {
@@ -201,6 +203,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     group: "financial",
     stage: "now",
     requirement: "required",
+    infoKind: "note",
     note: SOF_REMITTANCE_NOTE,
     source: { url: SOF_PRIMARY.source, lastVerified: SOF_PRIMARY.lastVerified },
   });
@@ -227,6 +230,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     group: "visa",
     stage: "after-offer",
     requirement: "required",
+    infoKind: "step",
     note: NOC_NOTE,
     source: { url: NOC_PRIMARY.source, lastVerified: NOC_PRIMARY.lastVerified },
   });
@@ -245,6 +249,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     group: "visa",
     stage: "after-offer",
     requirement: "required",
+    infoKind: "step",
     note: BIOMETRICS_NOTE,
     // SOURCE-DISPLAY GUARD: the note carries three claims from two modules, but the
     // SourceLine shows one URL — point it at the most concrete/falsifiable claim, the
@@ -259,6 +264,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     group: "visa",
     stage: "after-offer",
     requirement: "recommended", // DHA says "may ask" — conditional, so not "required"
+    infoKind: "step",
     note: POLICE_NOTE,
     // Single source (A.039) — no source-display guard needed: the SourceLine is the DHA
     // character page. The "Nepal Police character certificate" framing is generator

@@ -233,4 +233,22 @@ describe("generateChecklist", () => {
     expect(police?.note).toContain("Nepal Police character certificate");
     expect(police?.source?.url).toContain("immi.homeaffairs.gov.au");
   });
+
+  it("tags kind:null info items with infoKind (step for after-offer process, note for now-stage reference)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: { finance: { source: "scholarship-dependent" } }, uploadedKinds: noKinds });
+    const expectInfo = (key: string, infoKind: "step" | "note") =>
+      expect(byKey(items, key)).toMatchObject({ kind: null, status: "info", infoKind });
+    expectInfo("doc-preparation", "note");
+    expectInfo("fin-nrb-remittance", "note");
+    expectInfo("fin-scholarship", "note");
+    expectInfo("noc-application", "step");
+    expectInfo("biometrics", "step");
+    expectInfo("police-certificate", "step");
+    expect(byKey(items, "passport")?.infoKind).toBeUndefined(); // documents carry no infoKind
+  });
+
+  it("tags the AHPRA info item as note", () => {
+    const items = generateChecklist({ program: { ...baseProgram, field: "nursing" }, sections: {}, uploadedKinds: noKinds });
+    expect(byKey(items, "ahpra")).toMatchObject({ kind: null, status: "info", infoKind: "note" });
+  });
 });
