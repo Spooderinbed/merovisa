@@ -636,3 +636,20 @@ export interface AuStudentVisaRequirement extends Provenanced {
   source: string; // canonical DHA URL for the SourceLine
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A DHA-accepted student financial-capacity evidence record (finance category B).
+ * The four acceptable evidence *paths* DHA lists (money deposit, loan,
+ * scholarship/sponsorship, parent/partner income) plus the living-cost-indicative
+ * rule, distinguished by `kind`. `summary` is the phrase the plan/checklist render;
+ * `label` is the short form the profile editor lists. Fact-only — no scorer reads
+ * it; machine-checked against findings B.007–B.011.
+ */
+export interface AuFinancialEvidence extends Provenanced {
+  id: "deposit" | "loan" | "scholarship" | "parent-partner-income" | "living-cost-indicative";
+  kind: "evidence-path" | "living-cost-note";
+  label: string; // short, for inline UI (profile)
+  summary: string; // full phrase rendered by plan/checklist
+  source: string; // canonical DHA URL
+  lastVerified?: string; // ISO date
+}

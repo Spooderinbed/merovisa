@@ -62,6 +62,8 @@ import { AU_VISA_FACTS } from "@/lib/data/source/au-visa-facts";
 import { AuVisaFactsSchema } from "@/lib/data/schema/au-visa-facts.schema";
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
 import { AuStudentVisaRequirementsSchema } from "@/lib/data/schema/au-student-visa-requirements.schema";
+import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
+import { AuFinancialEvidenceSchema } from "@/lib/data/schema/au-financial-evidence.schema";
 import { AU_PATHWAY_PROGRAMS } from "@/lib/data/source/au-pathway-programs";
 import { AuPathwayProgramsSchema } from "@/lib/data/schema/au-pathway-programs.schema";
 import { AU_TUITION_PAYMENT_FACTS } from "@/lib/data/source/au-tuition-payment-facts";
@@ -130,6 +132,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-student-visa-requirements",
     subRecordKeys: [],
     recordInterface: "AuStudentVisaRequirement",
+  },
+  {
+    // Slice B — DHA-accepted financial-capacity evidence paths (money deposit,
+    // loan, scholarship/sponsorship, parent/partner income) + the living-cost-
+    // indicative rule. Prose rules backing findings B.007–B.011, consumed by the
+    // plan + checklist generators and the profile finance editor. Fact-only.
+    category: "B",
+    exportName: "AU_FINANCIAL_EVIDENCE",
+    data: AU_FINANCIAL_EVIDENCE,
+    schema: AuFinancialEvidenceSchema,
+    recordLabel: "au-financial-evidence",
+    subRecordKeys: [],
+    recordInterface: "AuFinancialEvidence",
   },
   {
     // DHA dependant/school financial-capacity figures (finance category B),
