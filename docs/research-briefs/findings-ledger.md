@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=391 · pending=723
+**Status:** used=392 · pending=722
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -46,7 +46,7 @@
 | A.036 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Outside Australia, health examinations must be done by one of DHA’s approved panel physicians or clinics. |
 | A.037 | A | primary | contact |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s Nepal panel-physician list includes Nepal Mediciti Hospital - Mediciti International Medical Examinatio… |
 | A.038 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Form 26 states that the costs of health examinations are paid directly to the panel physician or clinic by th… |
-| A.039 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | DHA says applicants might need a police certificate from each country where they spent 12 months or more in t… |
+| A.039 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | DHA says applicants might need a police certificate from each country where they spent 12 months or more in t… |
 | A.040 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants must attach a copy of their passport. |
 | A.041 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their birth certific… |
 | A.042 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their national ident… |
