@@ -767,3 +767,21 @@ export interface AuBiometrics extends Provenanced {
   source: string;    // canonical DHA URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * DHA police / character-certificate requirement for Nepal→Australia applicants
+ * (logistics category A). A single sourced fact: DHA may ask for a police certificate
+ * from each country where the applicant spent 12 months or more in the last 10 years,
+ * counting only time after turning 16 (A.039). `summary` is the sentence the
+ * plan/checklist render. The Nepal-side OPCR/CID process (A.094–A.103) is NOT here — it
+ * is a future slice. Fact-only — no scorer reads it; machine-checked against A.039.
+ * Single-record module (no `kind` discriminator), the second of its shape after
+ * AuBiometrics.
+ */
+export interface AuPoliceCertificate extends Provenanced {
+  id: "police-certificate-requirement";
+  label: string;     // short, inline
+  summary: string;   // the full sentence rendered by plan/checklist
+  source: string;    // canonical DHA URL
+  lastVerified?: string; // ISO date
+}

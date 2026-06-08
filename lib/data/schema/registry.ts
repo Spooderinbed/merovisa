@@ -78,6 +78,8 @@ import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AuHealthExamSchema } from "@/lib/data/schema/au-health-exam.schema";
 import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import { AuBiometricsSchema } from "@/lib/data/schema/au-biometrics.schema";
+import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
+import { AuPoliceCertificateSchema } from "@/lib/data/schema/au-police-certificate.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -638,5 +640,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-biometrics",
     subRecordKeys: [],
     recordInterface: "AuBiometrics",
+  },
+  {
+    // Slice H — DHA police / character-certificate requirement (logistics category A):
+    // DHA may ask for a police certificate from each country where the applicant spent
+    // 12 months or more in the last 10 years after turning 16 (A.039, a single record).
+    // The third post-lodgement visa-readiness item after health (F) and biometrics (G);
+    // surfaced in the checklist + plan. The Nepal-side OPCR process (A.094–A.103) is a
+    // future slice. Fact-only: no scorer reads it.
+    category: "A",
+    exportName: "AU_POLICE_CERTIFICATE",
+    data: AU_POLICE_CERTIFICATE,
+    schema: AuPoliceCertificateSchema,
+    recordLabel: "au-police-certificate",
+    subRecordKeys: [],
+    recordInterface: "AuPoliceCertificate",
   },
 ];
