@@ -6,6 +6,7 @@ import { NEPAL_L3_BANK_SEASONING_MONTHS } from "@/lib/programs/policy";
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
 import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
+import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -37,6 +38,22 @@ const SOF_REMITTANCE_NOTE =
   `${SOF_DEF.summary} Before releasing foreign currency, your bank requires ` +
   `${NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "bank-requirement").map((r) => r.summary).join(" and ")}. ` +
   `${NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "remittance-mechanism").map((r) => r.summary).join(" ")}`;
+
+/** Join phrases as "a, b, and c" (Oxford "and"). */
+function oxfordAnd(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0]!;
+  const last = items[items.length - 1]!;
+  return `${items.slice(0, -1).join(", ")}, and ${last}`;
+}
+
+const NOC_PRIMARY = NEPAL_NOC_JOURNEY.find((r) => r.id === "noc-doc-citizenship")!; // MoEST portal → item source
+const NOC_DOCS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "required-document").map((r) => r.summary);
+const NOC_STEPS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "process-step").map((r) => r.summary).join(" ");
+const NOC_NOTE =
+  "A No Objection Certificate (NOC) from Nepal's Ministry of Education clears you to study abroad, " +
+  "and your bank needs it before releasing tuition or living expenses. " +
+  `The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ${NOC_STEPS}`;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -159,6 +176,16 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
 
   // VISA (after-offer)
   add({ key: "offer-letter", kind: "offer-letter", label: "University offer letter", group: "visa", stage: "after-offer", requirement: "required", note: "Issued when a university accepts you." });
+  add({
+    key: "noc-application",
+    kind: null,
+    label: "No Objection Certificate (NOC)",
+    group: "visa",
+    stage: "after-offer",
+    requirement: "required",
+    note: NOC_NOTE,
+    source: { url: NOC_PRIMARY.source, lastVerified: NOC_PRIMARY.lastVerified },
+  });
   add({ key: "coe", kind: "coe", label: "Confirmation of Enrolment (CoE)", group: "visa", stage: "after-offer", requirement: "required", note: VISA_REQ["coe"]!.summary, source: reqSource("coe") });
   add({ key: "oshc", kind: "oshc", label: "Overseas Student Health Cover (OSHC)", group: "visa", stage: "after-offer", requirement: "required", note: VISA_REQ["oshc"]!.summary, source: reqSource("oshc") });
   add({ key: "medical", kind: "medical", label: "Panel medical exam", group: "visa", stage: "after-offer", requirement: "required", note: "When DHA requests it." });

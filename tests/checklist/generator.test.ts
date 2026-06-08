@@ -170,4 +170,17 @@ describe("generateChecklist", () => {
     expect(remit?.note).toContain("grants Nepalese students to study abroad");
     expect(remit?.source?.url).toContain("nrb.org.np");
   });
+
+  it("adds the after-offer NOC application item with the MoEST documents + steps (B.017–B.024)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const noc = byKey(items, "noc-application");
+    expect(noc).toMatchObject({
+      kind: null, status: "info", group: "visa", stage: "after-offer", requirement: "required",
+      label: "No Objection Certificate (NOC)",
+    });
+    expect(noc?.note).toContain("No Objection Certificate");
+    expect(noc?.note).toContain("academic transcript");
+    expect(noc?.note).toContain("original documents");
+    expect(noc?.source?.url).toContain("moest.gov.np");
+  });
 });
