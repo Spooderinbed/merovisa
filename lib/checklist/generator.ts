@@ -11,6 +11,7 @@ import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparati
 import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
+import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -83,6 +84,10 @@ const BIOMETRICS_NOTE =
   `Nepal takes part in Australia's biometrics program, so you'll give biometrics as part of your visa application. ` +
   `Expect a VFS Global collection fee of about ${BIOMETRICS_FEE.unit} ${Number(BIOMETRICS_FEE.value).toLocaleString()} at the Kathmandu centre. ` +
   `${BIOMETRICS_LETTER.summary}`;
+const POLICE_CERT = AU_POLICE_CERTIFICATE.find((r) => r.id === "police-certificate-requirement")!; // A.039
+const POLICE_NOTE =
+  `${POLICE_CERT.summary} For most Nepali students that means a Nepal Police character certificate, ` +
+  `plus one from any other country you've lived in that long.`;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -246,6 +251,19 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     // C.127 VFS Kathmandu fee/biometrics page, NOT A.031's Immi App page. A.031 stays
     // reconcile-backed via AU_BIOMETRICS (findingRefs), independent of the rendered URL.
     source: { url: BIOMETRICS_FEE.source, lastVerified: BIOMETRICS_FEE.lastVerified },
+  });
+  add({
+    key: "police-certificate",
+    kind: null,
+    label: "Police certificate",
+    group: "visa",
+    stage: "after-offer",
+    requirement: "recommended", // DHA says "may ask" — conditional, so not "required"
+    note: POLICE_NOTE,
+    // Single source (A.039) — no source-display guard needed: the SourceLine is the DHA
+    // character page. The "Nepal Police character certificate" framing is generator
+    // contextualization for the Nepal→Australia audience, not a separately-sourced claim.
+    source: { url: POLICE_CERT.source, lastVerified: POLICE_CERT.lastVerified },
   });
 
   return items;

@@ -220,4 +220,17 @@ describe("generateChecklist", () => {
     // source-display guard: the visible SourceLine is the fee/biometrics page (C.127), not A.031's Immi App page
     expect(bio?.source?.url).toContain("vfsglobal.com");
   });
+
+  it("adds the after-offer police-certificate info item with the DHA rule + Nepal framing (A.039)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const police = byKey(items, "police-certificate");
+    expect(police).toMatchObject({
+      kind: null, status: "info", group: "visa", stage: "after-offer", requirement: "recommended",
+      label: "Police certificate",
+    });
+    expect(police?.note).toContain("12 months or more");
+    expect(police?.note).toContain("after you turned 16");
+    expect(police?.note).toContain("Nepal Police character certificate");
+    expect(police?.source?.url).toContain("immi.homeaffairs.gov.au");
+  });
 });
