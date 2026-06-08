@@ -653,3 +653,26 @@ export interface AuFinancialEvidence extends Provenanced {
   source: string; // canonical DHA URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * The Nepal-side source-of-funds / remittance pathway (finance category B). How a
+ * Nepali bank legally releases foreign currency for study: the NOC + institution
+ * documents it requires, the NRB living-expense remittance, and the MoEST-portal
+ * approval check — plus a one-line definition of what an NOC is. Distinguished by
+ * `kind`. `summary` is the phrase the plan/checklist render; `label` is the short
+ * checklist label. Fact-only — no scorer reads it; machine-checked against
+ * findings B.012–B.016.
+ */
+export interface NepalSourceOfFunds extends Provenanced {
+  id:
+    | "noc-definition"
+    | "noc-requirement"
+    | "institution-documents"
+    | "living-expense-remittance"
+    | "forex-portal-confirmation";
+  kind: "definition" | "bank-requirement" | "remittance-mechanism";
+  label: string; // short, for the checklist item
+  summary: string; // full phrase rendered by plan/checklist
+  source: string; // canonical NRB / MoEST URL
+  lastVerified?: string; // ISO date
+}

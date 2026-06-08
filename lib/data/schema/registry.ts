@@ -68,6 +68,8 @@ import { AU_PATHWAY_PROGRAMS } from "@/lib/data/source/au-pathway-programs";
 import { AuPathwayProgramsSchema } from "@/lib/data/schema/au-pathway-programs.schema";
 import { AU_TUITION_PAYMENT_FACTS } from "@/lib/data/source/au-tuition-payment-facts";
 import { AuTuitionPaymentFactsSchema } from "@/lib/data/schema/au-tuition-payment-facts.schema";
+import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
+import { NepalSourceOfFundsSchema } from "@/lib/data/schema/nepal-source-of-funds.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -557,5 +559,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-tuition-payment-facts",
     subRecordKeys: [],
     recordInterface: "AuTuitionPaymentFact",
+  },
+  {
+    // Slice C — Nepal source-of-funds / remittance readiness (finance category B).
+    // How a Nepali bank legally releases foreign currency for study: the NOC +
+    // institution documents it requires, the NRB living-expense remittance, and the
+    // MoEST-portal approval check — plus a one-line NOC definition. Prose rules
+    // backing findings B.012–B.016, consumed by the plan + checklist generators.
+    // Fact-only: no scorer reads it.
+    category: "B",
+    exportName: "NEPAL_SOURCE_OF_FUNDS",
+    data: NEPAL_SOURCE_OF_FUNDS,
+    schema: NepalSourceOfFundsSchema,
+    recordLabel: "nepal-source-of-funds",
+    subRecordKeys: [],
+    recordInterface: "NepalSourceOfFunds",
   },
 ];
