@@ -13,13 +13,14 @@ const program: Program = {
 };
 
 describe("ChecklistView", () => {
-  it("renders both stage headings, the program name, and group labels", () => {
+  it("renders both stage headings, the program name, topical now-groups, and the after-offer document/step split", () => {
     const items = generateChecklist({ program, sections: {}, uploadedKinds: new Set<DocumentKind>() });
     render(<ChecklistView program={program} university={null} items={items} />);
     expect(screen.getByRole("heading", { name: "Master of IT" })).toBeInTheDocument();
     expect(screen.getByText("What you need now")).toBeInTheDocument();
     expect(screen.getByText("After your offer")).toBeInTheDocument();
     expect(screen.getByText("Identity")).toBeInTheDocument();
-    expect(screen.getByText("Visa")).toBeInTheDocument();
+    expect(screen.getByText("Documents")).toBeInTheDocument();
+    expect(screen.getByText("Visa lodgement steps")).toBeInTheDocument();
   });
 });
