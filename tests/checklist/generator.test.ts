@@ -156,4 +156,18 @@ describe("generateChecklist", () => {
     expect(bank?.note).toContain("indicative");
     expect(bank?.note).toMatch(/29[,.]?710/); // still names the figure
   });
+
+  it("adds the NRB remittance info item naming NOC + institution docs (B.012–B.016)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const remit = byKey(items, "fin-nrb-remittance");
+    expect(remit).toMatchObject({
+      kind: null, status: "info", group: "financial", stage: "now", label: "NOC + institution documents",
+    });
+    expect(remit?.note).toContain("No Objection Certificate");
+    expect(remit?.note).toContain("institution letter");
+    expect(remit?.note).toContain("Nepal Rastra Bank");
+    expect(remit?.note).toContain("MoEST portal");
+    expect(remit?.note).toContain("grants Nepalese students to study abroad");
+    expect(remit?.source?.url).toContain("nrb.org.np");
+  });
 });

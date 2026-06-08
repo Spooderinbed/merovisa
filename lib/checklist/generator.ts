@@ -5,6 +5,7 @@ import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living"
 import { NEPAL_L3_BANK_SEASONING_MONTHS } from "@/lib/programs/policy";
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
 import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
+import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -30,6 +31,12 @@ const reqSource = (id: string): ChecklistSource | undefined => {
   return r ? { url: r.source, lastVerified: r.lastVerified } : undefined;
 };
 const LIVING_COST_INDICATIVE = AU_FINANCIAL_EVIDENCE.find((e) => e.id === "living-cost-indicative")!;
+const SOF_DEF = NEPAL_SOURCE_OF_FUNDS.find((r) => r.kind === "definition")!;
+const SOF_PRIMARY = NEPAL_SOURCE_OF_FUNDS.find((r) => r.id === "noc-requirement")!; // NRB study page → item source
+const SOF_REMITTANCE_NOTE =
+  `${SOF_DEF.summary} Before releasing foreign currency, your bank requires ` +
+  `${NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "bank-requirement").map((r) => r.summary).join(" and ")}. ` +
+  `${NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "remittance-mechanism").map((r) => r.summary).join(" ")}`;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -124,6 +131,18 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     default:
       addFinance("fin-bank", "bank-statement", "Proof of funds (bank statement, loan sanction, or sponsor income)", "required");
   }
+
+  // Nepal-side remittance readiness (NRB rules) — unconditional reference note.
+  add({
+    key: "fin-nrb-remittance",
+    kind: null,
+    label: "NOC + institution documents",
+    group: "financial",
+    stage: "now",
+    requirement: "required",
+    note: SOF_REMITTANCE_NOTE,
+    source: { url: SOF_PRIMARY.source, lastVerified: SOF_PRIMARY.lastVerified },
+  });
 
   // EMPLOYMENT (now, conditional)
   const hasWork = !!sections.work?.title;
