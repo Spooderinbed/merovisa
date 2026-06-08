@@ -5,6 +5,7 @@ import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living"
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
 import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
+import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -23,8 +24,18 @@ function oxfordOr(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}, or ${last}`;
 }
 
+/** Join phrases as "a, b, and c" (Oxford "and"). */
+function oxfordAnd(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0]!;
+  const last = items[items.length - 1]!;
+  return `${items.slice(0, -1).join(", ")}, and ${last}`;
+}
+
 const SOF_REQUIREMENTS = NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "bank-requirement").map((r) => r.summary).join(" and ");
 const SOF_MECHANISMS = NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "remittance-mechanism").map((r) => r.summary).join(" ");
+const NOC_DOCS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "required-document").map((r) => r.summary);
+const NOC_STEPS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "process-step").map((r) => r.summary).join(" ");
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -138,6 +149,20 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       title: "Prepare your Genuine Student answers",
       body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer four questions — your current circumstances and ties, why this course and provider, how it benefits you, and anything else relevant — each in ${gs.responseLimitWords} words or less. Draft your answers early; they anchor your whole application.`,
       timeEstimate: "2-4 hours",
+    });
+  }
+
+  // NEPAL NOC APPLICATION JOURNEY (MoEST) — once Australia is the committed destination
+  if (inputs.primaryDestinationId === "australia") {
+    out.push({
+      kind: "apply-for-noc",
+      impact: "medium",
+      title: "Apply for your NOC (No Objection Certificate)",
+      body:
+        `Once your offer arrives, apply for your No Objection Certificate (NOC) — the permit from ` +
+        `Nepal's Ministry of Education that your bank needs before it can remit tuition. The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ` +
+        `${NOC_STEPS} It can take time, so start as soon as you're accepted.`,
+      timeEstimate: "1-2 weeks",
     });
   }
 

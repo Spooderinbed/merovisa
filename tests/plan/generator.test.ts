@@ -104,4 +104,22 @@ describe("generatePlan", () => {
     const items = generatePlan({ sections: { finance: { source: "scholarship-dependent" } }, primaryDestinationId: null, matches: [], policy });
     expect(items.some((i) => i.kind === "prepare-fund-remittance")).toBe(false);
   });
+
+  it("adds the apply-for-NOC item for an Australian primary destination (B.017–B.024)", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const noc = items.find((i) => i.kind === "apply-for-noc");
+    expect(noc).toBeTruthy();
+    expect(noc?.impact).toBe("medium");
+    expect(noc?.title).toContain("NOC");
+    expect(noc?.body).toContain("academic transcript");
+    expect(noc?.body).toContain("original documents");
+    expect(noc?.body).toContain("MoEST");
+  });
+
+  it("does not add the apply-for-NOC item for a non-AU or unset destination", () => {
+    const none = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    expect(none.some((i) => i.kind === "apply-for-noc")).toBe(false);
+    const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
+    expect(canada.some((i) => i.kind === "apply-for-noc")).toBe(false);
+  });
 });
