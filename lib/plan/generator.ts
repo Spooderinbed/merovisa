@@ -3,12 +3,23 @@ import type { MatchResult } from "@/lib/matches/types";
 import type { PlanItem } from "./types";
 import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
+import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
   primaryDestinationId: string | null;
   matches: MatchResult[];        // for "X more strong matches if you fix Y" hints
   policy: { nepalAssessmentLevel: "L2" | "L3" };
+}
+
+const EVIDENCE_PATHS = AU_FINANCIAL_EVIDENCE.filter((e) => e.kind === "evidence-path").map((e) => e.summary);
+
+/** Join phrases as "a, b, c, or d" (Oxford "or"). */
+function oxfordOr(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0]!;
+  const last = items[items.length - 1]!;
+  return `${items.slice(0, -1).join(", ")}, or ${last}`;
 }
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
@@ -65,7 +76,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "upload-proof-of-funds",
       impact: "high",
       title: "Add proof of funds",
-      body: `DHA expects evidence covering AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living + first-year tuition. Bank statement or sanction letter from a Class A institution.`,
+      body: `DHA expects evidence covering AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living costs plus first-year tuition. It accepts ${oxfordOr(EVIDENCE_PATHS)}. A bank statement or loan sanction letter from a Class A institution is the usual proof.`,
       liftEstimate: "Single biggest lift for visa case strength",
       timeEstimate: "1-3 days",
     });

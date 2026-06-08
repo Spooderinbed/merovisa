@@ -17,6 +17,16 @@ describe("generatePlan", () => {
     expect(kinds).toContain("upload-proof-of-funds");
   });
 
+  it("enumerates the four DHA-accepted evidence paths in the proof-of-funds item", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    const proof = items.find((i) => i.kind === "upload-proof-of-funds");
+    expect(proof).toBeTruthy();
+    expect(proof?.body).toContain("money deposit held with a financial institution");
+    expect(proof?.body).toContain("loan from a government or financial institution");
+    expect(proof?.body).toContain("scholarship or sponsorship");
+    expect(proof?.body).toContain("parents' or partner's annual income");
+  });
+
   it("when english.overall set + reportUploaded=false, asks to upload report instead of asking for score", () => {
     const items = generatePlan({
       sections: { english: { overall: 7, reportUploaded: false } },
