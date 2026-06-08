@@ -676,3 +676,28 @@ export interface NepalSourceOfFunds extends Provenanced {
   source: string; // canonical NRB / MoEST URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * The MoEST No Objection Certificate (NOC) application journey (finance category B).
+ * The sequel to NepalSourceOfFunds: once the student knows the bank needs an NOC,
+ * how to get one — the documents the MoEST portal requires and the two process steps
+ * (online submission, in-person originals check). Distinguished by `kind`. `summary`
+ * is the phrase the plan/checklist render; `label` is the short checklist label.
+ * Fact-only — no scorer reads it; machine-checked against findings B.017–B.024.
+ */
+export interface NepalNocJourney extends Provenanced {
+  id:
+    | "noc-doc-citizenship"
+    | "noc-doc-academic"
+    | "noc-doc-guardian"
+    | "noc-doc-previous"
+    | "noc-doc-transcript"
+    | "noc-doc-offer"
+    | "noc-step-online"
+    | "noc-step-visit";
+  kind: "required-document" | "process-step";
+  label: string; // short, for the checklist item
+  summary: string; // full phrase rendered by plan/checklist
+  source: string; // canonical MoEST URL
+  lastVerified?: string; // ISO date
+}

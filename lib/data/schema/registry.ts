@@ -70,6 +70,8 @@ import { AU_TUITION_PAYMENT_FACTS } from "@/lib/data/source/au-tuition-payment-f
 import { AuTuitionPaymentFactsSchema } from "@/lib/data/schema/au-tuition-payment-facts.schema";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import { NepalSourceOfFundsSchema } from "@/lib/data/schema/nepal-source-of-funds.schema";
+import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
+import { NepalNocJourneySchema } from "@/lib/data/schema/nepal-noc-journey.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -574,5 +576,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-source-of-funds",
     subRecordKeys: [],
     recordInterface: "NepalSourceOfFunds",
+  },
+  {
+    // Slice D — MoEST No Objection Certificate (NOC) application journey (finance
+    // category B). The sequel to nepal-source-of-funds: the six documents the MoEST
+    // portal requires + the two process steps (online submission, in-person originals
+    // check). Prose rules backing findings B.017–B.024, consumed by the plan +
+    // checklist generators. Fact-only: no scorer reads it.
+    category: "B",
+    exportName: "NEPAL_NOC_JOURNEY",
+    data: NEPAL_NOC_JOURNEY,
+    schema: NepalNocJourneySchema,
+    recordLabel: "nepal-noc-journey",
+    subRecordKeys: [],
+    recordInterface: "NepalNocJourney",
   },
 ];
