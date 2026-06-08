@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=390 · pending=724
+**Status:** used=391 · pending=723
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -38,7 +38,7 @@
 | A.028 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | If a translator is outside Australia, DHA asks for the translator’s full name, address, phone number and qual… |
 | A.029 | A | primary | contact | G3 | pending | lib/documents/types.ts (+ plan rules) | DHA lists Kathmandu as an Australian Biometrics Collection Centre location in Nepal. |
 | A.030 | A | primary | contact | G3 | pending | lib/documents/types.ts (+ plan rules) | DHA lists Pokhara as an Australian Biometrics Collection Centre location in Nepal. |
-| A.031 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Australian Immi App requires a biometrics letter with a Visa Lodgement Number that starts with AUI. |
+| A.031 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The Australian Immi App requires a biometrics letter with a Visa Lodgement Number that starts with AUI. |
 | A.032 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s published median processing time for Student visas was 28 days in April 2026. |
 | A.033 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The My Health Declarations service lets eligible applicants complete health examinations before submitting th… |
 | A.034 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Health examination results are generally valid for 12 months. |
