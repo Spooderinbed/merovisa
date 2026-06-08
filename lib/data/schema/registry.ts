@@ -74,6 +74,8 @@ import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import { NepalNocJourneySchema } from "@/lib/data/schema/nepal-noc-journey.schema";
 import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
 import { AuDocumentPreparationSchema } from "@/lib/data/schema/au-document-preparation.schema";
+import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
+import { AuHealthExamSchema } from "@/lib/data/schema/au-health-exam.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -605,5 +607,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-document-preparation",
     subRecordKeys: [],
     recordInterface: "AuDocumentPreparation",
+  },
+  {
+    // Slice F — DHA health-examination readiness (logistics category A): where the
+    // exam is done (panel physician/clinic overseas), who pays, My Health Declarations
+    // before lodging, and the 6-month health-undertaking validity. Backs A.033/A.035/
+    // A.036/A.038, consumed by the plan + checklist generators (12-month base validity
+    // reused from C.092). Fact-only: no scorer reads it.
+    category: "A",
+    exportName: "AU_HEALTH_EXAM",
+    data: AU_HEALTH_EXAM,
+    schema: AuHealthExamSchema,
+    recordLabel: "au-health-exam",
+    subRecordKeys: [],
+    recordInterface: "AuHealthExam",
   },
 ];

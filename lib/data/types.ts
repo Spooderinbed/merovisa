@@ -727,3 +727,26 @@ export interface AuDocumentPreparation extends Provenanced {
   source: string; // canonical DHA URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * DHA health-examination readiness for Nepal→Australia applicants (logistics category
+ * A). What the visa health examination involves: where it must be done (a DHA-approved
+ * panel physician or clinic, outside Australia), who pays (the applicant, directly),
+ * the My Health Declarations option to complete it before lodging, and the
+ * health-undertaking validity exception. Distinguished by `kind`; `summary` is the
+ * phrase the plan/checklist render. The 12-month base validity is NOT here — it is
+ * reused from the structured C.092 (au-health-biometric-facts). Fact-only — no scorer
+ * reads it; machine-checked against A.033, A.035, A.036, A.038.
+ */
+export interface AuHealthExam extends Provenanced {
+  id:
+    | "panel-physician-overseas"
+    | "cost-paid-to-clinic"
+    | "mhd-before-lodging"
+    | "undertaking-validity";
+  kind: "process" | "validity";
+  label: string; // short, inline
+  summary: string; // process = full sentence; validity = the 6-month nuance fragment
+  source: string; // canonical DHA URL
+  lastVerified?: string; // ISO date
+}
