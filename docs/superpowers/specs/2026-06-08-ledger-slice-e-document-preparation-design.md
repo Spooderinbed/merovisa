@@ -140,18 +140,18 @@ const DOC_PREP_NOTE =
 
 ```ts
 add({
-  key: "doc-preparation", kind: null, label: "Translated & certified documents",
+  key: "doc-preparation", kind: null, label: "Translations & certified copies",
   group: "identity", stage: "now", requirement: "required",
   note: DOC_PREP_NOTE,
   source: { url: DOC_PREP_PRIMARY.source, lastVerified: DOC_PREP_PRIMARY.lastVerified },
 });
 ```
 
-`kind:null` → `status:"info"`; the checklist UI renders `info` with a "· Bring this" suffix ([checklist-item.tsx:4](../../../components/checklist/checklist-item.tsx)), so the label is a document noun-phrase — **"Translated & certified documents · Bring this"** reads naturally. The existing private `oxfordAnd` helper ([checklist:43](../../../lib/checklist/generator.ts)) is **reused** (no new helper). The identity rows, academic/english/financial items, and the visa items are **unchanged**.
+`kind:null` → `status:"info"`; the checklist UI renders `info` with a "· Bring this" suffix ([checklist-item.tsx:4](../../../components/checklist/checklist-item.tsx)), so the label is a document noun-phrase — **"Translations & certified copies · Bring this"** reads naturally. The existing private `oxfordAnd` helper ([checklist:43](../../../lib/checklist/generator.ts)) is **reused** (no new helper). The identity rows, academic/english/financial items, and the visa items are **unchanged**.
 
 > **Rendered note:** "Any document not in English must be translated into English. Submit both the original document and its English translation. If your translator is outside Australia, include their full name, address, phone number, and qualifications. DHA also asks for certified copies of some identity documents, including your birth certificate and national identity card."
 
-New assertions: item `doc-preparation` exists in the `identity` group, `stage:"now"`, `status:"info"`, `kind:null`, `requirement:"required"`, `label:"Translated & certified documents"`; note contains "translated into English" / "outside Australia" / "certified copies of some identity documents"; `source.url` contains `immi.homeaffairs.gov.au`.
+New assertions: item `doc-preparation` exists in the `identity` group, `stage:"now"`, `status:"info"`, `kind:null`, `requirement:"required"`, `label:"Translations & certified copies"`; note contains "translated into English" / "outside Australia" / "certified copies of some identity documents"; `source.url` contains `immi.homeaffairs.gov.au`.
 
 ---
 
@@ -210,7 +210,7 @@ New assertions: item `translate-certify-documents` present for `primaryDestinati
 Write the failing test first; watch it fail for the right reason; implement the minimum; confirm green; then mutate to confirm the guard bites.
 
 - **`tests/data/`** (registry-driven, inherited): reconcile (coverage / validity / value-fidelity N/A for prose-only / conflict gate), schema parse, flip-status normal-mode clean, findings-integrity + registry-integrity for the new module.
-- **`tests/checklist/generator.test.ts`**: new case — `doc-preparation` identity-group info item (kind null, status info, stage now, requirement required, label "Translated & certified documents") with the content tokens + DHA source. RED first.
+- **`tests/checklist/generator.test.ts`**: new case — `doc-preparation` identity-group info item (kind null, status info, stage now, requirement required, label "Translations & certified copies") with the content tokens + DHA source. RED first.
 - **`tests/plan/generator.test.ts`**: new cases — `translate-certify-documents` present for AU primary with the tokens; absent for unset destination; absent for non-AU (`"canada"`). RED first.
 - **Adversarial mutation** (must bite, then revert) — adapted for prose-only (no structured value to drift): revert one of the five findings' `value_status` to `unset` while it stays `status:"used"`, run `tests/data/reconcile-modules.test.ts`, confirm it fails with `USED_UNSET`; restore via `git checkout --`.
 
@@ -229,7 +229,7 @@ Write the failing test first; watch it fail for the right reason; implement the 
 
 **Best-effort (non-gating) — do it if the environment allows; it never blocks the merge:**
 
-- Browser smoke via the preview tools: a Nepal→AU `/plan` (with AU primary) shows the new "Translate and certify your documents" action; `/checklist/[programId]` shows the identity-group "Translated & certified documents" note. Signed-in routes are OAuth-gated, so this typically falls back to the composition unit tests — note which was used. The automated tests + reconcile + typecheck are the real gate.
+- Browser smoke via the preview tools: a Nepal→AU `/plan` (with AU primary) shows the new "Translate and certify your documents" action; `/checklist/[programId]` shows the identity-group "Translations & certified copies" note. Signed-in routes are OAuth-gated, so this typically falls back to the composition unit tests — note which was used. The automated tests + reconcile + typecheck are the real gate.
 
 ---
 
