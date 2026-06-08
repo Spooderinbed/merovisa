@@ -4,32 +4,32 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=342 · pending=772
+**Status:** used=363 · pending=751
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
 | A.001 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The base application charge for a Subclass 500 Student visa is AUD2,000.00. |
-| A.002 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | A Subclass 500 applicant must provide a Confirmation of Enrolment for all intended courses unless they fall w… |
+| A.002 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | A Subclass 500 applicant must provide a Confirmation of Enrolment for all intended courses unless they fall w… |
 | A.003 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | If the applicant is under 18, DHA requires evidence of accommodation and welfare arrangements in Australia. |
 | A.004 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Form 157N is one acceptable welfare document for an under-18 student visa applicant. |
 | A.005 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | If a child under 18 is included in the visa application and one or both parents are not applying, both parent… |
-| A.006 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | DHA requires Overseas Student Health Cover as adequate health insurance for a student visa application. |
-| A.007 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | OSHC must start at least one week before the course starts. |
-| A.008 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | OSHC must cover the full duration of the student’s stay in Australia. |
-| A.009 | A | primary | process | G1 | pending | lib/documents/types.ts (+ plan rules) | If the student or agent arranged OSHC, the visa application should include the insurer name, policy start dat… |
-| A.010 | A | primary | process | G1 | pending | lib/documents/types.ts (+ plan rules) | If the education provider arranged OSHC, the visa application should include the insurer name and policy date… |
-| A.011 | A | primary | data | G2 | pending | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover travel costs. |
-| A.012 | A | primary | data | G2 | pending | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover 12 months of living costs. |
-| A.013 | A | primary | data | G2 | pending | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover tuition fees for the student and any accompanying family members. |
+| A.006 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | DHA requires Overseas Student Health Cover as adequate health insurance for a student visa application. |
+| A.007 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | OSHC must start at least one week before the course starts. |
+| A.008 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | OSHC must cover the full duration of the student’s stay in Australia. |
+| A.009 | A | primary | process | G1 | used | lib/documents/types.ts (+ plan rules) | If the student or agent arranged OSHC, the visa application should include the insurer name, policy start dat… |
+| A.010 | A | primary | process | G1 | used | lib/documents/types.ts (+ plan rules) | If the education provider arranged OSHC, the visa application should include the insurer name and policy date… |
+| A.011 | A | primary | data | G2 | used | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover travel costs. |
+| A.012 | A | primary | data | G2 | used | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover 12 months of living costs. |
+| A.013 | A | primary | data | G2 | used | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover tuition fees for the student and any accompanying family members. |
 | A.014 | A | primary | data | G2 | pending | lib/documents/types.ts (+ plan rules) | Student visa financial evidence must cover school costs for any school-aged dependants. |
 | A.015 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | For student visas lodged on or after 10 May 2024, the individual-student financial capacity figure is AUD29,7… |
-| A.016 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Student visa applications lodged on or after 23 March 2024 are assessed under the Genuine Student requirement. |
-| A.017 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The first GS question asks for the applicant’s current circumstances, including ties to family, community, em… |
-| A.018 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The second GS question asks why the applicant wants to study the course in Australia with that provider and t… |
-| A.019 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The third GS question asks how completing the course will benefit the applicant. |
-| A.020 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The fourth GS question asks for any other relevant information the applicant wants to include. |
-| A.021 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Each GS response must be written in English and can be no longer than 150 words. |
-| A.022 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | There is an additional GS question for applicants who previously held a student visa or who are applying in A… |
+| A.016 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Student visa applications lodged on or after 23 March 2024 are assessed under the Genuine Student requirement. |
+| A.017 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The first GS question asks for the applicant’s current circumstances, including ties to family, community, em… |
+| A.018 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The second GS question asks why the applicant wants to study the course in Australia with that provider and t… |
+| A.019 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The third GS question asks how completing the course will benefit the applicant. |
+| A.020 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The fourth GS question asks for any other relevant information the applicant wants to include. |
+| A.021 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Each GS response must be written in English and can be no longer than 150 words. |
+| A.022 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | There is an additional GS question for applicants who previously held a student visa or who are applying in A… |
 | A.023 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | DHA requires evidence of an approved English-language test score unless the applicant falls within an exempti… |
 | A.024 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s March 2024 student-visa change notice says the minimum IELTS score for a Student visa increased from 5.… |
 | A.025 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s English-language requirements page says test results from tests taken on or before 6 August 2025 can st… |
@@ -125,11 +125,11 @@
 | A.115 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | For property-tax determination on a house built before 2021, Lalitpur Metropolitan City’s FAQ lists a ward re… |
 | A.116 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | For property-tax determination on a house built after 2021, Lalitpur Metropolitan City’s FAQ lists the map-pa… |
 | A.117 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | If a house was built without map approval, Lalitpur Metropolitan City’s FAQ says a technical field inspection… |
-| A.118 | A | primary | data | G11 | pending | lib/documents/types.ts (+ plan rules) | The University of Wollongong says a CoE is an official document that shows course start and end dates. |
-| A.119 | A | primary | data | G11 | pending | lib/documents/types.ts (+ plan rules) | The University of Wollongong says a CoE is an official document that shows fees paid and total fees to be pai… |
-| A.120 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The University of Wollongong says a CoE is required to be submitted to DHA before applying for a student visa. |
-| A.121 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Australian Catholic University says a CoE will be issued only after enrolment and Genuine Student conditions … |
-| A.122 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | UTS says a tuition deposit is needed to receive an electronic Confirmation of Enrolment. |
+| A.118 | A | primary | data | G11 | used | lib/documents/types.ts (+ plan rules) | The University of Wollongong says a CoE is an official document that shows course start and end dates. |
+| A.119 | A | primary | data | G11 | used | lib/documents/types.ts (+ plan rules) | The University of Wollongong says a CoE is an official document that shows fees paid and total fees to be pai… |
+| A.120 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The University of Wollongong says a CoE is required to be submitted to DHA before applying for a student visa. |
+| A.121 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Australian Catholic University says a CoE will be issued only after enrolment and Genuine Student conditions … |
+| A.122 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | UTS says a tuition deposit is needed to receive an electronic Confirmation of Enrolment. |
 | B.001 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The Subclass 500 Student visa base application charge is AUD2,000.00. |
 | B.002 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks a student to declare or provide is AUD29,710. |
 | B.003 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks for a student’s partner or spouse is AUD10,394. |
