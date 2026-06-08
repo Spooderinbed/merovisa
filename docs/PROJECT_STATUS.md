@@ -1,9 +1,9 @@
 # MyVisa — project status & phase log
 
-**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist now shipped too, 2026-06-08)
+**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist now shipped too, 2026-06-08) · **signed-in flows manually smoked green + prod build verified 2026-06-08**
 **Tests:** 690 passing across 161 test files
 **Typecheck:** clean
-**Build:** clean (27 routes including `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
+**Build:** clean — prod build re-verified 2026-06-08 (routes incl. `/checklist`, `/checklist/[programId]`, `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
 **Code surface:** 26 files in `app/`, 55 in `lib/`, 81 in `components/`, 132 in `tests/`, 9 SQL migrations applied
 **Branch state:** pushed to `origin/master` (the prior local-only preference was lifted on 2026-06-07 at user request)
 
@@ -36,7 +36,8 @@
 
 | Issue | Where | Severity |
 |---|---|---|
-| **No manual smoke since Phase 0.** Signed-in flows pass tests but have never been clicked through with real Google OAuth. Highest-risk: profile editors saving correctly to DB, dashboard rendering with real data, shortlist persisting across sessions, plan regenerating on profile edit. | All `(app)/*` routes | **High** — biggest unknown |
+| ~~No manual smoke since Phase 0.~~ **Smoked green 2026-06-08** via a throwaway dev-session seam (since removed): dashboard, profile save (PATCH round-trip), matches + shortlist persistence, plan, documents upload/view/delete, and `/checklist/[programId]` all verified end-to-end against a real session + RLS + Storage; zero console/server errors; prod build passes. | All `(app)/*` routes | ✅ Resolved |
+| Plan items linger after their triggering condition is satisfied (e.g. "Add your name" stays after a name is set) — `invalidatePlan` is insert-only, never closes todos the generator no longer produces | `lib/plan/invalidate.ts` | Minor UX; fix task spawned (found in the 2026-06-08 smoke) |
 | `destination_id` rendered raw (e.g. "australia" not "Australia") | `components/dashboard/snapshot-card.tsx`, `components/assess/assess-interstitial.tsx` | Minor UX |
 | Day-of-week greeting uses server time, not user TZ | `app/(app)/dashboard/page.tsx` `partOfDay()` | Minor UX |
 | `private.set_updated_at` trigger function has mutable `search_path` | Supabase advisor WARN, present since Phase 1.5 migration | Low; harden in a follow-up migration |
@@ -54,10 +55,10 @@
 - 15 universities + 64 programs seeded into live DB
 - Security advisors: no new ERROR-level. Pre-existing WARN: `auth_leaked_password_protection` (project-level), `function_search_path_mutable` on `private.set_updated_at`. Pre-existing INFO: `rls_enabled_no_policy` on `public.leads`
 
-### ✅ Phase 5 (documents) — shipped & live, ⚠️ never smoked
+### ✅ Phase 5 (documents) — shipped & live, smoked green 2026-06-08
 
 - **Shipped:** `documents` table + an upload/view/delete flow (the original `checklist_items` + OCR design was simplified away — see `simplify_documents_drop_ocr_columns`), the `/documents` vault page, three `/api/documents/*` routes, `lib/documents/{repo,types}.ts`, service-role-only RLS (`fix_documents_rls_service_role_only`). The typed taxonomy (`DOCUMENT_META`) already groups document kinds into Identity/Academic/Financial/Visa. (Confirmed: real Supabase Storage — signed URLs, magic-byte validation, 5 MB image cap, rate-limited; an upload auto-flips the profile flag + re-scores + invalidates the plan.)
-- **Per-program checklist — shipped 2026-06-08.** Spec `docs/superpowers/specs/2026-06-08-per-program-checklist-design.md`, plan `docs/superpowers/plans/2026-06-08-per-program-checklist.md`. A pure rule-derived generator (`lib/checklist/generator.ts` — no migration, no scoring touched) turns a program + profile + uploaded kinds into stage-grouped (`now` / `after-offer`) checklist items; financial items derive from the profile funding source; scholarship/AHPRA are informational (`kind: null`) items; the DHA funds note carries a `SourceLine`. `/checklist/[programId]` page + `/checklist` landing + a ProgramCard link. Upload-from-checklist is a deep-link to the vault (clarity over upload UX, per the user's guard). 29 new tests; goldens byte-identical. **Signed-in page is OAuth-gated → never smoked.**
+- **Per-program checklist — shipped 2026-06-08.** Spec `docs/superpowers/specs/2026-06-08-per-program-checklist-design.md`, plan `docs/superpowers/plans/2026-06-08-per-program-checklist.md`. A pure rule-derived generator (`lib/checklist/generator.ts` — no migration, no scoring touched) turns a program + profile + uploaded kinds into stage-grouped (`now` / `after-offer`) checklist items; financial items derive from the profile funding source; scholarship/AHPRA are informational (`kind: null`) items; the DHA funds note carries a `SourceLine`. `/checklist/[programId]` page + `/checklist` landing + a ProgramCard link. Upload-from-checklist is a deep-link to the vault (clarity over upload UX, per the user's guard). 29 new tests; goldens byte-identical. **Smoked green 2026-06-08** (dev-session seam): `/checklist/[programId]` renders every rule correctly (bachelors→+2/SLC, parents-family→bank+sponsor, DHA sourced note + AL3 seasoning, gap→employment, visa in "After your offer"), and an uploaded passport flips its item to "Have". The prod build lists the route — the first-hit 404 seen in dev was a Next on-demand-compile artifact, absent in production.
 
 ### 🚫 Not built yet
 
@@ -384,12 +385,12 @@ supabase/migrations/
 
 ## What to do next — recommended order
 
-_(Reconciled 2026-06-08. Lint cleanup ✓ done (`3c8810c`). Phase A/B scorer-wiring ✓ done. Phase 5 documents vault + per-program checklist ✓ shipped. Center of gravity is now **release-readiness for the Nepal→Australia journey**, framed by the five student questions below.)_
+_(Reconciled 2026-06-08. Lint cleanup ✓ done (`3c8810c`). Phase A/B scorer-wiring ✓ done. Phase 5 documents vault + per-program checklist ✓ shipped. Signed-in flows ✓ manually smoked green; prod build ✓ passes. Center of gravity is now **release-readiness for the Nepal→Australia journey**, framed by the five student questions below.)_
 
 **Definition of "Nepal→Australia complete"** — a real student can answer: (1) can I apply? (2) what's my biggest risk? (3) what money + documents do I need? (4) which programs are realistic? (5) what do I do next?
 
 1. ~~Documents/checklist slice~~ ✓ **shipped 2026-06-08** — per-program `/checklist/[programId]` + landing, rule-derived generator, 29 tests, no migration/scoring touched. The "money + documents" question is now answered program-by-program. (Possible follow-ons, not scheduled: checklist completeness on the dashboard; an anonymous "what you'll need" preview.)
-2. **Manual smoke (deferred at user's choice 2026-06-08).** Signed-in flows still haven't been clicked through since Phase 0 — the standing #1 risk. The anonymous flow can be browser-verified headlessly; the signed-in half needs a real OAuth session (user-driven) or a throwaway dev session seam.
+2. ~~Manual smoke~~ ✓ **done 2026-06-08** — signed-in flows browser-smoked green via a throwaway dev-session seam (since removed), plus a clean prod build. The standing #1 risk is retired. One minor pre-existing bug found (plan items linger after their condition is satisfied — see Known issues; fix task spawned).
 3. **Ledger by slice (later).** Integrate remaining `lib/data/source/*` findings per-slice, tagging each used / rejected:&lt;reason&gt; / use-later / needs-human-call — not row-by-row.
 4. **Housekeeping (low priority).** Promote the Phase 3/4 plans to standalone MDs; hotfix the `private.set_updated_at` `search_path` WARN advisor (`alter function private.set_updated_at() set search_path = '';`).
 
