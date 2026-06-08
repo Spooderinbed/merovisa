@@ -60,6 +60,8 @@ import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric
 import { AuHealthBiometricFactsSchema } from "@/lib/data/schema/au-health-biometric-facts.schema";
 import { AU_VISA_FACTS } from "@/lib/data/source/au-visa-facts";
 import { AuVisaFactsSchema } from "@/lib/data/schema/au-visa-facts.schema";
+import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
+import { AuStudentVisaRequirementsSchema } from "@/lib/data/schema/au-student-visa-requirements.schema";
 import { AU_PATHWAY_PROGRAMS } from "@/lib/data/source/au-pathway-programs";
 import { AuPathwayProgramsSchema } from "@/lib/data/schema/au-pathway-programs.schema";
 import { AU_TUITION_PAYMENT_FACTS } from "@/lib/data/source/au-tuition-payment-facts";
@@ -117,6 +119,17 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-cost-of-living",
     subRecordKeys: [],
     recordInterface: "Sourced",
+  },
+  {
+    // Slice A — DHA student-visa documentary requirements (CoE, OSHC, financial
+    // coverage, Genuine Student). Prose rules backing findings A.002–A.022.
+    category: "A",
+    exportName: "AU_STUDENT_VISA_REQUIREMENTS",
+    data: AU_STUDENT_VISA_REQUIREMENTS,
+    schema: AuStudentVisaRequirementsSchema,
+    recordLabel: "au-student-visa-requirements",
+    subRecordKeys: [],
+    recordInterface: "AuStudentVisaRequirement",
   },
   {
     // DHA dependant/school financial-capacity figures (finance category B),

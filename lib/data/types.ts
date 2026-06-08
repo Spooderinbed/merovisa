@@ -617,3 +617,22 @@ export interface AuTuitionPaymentFact extends Provenanced {
   source: string; // university / provider page URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * A DHA Subclass 500 student-visa documentary requirement (visa-documents
+ * category A) — one of the four application pillars (CoE, OSHC, financial-evidence
+ * coverage, Genuine Student). `summary` is the student-facing note the checklist/
+ * plan generators render; the GS record additionally carries the four questions,
+ * the word limit, and the date GS took effect. Fact-only — no scorer reads it;
+ * machine-checked against the findings.
+ */
+export interface AuStudentVisaRequirement extends Provenanced {
+  id: "coe" | "oshc" | "financial-coverage" | "genuine-student";
+  label: string; // short human label
+  summary: string; // student-facing note text
+  questions?: string[]; // genuine-student only — the four GS questions
+  responseLimitWords?: number; // genuine-student only — 150 (backs A.021)
+  appliesSince?: string; // genuine-student only — ISO date GS took effect (A.016)
+  source: string; // canonical DHA URL for the SourceLine
+  lastVerified?: string; // ISO date
+}
