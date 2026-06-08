@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=368 · pending=746
+**Status:** used=373 · pending=741
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -141,11 +141,11 @@
 | B.009 | B | primary | process | G12 | used | lib/data/source/nepal-banks.ts (+ finance) | DHA lists a scholarship or sponsorship as an acceptable evidence path for student financial capacity. |
 | B.010 | B | primary | process | G12 | used | lib/data/source/nepal-banks.ts (+ finance) | DHA lists annual income of parents or partner as an acceptable evidence path for student financial capacity. |
 | B.011 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | DHA says the living-cost amounts it asks students to declare or provide should be indicative of the cost of l… |
-| B.012 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NRB says sending money abroad for higher study requires a No Objection Certificate from the education ministr… |
-| B.013 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NRB says sending money abroad for higher study also requires an institution letter, brochure, invoice, I-20, … |
-| B.014 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NRB says banks may send the NRB-determined living-expense amount when the institution documents do not state … |
-| B.015 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NRB’s 2022/23 annual report says BFIs can provide foreign-exchange facilities after confirming foreign-study … |
-| B.016 | B | primary | data |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal says an NOC is a No Objection Certificate granted by the Government of Nepal for Nepales… |
+| B.012 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | NRB says sending money abroad for higher study requires a No Objection Certificate from the education ministr… |
+| B.013 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | NRB says sending money abroad for higher study also requires an institution letter, brochure, invoice, I-20, … |
+| B.014 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | NRB says banks may send the NRB-determined living-expense amount when the institution documents do not state … |
+| B.015 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | NRB’s 2022/23 annual report says BFIs can provide foreign-exchange facilities after confirming foreign-study … |
+| B.016 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal says an NOC is a No Objection Certificate granted by the Government of Nepal for Nepales… |
 | B.017 | B | primary | process | G13 | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists a citizenship certificate as a necessary document. |
 | B.018 | B | primary | process | G13 | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists an academic certificate as a necessary document. |
 | B.019 | B | primary | process | G13 | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists guardian citizenship as a necessary document. |
