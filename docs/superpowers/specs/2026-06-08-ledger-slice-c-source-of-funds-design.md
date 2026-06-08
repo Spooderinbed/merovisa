@@ -132,14 +132,14 @@ const remittanceNote =
 
 ```ts
 add({
-  key: "fin-nrb-remittance", kind: null, label: "Releasing funds from Nepal",
+  key: "fin-nrb-remittance", kind: null, label: "NOC + institution documents",
   group: "financial", stage: "now", requirement: "required",
   note: remittanceNote,
   source: { url: sofPrimary.source, lastVerified: sofPrimary.lastVerified },
 });
 ```
 
-`kind:null` → `status:"info"` (the AHPRA / fin-scholarship pattern). The DHA `financeNote`, the funding-source branches, and the seasoning sentence are **unchanged**.
+`kind:null` → `status:"info"` (the AHPRA / fin-scholarship pattern); the checklist UI renders `info` with a "· Bring this" suffix ([checklist-item.tsx:4](../../../components/checklist/checklist-item.tsx)), so the label is a documents noun-phrase — "NOC + institution documents · Bring this" reads naturally (a gerund like "Releasing funds…" would not). The DHA `financeNote`, the funding-source branches, and the seasoning sentence are **unchanged**.
 
 > **Rendered note:** "A No Objection Certificate (NOC) is the approval the Government of Nepal grants Nepalese students to study abroad. Before releasing foreign currency, your bank requires a No Objection Certificate from Nepal's education ministry and an institution letter, brochure, invoice, I-20, or equivalent document. Banks may remit the living-expense amount Nepal Rastra Bank sets when your institution's documents don't state living expenses. Banks release foreign-exchange facilities after confirming your foreign-study approval on the MoEST portal."
 
@@ -220,7 +220,7 @@ Write the failing test first; watch it fail for the right reason; implement the 
 
 **Best-effort (non-gating) — do it if the environment allows; it never blocks the merge:**
 
-- Browser smoke via the preview tools: a Nepal→AU `/plan` (with a funding source set) shows the new "Prepare to release your funds from Nepal" action; `/checklist/[programId]` shows the "Releasing funds from Nepal" note. Signed-in routes are OAuth-gated and the dev-session seam was removed, so this typically falls back to the composition unit tests — note which was used. The automated tests + reconcile + typecheck are the real gate.
+- Browser smoke via the preview tools: a Nepal→AU `/plan` (with a funding source set) shows the new "Prepare to release your funds from Nepal" action; `/checklist/[programId]` shows the "NOC + institution documents" note. Signed-in routes are OAuth-gated and the dev-session seam was removed, so this typically falls back to the composition unit tests — note which was used. The automated tests + reconcile + typecheck are the real gate.
 
 ---
 
