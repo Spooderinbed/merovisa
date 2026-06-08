@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=363 · pending=751
+**Status:** used=368 · pending=746
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -136,11 +136,11 @@
 | B.004 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual living-cost amount DHA asks for a dependent child is AUD4,449. |
 | B.005 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual school-cost amount DHA asks for a child is AUD13,502. |
 | B.006 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The annual personal-income threshold DHA accepts from parents or partners is AUD87,856. |
-| B.007 | B | primary | process | G12 | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA lists money deposits held with a financial institution as an acceptable evidence path for student financi… |
-| B.008 | B | primary | process | G12 | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA lists a loan with a government or financial institution as an acceptable evidence path for student financ… |
-| B.009 | B | primary | process | G12 | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA lists a scholarship or sponsorship as an acceptable evidence path for student financial capacity. |
-| B.010 | B | primary | process | G12 | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA lists annual income of parents or partner as an acceptable evidence path for student financial capacity. |
-| B.011 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA says the living-cost amounts it asks students to declare or provide should be indicative of the cost of l… |
+| B.007 | B | primary | process | G12 | used | lib/data/source/nepal-banks.ts (+ finance) | DHA lists money deposits held with a financial institution as an acceptable evidence path for student financi… |
+| B.008 | B | primary | process | G12 | used | lib/data/source/nepal-banks.ts (+ finance) | DHA lists a loan with a government or financial institution as an acceptable evidence path for student financ… |
+| B.009 | B | primary | process | G12 | used | lib/data/source/nepal-banks.ts (+ finance) | DHA lists a scholarship or sponsorship as an acceptable evidence path for student financial capacity. |
+| B.010 | B | primary | process | G12 | used | lib/data/source/nepal-banks.ts (+ finance) | DHA lists annual income of parents or partner as an acceptable evidence path for student financial capacity. |
+| B.011 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | DHA says the living-cost amounts it asks students to declare or provide should be indicative of the cost of l… |
 | B.012 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NRB says sending money abroad for higher study requires a No Objection Certificate from the education ministr… |
 | B.013 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NRB says sending money abroad for higher study also requires an institution letter, brochure, invoice, I-20, … |
 | B.014 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | NRB says banks may send the NRB-determined living-expense amount when the institution documents do not state … |
