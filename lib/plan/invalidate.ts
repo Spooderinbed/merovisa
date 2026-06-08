@@ -13,10 +13,12 @@ import type { ProfileSections } from "@/lib/profiles/sections";
 type DB = SupabaseClient<Database>;
 
 /**
- * Re-run the generator and insert any new (owner, kind) items.
- * Existing items with the same kind are left alone (the partial unique index
- * blocks duplicate todos; done/dismissed items don't conflict because the index
- * is partial on status='todo').
+ * Reconcile a user's plan against a fresh generator run:
+ *  - open todos whose triggering condition is now satisfied (the generator no
+ *    longer emits that kind) are auto-closed to 'done';
+ *  - newly-relevant kinds not already open are inserted as todos.
+ * done/dismissed items are never touched — those are the user's decisions, and
+ * the partial unique index (owner, kind) WHERE status='todo' keeps inserts deduped.
  */
 export async function invalidatePlan(adminDb: DB, userId: string): Promise<void> {
   const [profileRow, primaryRow, programs, universities] = await Promise.all([
@@ -36,23 +38,30 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
     matches,
     policy: { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL },
   });
+  const generatedKinds = new Set(items.map((it) => it.kind));
 
-  if (items.length === 0) return;
-
-  // Use upsert with onConflict on (owner, kind) WHERE status='todo' — but PostgREST
-  // doesn't support partial-index conflict targets directly. Instead: do an INSERT
-  // ... ON CONFLICT DO NOTHING by inserting rows; the partial unique index causes
-  // open-kind dupes to be ignored at the DB level. Supabase's `upsert({ ignoreDuplicates: true })`
-  // accepts a non-partial conflict target; since plan_items has no full unique index,
-  // we model "skip if open exists" by reading + filtering first.
-
+  // Read the user's open todos once — used both to detect satisfied items and to
+  // skip re-inserting kinds that are already open.
   const { data: existing } = await adminDb
     .from("plan_items")
-    .select("kind")
+    .select("id, kind")
     .eq("owner", userId)
     .eq("status", "todo");
-  const seenKinds = new Set((existing ?? []).map((r) => r.kind));
+  const open = existing ?? [];
 
+  // Auto-close: an open todo whose kind the generator no longer emits means its
+  // condition is now met. Mark it done so it leaves the open plan but stays in history.
+  const satisfiedIds = open.filter((r) => !generatedKinds.has(r.kind)).map((r) => r.id);
+  if (satisfiedIds.length > 0) {
+    await adminDb
+      .from("plan_items")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("owner", userId)
+      .in("id", satisfiedIds);
+  }
+
+  // Insert newly-relevant kinds that aren't already open.
+  const seenKinds = new Set(open.map((r) => r.kind));
   const toInsert = items
     .filter((it) => !seenKinds.has(it.kind))
     .map((it) => ({
@@ -66,6 +75,7 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
       status: "todo" as const,
     }));
 
-  if (toInsert.length === 0) return;
-  await adminDb.from("plan_items").insert(toInsert);
+  if (toInsert.length > 0) {
+    await adminDb.from("plan_items").insert(toInsert);
+  }
 }

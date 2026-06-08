@@ -37,7 +37,7 @@
 | Issue | Where | Severity |
 |---|---|---|
 | ~~No manual smoke since Phase 0.~~ **Smoked green 2026-06-08** via a throwaway dev-session seam (since removed): dashboard, profile save (PATCH round-trip), matches + shortlist persistence, plan, documents upload/view/delete, and `/checklist/[programId]` all verified end-to-end against a real session + RLS + Storage; zero console/server errors; prod build passes. | All `(app)/*` routes | ✅ Resolved |
-| Plan items linger after their triggering condition is satisfied (e.g. "Add your name" stays after a name is set) — `invalidatePlan` is insert-only, never closes todos the generator no longer produces | `lib/plan/invalidate.ts` | Minor UX; fix task spawned (found in the 2026-06-08 smoke) |
+| ~~Plan items linger after their triggering condition is satisfied — `invalidatePlan` was insert-only.~~ **Fixed 2026-06-08:** every regenerate now auto-closes (→ `done`, with `completed_at`) any open todo whose `kind` the generator no longer emits, so satisfied items leave the open plan but stay in history. `done`/`dismissed` are never touched. | `lib/plan/invalidate.ts` | ✅ Resolved |
 | `destination_id` rendered raw (e.g. "australia" not "Australia") | `components/dashboard/snapshot-card.tsx`, `components/assess/assess-interstitial.tsx` | Minor UX |
 | Day-of-week greeting uses server time, not user TZ | `app/(app)/dashboard/page.tsx` `partOfDay()` | Minor UX |
 | `private.set_updated_at` trigger function has mutable `search_path` | Supabase advisor WARN, present since Phase 1.5 migration | Low; harden in a follow-up migration |
@@ -290,7 +290,7 @@ lib/plan/
 ├── types.ts          PlanItem, PlanItemRow, Impact ("high"|"medium"|"low"), PlanStatus ("todo"|"done"|"dismissed")
 ├── generator.ts      pure generatePlan({ sections, primaryDestinationId, matches, policy }) → PlanItem[]
 ├── repo.ts           listOpenPlanForUser, listAllPlanForUser, setPlanItemStatus
-└── invalidate.ts     invalidatePlan(adminDb, userId) — reads profile + primary + programs, computes matches, generates plan, inserts only new (owner, kind) items
+└── invalidate.ts     invalidatePlan(adminDb, userId) — reads profile + primary + programs, computes matches, generates plan, inserts new (owner, kind) items + auto-closes satisfied todos (kind no longer generated → done)
 
 app/api/plan/action/route.ts          POST { id, status }
 app/(app)/plan/page.tsx               REPLACE stub — server reads listAllPlanForUser, renders PlanList
@@ -320,7 +320,7 @@ app/api/assess/route.ts                MODIFY: await invalidatePlan(...) inside 
 | `!sections["intended-study"].field` | `set-intended-field` | medium |
 | Has primary + has reach matches + zero strong | `add-safer-options` | medium |
 
-Generator is **pure** (no I/O). `invalidatePlan` runs it then INSERTs only items whose `kind` doesn't already exist as an open todo for the user. The partial unique index `(owner, kind) where status='todo'` provides DB-level safety.
+Generator is **pure** (no I/O). `invalidatePlan` runs it then reconciles: it INSERTs items whose `kind` isn't already an open todo, **and auto-closes (→ `done` + `completed_at`) any open todo whose `kind` the generator no longer emits** — i.e. whose triggering condition is now satisfied. `done`/`dismissed` rows are left untouched. The partial unique index `(owner, kind) where status='todo'` provides DB-level safety.
 
 ### Migration (DDL summary)
 
@@ -390,7 +390,7 @@ _(Reconciled 2026-06-08. Lint cleanup ✓ done (`3c8810c`). Phase A/B scorer-wir
 **Definition of "Nepal→Australia complete"** — a real student can answer: (1) can I apply? (2) what's my biggest risk? (3) what money + documents do I need? (4) which programs are realistic? (5) what do I do next?
 
 1. ~~Documents/checklist slice~~ ✓ **shipped 2026-06-08** — per-program `/checklist/[programId]` + landing, rule-derived generator, 29 tests, no migration/scoring touched. The "money + documents" question is now answered program-by-program. (Possible follow-ons, not scheduled: checklist completeness on the dashboard; an anonymous "what you'll need" preview.)
-2. ~~Manual smoke~~ ✓ **done 2026-06-08** — signed-in flows browser-smoked green via a throwaway dev-session seam (since removed), plus a clean prod build. The standing #1 risk is retired. One minor pre-existing bug found (plan items linger after their condition is satisfied — see Known issues; fix task spawned).
+2. ~~Manual smoke~~ ✓ **done 2026-06-08** — signed-in flows browser-smoked green via a throwaway dev-session seam (since removed), plus a clean prod build. The standing #1 risk is retired. One minor pre-existing bug found there and **fixed 2026-06-08** (plan items lingered after their condition was satisfied — `invalidatePlan` now auto-closes them; see Known issues).
 3. **Ledger by slice (later).** Integrate remaining `lib/data/source/*` findings per-slice, tagging each used / rejected:&lt;reason&gt; / use-later / needs-human-call — not row-by-row.
 4. **Housekeeping (low priority).** Promote the Phase 3/4 plans to standalone MDs; hotfix the `private.set_updated_at` `search_path` WARN advisor (`alter function private.set_updated_at() set search_path = '';`).
 
