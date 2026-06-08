@@ -139,4 +139,21 @@ describe("generatePlan", () => {
     const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
     expect(canada.some((i) => i.kind === "translate-certify-documents")).toBe(false);
   });
+
+  it("adds the prepare-health-exam item for an Australian primary destination (A.033, A.035, A.036, A.038)", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const med = items.find((i) => i.kind === "prepare-health-exam");
+    expect(med).toBeTruthy();
+    expect(med?.impact).toBe("medium");
+    expect(med?.title).toContain("health examination");
+    expect(med?.body).toContain("panel physician or clinic");
+    expect(med?.body).toContain("12 months");
+  });
+
+  it("does not add the prepare-health-exam item for a non-AU or unset destination", () => {
+    const none = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    expect(none.some((i) => i.kind === "prepare-health-exam")).toBe(false);
+    const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
+    expect(canada.some((i) => i.kind === "prepare-health-exam")).toBe(false);
+  });
 });

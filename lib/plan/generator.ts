@@ -7,6 +7,8 @@ import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
+import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
+import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -38,6 +40,8 @@ const SOF_MECHANISMS = NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "remittanc
 const NOC_DOCS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "required-document").map((r) => r.summary);
 const NOC_STEPS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "process-step").map((r) => r.summary).join(" ");
 const CERTIFIED_COPIES = AU_DOCUMENT_PREPARATION.filter((r) => r.kind === "certified-copy").map((r) => r.summary);
+const HEALTH_EXAM_PROCESS = AU_HEALTH_EXAM.filter((r) => r.kind === "process").map((r) => r.summary).join(" ");
+const HEALTH_EXAM_VALIDITY = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "health-examination-validity")!; // C.092
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -179,6 +183,19 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
         `If your translator is outside Australia, include their details. ` +
         `DHA also asks for certified copies of some identity documents, including your ${oxfordAnd(CERTIFIED_COPIES)}.`,
       timeEstimate: "1 week",
+    });
+  }
+
+  // DHA HEALTH EXAMINATION readiness — once Australia is the committed destination
+  if (inputs.primaryDestinationId === "australia") {
+    out.push({
+      kind: "prepare-health-exam",
+      impact: "medium",
+      title: "Prepare for your health examination",
+      body:
+        `DHA may request a health examination as part of your visa. ${HEALTH_EXAM_PROCESS} ` +
+        `Results are generally valid for ${HEALTH_EXAM_VALIDITY.value} ${HEALTH_EXAM_VALIDITY.unit}, so arrange it early — don't let it hold up your application.`,
+      timeEstimate: "1-2 weeks",
     });
   }
 
