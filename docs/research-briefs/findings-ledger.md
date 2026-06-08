@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=373 · pending=741
+**Status:** used=381 · pending=733
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -146,14 +146,14 @@
 | B.014 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | NRB says banks may send the NRB-determined living-expense amount when the institution documents do not state … |
 | B.015 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | NRB’s 2022/23 annual report says BFIs can provide foreign-exchange facilities after confirming foreign-study … |
 | B.016 | B | primary | data |  | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal says an NOC is a No Objection Certificate granted by the Government of Nepal for Nepales… |
-| B.017 | B | primary | process | G13 | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists a citizenship certificate as a necessary document. |
-| B.018 | B | primary | process | G13 | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists an academic certificate as a necessary document. |
-| B.019 | B | primary | process | G13 | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists guardian citizenship as a necessary document. |
-| B.020 | B | primary | process | G13 | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists an old NOC as a necessary document. |
-| B.021 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC login page lists an academic transcript of +2, PCL, or equivalence as a required document. |
-| B.022 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC login page lists an admission, offer, acceptance, or I-20 letter as a required document. |
-| B.023 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | MoEST says foreign-study permit applications can be submitted online. |
-| B.024 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | MoEST says applicants who receive a visit date/time message must attend with all original documents. |
+| B.017 | B | primary | process | G13 | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists a citizenship certificate as a necessary document. |
+| B.018 | B | primary | process | G13 | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists an academic certificate as a necessary document. |
+| B.019 | B | primary | process | G13 | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists guardian citizenship as a necessary document. |
+| B.020 | B | primary | process | G13 | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC portal lists an old NOC as a necessary document. |
+| B.021 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC login page lists an academic transcript of +2, PCL, or equivalence as a required document. |
+| B.022 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | The MoEST NOC login page lists an admission, offer, acceptance, or I-20 letter as a required document. |
+| B.023 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | MoEST says foreign-study permit applications can be submitted online. |
+| B.024 | B | primary | process |  | used | lib/data/source/nepal-banks.ts (+ finance) | MoEST says applicants who receive a visit date/time message must attend with all original documents. |
 | B.025 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The NOC portal lists noc@moest.gov.np as its contact email. |
 | B.026 | B | primary | contact |  | pending | lib/data/source/nepal-banks.ts (+ finance) | The NOC portal lists +01-6635419 as its contact number. |
 | B.027 | B | primary | process |  | pending | lib/data/source/nepal-banks.ts (+ finance) | DHA tells applicants to use the Document Checklist Tool and the online application form for personalised evid… |
