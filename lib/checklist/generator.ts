@@ -4,6 +4,7 @@ import type { DocumentKind } from "@/lib/documents/types";
 import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
 import { NEPAL_L3_BANK_SEASONING_MONTHS } from "@/lib/programs/policy";
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
+import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -28,6 +29,7 @@ const reqSource = (id: string): ChecklistSource | undefined => {
   const r = VISA_REQ[id];
   return r ? { url: r.source, lastVerified: r.lastVerified } : undefined;
 };
+const LIVING_COST_INDICATIVE = AU_FINANCIAL_EVIDENCE.find((e) => e.id === "living-cost-indicative")!;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -85,7 +87,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
 
   // FINANCIAL (now, by funding source)
   const tuition = program.tuitionMin != null ? `AUD ${program.tuitionMin.toLocaleString()}` : "first-year tuition";
-  const dhaNote = `DHA expects evidence covering your travel, at least AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living costs, and ${tuition} (plus costs for any accompanying family members).`;
+  const dhaNote = `DHA expects evidence covering your travel, at least AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living costs, and ${tuition} (plus costs for any accompanying family members). ${LIVING_COST_INDICATIVE.summary}`;
   const seasoning = level === "L3" ? ` Under Nepal Assessment Level 3, season your balance for ${NEPAL_L3_BANK_SEASONING_MONTHS} months with source-of-funds evidence.` : "";
   const financeNote = dhaNote + seasoning;
   let financeNoteAttached = false;

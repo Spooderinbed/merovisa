@@ -150,4 +150,10 @@ describe("generateChecklist", () => {
     expect(bank?.note?.toLowerCase()).toContain("travel");
     expect(bank?.note).toMatch(/29[,.]?710/);
   });
+
+  it("notes the DHA living-cost figure is indicative (B.011)", () => {
+    const bank = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "fin-bank");
+    expect(bank?.note).toContain("indicative");
+    expect(bank?.note).toMatch(/29[,.]?710/); // still names the figure
+  });
 });
