@@ -175,15 +175,15 @@ if (inputs.primaryDestinationId === "australia") {
     impact: "medium",
     title: "Apply for your NOC (No Objection Certificate)",
     body:
-      `Once your offer arrives, apply for your No Objection Certificate (NOC) — the Nepal Ministry of ` +
-      `Education permit your bank needs before it can remit tuition. The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ` +
+      `Once your offer arrives, apply for your No Objection Certificate (NOC) — the permit from ` +
+      `Nepal's Ministry of Education that your bank needs before it can remit tuition. The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ` +
       `${NOC_STEPS} It can take time, so start as soon as you're accepted.`,
     timeEstimate: "1-2 weeks",
   });
 }
 ```
 
-> **Rendered body:** "Once your offer arrives, apply for your No Objection Certificate (NOC) — the Nepal Ministry of Education permit your bank needs before it can remit tuition. The MoEST portal asks for a citizenship certificate, an academic certificate, your guardian's citizenship certificate, any previous NOC you already hold, an academic transcript of your +2, PCL, or equivalent, and your admission, offer, acceptance, or I-20 letter. You can submit the foreign-study permit application online through the MoEST portal. Once your application is verified, MoEST messages you a visit date and time; attend in person with all your original documents. It can take time, so start as soon as you're accepted."
+> **Rendered body:** "Once your offer arrives, apply for your No Objection Certificate (NOC) — the permit from Nepal's Ministry of Education that your bank needs before it can remit tuition. The MoEST portal asks for a citizenship certificate, an academic certificate, your guardian's citizenship certificate, any previous NOC you already hold, an academic transcript of your +2, PCL, or equivalent, and your admission, offer, acceptance, or I-20 letter. You can submit the foreign-study permit application online through the MoEST portal. Once your application is verified, MoEST messages you a visit date and time; attend in person with all your original documents. It can take time, so start as soon as you're accepted."
 
 **Accepted Approach-1 trade-off:** slice C's `prepare-fund-remittance` already name-checks the NOC as a *bank requirement* (gated on funding source). This `apply-for-noc` is the *application action* (gated on AU primary). The word "NOC" can therefore appear twice in the plan, but the two are distinct actions firing on different gates and never contradict — the cost the user accepted in choosing both surfaces.
 
