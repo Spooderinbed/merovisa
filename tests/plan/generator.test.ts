@@ -173,4 +173,21 @@ describe("generatePlan", () => {
     const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
     expect(canada.some((i) => i.kind === "prepare-biometrics")).toBe(false);
   });
+
+  it("adds the prepare-police-certificate item for an Australian primary destination (A.039)", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const police = items.find((i) => i.kind === "prepare-police-certificate");
+    expect(police).toBeTruthy();
+    expect(police?.impact).toBe("medium");
+    expect(police?.title.toLowerCase()).toContain("police certificate");
+    expect(police?.body).toContain("12 months or more");
+    expect(police?.body).toContain("after you turned 16");
+  });
+
+  it("does not add the prepare-police-certificate item for a non-AU or unset destination", () => {
+    const none = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    expect(none.some((i) => i.kind === "prepare-police-certificate")).toBe(false);
+    const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
+    expect(canada.some((i) => i.kind === "prepare-police-certificate")).toBe(false);
+  });
 });

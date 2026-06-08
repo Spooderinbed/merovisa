@@ -10,6 +10,7 @@ import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparati
 import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
+import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -45,6 +46,7 @@ const HEALTH_EXAM_PROCESS = AU_HEALTH_EXAM.filter((r) => r.kind === "process").m
 const HEALTH_EXAM_VALIDITY = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "health-examination-validity")!; // C.092
 const BIOMETRICS_LETTER = AU_BIOMETRICS.find((r) => r.id === "immi-app-biometrics-letter")!; // A.031
 const BIOMETRICS_FEE = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "vfs-kathmandu-biometric-collection-fee")!; // C.127
+const POLICE_CERT = AU_POLICE_CERTIFICATE.find((r) => r.id === "police-certificate-requirement")!; // A.039
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -214,6 +216,21 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
         `(collection fee about ${BIOMETRICS_FEE.unit} ${Number(BIOMETRICS_FEE.value).toLocaleString()} in Kathmandu). ` +
         `${BIOMETRICS_LETTER.summary}`,
       timeEstimate: "After you lodge",
+    });
+  }
+
+  // DHA POLICE / CHARACTER certificate (after lodgement) — once Australia is committed
+  if (inputs.primaryDestinationId === "australia") {
+    out.push({
+      kind: "prepare-police-certificate",
+      impact: "medium",
+      title: "Get your police certificate",
+      // opens with POLICE_CERT.summary verbatim (the A.039 rule), shared with the
+      // checklist note; the plan adds only the soft Nepal framing + a "start early" nudge
+      body:
+        `${POLICE_CERT.summary} For most Nepali students that means a Nepal Police character certificate, ` +
+        `plus one from any other country you've lived in that long. They can take time, so start early.`,
+      timeEstimate: "1-2 weeks",
     });
   }
 
