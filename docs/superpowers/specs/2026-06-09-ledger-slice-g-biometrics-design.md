@@ -1,6 +1,6 @@
 # Ledger slice G — DHA biometrics readiness → checklist + plan
 
-**Status:** Design approved 2026-06-09 (subset = A.031 only; reuse C.123 + C.127 read-only; one new after-offer visa info item + one AU-gated plan action; the **source-display guard** → the checklist item's source line points to the fee/biometrics source C.127, not A.031; plan title "Prepare for biometrics after lodgement"; checklist label "Biometrics letter").
+**Status:** Design approved 2026-06-09 (subset = A.031 only; reuse C.123 + C.127 read-only; one new after-offer visa info item + one AU-gated plan action; the **source-display guard** → the checklist item's source line points to the fee/biometrics source C.127, not A.031; plan title "Prepare for biometrics after you lodge"; checklist label "Biometrics letter").
 **Lane:** Ledger by slice (integrate `lib/data/source/*` findings into the engine/UI, one coherent slice at a time, four-state tagged).
 **Slice-kit:** Follows `docs/research-briefs/_tools/slice-kit/SLICE-TEMPLATE.md` (the canonical registry-driven process).
 **Builds on:** Slices A–F. The natural sibling to slice F (health exam) — it completes the **post-lodgement logistics layer**: after health, *"what biometrics step will I face, what does it cost, and how do I track it?"*
@@ -14,7 +14,7 @@ Slice F enriched the after-offer `medical` item so the checklist answers the hea
 This slice wires **biometrics readiness** into the two already-shipped surfaces, kept intentionally small:
 
 - `lib/checklist/generator.ts` — **add one** after-offer `visa`-group info item (`kind:null`), "Biometrics letter".
-- `lib/plan/generator.ts` — **add one** AU-gated `prepare-biometrics` action, "Prepare for biometrics after lodgement".
+- `lib/plan/generator.ts` — **add one** AU-gated `prepare-biometrics` action, "Prepare for biometrics after you lodge".
 
 **Goal:** make the biometrics surfaces state — Nepal is in Australia's biometrics program, expect a VFS Global collection fee (about NPR 2,365 at the Kathmandu centre), and after lodging the Immi App needs your biometrics letter (Visa Lodgement Number starting "AUI") — every shipped phrase finding-backed and machine-checked.
 
@@ -162,7 +162,7 @@ if (inputs.primaryDestinationId === "australia") {
   out.push({
     kind: "prepare-biometrics",
     impact: "medium",
-    title: "Prepare for biometrics after lodgement",
+    title: "Prepare for biometrics after you lodge",
     body:
       // participation framed from C.123; fee from C.127; the AUI letter sentence is A.031 verbatim
       `Nepal is in Australia's biometrics program, so you'll give biometrics at a VFS Global centre as part of your visa ` +
@@ -176,7 +176,7 @@ if (inputs.primaryDestinationId === "australia") {
 > **Rendered body:** "Nepal is in Australia's biometrics program, so you'll give biometrics at a VFS Global centre as part of your visa (collection fee about NPR 2,365 in Kathmandu). After you lodge, the Australian Immi App requires your biometrics letter, whose Visa Lodgement Number starts with 'AUI'."
 
 **Copy-tweak compliance:**
-- **Plan title** — "Prepare for biometrics after lodgement" (user-confirmed; clearer than "Prepare biometrics").
+- **Plan title** — "Prepare for biometrics after you lodge" (revised at spec review from "after lodgement" to the warmer, student-friendly "after you lodge"; clearer than the bare "Prepare biometrics", and consistent with the body's "After you lodge …").
 - **Cross-surface consistency (the F lesson)** — both the checklist note and the plan body **end with `BIOMETRICS_LETTER.summary` verbatim**, so the load-bearing A.031 facts (Immi App, biometrics letter, "Visa Lodgement Number starts with 'AUI'") are byte-identical across surfaces and cannot drift. The fee scoping ("Kathmandu") and participation framing are consistent; only the connective idiom differs (informative note vs. action nudge).
 - **Fee scoped to Kathmandu** — "about NPR 2,365 … in Kathmandu" so the figure never reads as a universal/Australia-wide fee (C.127 is Kathmandu-specific).
 
@@ -226,7 +226,7 @@ New assertions: item `prepare-biometrics` present for `primaryDestinationId:"aus
 - **`git diff master...HEAD -- docs/research-briefs/findings/C.jsonl lib/data/source/au-health-biometric-facts.ts` empty** (no C churn — the F caution, carried forward).
 - `node docs/research-briefs/_tools/build-ledger.js` → **A used 42 → 43, pending 80 → 79** (overall used 390 → 391, pending 724 → 723); only this slice moved, A.029 + A.030 stay `pending`, clusters stay 41.
 
-**Best-effort (non-gating):** browser smoke via the preview tools — `/plan` (AU primary) shows "Prepare for biometrics after lodgement"; `/checklist/[programId]` shows the new "Biometrics letter" item. Signed-in routes are OAuth-gated, so this typically falls back to the composition unit tests — note which was used.
+**Best-effort (non-gating):** browser smoke via the preview tools — `/plan` (AU primary) shows "Prepare for biometrics after you lodge"; `/checklist/[programId]` shows the new "Biometrics letter" item. Signed-in routes are OAuth-gated, so this typically falls back to the composition unit tests — note which was used.
 
 ---
 
