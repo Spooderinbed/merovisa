@@ -171,14 +171,17 @@ Write the failing test first for each behavior; watch it fail for the right reas
 
 ---
 
-## 10. Verification gate (all must pass before "done")
+## 10. Verification gate
 
+**Hard gate — the slice is not "done" until all of these pass. This is the real gate:**
 - `npx vitest run tests/data/` → `reconcile OK · used += 21 · 0 orphans · 0 drift · 0 open-conflict-uses` + schema parses + flip-status normal-mode clean.
 - `npm run typecheck` clean.
 - `npm test` full suite green (checklist + plan suites include the new cases).
 - `node docs/research-briefs/_tools/build-ledger.js` → **A: used 12 → 33, pending 110 → 89**; inspect the regenerated `findings-clusters.md` / ledger diff to confirm only this slice moved.
 - **`git diff -- tests/scoring/__fixtures__/golden-assessments.json` is empty** (byte-identical — no scorer import).
-- Best-effort browser smoke via the preview tools: a Nepal→AU `/checklist/[programId]` shows the enriched CoE/OSHC/financial notes + `SourceLine`s, and `/plan` shows the GS-answers item. (Signed-in routes are OAuth-gated; the dev-session seam is gone, so this may rely on the `Results`/checklist/plan composition unit tests instead — note which was used.)
+
+**Best-effort (non-gating) — do it if the environment allows; it never blocks the merge:**
+- Browser smoke via the preview tools: a Nepal→AU `/checklist/[programId]` shows the enriched CoE/OSHC/financial notes + `SourceLine`s, and `/plan` shows the GS-answers item. Signed-in routes are OAuth-gated and the dev-session seam was removed, so this typically falls back to the `Results`/checklist/plan composition unit tests — note which was used. The automated tests + reconcile + typecheck are the real gate.
 
 ---
 
