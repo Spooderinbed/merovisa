@@ -9,6 +9,7 @@ import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
 import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
+import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -42,6 +43,8 @@ const NOC_STEPS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "process-step").map
 const CERTIFIED_COPIES = AU_DOCUMENT_PREPARATION.filter((r) => r.kind === "certified-copy").map((r) => r.summary);
 const HEALTH_EXAM_PROCESS = AU_HEALTH_EXAM.filter((r) => r.kind === "process").map((r) => r.summary).join(" ");
 const HEALTH_EXAM_VALIDITY = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "health-examination-validity")!; // C.092
+const BIOMETRICS_LETTER = AU_BIOMETRICS.find((r) => r.id === "immi-app-biometrics-letter")!; // A.031
+const BIOMETRICS_FEE = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "vfs-kathmandu-biometric-collection-fee")!; // C.127
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -196,6 +199,21 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
         `DHA may request a health examination as part of your visa. ${HEALTH_EXAM_PROCESS} ` +
         `Results are generally valid for ${HEALTH_EXAM_VALIDITY.value} ${HEALTH_EXAM_VALIDITY.unit}, so arrange it early — don't let it hold up your application.`,
       timeEstimate: "1-2 weeks",
+    });
+  }
+
+  // DHA BIOMETRICS readiness (after lodgement) — once Australia is the committed destination
+  if (inputs.primaryDestinationId === "australia") {
+    out.push({
+      kind: "prepare-biometrics",
+      impact: "medium",
+      title: "Prepare for biometrics after you lodge",
+      body:
+        // participation framed from C.123; fee from C.127; the AUI sentence is A.031 verbatim
+        `Nepal is in Australia's biometrics program, so you'll give biometrics at a VFS Global centre as part of your visa ` +
+        `(collection fee about ${BIOMETRICS_FEE.unit} ${Number(BIOMETRICS_FEE.value).toLocaleString()} in Kathmandu). ` +
+        `${BIOMETRICS_LETTER.summary}`,
+      timeEstimate: "After you lodge",
     });
   }
 

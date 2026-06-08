@@ -156,4 +156,21 @@ describe("generatePlan", () => {
     const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
     expect(canada.some((i) => i.kind === "prepare-health-exam")).toBe(false);
   });
+
+  it("adds the prepare-biometrics item for an Australian primary destination (A.031 + reuse C.123/C.127)", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const bio = items.find((i) => i.kind === "prepare-biometrics");
+    expect(bio).toBeTruthy();
+    expect(bio?.impact).toBe("medium");
+    expect(bio?.title).toContain("biometrics");
+    expect(bio?.body).toContain("AUI");
+    expect(bio?.body).toMatch(/2[,.]?365/); // locale-tolerant fee assertion
+  });
+
+  it("does not add the prepare-biometrics item for a non-AU or unset destination", () => {
+    const none = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    expect(none.some((i) => i.kind === "prepare-biometrics")).toBe(false);
+    const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
+    expect(canada.some((i) => i.kind === "prepare-biometrics")).toBe(false);
+  });
 });
