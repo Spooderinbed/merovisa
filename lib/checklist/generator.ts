@@ -8,6 +8,8 @@ import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
+import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
+import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -63,6 +65,14 @@ const CERTIFIED_COPIES = DOC_PREP.filter((r) => r.kind === "certified-copy").map
 const DOC_PREP_NOTE =
   `${TRANSLATION_RULES} DHA also asks for certified copies of some identity documents, ` +
   `including your ${oxfordAnd(CERTIFIED_COPIES)}.`;
+
+const HEALTH_EXAM_PROCESS = AU_HEALTH_EXAM.filter((r) => r.kind === "process").map((r) => r.summary).join(" ");
+const HEALTH_EXAM_UNDERTAKING = AU_HEALTH_EXAM.find((r) => r.id === "undertaking-validity")!.summary;
+const HEALTH_EXAM_VALIDITY = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "health-examination-validity")!; // C.092 (structured 12 months)
+const HEALTH_EXAM_SOURCE = AU_HEALTH_EXAM.find((r) => r.id === "mhd-before-lodging")!; // DHA health page → item source
+const MEDICAL_NOTE =
+  `DHA may request a health examination as part of your application. ${HEALTH_EXAM_PROCESS} ` +
+  `Results are generally valid for ${HEALTH_EXAM_VALIDITY.value} ${HEALTH_EXAM_VALIDITY.unit} — ${HEALTH_EXAM_UNDERTAKING}`;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -207,7 +217,12 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
   });
   add({ key: "coe", kind: "coe", label: "Confirmation of Enrolment (CoE)", group: "visa", stage: "after-offer", requirement: "required", note: VISA_REQ["coe"]!.summary, source: reqSource("coe") });
   add({ key: "oshc", kind: "oshc", label: "Overseas Student Health Cover (OSHC)", group: "visa", stage: "after-offer", requirement: "required", note: VISA_REQ["oshc"]!.summary, source: reqSource("oshc") });
-  add({ key: "medical", kind: "medical", label: "Panel medical exam", group: "visa", stage: "after-offer", requirement: "required", note: "When DHA requests it." });
+  add({
+    key: "medical", kind: "medical", label: "Panel medical exam",
+    group: "visa", stage: "after-offer", requirement: "required",
+    note: MEDICAL_NOTE,
+    source: { url: HEALTH_EXAM_SOURCE.source, lastVerified: HEALTH_EXAM_SOURCE.lastVerified },
+  });
 
   return items;
 }

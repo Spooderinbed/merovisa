@@ -196,4 +196,13 @@ describe("generateChecklist", () => {
     expect(prep?.note).toContain("certified copies of some identity documents");
     expect(prep?.source?.url).toContain("immi.homeaffairs.gov.au");
   });
+
+  it("enriches the medical item with the DHA health-exam process + validity (A.033, A.035, A.036, A.038)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const med = byKey(items, "medical");
+    expect(med?.note).toContain("panel physician or clinic");
+    expect(med?.note).toContain("My Health Declarations");
+    expect(med?.note).toContain("12 months");
+    expect(med?.source?.url).toContain("immi.homeaffairs.gov.au");
+  });
 });
