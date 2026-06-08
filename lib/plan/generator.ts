@@ -6,6 +6,7 @@ import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-
 import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
+import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -36,6 +37,7 @@ const SOF_REQUIREMENTS = NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "bank-re
 const SOF_MECHANISMS = NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "remittance-mechanism").map((r) => r.summary).join(" ");
 const NOC_DOCS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "required-document").map((r) => r.summary);
 const NOC_STEPS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "process-step").map((r) => r.summary).join(" ");
+const CERTIFIED_COPIES = AU_DOCUMENT_PREPARATION.filter((r) => r.kind === "certified-copy").map((r) => r.summary);
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -163,6 +165,20 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
         `Nepal's Ministry of Education that your bank needs before it can remit tuition. The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ` +
         `${NOC_STEPS} It can take time, so start as soon as you're accepted.`,
       timeEstimate: "1-2 weeks",
+    });
+  }
+
+  // DHA DOCUMENT PREPARATION (translation + certified copies) — once Australia is the committed destination
+  if (inputs.primaryDestinationId === "australia") {
+    out.push({
+      kind: "translate-certify-documents",
+      impact: "medium",
+      title: "Translate and certify your documents",
+      body:
+        `Translate any non-English document into English and keep both the original and translation. ` +
+        `If your translator is outside Australia, include their details. ` +
+        `DHA also asks for certified copies of some identity documents, including your ${oxfordAnd(CERTIFIED_COPIES)}.`,
+      timeEstimate: "1 week",
     });
   }
 

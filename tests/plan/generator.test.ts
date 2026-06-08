@@ -122,4 +122,21 @@ describe("generatePlan", () => {
     const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
     expect(canada.some((i) => i.kind === "apply-for-noc")).toBe(false);
   });
+
+  it("adds the translate-and-certify item for an Australian primary destination (A.026–A.028, A.041–A.042)", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const prep = items.find((i) => i.kind === "translate-certify-documents");
+    expect(prep).toBeTruthy();
+    expect(prep?.impact).toBe("medium");
+    expect(prep?.title).toContain("Translate");
+    expect(prep?.body).toContain("outside Australia");
+    expect(prep?.body).toContain("certified copies of some identity documents");
+  });
+
+  it("does not add the translate-and-certify item for a non-AU or unset destination", () => {
+    const none = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    expect(none.some((i) => i.kind === "translate-certify-documents")).toBe(false);
+    const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
+    expect(canada.some((i) => i.kind === "translate-certify-documents")).toBe(false);
+  });
 });
