@@ -21,6 +21,11 @@ const mk = (
   completedAt: null,
 });
 
+const mkKind = (id: number, kind: string, impact: PlanItemRow["impact"]): PlanItemRow => ({
+  ...mk(id, impact, "todo"),
+  kind,
+});
+
 describe("PlanList", () => {
   it("renders empty state when items is []", () => {
     render(<PlanList items={[]} />);
@@ -36,5 +41,27 @@ describe("PlanList", () => {
     expect(screen.getByText(/High impact \(1\)/)).toBeInTheDocument();
     expect(screen.getByText(/Medium impact \(1\)/)).toBeInTheDocument();
     expect(screen.getByText(/Closed \(1\)/)).toBeInTheDocument();
+  });
+
+  it("puts visa-prep items under 'Visa preparation' (GS first), leaving non-visa items in 'Your next steps'", () => {
+    render(
+      <PlanList items={[
+        mkKind(1, "prepare-police-certificate", "medium"),
+        mkKind(2, "prepare-gs-answers", "high"),
+        mkKind(3, "add-grade", "high"),
+      ]} />,
+    );
+    expect(screen.getByText("Visa preparation")).toBeInTheDocument();
+    expect(screen.getByText("Your next steps")).toBeInTheDocument();
+    expect(screen.getByText(/High impact \(1\)/)).toBeInTheDocument(); // only add-grade; GS moved to visa prep
+    const gsTitle = screen.getByText("T2"); // prepare-gs-answers
+    const policeTitle = screen.getByText("T1"); // prepare-police-certificate
+    expect(gsTitle.compareDocumentPosition(policeTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("omits 'Visa preparation' when there are no visa-prep items", () => {
+    render(<PlanList items={[mkKind(1, "add-grade", "high")]} />);
+    expect(screen.queryByText("Visa preparation")).not.toBeInTheDocument();
+    expect(screen.getByText("Your next steps")).toBeInTheDocument();
   });
 });
