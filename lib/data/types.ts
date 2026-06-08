@@ -750,3 +750,20 @@ export interface AuHealthExam extends Provenanced {
   source: string; // canonical DHA URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * DHA biometrics readiness for Nepal→Australia applicants (logistics category A). A
+ * single sourced fact: after lodging, the Australian Immi App requires the biometrics
+ * letter whose Visa Lodgement Number starts with "AUI" (A.031). `summary` is the
+ * sentence the plan/checklist render. The Nepal-side participation (C.123) and VFS
+ * Kathmandu fee (C.127) are NOT here — they are reused read-only from
+ * au-health-biometric-facts. Fact-only — no scorer reads it; machine-checked against
+ * A.031. Single-record module (no `kind` discriminator).
+ */
+export interface AuBiometrics extends Provenanced {
+  id: "immi-app-biometrics-letter";
+  label: string;     // short, inline
+  summary: string;   // the full sentence rendered by plan/checklist
+  source: string;    // canonical DHA URL
+  lastVerified?: string; // ISO date
+}

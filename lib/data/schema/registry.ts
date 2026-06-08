@@ -76,6 +76,8 @@ import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparati
 import { AuDocumentPreparationSchema } from "@/lib/data/schema/au-document-preparation.schema";
 import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AuHealthExamSchema } from "@/lib/data/schema/au-health-exam.schema";
+import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
+import { AuBiometricsSchema } from "@/lib/data/schema/au-biometrics.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -621,5 +623,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-health-exam",
     subRecordKeys: [],
     recordInterface: "AuHealthExam",
+  },
+  {
+    // Slice G — DHA biometrics readiness (logistics category A): after lodging, the
+    // Immi App needs the biometrics letter whose Visa Lodgement Number starts with
+    // "AUI" (A.031, a single record). Surfaced in the checklist + plan alongside Nepal's
+    // inclusion in the biometrics program (C.123) and the VFS Kathmandu collection fee
+    // (C.127), both reused read-only from au-health-biometric-facts. Fact-only: no
+    // scorer reads it.
+    category: "A",
+    exportName: "AU_BIOMETRICS",
+    data: AU_BIOMETRICS,
+    schema: AuBiometricsSchema,
+    recordLabel: "au-biometrics",
+    subRecordKeys: [],
+    recordInterface: "AuBiometrics",
   },
 ];
