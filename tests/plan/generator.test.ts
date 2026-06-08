@@ -84,4 +84,24 @@ describe("generatePlan", () => {
     const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
     expect(canada.some((i) => i.kind === "prepare-gs-answers")).toBe(false);
   });
+
+  it("adds the Nepal remittance prep item when a funding source is set (B.012–B.016)", () => {
+    const items = generatePlan({ sections: { finance: { source: "self-funded" } }, primaryDestinationId: null, matches: [], policy });
+    const remit = items.find((i) => i.kind === "prepare-fund-remittance");
+    expect(remit).toBeTruthy();
+    expect(remit?.body).toContain("No Objection Certificate");
+    expect(remit?.body).toContain("institution letter");
+    expect(remit?.body).toContain("Nepal Rastra Bank");
+    expect(remit?.body).toContain("MoEST portal");
+  });
+
+  it("omits the remittance prep item when no funding source is set", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    expect(items.some((i) => i.kind === "prepare-fund-remittance")).toBe(false);
+  });
+
+  it("omits the remittance prep item for scholarship-dependent funding", () => {
+    const items = generatePlan({ sections: { finance: { source: "scholarship-dependent" } }, primaryDestinationId: null, matches: [], policy });
+    expect(items.some((i) => i.kind === "prepare-fund-remittance")).toBe(false);
+  });
 });
