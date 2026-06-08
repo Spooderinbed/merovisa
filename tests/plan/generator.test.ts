@@ -58,4 +58,20 @@ describe("generatePlan", () => {
     const b = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
     expect(a.map((i) => i.kind)).toEqual(b.map((i) => i.kind));
   });
+
+  it("adds the Genuine Student answers item for an Australian primary destination", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const gs = items.find((i) => i.kind === "prepare-gs-answers");
+    expect(gs).toBeTruthy();
+    expect(gs?.impact).toBe("high");
+    expect(gs?.title).toContain("Genuine Student");
+    expect(gs?.body).toContain("150 words");
+  });
+
+  it("does not add the Genuine Student item for a non-AU or unset destination", () => {
+    const none = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+    expect(none.some((i) => i.kind === "prepare-gs-answers")).toBe(false);
+    const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
+    expect(canada.some((i) => i.kind === "prepare-gs-answers")).toBe(false);
+  });
 });

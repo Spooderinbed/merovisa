@@ -2,6 +2,7 @@ import type { ProfileSections } from "@/lib/profiles/sections";
 import type { MatchResult } from "@/lib/matches/types";
 import type { PlanItem } from "./types";
 import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
+import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -99,6 +100,18 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       body: "Nepal returned to Assessment Level 3 in Jan 2026. DHA case officers now expect 6 months of stable balance + source-of-funds documentation for any deposit > AUD 5,000.",
       liftEstimate: "Prevents the most common refusal reason for Nepal AL3 applicants",
       timeEstimate: "Plan ahead — 6 months elapsed",
+    });
+  }
+
+  // GENUINE STUDENT (Australian student-visa requirement)
+  if (inputs.primaryDestinationId === "australia") {
+    const gs = AU_STUDENT_VISA_REQUIREMENTS.find((r) => r.id === "genuine-student")!;
+    out.push({
+      kind: "prepare-gs-answers",
+      impact: "high",
+      title: "Prepare your Genuine Student answers",
+      body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer four questions — your current circumstances and ties, why this course and provider, how it benefits you, and anything else relevant — each in ${gs.responseLimitWords} words or less. Draft your answers early; they anchor your whole application.`,
+      timeEstimate: "2-4 hours",
     });
   }
 
