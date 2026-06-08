@@ -72,6 +72,8 @@ import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import { NepalSourceOfFundsSchema } from "@/lib/data/schema/nepal-source-of-funds.schema";
 import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import { NepalNocJourneySchema } from "@/lib/data/schema/nepal-noc-journey.schema";
+import { AU_DOCUMENT_PREPARATION } from "@/lib/data/source/au-document-preparation";
+import { AuDocumentPreparationSchema } from "@/lib/data/schema/au-document-preparation.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -590,5 +592,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-noc-journey",
     subRecordKeys: [],
     recordInterface: "NepalNocJourney",
+  },
+  {
+    // Slice E — DHA document-preparation rules (logistics category A). How Nepali-
+    // language documents are made acceptable to DHA: three translation rules
+    // (A.026–A.028) and two certified-copy rules (A.041–A.042), consumed by the plan
+    // + checklist generators. Fact-only: no scorer reads it.
+    category: "A",
+    exportName: "AU_DOCUMENT_PREPARATION",
+    data: AU_DOCUMENT_PREPARATION,
+    schema: AuDocumentPreparationSchema,
+    recordLabel: "au-document-preparation",
+    subRecordKeys: [],
+    recordInterface: "AuDocumentPreparation",
   },
 ];

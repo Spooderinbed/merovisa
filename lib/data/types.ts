@@ -701,3 +701,29 @@ export interface NepalNocJourney extends Provenanced {
   source: string; // canonical MoEST URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * DHA document-preparation rules for Nepal→Australia applicants (logistics category
+ * A). How Nepali-language documents are made acceptable to DHA: three translation
+ * rules (translate non-English documents, submit original + translation, list an
+ * overseas translator's details) and two certified-copy rules (birth certificate,
+ * national identity card). Distinguished by `kind`. `summary` is the phrase the
+ * plan/checklist render — translation-rule summaries are full sentences; certified-copy
+ * summaries are bare document nouns so the generators frame them as "certified copies
+ * of some identity documents, including …" (certification stays scoped to those named
+ * documents). Fact-only — no scorer reads it; machine-checked against A.026–A.028,
+ * A.041–A.042.
+ */
+export interface AuDocumentPreparation extends Provenanced {
+  id:
+    | "translate-non-english"
+    | "submit-original-and-translation"
+    | "overseas-translator-details"
+    | "certified-copy-birth-certificate"
+    | "certified-copy-national-id";
+  kind: "translation-rule" | "certified-copy";
+  label: string; // short, for the checklist item
+  summary: string; // translation-rule = full sentence; certified-copy = bare document noun
+  source: string; // canonical DHA URL
+  lastVerified?: string; // ISO date
+}
