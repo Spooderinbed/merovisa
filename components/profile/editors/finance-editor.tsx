@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BankLoanPanel } from "./bank-loan-panel";
+import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 
 export interface FinanceInitial {
   total?: number;
@@ -28,6 +29,12 @@ const SOURCES = [
   { value: "scholarship-dependent", label: "Scholarship-dependent" },
   { value: "mixed", label: "Mixed sources" },
 ];
+
+const EVIDENCE_PATH_LABELS = AU_FINANCIAL_EVIDENCE.filter((e) => e.kind === "evidence-path").map((e) =>
+  e.label.toLowerCase(),
+);
+const DHA_PATHS_SOURCE = AU_FINANCIAL_EVIDENCE.find((e) => e.kind === "evidence-path")!.source;
+const DHA_PATHS_SENTENCE = `${EVIDENCE_PATH_LABELS.slice(0, -1).join(", ")}, or ${EVIDENCE_PATH_LABELS[EVIDENCE_PATH_LABELS.length - 1]!}`;
 
 export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
   const [total, setTotal] = useState<string>(initial.total?.toString() ?? "");
@@ -83,7 +90,16 @@ export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
         <a href="/documents" className="text-primary underline-offset-2 hover:underline">
           Documents page
         </a>{" "}
-        to mark this as complete.
+        to mark this as complete. DHA accepts {DHA_PATHS_SENTENCE} as proof of funds — see the{" "}
+        <a
+          href={DHA_PATHS_SOURCE}
+          target="_blank"
+          rel="noreferrer"
+          className="text-primary underline-offset-2 hover:underline"
+        >
+          DHA student visa page
+        </a>
+        .
       </p>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>

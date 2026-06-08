@@ -23,6 +23,18 @@ describe("FinanceEditor", () => {
     expect(link).toHaveAttribute("href", "/documents");
   });
 
+  it("names the DHA-accepted funding paths with a source link", () => {
+    render(<FinanceEditor initial={{}} />);
+    const link = screen.getByRole("link", { name: /DHA student visa page/i });
+    expect(link.getAttribute("href")).toContain("student-500");
+    const p = link.closest("p")!;
+    expect(p.textContent).toContain("DHA accepts");
+    expect(p.textContent).toContain("money deposit");
+    expect(p.textContent).toContain("education loan");
+    expect(p.textContent).toContain("scholarship or sponsorship");
+    expect(p.textContent).toContain("parent or partner income");
+  });
+
   it("PATCHes with section finance", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), { status: 200 }),
