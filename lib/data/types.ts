@@ -785,3 +785,26 @@ export interface AuPoliceCertificate extends Provenanced {
   source: string;    // canonical DHA URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Nepal-side police / OPCR character-certificate process (logistics category A). The
+ * sequel to AuPoliceCertificate: once the student knows DHA may ask for a police
+ * certificate, this is how the Nepal one is obtained — the OPCR application route
+ * (A.095/A.096/A.097), the uploaded document set (A.100), and the 3-month study/
+ * migration validity (A.102). Distinguished by `kind`. `summary` is the phrase the
+ * plan/checklist render; `label` is the short inline label. The OPCR turnarounds
+ * (A.098/A.099) are NOT here — they are reused read-only from
+ * nepal-document-processing-times. Fact-only — no scorer reads it; machine-checked
+ * against findings A.095/A.096/A.097/A.100/A.102.
+ */
+export interface NepalPoliceCertificate extends Provenanced {
+  id:
+    | "opcr-application-route"
+    | "opcr-document-set"
+    | "opcr-validity";
+  kind: "application-route" | "required-document" | "validity-rule";
+  label: string;   // short, inline label
+  summary: string; // the phrase the plan/checklist render
+  source: string;  // OPCR service URL
+  lastVerified?: string; // ISO date
+}

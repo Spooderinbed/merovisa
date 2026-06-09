@@ -80,6 +80,8 @@ import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import { AuBiometricsSchema } from "@/lib/data/schema/au-biometrics.schema";
 import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import { AuPoliceCertificateSchema } from "@/lib/data/schema/au-police-certificate.schema";
+import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
+import { NepalPoliceCertificateSchema } from "@/lib/data/schema/nepal-police-certificate.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -655,5 +657,20 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-police-certificate",
     subRecordKeys: [],
     recordInterface: "AuPoliceCertificate",
+  },
+  {
+    // Slice I — Nepal-side police / OPCR process (logistics category A). The sequel to
+    // au-police-certificate (slice H): how the Nepal Police character certificate is
+    // obtained — the OPCR application route (A.095/A.096/A.097), the uploaded document
+    // set (A.100), and the 3-month study/migration validity (A.102). The OPCR
+    // turnarounds (A.098/A.099) are reused read-only from nepal-document-processing-times.
+    // Surfaced by enriching the existing checklist police item + plan action. Fact-only.
+    category: "A",
+    exportName: "NEPAL_POLICE_CERTIFICATE",
+    data: NEPAL_POLICE_CERTIFICATE,
+    schema: NepalPoliceCertificateSchema,
+    recordLabel: "nepal-police-certificate",
+    subRecordKeys: [],
+    recordInterface: "NepalPoliceCertificate",
   },
 ];
