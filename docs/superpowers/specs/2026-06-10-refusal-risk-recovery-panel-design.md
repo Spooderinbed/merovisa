@@ -20,7 +20,7 @@ This slice adds **one new panel** to the anonymous results page (also shown to s
 
 The wired subset is the **gov-sourced** trust-defense core of category I, across four sections.
 
-### Wired → `used` (16, all gov, all `prose-only`)
+### Wired → `used` (16, all gov; 13 `prose-only` + 3 `structured`)
 
 | Section | Findings | Rendered claim (paraphrased) |
 |---|---|---|
@@ -32,11 +32,11 @@ The wired subset is the **gov-sourced** trust-defense core of category I, across
 | **If you're refused** | I.044 | ART can review the decision |
 | | I.045 | ART review fee **AUD 3,580** (most migration decisions) |
 | | I.046 | 50% fee reduction may apply on hardship grounds |
-| | I.057, I.059, I.060 | Ministerial intervention is a rare, conditional last resort |
+| | I.057, I.059, I.060 | Ministerial intervention exists but is **not a normal appeal path** — a limited, conditional last resort |
 | **What not to trust** | I.078, I.079, I.080 | Australia issues no work permits / visa labels / LMIAs |
 | | I.028 | Bogus/false documents → refusal, cancellation, future-application bans |
 
-All sixteen are `value:null` / `value_status:"unset"` → each gets `value_status:"prose-only"`, then `FLIP_STATUS` derives `status:"used"`. None are clustered (`dup_group:null`, `conflict_with:null`) — no `cluster_triage` edits, no conflict-gate interaction.
+All sixteen are currently `value:null` / `value_status:"unset"`. **Thirteen** get `value_status:"prose-only"`; **three (I.034, I.035, I.045) get `value_status:"structured"`** with their extracted `value`/`value_type`/`unit` (the user-approved change — see §3/§4). Then `FLIP_STATUS` derives `status:"used"` for all sixteen. None are clustered (`dup_group:null`, `conflict_with:null`) — no `cluster_triage` edits, no conflict-gate interaction.
 
 ### Deferred / out of scope (firm)
 
@@ -51,7 +51,7 @@ All sixteen are `value:null` / `value_status:"unset"` → each gets `value_statu
 ## 3. Architecture — a static, propless, sourced panel
 
 ```
-I.jsonl (16 gov findings) ──(provenance.findingRefs)──► nepal-refusal-recovery.ts (NEW: kind-discriminated, prose-only)
+I.jsonl (16 gov findings) ──(provenance.findingRefs)──► nepal-refusal-recovery.ts (NEW: kind-discriminated; 13 prose-only + 3 structured)
                                                               │
                                                               └─► components/results/refusal-recovery.tsx (NEW panel)
                                                                       │
@@ -64,7 +64,7 @@ FLIP_STATUS=1 derives status:"used" + used_by for the 16 findings from the modul
 
 **Complements, not duplicates, `PolicyBanner`.** `PolicyBanner` shows the grant-rate corridor by **onshore vs offshore** (I.032/I.033, already used). This panel adds the **sector** cut (HE vs VET, I.034/I.035) inside the refusal narrative — a different, complementary dimension. The panel's odds section is framed "by sector" so the two never read as contradictory.
 
-**Prose-only (v1).** The grant rates (I.034/I.035) and the ART fee (I.045) are stored `value:null`, so v1 wires the whole panel as `prose-only` — the numbers (85.3%, 36.3%, AUD 3,580) live verbatim in the module `summary` strings with their `SourceLine`s, consistent with the slice-I prose pattern. **Deferred:** promoting the three headline numbers to `structured` (extract `value`) for reconcile value-fidelity / drift-protection — a clean future hardening pass, not v1.
+**Structured headline numbers + prose context (v1).** The three trust-payload figures — HE grant rate **85.3%** (I.034), VET grant rate **36.3%** (I.035), and the ART review fee **AUD 3,580** (I.045) — are wired `structured`: each finding gets a real `value`/`value_type`/`unit`, and the consuming record carries a matching numeric `value` field, so reconcile's value-fidelity pass (`recordContainsValue`) catches any drift between the figure we publish and the sourced finding. The remaining thirteen findings stay `prose-only` (claim surfaced as a sentence, no extracted number). The display numbers still live in the user-approved `summary` strings (the panel renders prose, not the scalar); the structured `value` is the machine-checked twin that guards them — the same figure in two forms, prose for the student and a scalar for reconcile. Keeping the locked copy intact while adding the scalar is the minimal change that buys drift-protection without re-opening the approved wording. This is the user-requested change from the design review: *the numbers are the trust payload, so they get reconcile/value-drift protection now, not in a later hardening pass.*
 
 The panel is **server-renderable, propless** — reads the sourced module, groups records by `kind`, renders four compact sections. No scorer reads it.
 
@@ -79,12 +79,17 @@ export interface NepalRefusalRecovery extends Provenanced {
   id: string; // slug, e.g. "ground-genuine-student"
   kind: "refusal-ground" | "grant-rate" | "recovery-path" | "scam-warning";
   label: string;   // short inline label
-  summary: string; // the rendered phrase (numbers live here in v1 prose-only)
+  summary: string; // the rendered phrase (display numbers live here)
   sector?: "higher-education" | "vet"; // grant-rate records only — drives HE-primary emphasis
+  value?: number;  // structured figure — the reconcile-checked twin of the number in `summary` (grant rates, fee)
+  unit?: string;   // "%" for grant rates, "AUD" for the fee
+  period?: string; // reporting window for time-bounded figures (grant rates) — sourced metadata, not reconcile-checked
   source: string;  // canonical gov URL (DHA / ART / legislation / Home Affairs stats)
   lastVerified?: string; // ISO date
 }
 ```
+
+`value`/`unit`/`period` are present **only** on the three structured records (the two grant rates + the ART fee). For those, the finding is `value_status:"structured"`, so reconcile's value-fidelity pass requires the finding's `value` to appear as a numeric leaf of the record — the `value` field satisfies that. `period` is a string leaf (no finding carries it as a structured value), so it is sourced display metadata, not drift-checked. The other eight records omit all three (prose-only).
 
 **`lib/data/source/nepal-refusal-recovery.ts`** — `export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[]`, **eleven records** (16 findings; some records cite several). `lastVerified` per record from the finding's `source_date` (e.g. legislation 2026-04, DHA 2026-01, ART 2024-10, stats 2025-06).
 
@@ -93,12 +98,12 @@ export interface NepalRefusalRecovery extends Provenanced {
 | `ground-genuine-student` | refusal-ground | I.008, I.006 | "Not being assessed as a genuine student — DHA weighs your Genuine Student answers and the evidence behind them." |
 | `ground-capacity` | refusal-ground | I.029 | "Not showing enough financial and English-language capacity." |
 | `ground-document-integrity` | refusal-ground | I.027 | "Document problems — altered, edited, or manipulated documents are unlawful." |
-| `grant-rate-higher-ed` | grant-rate (sector: higher-education) | I.034 | "University (Higher Education) applications from Nepal were granted 85.3% of the time when applying from outside Australia (Apr–Jun 2025)." |
-| `grant-rate-vet` | grant-rate (sector: vet) | I.035 | "Vocational (VET) applications were granted 36.3% over the same period." |
+| `grant-rate-higher-ed` | grant-rate (sector: higher-education) | I.034 | "University (Higher Education) applications from Nepal were granted 85.3% of the time when applying from outside Australia (Apr–Jun 2025)." **[structured: `value:85.3`, `unit:"%"`, `period:"Apr–Jun 2025"`]** |
+| `grant-rate-vet` | grant-rate (sector: vet) | I.035 | "Vocational (VET) applications were granted 36.3% over the same period." **[structured: `value:36.3`, `unit:"%"`, `period:"Apr–Jun 2025"`]** |
 | `recovery-review` | recovery-path | I.044 | "If you're refused, you can ask the Administrative Review Tribunal to review the decision." |
-| `recovery-cost` | recovery-path | I.045 | "The review has a fee — AUD 3,580 for most migration decisions." |
+| `recovery-cost` | recovery-path | I.045 | "The review has a fee — AUD 3,580 for most migration decisions." **[structured: `value:3580`, `unit:"AUD"`]** |
 | `recovery-hardship` | recovery-path | I.046 | "A 50% reduction may apply on financial-hardship grounds." |
-| `recovery-ministerial` | recovery-path | I.057, I.059, I.060 | "Ministerial intervention exists but is a rare, conditional last resort." |
+| `recovery-ministerial` | recovery-path | I.057, I.059, I.060 | "Ministerial intervention exists, but it is not a normal appeal path — it is a limited, conditional last resort." |
 | `scam-no-issuance` | scam-warning | I.078, I.079, I.080 | "Australia issues no work permits, visa labels, or Labour Market Impact Assessments — anyone offering these is running a scam." |
 | `scam-bogus-documents` | scam-warning | I.028 | "Bogus or false documents can lead to refusal, cancellation, and bans on future applications." |
 
@@ -138,7 +143,7 @@ The HE grant-rate row is emphasized (`text-ink`); the VET row is rendered as con
 ### Locked copy (user-approved guards)
 
 - **VET contrast line (verbatim):** *"We show VET as a contrast because some students are steered into cheaper courses — it is not your personal probability."* Never imply VET is bad for everyone; only that the corridor outcome differs.
-- **Recovery concision (user):** show only that review exists, that it costs money, that a hardship reduction may apply, and that ministerial intervention is rare/conditional — **no procedural deep dive** (I.058 deferred).
+- **Recovery concision (user):** show only that review exists, that it costs money, that a hardship reduction may apply, and that ministerial intervention is a limited, conditional last resort — **not a normal appeal path** (softened from "rare" per the design review, since the panel does not render the 34-of-197 supporting count). **No procedural deep dive** (I.058 deferred).
 - **Disclaimer (verbatim):** *"General context for Nepal → Australia, not legal advice."*
 - **No personal probability** (sector corridor context only — honors "never percentages as personal odds"). **No fearmongering** (neutral, factual). **No consultancy claims** (gov publishers only). **Sources visible** (per-row link).
 
@@ -146,14 +151,17 @@ The HE grant-rate row is emphasized (`text-ink`); the VET row is rendered as con
 
 ## 6. Finding edits + status derivation (slice-kit)
 
-1. **Hand-set `value_status:"prose-only"`** on the **sixteen** findings only (I.006/008/027/028/029/034/035/044/045/046/057/059/060/078/079/080) in `I.jsonl` via a parse-by-id node script (string-replace only those lines; leave every other field + EOL untouched). All other I findings stay `unset`/`pending`.
+1. **Hand-set the value fields** on the **sixteen** findings only in `I.jsonl` via a parse-by-id node script (string-replace only those lines; leave every other field + EOL untouched):
+   - **Thirteen prose-only** (I.006/008/027/028/029/044/046/057/059/060/078/079/080): set `value_status:"prose-only"` (leave `value`/`value_type`/`unit` null).
+   - **Three structured** (I.034/035/045): set `value_status:"structured"` **and** the extracted figure — I.034 → `value:85.3,value_type:"percent",unit:"%"`; I.035 → `value:36.3,value_type:"percent",unit:"%"`; I.045 → `value:3580,value_type:"money",unit:"AUD"`.
+   - All other I findings stay `unset`/`pending`.
 2. **Never hand-edit `status`.** Run `FLIP_STATUS=1 npx vitest run tests/data/flip-status.run.test.ts`; it promotes the sixteen to `status:"used"` with `used_by:["nepal-refusal-recovery[<id>]"]`. Inspect `git diff -- docs/research-briefs/findings/I.jsonl` — **only those sixteen lines change**.
 
 ---
 
 ## 7. Schema + registry (slice-kit)
 
-- **`lib/data/schema/nepal-refusal-recovery.schema.ts`** reusing `ProvenanceSchema`, `HttpUrl`, `IsoDate` from `common.ts`: `id` is `z.string().min(1)` (free slug — the record set may grow in a future deepen pass), `kind` `z.enum([4 values])`, optional `sector` `z.enum(["higher-education","vet"])`, non-empty `label`/`summary`, `HttpUrl` source, `IsoDate.optional()` lastVerified, `ProvenanceSchema`; unique-`id` array refine. Mirror `nepal-source-of-funds.schema.ts`.
+- **`lib/data/schema/nepal-refusal-recovery.schema.ts`** reusing `ProvenanceSchema`, `HttpUrl`, `IsoDate` from `common.ts`: `id` is `z.string().min(1)` (free slug — the record set may grow in a future deepen pass), `kind` `z.enum([4 values])`, optional `sector` `z.enum(["higher-education","vet"])`, non-empty `label`/`summary`, optional `value` `z.number()`, optional `unit`/`period` `z.string().min(1)`, `HttpUrl` source, `IsoDate.optional()` lastVerified, `ProvenanceSchema`; unique-`id` array refine. Mirror `nepal-source-of-funds.schema.ts`.
 - **`lib/data/schema/registry.ts`** — import pair after the `NEPAL_PASSPORT_PROCESS` imports, then append one `DataModuleEntry`:
   ```ts
   { category: "I", exportName: "NEPAL_REFUSAL_RECOVERY",
@@ -167,10 +175,12 @@ The HE grant-rate row is emphasized (`text-ink`); the VET row is rendered as con
 
 ## 8. Testing — TDD RED → GREEN → adversarial
 
-- **`tests/data/`** (registry-driven, inherited): reconcile (coverage; value-fidelity N/A for prose-only), schema parse, flip-status normal-mode clean, findings/registry integrity.
+- **`tests/data/`** (registry-driven, inherited): reconcile (coverage for all sixteen **+ value-fidelity for the three structured records** — each finding's `value` must appear as a numeric leaf of its record, else `VALUE_DRIFT`), schema parse, flip-status normal-mode clean, findings/registry integrity.
 - **`tests/results/refusal-recovery.test.tsx`** (NEW, render test): the panel renders all four section headers, both sector figures (85.3% emphasized, 36.3% as contrast), the VET guard line, a recovery row (ART + the AUD 3,580 fee), a scam row (no work permits), the disclaimer, and at least one source link per section (`immi.homeaffairs.gov.au` / `art.gov.au` / `legislation.gov.au`). RED first.
 - **`tests/results/results.test.tsx`** (existing composition test, if present): assert the new panel appears in the rendered results. (If no such test exists, the dedicated panel test above suffices.)
-- **Adversarial mutation** (prose-only): revert one finding's `value_status` to `unset` (e.g. I.034) while it stays `status:"used"`, run `tests/data/reconcile-modules.test.ts`, confirm `USED_UNSET I.034`; restore via `git checkout --`.
+- **Adversarial mutations** (both must bite, then restore each via `git checkout --`):
+  - **USED_UNSET** (prose-only path): revert one prose-only finding's `value_status` to `unset` (e.g. I.027) while it stays `status:"used"`, run `tests/data/reconcile-modules.test.ts`, confirm `USED_UNSET I.027`.
+  - **VALUE_DRIFT** (structured path): change a structured record's number (e.g. `grant-rate-higher-ed` `value:85.3 → 99.9`) so it no longer matches finding I.034, run the same test, confirm `VALUE_DRIFT … -> I.034`.
 
 ---
 
@@ -193,7 +203,7 @@ The HE grant-rate row is emphasized (`text-ink`); the VET row is rendered as con
 
 One slice branch (`ledger-slice-k-refusal-recovery`); granular commits, each typecheck- + test-green, each ending with the `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` trailer. **Never stage the WIP trio** (`CLAUDE.md`, `tests/integration/wizard-to-results.test.tsx`, `docs/debugging/`); explicit `git add <paths>`, never `git add -A`.
 
-1. **Sourced layer** — `types.ts` + `nepal-refusal-recovery.ts` + `.schema.ts` + registry line + `I.jsonl` value_status edits (×16) + `FLIP_STATUS`. `tests/data/` green.
+1. **Sourced layer** — `types.ts` + `nepal-refusal-recovery.ts` + `.schema.ts` + registry line + `I.jsonl` value edits (×16: 13 prose-only, 3 structured) + `FLIP_STATUS`. `tests/data/` green (incl. value-fidelity for the three structured records).
 2. **Panel component** — `refusal-recovery.tsx` + render in `results.tsx` + render test (RED → GREEN).
 3. **Status + ledger** — `PROJECT_STATUS.md` (actual test count + slice-K bullet) + regenerated `findings-ledger.md`.
 
@@ -208,7 +218,7 @@ Then `git merge --ff-only` master → push → delete branch. Report after the m
 - No new `DocumentKind`, no checklist/plan change, no `phases.ts` change.
 - No consultancy/forum (non-gov) findings — those feed the future **G** agent-risk human-sourcing task.
 - No procedural ART/ministerial deep dive (I.058 and the clause enumeration deferred).
-- No structured value extraction for the headline numbers (prose-only v1; structured hardening deferred).
+- No structured extraction of I figures **beyond the three headline numbers** — the HE/VET grant rates + the ART fee are wired `structured` in v1 (§3/§4); the raw Nepal grant counts (I.036–039) and the other I figures stay in the deferred use-later set, since this slice does not surface them.
 - No public/marketing guide page (the `app/(marketing)/trust` SEO packaging is a later lane).
 
 ---
@@ -216,7 +226,7 @@ Then `git merge --ff-only` master → push → delete branch. Report after the m
 ## 12. Success criteria
 
 1. The anonymous results page shows a compact **Refusal risk & recovery** panel with four gov-sourced sections (why refused / honest sector odds / recovery / what not to trust), placed after `PolicyBanner`, in both anonymous and owned modes.
-2. The odds section shows HE (85.3%) emphasized and VET (36.3%) as contrast, with the locked VET guard line; never as personal odds. Recovery is concise (review exists / fee / hardship reduction / ministerial rare-conditional). The disclaimer line is present. Every section shows its source.
-3. All reconcile invariants green for category I with `used` = 18; the adversarial mutation bites (`USED_UNSET`).
+2. The odds section shows HE (85.3%) emphasized and VET (36.3%) as contrast, with the locked VET guard line; never as personal odds. Recovery is concise (review exists / fee / hardship reduction / ministerial = limited conditional last resort, **not a normal appeal path**). The disclaimer line is present. Every section shows its source.
+3. All reconcile invariants green for category I with `used` = 18, **including value-fidelity for the three structured figures** (85.3 / 36.3 / 3580); both adversarial mutations bite (`USED_UNSET` + `VALUE_DRIFT`).
 4. `typecheck` + full suite green; `golden-assessments.json` byte-identical; scorer / `phases.ts` untouched; ledger shows exactly these sixteen findings `pending → used`, clusters unchanged at 41.
 5. Guardrails honored: gov-only, no personal probability, no fearmongering, compact, sources visible, "not legal advice."
