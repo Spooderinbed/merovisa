@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=392 · pending=722
+**Status:** used=397 · pending=717
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -102,14 +102,14 @@
 | A.092 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Australia is listed as a contracting party to the Apostille Convention with entry into force on 16 March 1995. |
 | A.093 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Nepal is not listed in the HCCH Apostille Convention status table updated on 31 December 2025. |
 | A.094 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police CID says it provides character certificates to Nepali and foreign citizens for different purpose… |
-| A.095 | A | primary | process | G8 | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants can apply online from home or through the nearest cyber. |
-| A.096 | A | primary | process | G8 | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the character-certificate service is available through Nagarik App. |
-| A.097 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants outside Nepal can also apply. |
+| A.095 | A | primary | process | G8 | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants can apply online from home or through the nearest cyber. |
+| A.096 | A | primary | process | G8 | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the character-certificate service is available through Nagarik App. |
+| A.097 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants outside Nepal can also apply. |
 | A.098 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the standard character-certificate service is generally completed within 2 w… |
 | A.099 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says urgent character-certificate service is generally completed within 1 working… |
-| A.100 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the uploaded document set includes a photo, citizenship certificate, passpor… |
+| A.100 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says the uploaded document set includes a photo, citizenship certificate, passpor… |
 | A.101 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s FAQ says applicants who departed Nepal through an airport other than Tribhuvan International A… |
-| A.102 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says a character certificate issued for foreign affairs, migration and study purp… |
+| A.102 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says a character certificate issued for foreign affairs, migration and study purp… |
 | A.103 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants abroad can print and download the Police Clearance Certificate PD… |
 | A.104 | A | primary | data | G9 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says rental-income certification requires a copy of the tenancy agreement. |
 | A.105 | A | primary | data | G9 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says business or agricultural-business income certification requires a copy … |
