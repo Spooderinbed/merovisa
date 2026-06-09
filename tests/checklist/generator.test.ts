@@ -241,6 +241,23 @@ describe("generateChecklist", () => {
     expect(police?.note).toContain("citizenship certificate");
   });
 
+  it("adds a conditional how-to-start note to the passport row only when no passport is uploaded (A.043/A.044)", () => {
+    const missing = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const p = byKey(missing, "passport");
+    expect(p?.kind).toBe("passport"); // still a document row (Have/Needed), not an info item
+    expect(p?.note).toContain("pre-enrolment");
+    expect(p?.note).toContain("enrolment centre");
+    expect(p?.source?.url).toContain("nepalpassport.gov.np");
+
+    const uploaded = generateChecklist({
+      program: baseProgram, sections: {}, uploadedKinds: new Set<DocumentKind>(["passport"]),
+    });
+    const p2 = byKey(uploaded, "passport");
+    expect(p2?.status).toBe("have");
+    expect(p2?.note).toBeUndefined();
+    expect(p2?.source).toBeUndefined();
+  });
+
   it("tags kind:null info items with infoKind (step for after-offer process, note for now-stage reference)", () => {
     const items = generateChecklist({ program: baseProgram, sections: { finance: { source: "scholarship-dependent" } }, uploadedKinds: noKinds });
     const expectInfo = (key: string, infoKind: "step" | "note") =>

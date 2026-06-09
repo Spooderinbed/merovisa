@@ -13,6 +13,7 @@ import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric
 import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
+import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -91,6 +92,10 @@ const POLICE_NOTE =
   `${POLICE_CERT.summary} For most Nepali students that means a Nepal Police character certificate, ` +
   `plus one from any other country you've lived in that long. ` +
   `For the Nepal certificate you'll upload ${POLICE_DOC_SET}.`;
+const PASSPORT_PRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "pre-enrolment")!;            // A.043
+const PASSPORT_CENTRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "choose-centre")!.summary; // A.044
+const PASSPORT_NOTE =
+  `If you still need a passport, start with ${PASSPORT_PRE.summary}, where you choose ${PASSPORT_CENTRE}.`;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -104,8 +109,15 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
   const add = (it: Omit<ChecklistItem, "status">) =>
     items.push({ ...it, status: statusFor(it.kind, uploadedKinds) });
 
-  // IDENTITY (now)
-  add({ key: "passport", kind: "passport", label: "Passport bio page", group: "identity", stage: "now", requirement: "required" });
+  // IDENTITY (now) — the passport row gains a conditional how-to-start note when not uploaded.
+  const passportMissing = !uploadedKinds.has("passport");
+  add({
+    key: "passport", kind: "passport", label: "Passport bio page",
+    group: "identity", stage: "now", requirement: "required",
+    ...(passportMissing
+      ? { note: PASSPORT_NOTE, source: { url: PASSPORT_PRE.source, lastVerified: PASSPORT_PRE.lastVerified } }
+      : {}),
+  });
   add({ key: "national-id", kind: "national-id", label: "Citizenship / National ID", group: "identity", stage: "now", requirement: "required" });
   add({ key: "birth-certificate", kind: "birth-certificate", label: "Birth certificate", group: "identity", stage: "now", requirement: "recommended" });
   add({
