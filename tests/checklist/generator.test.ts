@@ -234,6 +234,13 @@ describe("generateChecklist", () => {
     expect(police?.source?.url).toContain("immi.homeaffairs.gov.au");
   });
 
+  it("surfaces the Nepal OPCR document set in the police note (A.100)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const police = byKey(items, "police-certificate");
+    expect(police?.note).toContain("passport pages 1 to 3");
+    expect(police?.note).toContain("citizenship certificate");
+  });
+
   it("tags kind:null info items with infoKind (step for after-offer process, note for now-stage reference)", () => {
     const items = generateChecklist({ program: baseProgram, sections: { finance: { source: "scholarship-dependent" } }, uploadedKinds: noKinds });
     const expectInfo = (key: string, infoKind: "step" | "note") =>

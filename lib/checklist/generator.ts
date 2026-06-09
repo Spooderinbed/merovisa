@@ -12,6 +12,7 @@ import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
+import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -85,9 +86,11 @@ const BIOMETRICS_NOTE =
   `Expect a VFS Global collection fee of about ${BIOMETRICS_FEE.unit} ${Number(BIOMETRICS_FEE.value).toLocaleString()} at the Kathmandu centre. ` +
   `${BIOMETRICS_LETTER.summary}`;
 const POLICE_CERT = AU_POLICE_CERTIFICATE.find((r) => r.id === "police-certificate-requirement")!; // A.039
+const POLICE_DOC_SET = NEPAL_POLICE_CERTIFICATE.find((r) => r.id === "opcr-document-set")!.summary; // A.100
 const POLICE_NOTE =
   `${POLICE_CERT.summary} For most Nepali students that means a Nepal Police character certificate, ` +
-  `plus one from any other country you've lived in that long.`;
+  `plus one from any other country you've lived in that long. ` +
+  `For the Nepal certificate you'll upload ${POLICE_DOC_SET}.`;
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
