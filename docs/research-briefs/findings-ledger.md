@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=397 · pending=717
+**Status:** used=401 · pending=713
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -50,10 +50,10 @@
 | A.040 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants must attach a copy of their passport. |
 | A.041 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their birth certific… |
 | A.042 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | DHA’s student-document checklist says applicants should also include a certified copy of their national ident… |
-| A.043 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says the first step for an ordinary e-passport is to complete the online pre-enro… |
-| A.044 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | The Department of Passports says the applicant chooses the enrolment centre and appointment date and time dur… |
-| A.045 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | After submitting the pre-enrolment form, the applicant receives a copy with a barcode and QR code. |
-| A.046 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | At the passport enrolment centre, registration includes applicant photo and biometrics. |
+| A.043 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports says the first step for an ordinary e-passport is to complete the online pre-enro… |
+| A.044 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports says the applicant chooses the enrolment centre and appointment date and time dur… |
+| A.045 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | After submitting the pre-enrolment form, the applicant receives a copy with a barcode and QR code. |
+| A.046 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | At the passport enrolment centre, registration includes applicant photo and biometrics. |
 | A.047 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR12,000 for a new or renewed 34-page passport at the Department of Pass… |
 | A.048 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports charges NPR20,000 for a new or renewed 66-page passport at the Department of Pass… |
 | A.049 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | The Department of Passports says applications lodged at the Department of Passports are normally processed wi… |
