@@ -11,6 +11,8 @@ import { AU_HEALTH_EXAM } from "@/lib/data/source/au-health-exam";
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
+import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
+import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-document-processing-times";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -47,6 +49,10 @@ const HEALTH_EXAM_VALIDITY = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "hea
 const BIOMETRICS_LETTER = AU_BIOMETRICS.find((r) => r.id === "immi-app-biometrics-letter")!; // A.031
 const BIOMETRICS_FEE = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "vfs-kathmandu-biometric-collection-fee")!; // C.127
 const POLICE_CERT = AU_POLICE_CERTIFICATE.find((r) => r.id === "police-certificate-requirement")!; // A.039
+const POLICE_ROUTE = NEPAL_POLICE_CERTIFICATE.find((r) => r.id === "opcr-application-route")!.summary; // A.095/096/097
+const POLICE_VALIDITY = NEPAL_POLICE_CERTIFICATE.find((r) => r.id === "opcr-validity")!.summary;       // A.102
+const POLICE_STD_DAYS = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "police-character-standard")!.typicalBusinessDays; // A.098 (read-only)
+const POLICE_URGENT_DAYS = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "police-character-urgent")!.typicalBusinessDays; // A.099 (read-only)
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -225,11 +231,14 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "prepare-police-certificate",
       impact: "medium",
       title: "Get your police certificate",
-      // opens with POLICE_CERT.summary verbatim (the A.039 rule), shared with the
-      // checklist note; the plan adds only the soft Nepal framing + a "start early" nudge
+      // opens with POLICE_CERT.summary verbatim (the A.039 rule), shared with the checklist
+      // note; the plan then carries the OPCR how-to: route (A.095/096/097), turnaround
+      // (A.098/099, read-only) and 3-month validity (A.102) + a timing nudge.
       body:
         `${POLICE_CERT.summary} For most Nepali students that means a Nepal Police character certificate, ` +
-        `plus one from any other country you've lived in that long. They can take time, so start early.`,
+        `plus one from any other country you've lived in that long. ${POLICE_ROUTE} ` +
+        `Standard service is usually about ${POLICE_STD_DAYS} working days (${POLICE_URGENT_DAYS} working day urgent). ` +
+        `${POLICE_VALIDITY} Time it so it's still valid when you lodge.`,
       timeEstimate: "1-2 weeks",
     });
   }

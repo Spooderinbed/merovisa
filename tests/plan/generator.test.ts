@@ -190,4 +190,13 @@ describe("generatePlan", () => {
     const canada = generatePlan({ sections: {}, primaryDestinationId: "canada", matches: [], policy });
     expect(canada.some((i) => i.kind === "prepare-police-certificate")).toBe(false);
   });
+
+  it("enriches the police action with the OPCR route, turnaround, and validity (A.095/096/097, A.098/099, A.102)", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const police = items.find((i) => i.kind === "prepare-police-certificate");
+    expect(police?.body).toContain("OPCR");
+    expect(police?.body).toContain("Nagarik App");
+    expect(police?.body).toContain("working days");
+    expect(police?.body).toContain("3 months");
+  });
 });
