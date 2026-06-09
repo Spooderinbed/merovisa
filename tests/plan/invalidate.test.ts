@@ -2,15 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { getProfile, getPrimaryAssessmentForUser, listAllPrograms, listAllUniversities } = vi.hoisted(() => ({
+const { getProfile, getPrimaryAssessmentForUser, listAllPrograms, listAllUniversities, listDocumentsForUser } = vi.hoisted(() => ({
   getProfile: vi.fn(),
   getPrimaryAssessmentForUser: vi.fn(),
   listAllPrograms: vi.fn(),
   listAllUniversities: vi.fn(),
+  listDocumentsForUser: vi.fn(),
 }));
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
+vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
 
 // select("id, kind").eq("owner", u).eq("status", "todo")  -> resolves the open-todo read
 const selectEqEq = vi.fn().mockResolvedValue({ data: [], error: null });
@@ -30,6 +32,7 @@ const EMPTY_PROFILE_KINDS = [
   "add-grade",
   "add-english-score",
   "upload-proof-of-funds",
+  "start-passport-process",
   "season-funds-six-months",
   "set-intended-field",
 ];
@@ -57,6 +60,7 @@ describe("invalidatePlan", () => {
     getPrimaryAssessmentForUser.mockResolvedValue(null);
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockResolvedValue([]);
+    listDocumentsForUser.mockReset().mockResolvedValue([]);
   });
 
   it("inserts items generated for an empty profile (all expected high-impact prompts)", async () => {
@@ -112,5 +116,17 @@ describe("invalidatePlan", () => {
 
     expect(updateEqIn).toHaveBeenCalledWith("id", [77]);
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("does not emit start-passport-process once a passport is uploaded, and auto-closes an open one", async () => {
+    listDocumentsForUser.mockResolvedValue([{ kind: "passport" }]);
+    openTodos([{ id: 5, kind: "start-passport-process" }]);
+
+    await invalidatePlan(fakeAdmin, "u1");
+
+    // passport uploaded → generator omits start-passport-process → the open todo is satisfied → closed.
+    expect(updateEqIn).toHaveBeenCalledWith("id", [5]);
+    const insertedKinds = (insert.mock.calls[0]?.[0] as Array<{ kind: string }> | undefined)?.map((r) => r.kind) ?? [];
+    expect(insertedKinds).not.toContain("start-passport-process");
   });
 });

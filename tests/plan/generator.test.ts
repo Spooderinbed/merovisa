@@ -199,4 +199,22 @@ describe("generatePlan", () => {
     expect(police?.body).toContain("working days");
     expect(police?.body).toContain("3 months");
   });
+
+  it("adds start-passport-process when hasPassport is false, regardless of destination (A.043-046, A.049)", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy, hasPassport: false });
+    const pp = items.find((i) => i.kind === "start-passport-process");
+    expect(pp).toBeTruthy();
+    expect(pp?.impact).toBe("medium");
+    expect(pp?.title).toBe("Start your passport application");
+    expect(pp?.body).toContain("pre-enrolment");
+    expect(pp?.body).toContain("barcode");
+    expect(pp?.body).toContain("working days");
+  });
+
+  it("does not add start-passport-process when a passport is uploaded or when hasPassport is omitted", () => {
+    const has = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy, hasPassport: true });
+    expect(has.some((i) => i.kind === "start-passport-process")).toBe(false);
+    const omitted = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    expect(omitted.some((i) => i.kind === "start-passport-process")).toBe(false);
+  });
 });

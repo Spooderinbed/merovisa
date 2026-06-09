@@ -13,12 +13,14 @@ import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
 import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-document-processing-times";
+import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
   primaryDestinationId: string | null;
   matches: MatchResult[];        // for "X more strong matches if you fix Y" hints
   policy: { nepalAssessmentLevel: "L2" | "L3" };
+  hasPassport?: boolean;         // from the user's uploaded document kinds; gates start-passport-process. Omitted => not emitted.
 }
 
 const EVIDENCE_PATHS = AU_FINANCIAL_EVIDENCE.filter((e) => e.kind === "evidence-path").map((e) => e.summary);
@@ -53,6 +55,11 @@ const POLICE_ROUTE = NEPAL_POLICE_CERTIFICATE.find((r) => r.id === "opcr-applica
 const POLICE_VALIDITY = NEPAL_POLICE_CERTIFICATE.find((r) => r.id === "opcr-validity")!.summary;       // A.102
 const POLICE_STD_DAYS = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "police-character-standard")!.typicalBusinessDays; // A.098 (read-only)
 const POLICE_URGENT_DAYS = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "police-character-urgent")!.typicalBusinessDays; // A.099 (read-only)
+const PP_PRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "pre-enrolment")!.summary;          // A.043
+const PP_CENTRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "choose-centre")!.summary;        // A.044
+const PP_BARCODE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "barcode-copy")!.summary;        // A.045
+const PP_BIO = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "enrolment-biometrics")!.summary;    // A.046
+const PASSPORT_CENTRAL_DAYS = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "passport-central")!.typicalBusinessDays; // A.049 (read-only)
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -240,6 +247,20 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
         `Standard service is usually about ${POLICE_STD_DAYS} working days (${POLICE_URGENT_DAYS} working day urgent). ` +
         `${POLICE_VALIDITY} Time it so it's still valid when you lodge.`,
       timeEstimate: "1-2 weeks",
+    });
+  }
+
+  // PASSPORT (Nepal-side prerequisite) — destination-agnostic; show only if no passport uploaded.
+  // Gate is strict === false: omitted (undefined) means do not emit (older/direct callers).
+  if (inputs.hasPassport === false) {
+    out.push({
+      kind: "start-passport-process",
+      impact: "medium",
+      title: "Start your passport application",
+      body:
+        `Start with ${PP_PRE}, where you choose ${PP_CENTRE}. ` +
+        `After submitting, you'll get ${PP_BARCODE}, then give ${PP_BIO}. ` +
+        `Lodged at the central office, an ordinary e-passport is usually ready in about ${PASSPORT_CENTRAL_DAYS} working days.`,
     });
   }
 

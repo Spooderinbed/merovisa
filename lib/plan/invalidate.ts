@@ -4,6 +4,7 @@ import type { Database } from "@/lib/supabase/types";
 import { getProfile } from "@/lib/profiles/repo";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
+import { listDocumentsForUser } from "@/lib/documents/repo";
 import { computeMatches } from "@/lib/matches/compute";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
@@ -21,12 +22,14 @@ type DB = SupabaseClient<Database>;
  * the partial unique index (owner, kind) WHERE status='todo' keeps inserts deduped.
  */
 export async function invalidatePlan(adminDb: DB, userId: string): Promise<void> {
-  const [profileRow, primaryRow, programs, universities] = await Promise.all([
+  const [profileRow, primaryRow, programs, universities, docs] = await Promise.all([
     getProfile(adminDb, userId),
     getPrimaryAssessmentForUser(adminDb, userId),
     listAllPrograms(adminDb),
     listAllUniversities(adminDb),
+    listDocumentsForUser(adminDb, userId),
   ]);
+  const hasPassport = docs.some((d) => d.kind === "passport");
 
   const sections = (profileRow?.sections as ProfileSections | undefined) ?? {};
   const matchInputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
@@ -37,6 +40,7 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
     primaryDestinationId: primaryRow?.destination_id ?? null,
     matches,
     policy: { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL },
+    hasPassport,
   });
   const generatedKinds = new Set(items.map((it) => it.kind));
 
