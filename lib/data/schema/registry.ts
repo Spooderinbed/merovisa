@@ -82,6 +82,8 @@ import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import { AuPoliceCertificateSchema } from "@/lib/data/schema/au-police-certificate.schema";
 import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
 import { NepalPoliceCertificateSchema } from "@/lib/data/schema/nepal-police-certificate.schema";
+import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
+import { NepalPassportProcessSchema } from "@/lib/data/schema/nepal-passport-process.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -672,5 +674,21 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-police-certificate",
     subRecordKeys: [],
     recordInterface: "NepalPoliceCertificate",
+  },
+  {
+    // Slice J — Nepal e-passport pre-enrolment process (logistics category A). How a
+    // student who does not yet hold a passport begins: the online pre-enrolment form
+    // (A.043), choosing an enrolment centre + appointment (A.044), the barcoded/QR copy
+    // produced on submission (A.045), and giving photo + biometrics at the centre (A.046).
+    // The central-office ~2-working-day turnaround (A.049) is reused read-only from
+    // nepal-document-processing-times. Surfaced by a conditional note on the existing
+    // passport checklist row + a hasPassport-gated plan action. Fact-only: no scorer reads it.
+    category: "A",
+    exportName: "NEPAL_PASSPORT_PROCESS",
+    data: NEPAL_PASSPORT_PROCESS,
+    schema: NepalPassportProcessSchema,
+    recordLabel: "nepal-passport-process",
+    subRecordKeys: [],
+    recordInterface: "NepalPassportProcess",
   },
 ];

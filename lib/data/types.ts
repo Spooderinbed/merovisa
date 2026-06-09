@@ -808,3 +808,26 @@ export interface NepalPoliceCertificate extends Provenanced {
   source: string;  // OPCR service URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Nepal e-passport pre-enrolment process (logistics category A). How a student who does
+ * not yet hold a passport begins: the online pre-enrolment form (A.043), choosing an
+ * enrolment centre + appointment (A.044), the barcoded/QR copy produced on submission
+ * (A.045), and giving photo + biometrics at the centre (A.046). Records are picked by
+ * `id` (no `kind` discriminator). `summary` is the article/noun-first fragment the
+ * plan/checklist compose into sentences; `label` is the short inline label. The
+ * central-office ~2-working-day turnaround (A.049) is reused read-only from
+ * nepal-document-processing-times; fees (A.047/A.048) live in nepal-application-fees.
+ * Fact-only — no scorer reads it; machine-checked against findings A.043–A.046.
+ */
+export interface NepalPassportProcess extends Provenanced {
+  id:
+    | "pre-enrolment"
+    | "choose-centre"
+    | "barcode-copy"
+    | "enrolment-biometrics";
+  label: string;   // short, inline label
+  summary: string; // article/noun-first fragment the plan/checklist compose
+  source: string;  // Department of Passports process URL
+  lastVerified?: string; // ISO date
+}
