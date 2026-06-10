@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SaveFeedback, useSectionSave } from "./section-save";
 
 export interface PersonalInitial {
   name?: string;
@@ -13,21 +14,15 @@ export function PersonalEditor({ initial }: { initial: PersonalInitial }) {
   const [name, setName] = useState(initial.name ?? "");
   const [age, setAge] = useState<string>(initial.age?.toString() ?? "");
   const [intake, setIntake] = useState<string>(initial.intakeIso ?? "");
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const { status, save } = useSectionSave("personal");
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (name.trim()) patch.name = name.trim();
     if (age) patch.age = Number(age);
     if (intake) patch.intakeIso = intake;
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: "personal", patch }),
-    });
-    setStatus(res.ok ? "saved" : "error");
+    await save(patch);
   };
 
   return (
@@ -51,8 +46,7 @@ export function PersonalEditor({ initial }: { initial: PersonalInitial }) {
       </div>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
-        {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
-        {status === "error" ? <span role="status" className="text-[14px] text-reach">Couldn&apos;t save — try again.</span> : null}
+        <SaveFeedback status={status} />
       </div>
     </form>
   );
