@@ -49,4 +49,39 @@ describe("PlanItemCard", () => {
     render(<PlanItemCard item={{ ...item, status: "done" }} />);
     expect(screen.getByRole("button", { name: /Undo/i })).toBeInTheDocument();
   });
+
+  it("verified item: no Done button, CTA to the completing surface, Dismiss kept", () => {
+    render(<PlanItemCard item={{ ...item, kind: "upload-ielts-report" }} />);
+    expect(screen.queryByRole("button", { name: /^Done$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Mark as in progress/i })).toBeNull();
+    expect(screen.getByRole("link", { name: /Upload in documents/i })).toHaveAttribute(
+      "href",
+      "/documents",
+    );
+    expect(screen.getByRole("button", { name: /Dismiss/i })).toBeInTheDocument();
+  });
+
+  it("self-reported item: POSTs started=true on 'Mark as in progress' and shows the badge", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    render(<PlanItemCard item={{ ...item, kind: "apply-for-noc" }} />);
+    await userEvent.click(screen.getByRole("button", { name: /Mark as in progress/i }));
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body).toEqual({ id: 1, started: true });
+    expect(screen.getByText(/^In progress$/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Back to open/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Done$/i })).toBeInTheDocument();
+  });
+
+  it("renders an already-started item with the badge and undo", () => {
+    render(
+      <PlanItemCard
+        item={{ ...item, kind: "apply-for-noc", startedAt: "2026-06-10T00:00:00Z" }}
+      />,
+    );
+    expect(screen.getByText(/^In progress$/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Back to open/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mark as in progress/i })).toBeNull();
+  });
 });

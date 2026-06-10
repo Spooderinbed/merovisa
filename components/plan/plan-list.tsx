@@ -1,18 +1,12 @@
 import type { PlanItemRow } from "@/lib/plan/types";
 import { PlanItemCard } from "./plan-item-card";
-import { isVisaPrep, visaPrepOrder } from "@/lib/plan/phases";
+import { groupOpenItems } from "@/lib/plan/select";
 
 export function PlanList({ items }: { items: PlanItemRow[] }) {
-  const open = items.filter((i) => i.status === "todo");
   const closed = items.filter((i) => i.status !== "todo");
-
-  const visaPrep = open
-    .filter((i) => isVisaPrep(i.kind))
-    .sort((a, b) => visaPrepOrder(a.kind) - visaPrepOrder(b.kind));
-  const rest = open.filter((i) => !isVisaPrep(i.kind));
-  const high = rest.filter((i) => i.impact === "high");
-  const medium = rest.filter((i) => i.impact === "medium");
-  const low = rest.filter((i) => i.impact === "low");
+  // Shared grouping — the dashboard next-step selector ranks with the same brain.
+  const { high, medium, low, visaPrep } = groupOpenItems(items);
+  const rest = [...high, ...medium, ...low];
 
   if (items.length === 0) {
     return (
