@@ -6,35 +6,60 @@ import type { SectionKey } from "@/lib/profiles/sections";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+export interface GroupSaveEntry {
+  section: SectionKey;
+  patch: Record<string, unknown>;
+}
+
 const SAVED_VISIBLE_MS = 2000;
 
 /**
- * Shared save lifecycle for profile section editors: PATCHes the section,
- * refreshes server-rendered data (row summary + completeness ring) on success,
- * and clears the saved notice after a short delay.
+ * Shared save lifecycle for profile group editors: PATCHes each dirty member
+ * storage section sequentially (one request per section — the API stays
+ * per-section), shows a single Saved/error notice for the whole group, and
+ * refreshes server-rendered data (row summaries + completeness ring) once
+ * after every PATCH succeeded. Returns whether the save fully succeeded so
+ * callers can advance their dirty-tracking baseline.
  */
-export function useSectionSave(section: SectionKey) {
+export function useGroupSave() {
   const router = useRouter();
   const [status, setStatus] = useState<SaveStatus>("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const save = async (patch: Record<string, unknown>) => {
+  const saveSections = async (entries: GroupSaveEntry[]): Promise<boolean> => {
     clearTimeout(timer.current);
     setStatus("saving");
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section, patch }),
-    }).catch(() => null);
-    if (res?.ok) {
-      setStatus("saved");
-      router.refresh();
-      timer.current = setTimeout(() => setStatus("idle"), SAVED_VISIBLE_MS);
-    } else {
-      setStatus("error");
+    for (const { section, patch } of entries) {
+      const res = await fetch("/api/profile/section", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section, patch }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        setStatus("error");
+        return false;
+      }
     }
+    setStatus("saved");
+    router.refresh();
+    timer.current = setTimeout(() => setStatus("idle"), SAVED_VISIBLE_MS);
+    return true;
+  };
+
+  return { status, saveSections };
+}
+
+/**
+ * Single-section save lifecycle — the original hook, now composed over
+ * useGroupSave so both share one PATCH + notice + refresh implementation.
+ */
+export function useSectionSave(section: SectionKey) {
+  const { status, saveSections } = useGroupSave();
+
+  const save = async (patch: Record<string, unknown>) => {
+    await saveSections([{ section, patch }]);
   };
 
   return { status, save };
