@@ -5,6 +5,7 @@ import { safeNext } from "@/lib/auth/safe-next";
 import { AppBar } from "@/components/layout/app-bar";
 import { Footer } from "@/components/layout/footer";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
+import { IdentifyUser } from "@/components/analytics/identify-user";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
   return (
     <>
+      <IdentifyUser userId={data.user.id} />
       <AppBar variant="app" user={data.user} />
       {/* Padded below md so the fixed tab bar never covers content or footer. */}
       <div className="pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">

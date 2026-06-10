@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PlanItemRow } from "@/lib/plan/types";
 import { completionFor } from "@/lib/plan/completion";
 import { ImpactPill } from "./impact-pill";
+import { track } from "@/lib/analytics/events";
 
 /** Mono-uppercase state pill, shared by In progress / Done / Dismissed. */
 const statePill =
@@ -30,6 +31,10 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
 
   const setStatus = async (status: "done" | "dismissed" | "todo") => {
     if (await post({ status })) {
+      track("plan_action", {
+        kind: item.kind,
+        action: status === "todo" ? "reopened" : status,
+      });
       setDone(status === "done");
       setDismissed(status === "dismissed");
       setStarted(false);
@@ -39,6 +44,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
 
   const setInProgress = async (next: boolean) => {
     if (await post({ started: next })) {
+      track("plan_action", { kind: item.kind, action: next ? "started" : "reopened" });
       setStarted(next);
       onChanged?.();
     }

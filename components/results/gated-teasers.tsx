@@ -1,3 +1,5 @@
+import { track } from "@/lib/analytics/events";
+
 // Tease only what exists — scholarship matching isn't built, so it is never promised here.
 const TEASERS = [
   {
@@ -30,7 +32,10 @@ export function GatedTeasers({ onUnlock, unlocked = false }: { onUnlock: () => v
           <button
             key={t.title}
             type="button"
-            onClick={onUnlock}
+            onClick={() => {
+              track("gate_cta_clicked");
+              onUnlock();
+            }}
             className="overflow-hidden rounded-md border border-line bg-surface p-4 text-left"
           >
             <span className="block text-ink">{t.title}</span>

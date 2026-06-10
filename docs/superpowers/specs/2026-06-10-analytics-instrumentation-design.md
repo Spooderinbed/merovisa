@@ -1,7 +1,7 @@
 # Analytics instrumentation — design spec
 
 **Date:** 2026-06-10
-**Status:** DRAFT — awaiting user approval (Phase 2 parallel slice per `docs/audits/2026-06-10-data-governance-and-triage.md`)
+**Status:** APPROVED by user 2026-06-10, implemented same day (Phase 2b parallel slice per `docs/audits/2026-06-10-data-governance-and-triage.md`). As-built deviations in "Implementation notes" below.
 **Why now:** the triage lane chooses the next product slice from evidence; today there is zero usage signal. PostHog is named in the stack (`.env.example` already carries `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST`) but no code exists.
 
 ## Problem
@@ -46,6 +46,25 @@ loses people. Every product-lane decision is currently taste, not evidence.
 ## Out of scope
 
 PostHog dashboards/funnels (UI-side), server events, A/B flags, session replay, marketing attribution.
+
+## Implementation notes (as built, 2026-06-10)
+
+- **v1 ships 9 of the 10 events.** `checklist_item_toggled` is deferred: no toggle exists in the
+  product — checklist document status derives from the vault, and step completion mirrors the plan
+  (plan-links; "the plan stays the only place that completes these"). A catalog entry that can never
+  fire would be decoration; the event ships when a real toggle ships.
+- `source_link_clicked.surface` is a closed enum of the five surfaces that actually render outbound
+  source anchors: `factor-bars` | `refusal-recovery` | `cost-to-apply` | `checklist` | `matches`.
+  PolicyBanner renders facts without links, and plan cards carry no source line, so the spec's
+  illustrative "policy-banner"/"plan" surfaces don't exist yet.
+- `dashboard_cta_clicked.state` includes the fourth real prompt state, `profile-incomplete`.
+- `gate_cta_clicked` fires at both anonymous-results gates: the blurred teasers and the locked
+  university-matches unlock button.
+- `capture_pageview: "history_change"` (not bare `true`) so App Router client-side navigations
+  count as pageviews.
+- Call surfaces: one client leaf `components/analytics/source-anchor.tsx` carries all outbound
+  source links (panels stay server components); `identify` + `signed_in` mount from the `(app)`
+  shell via `components/analytics/identify-user.tsx`, once per page session, UUID only.
 
 ## Acceptance criteria (tests)
 

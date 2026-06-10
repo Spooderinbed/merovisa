@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import type { PlanItemRow } from "@/lib/plan/types";
 import { completionFor } from "@/lib/plan/completion";
+import { track } from "@/lib/analytics/events";
 
 export type PromptState =
   | { kind: "profile-incomplete" }
@@ -35,7 +38,11 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
           Nothing on your plan needs action right now. We&apos;ll surface the next step here when
           something changes.
         </p>
-        <Link href="/plan" className="text-[14px] text-ink-soft underline-offset-4 hover:underline">
+        <Link
+          href="/plan"
+          className="text-[14px] text-ink-soft underline-offset-4 hover:underline"
+          onClick={() => track("dashboard_cta_clicked", { state: "caught-up" })}
+        >
           See your plan →
         </Link>
       </div>
@@ -51,7 +58,11 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
           All {prompt.openCount} remaining plan items are marked in progress. Check your plan if
           anything has changed.
         </p>
-        <Link href="/plan" className="text-[14px] text-ink-soft underline-offset-4 hover:underline">
+        <Link
+          href="/plan"
+          className="text-[14px] text-ink-soft underline-offset-4 hover:underline"
+          onClick={() => track("dashboard_cta_clicked", { state: "waiting" })}
+        >
           Open your plan →
         </Link>
       </div>
@@ -67,7 +78,11 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
         {prompt.item.body ? (
           <p className="line-clamp-3 text-[15px] opacity-90">{prompt.item.body}</p>
         ) : null}
-        <Link href={meta.href} className={CTA_CLASSES}>
+        <Link
+          href={meta.href}
+          className={CTA_CLASSES}
+          onClick={() => track("dashboard_cta_clicked", { state: "next", kind: prompt.item.kind })}
+        >
           {meta.cta}
         </Link>
       </div>
@@ -81,7 +96,11 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
       <p className="text-[15px] opacity-90">
         Filling more of your profile sharpens the verdict and unlocks better matches.
       </p>
-      <Link href="/profile" className={CTA_CLASSES}>
+      <Link
+        href="/profile"
+        className={CTA_CLASSES}
+        onClick={() => track("dashboard_cta_clicked", { state: "profile-incomplete" })}
+      >
         Add details →
       </Link>
     </div>

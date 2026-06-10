@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { AssessmentPayload } from "@/lib/results/types";
 import type { Destination } from "@/lib/scoring/types";
 import { isDestinationSupported } from "@/lib/scoring/types";
+import { track } from "@/lib/analytics/events";
 import { UnsupportedDestinationNotice, NotSureFramingNotice } from "./destination-notice";
 import { VerdictCard } from "./verdict-card";
 import { FactorBars } from "./factor-bars";
@@ -32,6 +33,13 @@ export function Results({
   const scrollToConversion = () =>
     conversionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   const owned = mode === "owned";
+
+  // Fires only when a verdict readout actually renders (band only, never the score).
+  const supported = isDestinationSupported(destination) || destination === "not-sure";
+  const band = payload.result.verdict;
+  useEffect(() => {
+    if (supported) track("assessment_viewed", { mode, band });
+  }, [supported, mode, band]);
 
   // Destination honesty: an unsupported corridor never silently renders the
   // Australia readout — the user gets a plain "we don't cover this yet".

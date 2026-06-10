@@ -1,6 +1,7 @@
 import type { UniversityMatch } from "@/lib/matching/universities";
 import { Button } from "@/components/ui/button";
 import { cn, formatUsd } from "@/lib/utils";
+import { track } from "@/lib/analytics/events";
 
 const LEVEL_CLS = {
   strong: "bg-strong-tint text-strong",
@@ -70,7 +71,14 @@ export function UniversityMatches({
                 ))}
               </div>
               <div className="absolute inset-0 grid place-items-center bg-surface/60">
-                <Button onClick={onUnlock}>Unlock all {total} matches →</Button>
+                <Button
+                  onClick={() => {
+                    track("gate_cta_clicked");
+                    onUnlock();
+                  }}
+                >
+                  Unlock all {total} matches →
+                </Button>
               </div>
             </div>
           ) : null}

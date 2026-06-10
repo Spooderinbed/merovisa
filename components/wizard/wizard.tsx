@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
 import type { StudentProfile } from "@/lib/scoring/types";
 import { evaluateWizardCallouts } from "@/lib/callouts/rules";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { InlineCallout } from "@/components/ui/inline-callout";
 import { ProgressDots } from "@/components/ui/progress-dots";
 import { useWizardState, type WizardStepKey } from "./use-wizard-state";
 import { isStepComplete, STEP_CALLOUT_KEY } from "./step-meta";
+import { track } from "@/lib/analytics/events";
 import type { StepProps } from "./steps/types";
 import { HomeCountryStep } from "./steps/home-country-step";
 import { EducationStep } from "./steps/education-step";
@@ -33,6 +34,9 @@ const STEP_COMPONENTS: Record<WizardStepKey, ComponentType<StepProps>> = {
 
 export function Wizard({ onComplete }: { onComplete: (profile: StudentProfile) => void }) {
   const w = useWizardState();
+  useEffect(() => {
+    track("wizard_step_viewed", { step: w.stepKey });
+  }, [w.stepKey]);
   const calloutKey = STEP_CALLOUT_KEY[w.stepKey];
   const callouts = calloutKey ? evaluateWizardCallouts(w.profile, calloutKey) : [];
   const complete = isStepComplete(w.stepKey, w.profile);

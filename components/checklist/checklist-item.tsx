@@ -1,6 +1,9 @@
+"use client";
+
 import type { ChecklistItem as Item } from "@/lib/checklist/types";
 import type { LinkedPlanState } from "@/lib/checklist/plan-links";
 import { SourceLine } from "@/components/results/source-line";
+import { track } from "@/lib/analytics/events";
 
 const DOC_STATUS_LABEL: Record<"have" | "missing", string> = { have: "Have", missing: "Needed" };
 const INFO_CHIP: Record<NonNullable<Item["infoKind"]>, string> = { step: "Step", note: "Note" };
@@ -34,12 +37,18 @@ export function ChecklistItem({ item, planState }: { item: Item; planState?: Lin
         </div>
       </div>
       {item.note && <p className="text-[13px] text-ink-soft">{item.note}</p>}
-      {item.source && <SourceLine url={item.source.url} lastVerified={item.source.lastVerified} />}
+      {item.source && <SourceLine url={item.source.url} lastVerified={item.source.lastVerified} surface="checklist" />}
       {item.status === "missing" && item.kind && (
         <a href="/documents" className="text-[12.5px] text-primary hover:underline">Upload in documents ↗</a>
       )}
       {(planState === "open" || planState === "in-progress") && (
-        <a href="/plan" className="text-[12.5px] text-primary hover:underline">Track in your plan →</a>
+        <a
+          href="/plan"
+          className="text-[12.5px] text-primary hover:underline"
+          onClick={() => track("checklist_plan_link_clicked", { key: item.key })}
+        >
+          Track in your plan →
+        </a>
       )}
     </li>
   );

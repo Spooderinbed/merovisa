@@ -1,4 +1,5 @@
 import { selectCostToApply, type CostLine } from "@/lib/data/cost-to-apply";
+import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 function formatAmount(line: CostLine): string {
   const low = line.amount.toLocaleString();
@@ -34,15 +35,14 @@ export function CostToApply() {
                     {line.label}
                     {line.note ? <span className="text-ink-faint"> &mdash; {line.note}</span> : null}
                   </span>
-                  <a
+                  <SourceAnchor
+                    surface="cost-to-apply"
                     href={line.source}
-                    target="_blank"
-                    rel="noreferrer"
                     title={line.lastVerified ? `verified ${line.lastVerified}` : undefined}
                     className="shrink-0 font-mono text-ink hover:text-primary hover:underline"
                   >
                     {formatAmount(line)}
-                  </a>
+                  </SourceAnchor>
                 </li>
               ))}
             </ul>

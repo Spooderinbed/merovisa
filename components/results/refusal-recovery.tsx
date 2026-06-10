@@ -1,5 +1,6 @@
 import { NEPAL_REFUSAL_RECOVERY } from "@/lib/data/source/nepal-refusal-recovery";
 import type { NepalRefusalRecovery } from "@/lib/data/types";
+import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 const SECTIONS: { kind: NepalRefusalRecovery["kind"]; heading: string }[] = [
   { kind: "refusal-ground", heading: "Why applications are refused" },
@@ -42,15 +43,14 @@ export function RefusalRecovery() {
               {NEPAL_REFUSAL_RECOVERY.filter((r) => r.kind === section.kind).map((r) => (
                 <li key={r.id} className="flex items-baseline justify-between gap-3">
                   <span className={rowClass(r)}>{r.summary}</span>
-                  <a
+                  <SourceAnchor
+                    surface="refusal-recovery"
                     href={r.source}
-                    target="_blank"
-                    rel="noreferrer"
                     title={r.lastVerified ? `verified ${r.lastVerified}` : undefined}
                     className="shrink-0 font-mono text-ink hover:text-primary hover:underline"
                   >
                     {r.label}
-                  </a>
+                  </SourceAnchor>
                 </li>
               ))}
             </ul>

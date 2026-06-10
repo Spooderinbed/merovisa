@@ -1,5 +1,6 @@
 import type { MatchResult } from "@/lib/matches/types";
 import { ShortlistButton } from "./shortlist-button";
+import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 const VERDICT_CLS = {
   strong: "bg-strong-tint text-strong",
@@ -79,14 +80,13 @@ export function ProgramCard({
           <span className={`font-mono text-[11px] uppercase tracking-wide ${provenanceTone}`}>
             {provenance}
           </span>
-          <a
+          <SourceAnchor
+            surface="matches"
             href={p.source}
-            target="_blank"
-            rel="noreferrer"
             className="text-[12.5px] text-primary hover:underline"
           >
             {linkLabel} ↗
-          </a>
+          </SourceAnchor>
           <a href={`/checklist/${p.id}`} className="text-[12.5px] text-primary hover:underline">
             Document checklist →
           </a>

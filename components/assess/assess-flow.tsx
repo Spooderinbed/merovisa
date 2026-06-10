@@ -6,6 +6,7 @@ import type { AssessmentPayload } from "@/lib/results/types";
 import { Wizard } from "@/components/wizard/wizard";
 import { ProfileRecap } from "./profile-recap";
 import { Results } from "@/components/results/results";
+import { track } from "@/lib/analytics/events";
 
 type Phase = "wizard" | "recap" | "results";
 
@@ -24,6 +25,7 @@ export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
   }, [phase, payload, recapElapsed]);
 
   const handleComplete = async (completed: StudentProfile) => {
+    track("wizard_completed", { destination: completed.destination });
     setProfile(completed);
     setPhase("recap");
     setRecapElapsed(false);

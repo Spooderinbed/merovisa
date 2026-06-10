@@ -68,7 +68,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
                   <li key={i} className="flex flex-col text-[15px]">
                     <span className={cn("font-medium", INFLUENCE_CLS[f.influence])}>{f.label}</span>
                     <span className="text-ink-soft">{humanizeFactorDetail(f.detail)}</span>
-                    {f.source ? <SourceLine url={f.source.url} lastVerified={f.source.lastVerified} /> : null}
+                    {f.source ? <SourceLine url={f.source.url} lastVerified={f.source.lastVerified} surface="factor-bars" /> : null}
                   </li>
                 ))}
               </ul>
