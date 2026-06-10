@@ -1,8 +1,5 @@
+// Tease only what exists — scholarship matching isn't built, so it is never promised here.
 const TEASERS = [
-  {
-    title: "3 scholarships you may qualify for",
-    peek: "Australia Awards Scholarship — full tuition + monthly stipend for eligible applicants",
-  },
   {
     title: "23-step Australia procedure guide from Nepal",
     peek: "1. Collect academic transcripts  2. Sit IELTS at British Council  3. Shortlist universities",
