@@ -6,73 +6,58 @@ import { safeNext } from "@/lib/auth/safe-next";
 import { getProfile } from "@/lib/profiles/repo";
 import { computeCompleteness } from "@/lib/profiles/completeness";
 import { SECTION_KEYS } from "@/lib/profiles/sections";
-import type { ProfileSections, SectionKey } from "@/lib/profiles/sections";
-import { humanize } from "@/lib/text/humanize";
+import type { ProfileSections } from "@/lib/profiles/sections";
+import { PROFILE_GROUPS, deriveGroupStatus, summarizeGroup } from "@/components/profile/groups";
+import type { ProfileGroupKey } from "@/components/profile/groups";
 import { CompletenessRing } from "@/components/profile/completeness-ring";
 import { SectionAccordion } from "@/components/profile/section-accordion";
-import { PersonalEditor } from "@/components/profile/editors/personal-editor";
-import { DestinationEditor } from "@/components/profile/editors/destination-editor";
+import { AboutYouEditor } from "@/components/profile/editors/about-you-editor";
+import { DestinationIntakeEditor } from "@/components/profile/editors/destination-intake-editor";
 import { AcademicEditor } from "@/components/profile/editors/academic-editor";
-import { IntendedStudyEditor } from "@/components/profile/editors/intended-study-editor";
+import { StudyCareerEditor } from "@/components/profile/editors/study-career-editor";
 import { EnglishEditor } from "@/components/profile/editors/english-editor";
-import { GapEditor } from "@/components/profile/editors/gap-editor";
-import { WorkEditor } from "@/components/profile/editors/work-editor";
-import { FinanceEditor } from "@/components/profile/editors/finance-editor";
+import { WorkGapEditor } from "@/components/profile/editors/work-gap-editor";
+import { MoneyScholarshipsEditor } from "@/components/profile/editors/money-scholarships-editor";
 import { ImmigrationEditor } from "@/components/profile/editors/immigration-editor";
-import { FamilyEditor } from "@/components/profile/editors/family-editor";
-import { CareerEditor } from "@/components/profile/editors/career-editor";
-import { ScholarshipsEditor } from "@/components/profile/editors/scholarships-editor";
-import { DealBreakersEditor } from "@/components/profile/editors/deal-breakers-editor";
 
-const TITLES: Record<SectionKey, string> = {
-  "personal":        "Personal information",
-  "destination":     "Destination preferences",
-  "academic":        "Academic background",
-  "intended-study":  "Intended study",
-  "english":         "English proficiency",
-  "gap":             "Study gap",
-  "work":            "Work experience",
-  "finance":         "Financial capacity",
-  "immigration":     "Immigration & visa history",
-  "family":          "Family information",
-  "career":          "Career goals",
-  "scholarships":    "Scholarship profile",
-  "deal-breakers":   "Deal-breakers",
-};
-
-const EDITORS: Record<SectionKey, React.ComponentType<{ initial: never }>> = {
-  "personal":        PersonalEditor as React.ComponentType<{ initial: never }>,
-  "destination":     DestinationEditor as React.ComponentType<{ initial: never }>,
-  "academic":        AcademicEditor as React.ComponentType<{ initial: never }>,
-  "intended-study":  IntendedStudyEditor as React.ComponentType<{ initial: never }>,
-  "english":         EnglishEditor as React.ComponentType<{ initial: never }>,
-  "gap":             GapEditor as React.ComponentType<{ initial: never }>,
-  "work":            WorkEditor as React.ComponentType<{ initial: never }>,
-  "finance":         FinanceEditor as React.ComponentType<{ initial: never }>,
-  "immigration":     ImmigrationEditor as React.ComponentType<{ initial: never }>,
-  "family":          FamilyEditor as React.ComponentType<{ initial: never }>,
-  "career":          CareerEditor as React.ComponentType<{ initial: never }>,
-  "scholarships":    ScholarshipsEditor as React.ComponentType<{ initial: never }>,
-  "deal-breakers":   DealBreakersEditor as React.ComponentType<{ initial: never }>,
-};
-
-function summarize(key: SectionKey, sections: ProfileSections): string {
-  const s = (sections as Record<string, Record<string, unknown> | undefined>)[key];
-  if (!s) return "";
+/**
+ * One editor per presentation group; multi-section groups receive the
+ * slices of every member storage section they compose.
+ */
+function renderGroupEditor(key: ProfileGroupKey, sections: ProfileSections): React.ReactNode {
   switch (key) {
-    case "personal":      return [s.name as string, s.age ? `${s.age}` : "", s.intakeIso ? `${s.intakeIso} intake` : ""].filter(Boolean).join(" · ");
-    case "destination":   return [humanize(s.primary as string), ...((s.alternates as string[] | undefined) ?? []).map(humanize)].filter(Boolean).join(", ");
-    case "academic":      return [s.institution as string, s.gradePercent ? `${s.gradePercent}%` : "", humanize(s.degree as string)].filter(Boolean).join(" · ");
-    case "intended-study":return [humanize(s.level as string), humanize(s.field as string), s.specialisation as string].filter(Boolean).join(" · ");
-    case "english":       return s.overall ? `IELTS ${s.overall} — ${s.reportUploaded ? "uploaded" : "report not uploaded"}` : "";
-    case "gap":           return [s.years ? `${s.years} year` : "", ...((s.reasons as string[] | undefined) ?? []).map(humanize)].filter(Boolean).join(" · ");
-    case "work":          return [s.title as string, s.years ? `${s.years} yr` : "", s.docs ? "" : "docs missing"].filter(Boolean).join(" · ");
-    case "finance":       return [humanize(s.source as string), s.proofUploaded ? "" : "proof not uploaded"].filter(Boolean).join(" · ");
-    case "immigration":   return [s.refusals ? `${humanize(s.refusals as string)} refusal${s.refusals !== "one" ? "s" : ""}` : "", s.travelled === undefined ? "travel history unknown" : ""].filter(Boolean).join(" · ");
-    case "family":        return humanize(s.situation as string);
-    case "career":        return [humanize(s.goal as string), s.targetRole as string].filter(Boolean).join(" · ");
-    case "scholarships":  return ((s.profile as string[] | undefined) ?? []).join(", ");
-    case "deal-breakers": return ((s.mustHaves as string[] | undefined) ?? []).join(", ");
+    case "about-you":
+      return <AboutYouEditor initial={{ personal: sections.personal, family: sections.family }} />;
+    case "destination-intake":
+      return (
+        <DestinationIntakeEditor
+          initial={{
+            destination: sections.destination,
+            personal: sections.personal,
+            "deal-breakers": sections["deal-breakers"],
+          }}
+        />
+      );
+    case "academic":
+      return <AcademicEditor initial={sections.academic ?? {}} />;
+    case "study-career":
+      return (
+        <StudyCareerEditor
+          initial={{ "intended-study": sections["intended-study"], career: sections.career }}
+        />
+      );
+    case "english":
+      return <EnglishEditor initial={sections.english ?? {}} />;
+    case "work-gap":
+      return <WorkGapEditor initial={{ work: sections.work, gap: sections.gap }} />;
+    case "money-scholarships":
+      return (
+        <MoneyScholarshipsEditor
+          initial={{ finance: sections.finance, scholarships: sections.scholarships }}
+        />
+      );
+    case "visa-history":
+      return <ImmigrationEditor initial={sections.immigration ?? {}} />;
   }
 }
 
@@ -88,6 +73,8 @@ export default async function ProfilePage() {
   const profileRow = await getProfile(supabase, user.id);
   const sections = (profileRow?.sections as ProfileSections | undefined) ?? {};
   const { pct, status } = computeCompleteness(sections);
+  // The ring keeps its existing math + breakdown over the 13 storage
+  // sections — only the rows below group them for presentation.
   const counts = SECTION_KEYS.reduce(
     (acc, k) => {
       acc[status[k]] += 1;
@@ -105,18 +92,14 @@ export default async function ProfilePage() {
       </header>
       <CompletenessRing pct={pct} complete={counts.complete} partial={counts.partial} empty={counts.empty} />
       <div className="flex flex-col gap-3">
-        {SECTION_KEYS.map((key) => (
+        {PROFILE_GROUPS.map((group) => (
           <SectionAccordion
-            key={key}
-            title={TITLES[key]}
-            summary={summarize(key, sections)}
-            status={status[key]}
+            key={group.key}
+            title={group.title}
+            summary={summarizeGroup(group, sections)}
+            status={deriveGroupStatus(group.sections, status)}
           >
-            {(() => {
-              const Editor = EDITORS[key];
-              // Cast initial to never to match the EDITORS map signature; each editor knows its shape internally.
-              return <Editor initial={(sections[key] ?? {}) as never} />;
-            })()}
+            {renderGroupEditor(group.key, sections)}
           </SectionAccordion>
         ))}
       </div>
