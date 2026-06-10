@@ -1,22 +1,65 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { PromptCard } from "@/components/dashboard/prompt-card";
+import { PromptCard, type PromptState } from "@/components/dashboard/prompt-card";
+import type { PlanItemRow } from "@/lib/plan/types";
+
+const mkItem = (over: Partial<PlanItemRow> = {}): PlanItemRow => ({
+  id: 1,
+  owner: "u1",
+  kind: "upload-ielts-report",
+  impact: "medium",
+  title: "Upload your IELTS report",
+  body: "Uploading the official report lets us check per-band scores against program requirements.",
+  liftEstimate: null,
+  timeEstimate: null,
+  status: "todo",
+  createdAt: "2026-06-10",
+  completedAt: null,
+  startedAt: null,
+  ...over,
+});
+
+const next = (over: Partial<PlanItemRow> = {}): PromptState => ({ kind: "next", item: mkItem(over) });
 
 describe("PromptCard", () => {
-  it("renders the IELTS prompt with a CTA when reportUploaded is false", () => {
-    render(<PromptCard kind="ielts-missing" />);
-    expect(screen.getByText(/Upload your IELTS report/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Add details/i })).toHaveAttribute("href", "/profile");
-  });
-
-  it("renders a generic next-best-step card when kind is profile-incomplete", () => {
-    render(<PromptCard kind="profile-incomplete" />);
+  it("renders the generic profile prompt when there is no profile or assessment yet", () => {
+    render(<PromptCard prompt={{ kind: "profile-incomplete" }} />);
     expect(screen.getByText(/Your next best step/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Add details/i })).toHaveAttribute("href", "/profile");
   });
 
-  it("renders empty state when kind is none", () => {
-    render(<PromptCard kind="none" />);
+  it("renders the plan's top item with a CTA to its completing surface (verified kind)", () => {
+    render(<PromptCard prompt={next()} />);
+    expect(screen.getByText("Upload your IELTS report")).toBeInTheDocument();
+    const cta = screen.getByRole("link", { name: /Upload in documents/i });
+    expect(cta).toHaveAttribute("href", "/documents");
+    // Visible-token fix: paper pill + teal text, never the panel color.
+    expect(cta.className).toContain("bg-bg");
+    expect(cta.className).toContain("text-primary");
+  });
+
+  it("sends self-reported kinds to the plan", () => {
+    render(<PromptCard prompt={next({ kind: "apply-for-noc", title: "Apply for your NOC" })} />);
+    expect(screen.getByRole("link", { name: /Open your plan/i })).toHaveAttribute("href", "/plan");
+  });
+
+  it("waiting: says everything is underway with the open count — not caught up", () => {
+    render(<PromptCard prompt={{ kind: "waiting", openCount: 3 }} />);
+    expect(screen.getByText("Everything is underway")).toBeInTheDocument();
+    expect(
+      screen.getByText(/All 3 remaining plan items are marked in progress/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/All caught up/i)).toBeNull();
+    expect(screen.getByRole("link", { name: /Open your plan/i })).toHaveAttribute("href", "/plan");
+  });
+
+  it("caught-up: honest copy with no phantom controls", () => {
+    render(<PromptCard prompt={{ kind: "caught-up" }} />);
     expect(screen.getByText(/All caught up/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Nothing on your plan needs action right now/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/refresh your assessment/i)).toBeNull();
+    expect(screen.getByRole("link", { name: /See your plan/i })).toHaveAttribute("href", "/plan");
   });
 });

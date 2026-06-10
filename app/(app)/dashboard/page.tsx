@@ -6,9 +6,12 @@ import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { getProfile } from "@/lib/profiles/repo";
 import { listShortlistForUser } from "@/lib/matches/repo";
 import { listDocumentsForUser } from "@/lib/documents/repo";
+import { listOpenPlanForUser } from "@/lib/plan/repo";
+import { selectNextStep } from "@/lib/plan/select";
+import type { PlanItemRow } from "@/lib/plan/types";
 import { Greeting } from "@/components/dashboard/greeting";
 import { SnapshotCard } from "@/components/dashboard/snapshot-card";
-import { PromptCard, type PromptKind } from "@/components/dashboard/prompt-card";
+import { PromptCard, type PromptState } from "@/components/dashboard/prompt-card";
 import { JourneyTimeline } from "@/components/dashboard/journey-timeline";
 import { StatsRow } from "@/components/dashboard/stats-row";
 import { RecentUpdates } from "@/components/dashboard/recent-updates";
@@ -21,12 +24,13 @@ function partOfDay(): "morning" | "afternoon" | "evening" {
   return h < 12 ? "morning" : h < 18 ? "afternoon" : "evening";
 }
 
-function pickPromptKind(profile: { sections: ProfileSections } | null, primary: unknown): PromptKind {
-  if (!profile) return "profile-incomplete";
-  const s = profile.sections;
-  if (s.english && s.english.overall && s.english.reportUploaded === false) return "ielts-missing";
-  if (primary) return "none";
-  return "profile-incomplete";
+/** The plan is the only next-step brain; the dashboard just reads its top item. */
+function pickPrompt(profileRow: unknown, primary: unknown, planItems: PlanItemRow[]): PromptState {
+  if (!profileRow || !primary) return { kind: "profile-incomplete" };
+  const sel = selectNextStep(planItems);
+  if (sel.state === "next") return { kind: "next", item: sel.item! };
+  if (sel.state === "waiting") return { kind: "waiting", openCount: sel.openCount };
+  return { kind: "caught-up" };
 }
 
 export default async function DashboardPage() {
@@ -38,24 +42,25 @@ export default async function DashboardPage() {
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
   const user = userData.user;
-  const [primaryRow, profileRow, shortlist, documents] = await Promise.all([
+  const [primaryRow, profileRow, shortlist, documents, planItems] = await Promise.all([
     getPrimaryAssessmentForUser(supabase, user.id),
     getProfile(supabase, user.id),
     listShortlistForUser(supabase, user.id),
     listDocumentsForUser(supabase, user.id),
+    listOpenPlanForUser(supabase, user.id),
   ]);
   const primary = (primaryRow?.result as unknown as AssessmentPayload | undefined) ?? null;
   const profileSections = (profileRow?.sections as ProfileSections | undefined) ?? null;
   const name = profileSections?.personal?.name ?? null;
   const completenessPct = profileRow?.completeness ?? 0;
-  const promptKind = pickPromptKind(profileRow as { sections: ProfileSections } | null, primary);
+  const prompt = pickPrompt(profileRow, primary, planItems);
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
       <Greeting name={name} partOfDay={partOfDay()} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
         <SnapshotCard primary={primary} destinationLabel={primaryRow?.destination_id ? humanize(primaryRow.destination_id) : null} />
-        <PromptCard kind={promptKind} />
+        <PromptCard prompt={prompt} />
       </div>
       <JourneyTimeline currentStep="shortlist" />
       <StatsRow
