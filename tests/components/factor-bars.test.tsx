@@ -50,6 +50,25 @@ describe("FactorBars", () => {
     expect(screen.queryByText(/verified/)).toBeNull();
   });
 
+  // The scoring payload interpolates raw destination ids into factor details
+  // ("threshold for australia"). The engine is off-limits, so the render seam
+  // must show the proper name.
+  it("humanizes raw destination ids leaked into factor detail copy", async () => {
+    const leaky: AssessmentResult["dimensions"] = {
+      ...dimensions,
+      visa: {
+        value: 55,
+        factors: [
+          { label: "IELTS 7.0", influence: "positive", detail: "Meets the 6.5 threshold for australia." },
+        ],
+      },
+    };
+    render(<FactorBars dimensions={leaky} />);
+    await userEvent.click(screen.getByRole("button", { name: /Visa case strength/ }));
+    expect(screen.getByText("Meets the 6.5 threshold for Australia.")).toBeInTheDocument();
+    expect(screen.queryByText(/for australia/)).toBeNull();
+  });
+
   // A dimension whose payload ships zero factors (e.g. profile strength for a
   // zero-gap bachelor's profile) must not pretend to open — no button, no
   // aria-expanded, nothing. The affordance is data-driven, not per-dimension.
