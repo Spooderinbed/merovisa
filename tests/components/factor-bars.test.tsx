@@ -49,4 +49,26 @@ describe("FactorBars", () => {
     await userEvent.click(screen.getByRole("button", { name: /Academic fit/ }));
     expect(screen.queryByText(/verified/)).toBeNull();
   });
+
+  // A dimension whose payload ships zero factors (e.g. profile strength for a
+  // zero-gap bachelor's profile) must not pretend to open — no button, no
+  // aria-expanded, nothing. The affordance is data-driven, not per-dimension.
+  describe("dimension with no factors", () => {
+    const withEmpty: AssessmentResult["dimensions"] = {
+      ...dimensions,
+      profileStrength: { value: 65, factors: [] },
+    };
+
+    it("renders the bar as a plain row with no expand affordance", () => {
+      render(<FactorBars dimensions={withEmpty} />);
+      expect(screen.getByText("Profile strength")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Profile strength/ })).toBeNull();
+    });
+
+    it("keeps the affordance data-driven — sibling dimensions still expand", async () => {
+      render(<FactorBars dimensions={withEmpty} />);
+      await userEvent.click(screen.getByRole("button", { name: /Academic fit/ }));
+      expect(screen.getByText("72% clears typical bars")).toBeInTheDocument();
+    });
+  });
 });

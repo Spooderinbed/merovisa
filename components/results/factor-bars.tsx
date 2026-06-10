@@ -25,26 +25,40 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
     <section className="flex flex-col gap-3">
       {DIMENSION_META.map(({ key, label }) => {
         const dim: DimensionScore = dimensions[key];
-        const isOpen = open === key;
+        // Data-driven affordance: a dimension that ships no factors (e.g. profile
+        // strength for a zero-gap bachelor's profile) gets a plain row — nothing
+        // that pretends to open onto empty content.
+        const expandable = dim.factors.length > 0;
+        const isOpen = expandable && open === key;
+        const rowCls = "flex w-full flex-col gap-2 px-4 py-3 text-left";
+        const rowContent = (
+          <>
+            <span className="flex items-center justify-between">
+              <span className="text-ink">{label}</span>
+              <span className="font-mono text-[12.5px] text-ink-faint">{bandLabel(dim.value)}</span>
+            </span>
+            <span className="h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
+              <span
+                className="block h-full rounded-pill bg-primary transition-[width] duration-700 ease-calm"
+                style={{ width: `${dim.value}%` }}
+              />
+            </span>
+          </>
+        );
         return (
           <div key={key} className="rounded-md border border-line bg-surface">
-            <button
-              type="button"
-              aria-expanded={isOpen}
-              onClick={() => setOpen(isOpen ? null : key)}
-              className="flex w-full flex-col gap-2 px-4 py-3 text-left"
-            >
-              <span className="flex items-center justify-between">
-                <span className="text-ink">{label}</span>
-                <span className="font-mono text-[12.5px] text-ink-faint">{bandLabel(dim.value)}</span>
-              </span>
-              <span className="h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
-                <span
-                  className="block h-full rounded-pill bg-primary transition-[width] duration-700 ease-calm"
-                  style={{ width: `${dim.value}%` }}
-                />
-              </span>
-            </button>
+            {expandable ? (
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                onClick={() => setOpen(isOpen ? null : key)}
+                className={rowCls}
+              >
+                {rowContent}
+              </button>
+            ) : (
+              <div className={rowCls}>{rowContent}</div>
+            )}
             {isOpen ? (
               <ul className="flex flex-col gap-2 border-t border-line px-4 py-3">
                 {dim.factors.map((f, i) => (
