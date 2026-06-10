@@ -31,6 +31,43 @@ describe("ChecklistItem", () => {
   });
 });
 
+describe("ChecklistItem plan-linked state (mirrors the plan — no second completion control)", () => {
+  const step: Item = {
+    key: "noc-application", kind: null, label: "No Objection Certificate (NOC)",
+    group: "visa", stage: "after-offer", requirement: "required", status: "info", infoKind: "step",
+  };
+  it("renders exactly as today when no plan state is passed", () => {
+    render(<ul><ChecklistItem item={step} /></ul>);
+    expect(screen.getByText("Step")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Track in your plan/i })).not.toBeInTheDocument();
+  });
+  it("shows an In your plan chip and a track link while the plan item is open", () => {
+    render(<ul><ChecklistItem item={step} planState="open" /></ul>);
+    expect(screen.getByText("In your plan")).toBeInTheDocument();
+    expect(screen.queryByText("Step")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Track in your plan/i })).toHaveAttribute("href", "/plan");
+  });
+  it("shows an In progress chip while the plan item is started", () => {
+    render(<ul><ChecklistItem item={step} planState="in-progress" /></ul>);
+    expect(screen.getByText("In progress")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Track in your plan/i })).toHaveAttribute("href", "/plan");
+  });
+  it("shows the checked have treatment when the plan item is done", () => {
+    const { container } = render(<ul><ChecklistItem item={step} planState="done" /></ul>);
+    expect(screen.getByText("Done")).toBeInTheDocument();
+    expect(screen.getByText("✓ No Objection Certificate (NOC)")).toBeInTheDocument();
+    expect(container.querySelector("li")?.className).toContain("border-primary");
+    expect(screen.queryByRole("link", { name: /Track in your plan/i })).not.toBeInTheDocument();
+  });
+  it("never renders a button — the checklist cannot mutate plan state", () => {
+    for (const state of ["open", "in-progress", "done"] as const) {
+      const { unmount } = render(<ul><ChecklistItem item={step} planState={state} /></ul>);
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+});
+
 describe("ChecklistItem info chips (Step/Note)", () => {
   const info: Item = {
     key: "x", kind: null, label: "X", group: "visa", stage: "after-offer",
