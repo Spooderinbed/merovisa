@@ -62,7 +62,6 @@ export default async function DashboardPage() {
         universities={shortlist.length}
         documents={documents.length}
         profilePct={completenessPct}
-        scholarships={null}
       />
       <RecentUpdates updates={[]} />
     </div>

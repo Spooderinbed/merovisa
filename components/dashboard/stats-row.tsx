@@ -14,20 +14,22 @@ export function StatsRow({
   universities,
   documents,
   profilePct,
-  scholarships,
 }: {
   universities: number | null;
   documents: number | null;
   profilePct: number;
-  scholarships: number | null;
 }) {
   const dash = "—";
   return (
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Stat label="Universities" value={universities ?? dash} href="/matches" />
-      <Stat label="Documents" value={documents ?? dash} href="/checklist" />
+      <Stat label="Documents" value={documents ?? dash} href="/documents" />
       <Stat label="Profile" value={bandLabel(profilePct)} href="/profile" />
-      <Stat label="Scholarships" value={scholarships ?? dash} href="/matches" />
+      {/* Scholarship matching isn't built yet — an honest non-link tile, not a doorway to a stub. */}
+      <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">
+        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Scholarships</span>
+        <span className="text-[15px] text-ink-faint">Coming soon</span>
+      </div>
     </section>
   );
 }
