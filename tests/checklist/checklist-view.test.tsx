@@ -23,4 +23,19 @@ describe("ChecklistView", () => {
     expect(screen.getByText("Documents")).toBeInTheDocument();
     expect(screen.getByText("Visa lodgement steps")).toBeInTheDocument();
   });
+
+  it("passes plan state through to linked rows", () => {
+    const items = generateChecklist({ program, sections: {}, uploadedKinds: new Set<DocumentKind>() });
+    render(
+      <ChecklistView
+        program={program}
+        university={null}
+        items={items}
+        planStates={{ "noc-application": "open", "doc-preparation": "done" }}
+      />,
+    );
+    expect(screen.getByText("In your plan")).toBeInTheDocument();
+    expect(screen.getByText("Done")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Track in your plan/i })).toHaveAttribute("href", "/plan");
+  });
 });

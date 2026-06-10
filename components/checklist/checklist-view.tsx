@@ -1,9 +1,10 @@
 import type { ChecklistItem } from "@/lib/checklist/types";
+import type { LinkedPlanState } from "@/lib/checklist/plan-links";
 import type { Program, University } from "@/lib/programs/types";
 import { GROUP_LABELS, GROUPS } from "@/lib/documents/types";
 import { ChecklistStageSection, type ChecklistBlock } from "./checklist-stage-section";
 
-export function ChecklistView({ program, university, items }: { program: Program; university: University | null; items: ChecklistItem[] }) {
+export function ChecklistView({ program, university, items, planStates }: { program: Program; university: University | null; items: ChecklistItem[]; planStates?: Record<string, LinkedPlanState> }) {
   const now = items.filter((i) => i.stage === "now");
   const later = items.filter((i) => i.stage === "after-offer");
 
@@ -24,8 +25,8 @@ export function ChecklistView({ program, university, items }: { program: Program
         </span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">{program.name}</h1>
       </header>
-      <ChecklistStageSection title="What you need now" subtitle="Gather these to apply and to build your visa case." blocks={nowBlocks} />
-      <ChecklistStageSection title="After your offer" subtitle="You'll add these once a university offers you a place." blocks={laterBlocks} />
+      <ChecklistStageSection title="What you need now" subtitle="Gather these to apply and to build your visa case." blocks={nowBlocks} planStates={planStates} />
+      <ChecklistStageSection title="After your offer" subtitle="You'll add these once a university offers you a place." blocks={laterBlocks} planStates={planStates} />
     </div>
   );
 }
