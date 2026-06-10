@@ -148,10 +148,10 @@ p {
   text-wrap: pretty;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+/* No unlayered `a` reset: unlayered rules beat every Tailwind utility layer,
+   which silently disabled color utilities (text-primary etc.) on all links.
+   Preflight already supplies `a { color: inherit; text-decoration: inherit }`
+   inside @layer base, where utilities can override it. */
 
 button {
   font-family: inherit;
