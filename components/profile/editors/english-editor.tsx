@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SaveFeedback, useSectionSave } from "./section-save";
 
 export interface EnglishInitial {
   test?: "ielts" | "pte" | "toefl";
@@ -26,11 +27,10 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
   const [reading, setReading] = useState<string>(initial.reading?.toString() ?? "");
   const [writing, setWriting] = useState<string>(initial.writing?.toString() ?? "");
   const [speaking, setSpeaking] = useState<string>(initial.speaking?.toString() ?? "");
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const { status, save } = useSectionSave("english");
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (test) patch.test = test;
     if (overall) patch.overall = Number(overall);
@@ -38,12 +38,7 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
     if (reading) patch.reading = Number(reading);
     if (writing) patch.writing = Number(writing);
     if (speaking) patch.speaking = Number(speaking);
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: "english", patch }),
-    });
-    setStatus(res.ok ? "saved" : "error");
+    await save(patch);
   };
 
   return (
@@ -94,8 +89,7 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
       </p>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
-        {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
-        {status === "error" ? <span role="status" className="text-[14px] text-reach">Couldn&apos;t save — try again.</span> : null}
+        <SaveFeedback status={status} />
       </div>
     </form>
   );

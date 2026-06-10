@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SaveFeedback, useSectionSave } from "./section-save";
 
 export interface AcademicInitial {
   institution?: string;
@@ -21,22 +22,16 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
   const [degree, setDegree] = useState(initial.degree ?? "");
   const [gradePercent, setGradePercent] = useState<string>(initial.gradePercent?.toString() ?? "");
   const [gradeSystem, setGradeSystem] = useState(initial.gradeSystem ?? "");
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const { status, save } = useSectionSave("academic");
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (institution.trim()) patch.institution = institution.trim();
     if (degree) patch.degree = degree;
     if (gradePercent) patch.gradePercent = Number(gradePercent);
     if (gradeSystem.trim()) patch.gradeSystem = gradeSystem.trim();
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: "academic", patch }),
-    });
-    setStatus(res.ok ? "saved" : "error");
+    await save(patch);
   };
 
   return (
@@ -70,8 +65,7 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
       </div>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
-        {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
-        {status === "error" ? <span role="status" className="text-[14px] text-reach">Couldn&apos;t save — try again.</span> : null}
+        <SaveFeedback status={status} />
       </div>
     </form>
   );

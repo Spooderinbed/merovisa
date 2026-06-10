@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SaveFeedback, useSectionSave } from "./section-save";
 import { BankLoanPanel } from "./bank-loan-panel";
 import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 
@@ -40,21 +41,15 @@ export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
   const [total, setTotal] = useState<string>(initial.total?.toString() ?? "");
   const [currency, setCurrency] = useState<string>(initial.currency ?? "");
   const [source, setSource] = useState<string>(initial.source ?? "");
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const { status, save } = useSectionSave("finance");
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (total) patch.total = Number(total);
     if (currency) patch.currency = currency;
     if (source) patch.source = source;
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: "finance", patch }),
-    });
-    setStatus(res.ok ? "saved" : "error");
+    await save(patch);
   };
 
   return (
@@ -103,8 +98,7 @@ export function FinanceEditor({ initial }: { initial: FinanceInitial }) {
       </p>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
-        {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
-        {status === "error" ? <span role="status" className="text-[14px] text-reach">Couldn&apos;t save — try again.</span> : null}
+        <SaveFeedback status={status} />
       </div>
     </form>
   );

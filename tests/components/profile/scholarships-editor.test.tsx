@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ScholarshipsEditor } from "@/components/profile/editors/scholarships-editor";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 describe("ScholarshipsEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 

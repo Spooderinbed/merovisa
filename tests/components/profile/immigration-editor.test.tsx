@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ImmigrationEditor } from "@/components/profile/editors/immigration-editor";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 describe("ImmigrationEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 

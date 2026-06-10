@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WorkEditor } from "@/components/profile/editors/work-editor";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 describe("WorkEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 

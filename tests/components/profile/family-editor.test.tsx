@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FamilyEditor } from "@/components/profile/editors/family-editor";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 describe("FamilyEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 

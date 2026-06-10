@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SaveFeedback, useSectionSave } from "./section-save";
 
 export interface GapInitial {
   years?: number;
@@ -21,7 +22,7 @@ export function GapEditor({ initial }: { initial: GapInitial }) {
   const [years, setYears] = useState<string>(initial.years?.toString() ?? "");
   const [reasons, setReasons] = useState<Set<string>>(new Set(initial.reasons ?? []));
   const [evidence, setEvidence] = useState((initial.evidence ?? []).join(", "));
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const { status, save } = useSectionSave("gap");
 
   const toggleReason = (value: string) => {
     setReasons((prev) => {
@@ -34,18 +35,12 @@ export function GapEditor({ initial }: { initial: GapInitial }) {
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (years) patch.years = Number(years);
     if (reasons.size) patch.reasons = Array.from(reasons);
     const evs = evidence.split(",").map((s) => s.trim()).filter(Boolean);
     if (evs.length) patch.evidence = evs;
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: "gap", patch }),
-    });
-    setStatus(res.ok ? "saved" : "error");
+    await save(patch);
   };
 
   return (
@@ -73,8 +68,7 @@ export function GapEditor({ initial }: { initial: GapInitial }) {
       </div>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
-        {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
-        {status === "error" ? <span role="status" className="text-[14px] text-reach">Couldn&apos;t save — try again.</span> : null}
+        <SaveFeedback status={status} />
       </div>
     </form>
   );

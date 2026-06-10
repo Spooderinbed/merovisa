@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntendedStudyEditor } from "@/components/profile/editors/intended-study-editor";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 describe("IntendedStudyEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 

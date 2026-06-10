@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DealBreakersEditor } from "@/components/profile/editors/deal-breakers-editor";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 describe("DealBreakersEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SaveFeedback, useSectionSave } from "./section-save";
 
 export interface FamilyInitial {
   situation?: "alone" | "spouse" | "spouse-and-kids" | "other";
@@ -20,23 +21,17 @@ const MAX_CHILDREN = 10;
 export function FamilyEditor({ initial }: { initial: FamilyInitial }) {
   const [situation, setSituation] = useState<string>(initial.situation ?? "");
   const [children, setChildren] = useState<number>(initial.children ?? 1);
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const { status, save } = useSectionSave("family");
 
   // The child count only matters when kids are declared; the situation gates it.
   const hasKids = situation === "spouse-and-kids";
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (situation) patch.situation = situation;
     if (hasKids) patch.children = Math.min(MAX_CHILDREN, Math.max(1, children));
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: "family", patch }),
-    });
-    setStatus(res.ok ? "saved" : "error");
+    await save(patch);
   };
 
   return (
@@ -61,8 +56,7 @@ export function FamilyEditor({ initial }: { initial: FamilyInitial }) {
       ) : null}
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
-        {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
-        {status === "error" ? <span role="status" className="text-[14px] text-reach">Couldn&apos;t save — try again.</span> : null}
+        <SaveFeedback status={status} />
       </div>
     </form>
   );

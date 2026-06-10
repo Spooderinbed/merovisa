@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CareerEditor } from "@/components/profile/editors/career-editor";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 describe("CareerEditor", () => {
   beforeEach(() => vi.restoreAllMocks());
 

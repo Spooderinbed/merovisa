@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SaveFeedback, useSectionSave } from "./section-save";
 
 export interface DealBreakersInitial {
   mustHaves?: string[];
@@ -18,7 +19,7 @@ const OPTIONS = [
 
 export function DealBreakersEditor({ initial }: { initial: DealBreakersInitial }) {
   const [mustHaves, setMustHaves] = useState<Set<string>>(new Set(initial.mustHaves ?? []));
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const { status, save } = useSectionSave("deal-breakers");
 
   const toggle = (value: string) => {
     setMustHaves((prev) => {
@@ -31,15 +32,9 @@ export function DealBreakersEditor({ initial }: { initial: DealBreakersInitial }
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("saving");
     const patch: Record<string, unknown> = {};
     if (mustHaves.size > 0) patch.mustHaves = Array.from(mustHaves);
-    const res = await fetch("/api/profile/section", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: "deal-breakers", patch }),
-    });
-    setStatus(res.ok ? "saved" : "error");
+    await save(patch);
   };
 
   return (
@@ -57,8 +52,7 @@ export function DealBreakersEditor({ initial }: { initial: DealBreakersInitial }
       </div>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>
-        {status === "saved" ? <span role="status" className="text-[14px] text-strong">Saved</span> : null}
-        {status === "error" ? <span role="status" className="text-[14px] text-reach">Couldn&apos;t save — try again.</span> : null}
+        <SaveFeedback status={status} />
       </div>
     </form>
   );
