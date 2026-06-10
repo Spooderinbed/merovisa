@@ -50,6 +50,32 @@ describe("FactorBars", () => {
     expect(screen.queryByText(/verified/)).toBeNull();
   });
 
+  // Characterization (audit #8): the verified·source line is dimension-agnostic —
+  // any factor that ships source metadata renders it (here: the visa IELTS floor,
+  // gov-sourced). Rows without it stay bare because the engine attaches no source
+  // there, not because rendering is special-cased to the financial row.
+  it("renders the source line for any dimension whose factor carries one", async () => {
+    const url = "https://immi.homeaffairs.gov.au/visa-eligibility/international";
+    const visaSourced: AssessmentResult["dimensions"] = {
+      ...dimensions,
+      visa: {
+        value: 55,
+        factors: [
+          {
+            label: "IELTS 6.0",
+            influence: "neutral",
+            detail: "Meets the DHA visa floor (6.0); below the 6.5 course preference.",
+            source: { url, lastVerified: "2026-06-07" },
+          },
+        ],
+      },
+    };
+    render(<FactorBars dimensions={visaSourced} />);
+    await userEvent.click(screen.getByRole("button", { name: /Visa case strength/ }));
+    expect(screen.getByText(/verified 2026-06-07/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "immi.homeaffairs.gov.au" })).toHaveAttribute("href", url);
+  });
+
   // The scoring payload interpolates raw destination ids into factor details
   // ("threshold for australia"). The engine is off-limits, so the render seam
   // must show the proper name.
