@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ProfileSchema } from "@/lib/validation/profile";
+import { isDestinationSupported } from "@/lib/scoring/types";
 import { assembleAssessment } from "@/lib/results/assemble";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -32,6 +33,17 @@ export async function POST(request: Request): Promise<Response> {
   const parsed = ProfileSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Validation failed", issues: parsed.error.flatten() }, { status: 422 });
+  }
+
+  // Destination honesty: never silently assess an unsupported corridor as Australia.
+  // "not-sure" is explicit delegation and passes through (the Results UI says how
+  // we resolved it). See docs/superpowers/specs/2026-06-10-destination-honesty-design.md.
+  const dest = parsed.data.destination;
+  if (!isDestinationSupported(dest) && dest !== "not-sure") {
+    return NextResponse.json(
+      { error: `Destination not supported yet: ${dest}` },
+      { status: 422 },
+    );
   }
 
   const payload = assembleAssessment(parsed.data);

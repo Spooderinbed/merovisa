@@ -65,4 +65,16 @@ describe("POST /api/assess", () => {
     const res = await POST(bad);
     expect(res.status).toBe(400);
   });
+
+  it("returns 422 for an unsupported destination (no silent Australia fallback)", async () => {
+    const res = await POST(req({ ...validProfile, destination: "canada" }));
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error).toMatch(/destination/i);
+  });
+
+  it("accepts not-sure as explicit delegation", async () => {
+    const res = await POST(req({ ...validProfile, destination: "not-sure" }));
+    expect(res.status).toBe(200);
+  });
 });
