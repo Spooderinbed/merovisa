@@ -11,8 +11,8 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
 vi.mock("@/lib/plan/repo", () => ({ listAllPlanForUser }));
-vi.mock("@/components/plan/plan-list", () => ({
-  PlanList: ({ items }: { items: unknown[] }) => <div data-testid="list">{items.length} items</div>,
+vi.mock("@/components/plan/plan-list-live", () => ({
+  PlanListLive: ({ items }: { items: unknown[] }) => <div data-testid="list">{items.length} items</div>,
 }));
 
 import PlanPage from "@/app/(app)/plan/page";

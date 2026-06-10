@@ -2,7 +2,14 @@ import type { PlanItemRow } from "@/lib/plan/types";
 import { PlanItemCard } from "./plan-item-card";
 import { groupOpenItems } from "@/lib/plan/select";
 
-export function PlanList({ items }: { items: PlanItemRow[] }) {
+export function PlanList({
+  items,
+  onChanged,
+}: {
+  items: PlanItemRow[];
+  /** Fires after any successful item action so the caller can re-fetch server data. */
+  onChanged?: () => void;
+}) {
   const closed = items.filter((i) => i.status !== "todo");
   // Shared grouping — the dashboard next-step selector ranks with the same brain.
   const { high, medium, low, visaPrep } = groupOpenItems(items);
@@ -27,7 +34,7 @@ export function PlanList({ items }: { items: PlanItemRow[] }) {
         </h3>
         <div className="flex flex-col gap-3">
           {list.map((i) => (
-            <PlanItemCard key={i.id} item={i} />
+            <PlanItemCard key={i.id} item={i} onChanged={onChanged} />
           ))}
         </div>
       </section>
@@ -57,7 +64,7 @@ export function PlanList({ items }: { items: PlanItemRow[] }) {
           </div>
           <div className="flex flex-col gap-3">
             {visaPrep.map((i) => (
-              <PlanItemCard key={i.id} item={i} />
+              <PlanItemCard key={i.id} item={i} onChanged={onChanged} />
             ))}
           </div>
         </div>
@@ -70,7 +77,7 @@ export function PlanList({ items }: { items: PlanItemRow[] }) {
           </summary>
           <div className="mt-3 flex flex-col gap-3">
             {closed.map((i) => (
-              <PlanItemCard key={i.id} item={i} />
+              <PlanItemCard key={i.id} item={i} onChanged={onChanged} />
             ))}
           </div>
         </details>

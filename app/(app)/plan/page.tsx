@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
 import { listAllPlanForUser } from "@/lib/plan/repo";
-import { PlanList } from "@/components/plan/plan-list";
+import { PlanListLive } from "@/components/plan/plan-list-live";
 
 export default async function PlanPage() {
   const supabase = await createSupabaseServerClient();
@@ -30,7 +30,7 @@ export default async function PlanPage() {
           changes.
         </p>
       </header>
-      <PlanList items={items} />
+      <PlanListLive items={items} />
     </div>
   );
 }

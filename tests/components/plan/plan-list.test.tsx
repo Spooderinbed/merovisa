@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { PlanList } from "@/components/plan/plan-list";
 import type { PlanItemRow } from "@/lib/plan/types";
 
@@ -64,5 +65,16 @@ describe("PlanList", () => {
     render(<PlanList items={[mkKind(1, "add-grade", "high")]} />);
     expect(screen.queryByText("Visa preparation")).not.toBeInTheDocument();
     expect(screen.getByText("Your next steps")).toBeInTheDocument();
+  });
+
+  it("threads onChanged to item cards so section counts can refresh", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    const onChanged = vi.fn();
+    render(<PlanList items={[mk(1, "high", "todo")]} onChanged={onChanged} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Done$/i }));
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    vi.restoreAllMocks();
   });
 });
