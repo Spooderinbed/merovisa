@@ -35,6 +35,25 @@ describe("orderOpenItems", () => {
   });
 });
 
+describe("orderOpenItems determinism", () => {
+  it("breaks created_at ties by id so every surface agrees regardless of query order", () => {
+    const tied = [
+      mk({ id: 6, kind: "document-gap-evidence", impact: "high", createdAt: "2026-06-04T15:44:14.996Z" }),
+      mk({ id: 4, kind: "upload-proof-of-funds", impact: "high", createdAt: "2026-06-04T15:44:14.996Z" }),
+    ];
+    expect(orderOpenItems(tied).map((i) => i.id)).toEqual([4, 6]);
+    expect(orderOpenItems([...tied].reverse()).map((i) => i.id)).toEqual([4, 6]);
+  });
+
+  it("orders newer items first within an impact group", () => {
+    const items = [
+      mk({ id: 1, impact: "high", createdAt: "2026-06-04T00:00:00Z" }),
+      mk({ id: 2, impact: "high", createdAt: "2026-06-10T00:00:00Z" }),
+    ];
+    expect(orderOpenItems(items).map((i) => i.id)).toEqual([2, 1]);
+  });
+});
+
 describe("selectNextStep", () => {
   it("returns the top open actionable item", () => {
     const sel = selectNextStep([mk({ id: 1, impact: "low" }), mk({ id: 2, impact: "high" })]);
