@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BankLoanPanel } from "@/components/profile/editors/bank-loan-panel";
-import { FinanceEditor } from "@/components/profile/editors/finance-editor";
+import { MoneyScholarshipsEditor } from "@/components/profile/editors/money-scholarships-editor";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -27,9 +27,9 @@ describe("BankLoanPanel", () => {
   });
 });
 
-describe("FinanceEditor education-loan surface", () => {
+describe("MoneyScholarshipsEditor education-loan surface", () => {
   it("hides the bank panel until education-loan is selected", () => {
-    render(<FinanceEditor initial={{}} />);
+    render(<MoneyScholarshipsEditor initial={{}} />);
     expect(screen.queryByText(/Class-A banks with education loans/i)).toBeNull();
     fireEvent.change(screen.getByLabelText(/Source of funds/i), { target: { value: "education-loan" } });
     expect(screen.getByText(/Class-A banks with education loans/i)).toBeInTheDocument();
