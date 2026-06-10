@@ -6,6 +6,10 @@ import type { PlanItemRow } from "@/lib/plan/types";
 import { completionFor } from "@/lib/plan/completion";
 import { ImpactPill } from "./impact-pill";
 
+/** Mono-uppercase state pill, shared by In progress / Done / Dismissed. */
+const statePill =
+  "rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 font-mono text-[11.5px] uppercase tracking-wide text-ink-soft";
+
 export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(item.status === "done");
@@ -51,11 +55,10 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <ImpactPill impact={item.impact} />
-            {!isClosed && started ? (
-              <span className="rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 font-mono text-[11.5px] uppercase tracking-wide text-ink-soft">
-                In progress
-              </span>
-            ) : null}
+            {!isClosed && started ? <span className={statePill}>In progress</span> : null}
+            {/* Done = completed; Dismissed = opted out, so its title keeps no strike. */}
+            {done ? <span className={statePill}>Done</span> : null}
+            {dismissed ? <span className={statePill}>Dismissed</span> : null}
           </div>
           <h3 className={`text-[18px] font-medium text-ink ${done ? "line-through" : ""}`}>
             {item.title}

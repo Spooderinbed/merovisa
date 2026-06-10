@@ -84,4 +84,35 @@ describe("PlanItemCard", () => {
     expect(screen.getByRole("button", { name: /Back to open/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Mark as in progress/i })).toBeNull();
   });
+
+  // Done vs Dismissed need to read differently in the Closed section (audit fix #4):
+  // done = completed (chip + struck title), dismissed = opted out (chip, no strike).
+  it("done item: shows a Done chip and strikes the title", () => {
+    render(<PlanItemCard item={{ ...item, status: "done" }} />);
+    const chip = screen.getByText(/^Done$/);
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveClass("font-mono", "uppercase");
+    expect(screen.getByText("Upload IELTS")).toHaveClass("line-through");
+    expect(screen.queryByText(/^Dismissed$/)).toBeNull();
+  });
+
+  it("dismissed item: shows a Dismissed chip, no strikethrough, Undo kept", () => {
+    render(<PlanItemCard item={{ ...item, status: "dismissed" }} />);
+    const chip = screen.getByText(/^Dismissed$/);
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveClass("font-mono", "uppercase");
+    expect(screen.getByText("Upload IELTS")).not.toHaveClass("line-through");
+    expect(screen.queryByText(/^Done$/)).toBeNull();
+    expect(screen.getByRole("button", { name: /Undo/i })).toBeInTheDocument();
+  });
+
+  it("dismissing an open item swaps in the Dismissed chip without striking the title", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    render(<PlanItemCard item={item} />);
+    await userEvent.click(screen.getByRole("button", { name: /Dismiss/i }));
+    expect(screen.getByText(/^Dismissed$/)).toBeInTheDocument();
+    expect(screen.getByText("Upload IELTS")).not.toHaveClass("line-through");
+  });
 });
