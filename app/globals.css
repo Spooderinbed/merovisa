@@ -112,6 +112,10 @@
   --reach-tint: #d8775f20;
 }
 
+/* Element resets must live in @layer base: unlayered rules outrank EVERY
+   Tailwind layer (utilities included) and silently disable utility classes
+   on these elements. Guarded by tests/styles/globals-layering.test.ts. */
+@layer base {
 * {
   box-sizing: border-box;
 }
@@ -166,3 +170,4 @@ button {
   scrollbar-width: thin;
   scrollbar-color: var(--line-2) transparent;
 }
+} /* end @layer base */
