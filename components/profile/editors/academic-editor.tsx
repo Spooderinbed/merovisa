@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { GRADE_SYSTEMS } from "@/lib/scoring/types";
+import { humanize } from "@/lib/text/humanize";
 import { Button } from "@/components/ui/button";
 import { SaveFeedback, useSectionSave } from "./section-save";
 
@@ -30,7 +32,7 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
     if (institution.trim()) patch.institution = institution.trim();
     if (degree) patch.degree = degree;
     if (gradePercent) patch.gradePercent = Number(gradePercent);
-    if (gradeSystem.trim()) patch.gradeSystem = gradeSystem.trim();
+    if (gradeSystem) patch.gradeSystem = gradeSystem;
     await save(patch);
   };
 
@@ -59,8 +61,13 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="ae-system" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Grade system</label>
-          <input id="ae-system" value={gradeSystem} onChange={(e) => setGradeSystem(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+          <select id="ae-system" value={gradeSystem} onChange={(e) => setGradeSystem(e.target.value)}
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+            <option value="">Select a system</option>
+            {GRADE_SYSTEMS.map((g) => (
+              <option key={g} value={g}>{humanize(g)}</option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="flex items-center gap-3">
