@@ -19,6 +19,7 @@ const mk = (
   status,
   createdAt: "2026-06-04",
   completedAt: null,
+  startedAt: null,
 });
 
 const mkKind = (id: number, kind: string, impact: PlanItemRow["impact"]): PlanItemRow => ({

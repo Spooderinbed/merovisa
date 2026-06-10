@@ -37,6 +37,8 @@ export async function setPlanItemStatus(
     .update({
       status,
       completed_at: status === "done" ? new Date().toISOString() : null,
+      // Any explicit status change resets the in-progress marker.
+      started_at: null,
     })
     .eq("owner", owner)
     .eq("id", id);
@@ -56,5 +58,6 @@ function mapRow(r: Database["public"]["Tables"]["plan_items"]["Row"]): PlanItemR
     status: r.status as PlanStatus,
     createdAt: r.created_at,
     completedAt: r.completed_at,
+    startedAt: r.started_at,
   };
 }

@@ -23,4 +23,6 @@ export interface PlanItemRow {
   status: PlanStatus;
   createdAt: string;
   completedAt: string | null;
+  /** Set when a self-reported item is marked in progress; null = not started. */
+  startedAt: string | null;
 }

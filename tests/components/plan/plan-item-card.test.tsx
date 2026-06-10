@@ -16,6 +16,7 @@ const item: PlanItemRow = {
   status: "todo",
   createdAt: "2026-06-04",
   completedAt: null,
+  startedAt: null,
 };
 
 describe("PlanItemCard", () => {

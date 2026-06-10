@@ -125,6 +125,7 @@ export type Database = {
           kind: string
           lift_estimate: string | null
           owner: string
+          started_at: string | null
           status: string
           time_estimate: string | null
           title: string
@@ -138,6 +139,7 @@ export type Database = {
           kind: string
           lift_estimate?: string | null
           owner: string
+          started_at?: string | null
           status?: string
           time_estimate?: string | null
           title: string
@@ -151,6 +153,7 @@ export type Database = {
           kind?: string
           lift_estimate?: string | null
           owner?: string
+          started_at?: string | null
           status?: string
           time_estimate?: string | null
           title?: string
