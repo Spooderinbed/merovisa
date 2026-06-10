@@ -118,14 +118,17 @@ export function DestinationIntakeEditor({ initial }: { initial: DestinationIntak
         <div role="group" aria-label="Alternate destinations" className="flex flex-col gap-2">
           {alternateOptions.map((d) => {
             const selectable = isSelectable(d);
+            const selected = alternates.includes(d);
             return (
               <OptionCard
                 key={d}
                 label={humanize(d)}
                 multi
-                selected={alternates.includes(d)}
+                selected={selected}
                 onSelect={() => toggleAlternate(d)}
-                disabled={!selectable}
+                // Honesty restricts adding, not removing: a stored unsupported
+                // alternate stays interactive so the user can untick it.
+                disabled={!selectable && !selected}
                 description={selectable ? undefined : "Coming soon"}
               />
             );

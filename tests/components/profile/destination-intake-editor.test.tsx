@@ -92,6 +92,24 @@ describe("DestinationIntakeEditor", () => {
     expect(body.patch.alternates).toEqual(["canada", "uk"]);
   });
 
+  it("lets a stored unsupported alternate be removed — honesty restricts adding, not removing", async () => {
+    const fetchMock = okFetch();
+    render(
+      <DestinationIntakeEditor
+        initial={{ destination: { primary: "australia", alternates: ["canada", "uk"] } }}
+      />,
+    );
+    // Selected-but-unsupported stays interactive so the user can untick it…
+    const canada = screen.getByRole("checkbox", { name: /Canada/i });
+    expect(canada).not.toBeDisabled();
+    await userEvent.click(canada);
+    // …while an unselected unsupported option stays disabled.
+    expect(screen.getByRole("checkbox", { name: /Germany/i })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: /Save/i }));
+    const [body] = bodies(fetchMock);
+    expect(body.patch.alternates).toEqual(["uk"]);
+  });
+
   it("persists an intake edit to personal.intakeIso — and only PATCHes personal", async () => {
     const fetchMock = okFetch();
     render(
