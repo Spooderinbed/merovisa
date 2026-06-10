@@ -45,6 +45,32 @@ export async function setPlanItemStatus(
   return !error;
 }
 
+/** Toggle the in-progress marker. Only open items can be (un)started. */
+export async function setPlanItemStarted(
+  db: DB,
+  owner: string,
+  id: number,
+  started: boolean,
+): Promise<boolean> {
+  const { error } = await db
+    .from("plan_items")
+    .update({ started_at: started ? new Date().toISOString() : null })
+    .eq("owner", owner)
+    .eq("id", id)
+    .eq("status", "todo");
+  return !error;
+}
+
+export async function getPlanItemKind(db: DB, owner: string, id: number): Promise<string | null> {
+  const { data } = await db
+    .from("plan_items")
+    .select("kind")
+    .eq("owner", owner)
+    .eq("id", id)
+    .maybeSingle();
+  return data?.kind ?? null;
+}
+
 function mapRow(r: Database["public"]["Tables"]["plan_items"]["Row"]): PlanItemRow {
   return {
     id: r.id,
