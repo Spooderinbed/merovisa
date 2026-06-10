@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { FINDING_FIELDS, validateFinding } from "../../docs/research-briefs/_tools/finding-schema.js";
+import { FINDING_FIELDS, TRIAGE, validateFinding } from "../../docs/research-briefs/_tools/finding-schema.js";
 
 const base = {
   id: "B.045",
@@ -89,5 +89,46 @@ describe("validateFinding", () => {
   it("exposes the canonical field list", () => {
     expect(FINDING_FIELDS).toContain("id");
     expect(FINDING_FIELDS).toContain("value_status");
+  });
+});
+
+describe("validateFinding — human-owned triage fields", () => {
+  it("accepts each triage value on a pending finding when a reason is given", () => {
+    for (const t of ["ready", "use-later", "needs-human-call", "stale"]) {
+      expect(
+        validateFinding({ ...base, triage: t, triage_reason: "ranked in phase-2 cluster triage" }),
+      ).toEqual([]);
+    }
+  });
+
+  it("treats triage as optional (absent is fine)", () => {
+    expect(validateFinding(base)).toEqual([]);
+  });
+
+  it("flags an unknown triage value", () => {
+    expect(validateFinding({ ...base, triage: "later-maybe", triage_reason: "x" }).length).toBeGreaterThan(0);
+  });
+
+  it("requires a non-empty triage_reason when triage is set", () => {
+    expect(validateFinding({ ...base, triage: "ready" }).length).toBeGreaterThan(0);
+    expect(validateFinding({ ...base, triage: "ready", triage_reason: "   " }).length).toBeGreaterThan(0);
+  });
+
+  it("flags an orphan triage_reason (reason without triage)", () => {
+    expect(validateFinding({ ...base, triage_reason: "left behind" }).length).toBeGreaterThan(0);
+  });
+
+  it("rejects triage on a used finding — clear it when integrating", () => {
+    const used = { ...base, status: "used", value_status: "prose-only", triage: "ready", triage_reason: "r" };
+    expect(validateFinding(used).some((e) => e.includes("non-pending"))).toBe(true);
+  });
+
+  it("rejects triage on a rejected finding — rejected:<reason> already carries the decision", () => {
+    const rejected = { ...base, status: "rejected:superseded", triage: "stale", triage_reason: "r" };
+    expect(validateFinding(rejected).some((e) => e.includes("non-pending"))).toBe(true);
+  });
+
+  it("exposes the triage vocabulary", () => {
+    expect([...TRIAGE].sort()).toEqual(["needs-human-call", "ready", "stale", "use-later"]);
   });
 });

@@ -35,6 +35,14 @@ const VALUE_TYPE = new Set(["number", "enum", "string", "boolean", "money", "per
 // Optional: set on members of an entity+attribute cluster (see build-ledger.js).
 // Absent = not in a cluster. "contradiction" members must resolve via the conflict gate.
 const CLUSTER_TRIAGE = new Set(["untriaged", "enumeration", "contradiction", "duplicate"]);
+// Optional, human-owned (memo: docs/audits/2026-06-10-data-governance-and-triage.md):
+// what should happen to a *pending* finding next. status answers "is this wired
+// into the product?" (machine-derived by flip-status); triage answers "what should
+// humans do with it?". Automation never writes triage; integrating or rejecting a
+// finding requires clearing its triage in the same change — validation fails on a
+// non-pending triaged finding as the designed reminder. Requires a one-line
+// triage_reason. Distinct from cluster_triage, which records a cluster's shape.
+const TRIAGE = new Set(["ready", "use-later", "needs-human-call", "stale"]);
 
 function isValidStatus(s) {
   return s === "pending" || s === "used" || (typeof s === "string" && s.startsWith("rejected:"));
@@ -73,7 +81,23 @@ function validateFinding(f) {
     }
   }
 
+  if (f.triage != null || f.triage_reason != null) {
+    if (f.triage == null) {
+      errors.push(`triage_reason without triage on ${f.id}`);
+    } else if (!TRIAGE.has(f.triage)) {
+      errors.push(`bad triage: ${JSON.stringify(f.triage)}`);
+    }
+    if (typeof f.triage_reason !== "string" || !f.triage_reason.trim()) {
+      errors.push(`triage on ${f.id} requires a non-empty triage_reason`);
+    }
+    if (f.triage != null && f.status !== "pending") {
+      errors.push(
+        `triage on non-pending ${f.id} (status ${JSON.stringify(f.status)}) — clear triage when integrating or rejecting`,
+      );
+    }
+  }
+
   return errors;
 }
 
-module.exports = { FINDING_FIELDS, VALUE_TYPE, VALUE_STATUS, validateFinding };
+module.exports = { FINDING_FIELDS, VALUE_TYPE, VALUE_STATUS, TRIAGE, validateFinding };
