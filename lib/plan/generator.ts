@@ -66,7 +66,12 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const s = inputs.sections;
   const hasPrimary = !!inputs.primaryDestinationId;
   const reachCount = inputs.matches.filter((m) => m.verdict === "reach").length;
-  const possibleCount = inputs.matches.filter((m) => m.verdict === "possible").length;
+  // Possible matches actually gated on per-band scores. The report can only verify
+  // bands, never lift a verdict (min band ≤ overall), so the lift line claims a
+  // check on the genuinely band-gated set — not re-classification (audit 2026-06-10).
+  const bandGatedPossible = inputs.matches.filter(
+    (m) => m.verdict === "possible" && m.scoreSnapshot.bandGap > 0,
+  ).length;
 
   // PROFILE COMPLETENESS
   if (!s.personal?.name) {
@@ -105,7 +110,10 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       impact: "medium",
       title: "Upload your IELTS report",
       body: "Uploading the official report lets us check per-band scores against program requirements (some nursing programs need each band ≥ 7).",
-      liftEstimate: possibleCount > 0 ? `Could re-classify ${possibleCount} possible matches as strong` : "Sharpens band-aware verdicts",
+      liftEstimate:
+        bandGatedPossible > 0
+          ? `Verifies per-band requirements on ${bandGatedPossible} possible ${bandGatedPossible === 1 ? "match" : "matches"}`
+          : "Sharpens band-aware verdicts",
       timeEstimate: "2 minutes",
     });
   }
@@ -116,7 +124,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       impact: "high",
       title: "Add proof of funds",
       body: `DHA expects evidence covering AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living costs plus first-year tuition. It accepts ${oxfordOr(EVIDENCE_PATHS)}. A bank statement or loan sanction letter from a Class A institution is the usual proof.`,
-      liftEstimate: "Single biggest lift for visa case strength",
+      liftEstimate: "Core financial evidence for your visa case",
       timeEstimate: "1-3 days",
     });
   }
@@ -159,7 +167,10 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       impact: "high",
       title: "Season your bank statements for 6 months",
       body: "Nepal returned to Assessment Level 3 in Jan 2026. DHA case officers now expect 6 months of stable balance + source-of-funds documentation for any deposit > AUD 5,000.",
-      liftEstimate: "Prevents the most common refusal reason for Nepal AL3 applicants",
+      // "Documented refusal ground" per nepal-refusal-recovery ground-capacity; no
+      // sourced frequency ranking exists, so no "most common", and seasoning
+      // addresses the ground rather than preventing refusal.
+      liftEstimate: "Addresses a documented refusal ground — financial capacity",
       timeEstimate: "Plan ahead — 6 months elapsed",
     });
   }

@@ -217,4 +217,64 @@ describe("generatePlan", () => {
     const omitted = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
     expect(omitted.some((i) => i.kind === "start-passport-process")).toBe(false);
   });
+
+  // Honest lift estimates (visual audit 2026-06-10, fix #4): the engine can never
+  // re-classify possible → strong from a report upload (min band ≤ overall), so the
+  // lift line counts only the possible matches actually gated on per-band scores and
+  // claims verification, not upgrade.
+  describe("liftEstimate honesty", () => {
+    const mkMatch = (
+      verdict: "strong" | "possible" | "reach",
+      bandGap: number,
+    ) => ({
+      verdict,
+      program: {} as never,
+      university: {} as never,
+      reasons: [],
+      scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap, tuitionGap: 0 },
+    });
+
+    it("upload-ielts-report counts only band-gated possible matches and never promises re-classification", () => {
+      const matches = [
+        mkMatch("possible", 0.5), // band-gated possible — counted
+        mkMatch("possible", 0),   // possible but band already clears — not counted
+        mkMatch("strong", 0),     // not possible
+        mkMatch("reach", 1),      // band-gated but reach — not counted
+      ];
+      const items = generatePlan({
+        sections: { english: { overall: 6.5, reportUploaded: false } },
+        primaryDestinationId: null, matches, policy,
+      });
+      const upload = items.find((i) => i.kind === "upload-ielts-report");
+      expect(upload?.liftEstimate).toBe("Verifies per-band requirements on 1 possible match");
+    });
+
+    it("upload-ielts-report pluralizes the band-gated count", () => {
+      const matches = [mkMatch("possible", 0.5), mkMatch("possible", 1)];
+      const items = generatePlan({
+        sections: { english: { overall: 6, reportUploaded: false } },
+        primaryDestinationId: null, matches, policy,
+      });
+      const upload = items.find((i) => i.kind === "upload-ielts-report");
+      expect(upload?.liftEstimate).toBe("Verifies per-band requirements on 2 possible matches");
+    });
+
+    it("upload-ielts-report falls back to the band-aware line when no possible match is band-gated", () => {
+      const matches = [mkMatch("possible", 0), mkMatch("possible", 0)];
+      const items = generatePlan({
+        sections: { english: { overall: 7, reportUploaded: false } },
+        primaryDestinationId: null, matches, policy,
+      });
+      const upload = items.find((i) => i.kind === "upload-ielts-report");
+      expect(upload?.liftEstimate).toBe("Sharpens band-aware verdicts");
+    });
+
+    it("proof-of-funds and AL3 seasoning carry no unverifiable superlatives", () => {
+      const items = generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy });
+      const proof = items.find((i) => i.kind === "upload-proof-of-funds");
+      const season = items.find((i) => i.kind === "season-funds-six-months");
+      expect(proof?.liftEstimate).toBe("Core financial evidence for your visa case");
+      expect(season?.liftEstimate).toBe("Addresses a documented refusal ground — financial capacity");
+    });
+  });
 });
