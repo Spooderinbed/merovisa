@@ -5,7 +5,7 @@ export default function GuidePage() {
   return (
     <section className="mx-auto w-full max-w-[720px] px-5 py-16 text-center">
       <Eyebrow>Coming soon</Eyebrow>
-      <h1 className="mt-4 text-[clamp(28px,3.4vw,40px)]">Guide landing in Phase 6.</h1>
+      <h1 className="mt-4 text-[clamp(28px,3.4vw,40px)]">Your AI guide is coming soon.</h1>
       <p className="mx-auto mt-4 max-w-[52ch] text-[17px] text-ink-soft">
         Your AI guide — reads your profile and explains its reasoning. Coming with sources, never writes your
         application for you.

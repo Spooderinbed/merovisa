@@ -55,14 +55,14 @@ export default async function MatchesPage() {
 
   const scholarshipsPanel = (
     <p className="text-[15px] text-ink-soft">
-      Scholarship matching is coming next. We&apos;ll surface scholarships you may qualify for
-      based on your destination, field, and grade.
+      Coming soon — we&apos;ll surface scholarships you may qualify for based on your
+      destination, field, and grade.
     </p>
   );
   const costPanel = (
     <p className="text-[15px] text-ink-soft">
-      Live cost estimate is coming next — tuition, DHA living costs, OSHC, and intake-aligned
-      forecasts rolled into one number you can plan against.
+      Coming soon — a live cost estimate covering tuition, DHA living costs, OSHC, and
+      intake-aligned forecasts rolled into one number you can plan against.
     </p>
   );
 

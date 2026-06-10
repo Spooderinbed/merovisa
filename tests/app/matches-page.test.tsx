@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("server-only", () => ({}));
 
@@ -39,6 +40,20 @@ describe("/matches page", () => {
     expect(screen.getByText(/29,710/)).toBeInTheDocument();
     expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
     expect(screen.getByText(/No programs found yet/i)).toBeInTheDocument();
+  });
+
+  it("scholarships and cost tabs lead with honest coming-soon copy", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue(null);
+    listAllPrograms.mockResolvedValue([]);
+    listAllUniversities.mockResolvedValue([]);
+    listShortlistForUser.mockResolvedValue([]);
+    const ui = await MatchesPage();
+    render(ui);
+    await userEvent.click(screen.getByRole("button", { name: /Scholarships/i }));
+    expect(screen.getByText(/Coming soon — we'll surface scholarships/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Cost estimate/i }));
+    expect(screen.getByText(/Coming soon — a live cost estimate/i)).toBeInTheDocument();
   });
 
   it("renders match groups when programs + profile present", async () => {

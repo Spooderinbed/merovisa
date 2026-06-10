@@ -3,10 +3,12 @@ import { render, screen } from "@testing-library/react";
 import GuidePage from "@/app/(app)/guide/page";
 
 describe("(app) stub pages", () => {
-  it("guide renders headline + body + back link", () => {
+  it("guide renders a plain coming-soon headline + body + back link", () => {
     render(<GuidePage />);
-    expect(screen.getByText(/Guide landing in Phase 6/i)).toBeInTheDocument();
-    expect(screen.getByText(/AI guide/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Your AI guide is coming soon\./i })).toBeInTheDocument();
+    // internal phase jargon never reaches user-facing copy
+    expect(screen.queryByText(/phase \d/i)).toBeNull();
+    expect(screen.getByText(/reads your profile and explains its reasoning/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back to dashboard/i })).toHaveAttribute("href", "/dashboard");
   });
 
