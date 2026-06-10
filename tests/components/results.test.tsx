@@ -45,4 +45,11 @@ describe("Results", () => {
     expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /AUD 2,000/ })).toBeInTheDocument();
   });
+
+  it("surfaces the refusal risk & recovery trust panel", () => {
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    render(<Results payload={payload} />);
+    expect(screen.getByText(/Refusal risk & recovery/i)).toBeInTheDocument();
+    expect(screen.getByText(/it is not your personal probability/i)).toBeInTheDocument();
+  });
 });
