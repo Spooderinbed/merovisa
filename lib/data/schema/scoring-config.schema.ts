@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FindingId, IsoDate } from "./common";
+import { FindingId, IsoDate, Volatility, missingReverifyBy } from "./common";
 
 /**
  * Zod schemas for the sourced scoring-config layer (lib/data/policy/*).
@@ -18,9 +18,14 @@ export const ConfigProvenanceSchema = z
     lastVerified: IsoDate.optional(),
     effectiveDate: IsoDate.optional(),
     note: z.string().optional(),
+    volatility: Volatility.optional(),
+    reverifyBy: IsoDate.optional(),
   })
   .refine((p) => p.findingRefs.length >= 1 || p.source === "internal-heuristic", {
     message: "a config value needs ≥1 findingRef or source:'internal-heuristic'",
+  })
+  .refine((p) => !missingReverifyBy(p), {
+    message: "non-stable volatility requires a reverifyBy date",
   });
 
 /** A `{ value, provenance }` wrapper whose `value` matches `valueSchema`. */

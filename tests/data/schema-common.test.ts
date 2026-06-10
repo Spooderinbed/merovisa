@@ -65,6 +65,42 @@ describe("ProvenanceSchema", () => {
   });
 });
 
+describe("ProvenanceSchema — volatility & reverifyBy", () => {
+  const base = { findingRefs: ["B.045"] };
+
+  it("accepts stable volatility without a reverifyBy", () => {
+    expect(ProvenanceSchema.safeParse({ ...base, volatility: "stable" }).success).toBe(true);
+  });
+
+  it("accepts annual/volatile with a reverifyBy date", () => {
+    for (const v of ["annual", "volatile"]) {
+      expect(
+        ProvenanceSchema.safeParse({ ...base, volatility: v, reverifyBy: "2026-07-01" }).success,
+      ).toBe(true);
+    }
+  });
+
+  it("rejects non-stable volatility without a reverifyBy", () => {
+    for (const v of ["annual", "volatile"]) {
+      expect(ProvenanceSchema.safeParse({ ...base, volatility: v }).success).toBe(false);
+    }
+  });
+
+  it("accepts a reverifyBy on its own (deadline without a volatility class)", () => {
+    expect(ProvenanceSchema.safeParse({ ...base, reverifyBy: "2026-07-01" }).success).toBe(true);
+  });
+
+  it("rejects an unknown volatility", () => {
+    expect(ProvenanceSchema.safeParse({ ...base, volatility: "weekly" }).success).toBe(false);
+  });
+
+  it("rejects a malformed reverifyBy", () => {
+    expect(
+      ProvenanceSchema.safeParse({ ...base, volatility: "volatile", reverifyBy: "July 2026" }).success,
+    ).toBe(false);
+  });
+});
+
 describe("freshIsoDate", () => {
   it("accepts a recent date within the TTL", () => {
     const today = new Date().toISOString().slice(0, 10);

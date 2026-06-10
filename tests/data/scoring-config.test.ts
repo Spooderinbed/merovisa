@@ -142,6 +142,19 @@ describe("scoring config — schema validity", () => {
     const bad = { value: 1, provenance: { findingRefs: ["nope"] } };
     expect(DhaLivingSchema.safeParse(bad).success).toBe(false);
   });
+
+  it("accepts a config value declaring volatility with a reverifyBy deadline", () => {
+    const ok = {
+      value: 1,
+      provenance: { findingRefs: ["A.015"], volatility: "annual", reverifyBy: "2026-07-01" },
+    };
+    expect(DhaLivingSchema.safeParse(ok).success).toBe(true);
+  });
+
+  it("rejects non-stable volatility without a reverifyBy on a config value", () => {
+    const bad = { value: 1, provenance: { findingRefs: ["A.015"], volatility: "volatile" } };
+    expect(DhaLivingSchema.safeParse(bad).success).toBe(false);
+  });
 });
 
 describe("scoring config — provenance discipline", () => {

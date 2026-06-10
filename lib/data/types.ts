@@ -17,6 +17,14 @@ export interface Provenance {
   effectiveDate?: string;
   /** Freeform note (e.g. why a value is an internal heuristic). */
   note?: string;
+  /** How quickly this fact goes stale. Non-stable values must set reverifyBy. */
+  volatility?: "stable" | "annual" | "volatile";
+  /**
+   * ISO date the source must be re-verified by — the date the fact may change
+   * (e.g. DHA fees on 1 July), not a TTL. The freshness guard
+   * (tests/data/freshness.test.ts) goes red on this date.
+   */
+  reverifyBy?: string;
 }
 
 /** Mixin for data records that declare their finding provenance. */

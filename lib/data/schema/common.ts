@@ -16,14 +16,27 @@ export const HttpUrl = z.string().regex(/^https?:\/\//, "expected an http(s) URL
 // then a zero-padded number: A.001, B.045, J1.001, J2.010.
 export const FindingId = z.string().regex(/^[A-J]\d*\.\d{3,}$/, "expected a finding id like B.045 or J1.001");
 
+/** How quickly a sourced fact goes stale. Non-stable values must set reverifyBy. */
+export const Volatility = z.enum(["stable", "annual", "volatile"]);
+
+/** True when a provenance declares it expires but gives no re-verification deadline. */
+export const missingReverifyBy = (p: { volatility?: string; reverifyBy?: string }) =>
+  p.volatility !== undefined && p.volatility !== "stable" && p.reverifyBy === undefined;
+
 /** Machine-checkable provenance attached to a sourced data record. */
-export const ProvenanceSchema = z.object({
-  findingRefs: z.array(FindingId).min(1, "at least one findingRef is required"),
-  source: HttpUrl.optional(),
-  lastVerified: IsoDate.optional(),
-  effectiveDate: IsoDate.optional(),
-  note: z.string().optional(),
-});
+export const ProvenanceSchema = z
+  .object({
+    findingRefs: z.array(FindingId).min(1, "at least one findingRef is required"),
+    source: HttpUrl.optional(),
+    lastVerified: IsoDate.optional(),
+    effectiveDate: IsoDate.optional(),
+    note: z.string().optional(),
+    volatility: Volatility.optional(),
+    reverifyBy: IsoDate.optional(),
+  })
+  .refine((p) => !missingReverifyBy(p), {
+    message: "non-stable volatility requires a reverifyBy date",
+  });
 
 const MS_PER_DAY = 86_400_000;
 
