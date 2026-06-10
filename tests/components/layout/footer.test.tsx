@@ -8,8 +8,16 @@ describe("Footer", () => {
     expect(screen.getByText(/Product/i)).toBeInTheDocument();
     expect(screen.getByText(/Trust/i)).toBeInTheDocument();
     expect(screen.getByText(/Company/i)).toBeInTheDocument();
-    expect(screen.getByText(/Visa rules sourced from official government sites/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Every data point carries its source and a verification date\./i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/© 2026 MyVisa/i)).toBeInTheDocument();
+  });
+
+  it("makes no freshness claim we cannot keep", () => {
+    render(<Footer />);
+    // no daily checker exists — the honest claim is per-data-point source + verification date
+    expect(screen.queryByText(/checked daily/i)).toBeNull();
   });
 
   it("renders linkable footer entries", () => {
