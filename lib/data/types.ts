@@ -831,3 +831,29 @@ export interface NepalPassportProcess extends Provenanced {
   source: string;  // Department of Passports process URL
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Nepal → Australia student-visa refusal risk & recovery (trust-defense, category I).
+ * The gov-sourced truth a scared student needs before signup: why applications are
+ * refused (Genuine Student, financial/English capacity, document integrity), the honest
+ * sector grant rates (Higher Education vs VET), what recovery actually looks like
+ * (ART review, its fee, hardship reduction, ministerial intervention), and what not to
+ * trust (visa scams, bogus documents). Records are `kind`-discriminated. Three figure-
+ * bearing records (the two grant rates + the ART fee) carry a structured `value` so
+ * reconcile's value-fidelity pass guards the published number against the sourced finding;
+ * the rest are prose-only. `summary` is the rendered sentence (display numbers live here);
+ * `label` is the short source/topic label shown as the row's link text. Fact-only — no
+ * scorer reads it; machine-checked against findings (see provenance.findingRefs).
+ */
+export interface NepalRefusalRecovery extends Provenanced {
+  id: string; // slug, e.g. "ground-genuine-student"
+  kind: "refusal-ground" | "grant-rate" | "recovery-path" | "scam-warning";
+  label: string;   // short source/topic label — rendered as the row's link text
+  summary: string; // the rendered sentence (display numbers live here)
+  sector?: "higher-education" | "vet"; // grant-rate records only — drives HE-primary emphasis
+  value?: number;  // structured figure — reconcile-checked twin of the number in `summary`
+  unit?: string;   // "%" for grant rates, "AUD" for the fee
+  period?: string; // reporting window for time-bounded figures (grant rates) — display metadata
+  source: string;  // canonical gov URL (DHA / ART / Home Affairs stats)
+  lastVerified?: string; // ISO date
+}

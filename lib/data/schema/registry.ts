@@ -84,6 +84,8 @@ import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certifi
 import { NepalPoliceCertificateSchema } from "@/lib/data/schema/nepal-police-certificate.schema";
 import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
 import { NepalPassportProcessSchema } from "@/lib/data/schema/nepal-passport-process.schema";
+import { NEPAL_REFUSAL_RECOVERY } from "@/lib/data/source/nepal-refusal-recovery";
+import { NepalRefusalRecoverySchema } from "@/lib/data/schema/nepal-refusal-recovery.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -690,5 +692,21 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-passport-process",
     subRecordKeys: [],
     recordInterface: "NepalPassportProcess",
+  },
+  {
+    // Slice K — Nepal → Australia refusal risk & recovery (trust-defense, category I).
+    // The first trust-defense panel's data: why applications are refused (Genuine Student,
+    // financial/English capacity, document integrity), honest sector grant rates (HE vs VET),
+    // recovery (ART review + fee + hardship reduction + ministerial intervention), and visa
+    // scams. 11 records / 16 findings; the two grant rates + the ART fee are structured
+    // (reconcile value-fidelity against I.034/I.035/I.045), the rest prose-only. Rendered on
+    // the results page after PolicyBanner. Fact-only: no scorer reads it.
+    category: "I",
+    exportName: "NEPAL_REFUSAL_RECOVERY",
+    data: NEPAL_REFUSAL_RECOVERY,
+    schema: NepalRefusalRecoverySchema,
+    recordLabel: "nepal-refusal-recovery",
+    subRecordKeys: [],
+    recordInterface: "NepalRefusalRecovery",
   },
 ];
