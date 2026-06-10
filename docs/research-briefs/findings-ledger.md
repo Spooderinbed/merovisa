@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=401 · pending=713
+**Status:** used=417 · pending=697
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1019,9 +1019,9 @@
 | I.003 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says applicants should answer the GS questions in the online application form rather than attach a separa… |
 | I.004 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA sets a 150-word limit for each GS response. |
 | I.005 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA requires all GS responses to be written in English. |
-| I.006 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says it gives more weight to GS statements that are supported by evidence. |
+| I.006 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says it gives more weight to GS statements that are supported by evidence. |
 | I.007 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Clause 500.211 requires a primary Subclass 500 applicant to fall within one of the listed enrolment or minist… |
-| I.008 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Clause 500.212 requires a primary Subclass 500 applicant to be a genuine applicant for entry and stay as a st… |
+| I.008 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Clause 500.212 requires a primary Subclass 500 applicant to be a genuine applicant for entry and stay as a st… |
 | I.009 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Clause 500.217 requires a primary Subclass 500 applicant to satisfy PIC 4013. |
 | I.010 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Clause 500.217 requires a primary Subclass 500 applicant to satisfy PIC 4020. |
 | I.011 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Clause 500.217 requires a primary Subclass 500 applicant to satisfy PIC 4001. |
@@ -1040,15 +1040,15 @@
 | I.024 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover school costs for school-aged depend… |
 | I.025 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says the applicant must provide evidence of an approved minimum English test sc… |
 | I.026 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says OSHC must cover the applicant from at least one week before the course sta… |
-| I.027 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says providing altered, edited, or digitally manipulated documents for visa purposes is unlawful. |
-| I.028 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says bogus documents or false or misleading information may lead to refusal, cancellation, restrictions o… |
-| I.029 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s SSVF page says a student needs to provide evidence of financial and English language capacity with the … |
+| I.027 | I | primary | red-flag |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says providing altered, edited, or digitally manipulated documents for visa purposes is unlawful. |
+| I.028 | I | primary | red-flag |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says bogus documents or false or misleading information may lead to refusal, cancellation, restrictions o… |
+| I.029 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s SSVF page says a student needs to provide evidence of financial and English language capacity with the … |
 | I.030 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The BP0015 Student visa grant rates resource locked at 2026-03-31 was updated on 30 April 2026 on data.gov.au. |
 | I.031 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA defines grant rate as the number of grants multiplied by 100 and divided by the number of decisions. |
 | I.032 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal’s outside-Australia student visa grant rate was 76.5% in the quarter from 1 April 2025 to 30 June 2025. |
 | I.033 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal’s in-Australia student visa grant rate was 78.7% in the quarter from 1 April 2025 to 30 June 2025. |
-| I.034 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The outside-Australia Higher Education sector grant rate was 85.3% in the quarter from 1 April 2025 to 30 Jun… |
-| I.035 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The outside-Australia Vocational Education and Training sector grant rate was 36.3% in the quarter from 1 Apr… |
+| I.034 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The outside-Australia Higher Education sector grant rate was 85.3% in the quarter from 1 April 2025 to 30 Jun… |
+| I.035 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The outside-Australia Vocational Education and Training sector grant rate was 36.3% in the quarter from 1 Apr… |
 | I.036 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal recorded 14,474 Higher Education visa grants outside Australia in 2024-25 to 30 June 2025. |
 | I.037 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal recorded 473 Vocational Education and Training visa grants outside Australia in 2024-25 to 30 June 2025. |
 | I.038 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal recorded 12,008 Higher Education visa grants in Australia in 2024-25 to 30 June 2025. |
@@ -1057,9 +1057,9 @@
 | I.041 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA reported that student visa grants to citizens of Nepal increased by 64.3% compared with the same period i… |
 | I.042 | I | anecdotal | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal-specific Subclass 500 refusal breakdown by legal ground is unverified — needs confirmation. |
 | I.043 | I | anecdotal | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal-specific refusal-rate differences by provider tier or university tier are unverified — needs confirmati… |
-| I.044 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The Administrative Review Tribunal has jurisdiction to review certain visa decisions made under the Migration… |
-| I.045 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The ART application fee for a review of most migration decisions is AUD 3,580. |
-| I.046 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The ART may grant a fee reduction to 50% of the full migration review fee on financial hardship grounds. |
+| I.044 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The Administrative Review Tribunal has jurisdiction to review certain visa decisions made under the Migration… |
+| I.045 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The ART application fee for a review of most migration decisions is AUD 3,580. |
+| I.046 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The ART may grant a fee reduction to 50% of the full migration review fee on financial hardship grounds. |
 | I.047 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART’s 17 June 2025 notice said the fee for review of a reviewable migration decision would increase to AUD 3,… |
 | I.048 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 50% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
 | I.049 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 95% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
@@ -1070,10 +1070,10 @@
 | I.054 | I | primary | process | G41 | pending | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to set aside the original decision and substitute a new decision. |
 | I.055 | I | primary | process | G41 | pending | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to remit the decision to the original decision maker for reconsideration. |
 | I.056 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART says the Department’s decision letter will tell the applicant whether the Tribunal can review the decisio… |
-| I.057 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says the Minister’s intervention powers are not available if there is no review decision by a merits revi… |
+| I.057 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says the Minister’s intervention powers are not available if there is no review decision by a merits revi… |
 | I.058 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says a person must make arrangements to leave Australia even if they have requested ministerial intervent… |
-| I.059 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Home Affairs FOI data recorded 197 Ministerial Intervention requests received in April 2025. |
-| I.060 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Home Affairs FOI data recorded 34 interventions by the Minister in April 2025. |
+| I.059 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Home Affairs FOI data recorded 197 Ministerial Intervention requests received in April 2025. |
+| I.060 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Home Affairs FOI data recorded 34 interventions by the Minister in April 2025. |
 | I.061 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The same FOI file says one Ministerial Intervention request may include multiple persons. |
 | I.062 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The same FOI file says tribunal-initiated Ministerial Intervention requests include requests referred by the … |
 | I.063 | I | practitioner | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | AHC Lawyers says many student visa refusals involve not meeting the Genuine Student criteria. |
@@ -1091,9 +1091,9 @@
 | I.075 | I | practitioner | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Emigrate Lawyers says an applicant refused because of missing documentation, inconsistent information, or fin… |
 | I.076 | I | practitioner | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | HECT says clearer source-of-funds evidence and sponsor documents can be critical in appeals involving financi… |
 | I.077 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal’s MoEST NOC portal says a student applying for a language course should also have an additional academi… |
-| I.078 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue work permits. |
-| I.079 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue visa labels. |
-| I.080 | I | primary | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue Labour Market Impact Assessments. |
+| I.078 | I | primary | red-flag |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue work permits. |
+| I.079 | I | primary | red-flag |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue visa labels. |
+| I.080 | I | primary | red-flag |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s visa-scams page says Australia does not issue Labour Market Impact Assessments. |
 | J1.001 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Cambridge C1 Advanced (C1 Advanced) is accepted by the Australian Department of Home Affairs as evidence of E… |
 | J1.002 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | Canadian English Language Proficiency Index Program General (CELPIP General) is accepted by the Australian De… |
 | J1.003 | J1 | primary | data |  | used | lib/data/source/nepal.ts tests (+ scholarships) | IELTS Academic (including One Skill Retake) is accepted by the Australian Department of Home Affairs for visa… |
