@@ -1,4 +1,5 @@
 import type { StudentProfile } from "@/lib/scoring/types";
+import { isDestinationSupported } from "@/lib/scoring/types";
 import type { CalloutStep } from "@/lib/callouts/types";
 import type { WizardStepKey } from "./use-wizard-state";
 
@@ -28,7 +29,10 @@ export function isStepComplete(step: WizardStepKey, p: Partial<StudentProfile>):
     case "english":
       return p.englishStatus === "taken" ? typeof p.englishScore === "number" : Boolean(p.englishStatus);
     case "destination":
-      return Boolean(p.destination);
+      return (
+        p.destination !== undefined &&
+        (isDestinationSupported(p.destination) || p.destination === "not-sure")
+      );
     case "budget":
       return typeof p.budget === "number" && Boolean(p.budgetCurrency) && Boolean(p.fundingSource);
     case "goal":
