@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
 import { AppBar } from "@/components/layout/app-bar";
 import { Footer } from "@/components/layout/footer";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -17,8 +18,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <AppBar variant="app" user={data.user} />
-      <main>{children}</main>
-      <Footer />
+      {/* Padded below md so the fixed tab bar never covers content or footer. */}
+      <div className="pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
+        <main>{children}</main>
+        <Footer />
+      </div>
+      <MobileTabBar />
     </>
   );
 }

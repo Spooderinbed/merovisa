@@ -19,6 +19,9 @@ vi.mock("@/components/layout/app-bar", () => ({
 vi.mock("@/components/layout/footer", () => ({
   Footer: () => <div data-testid="footer">footer</div>,
 }));
+vi.mock("@/components/layout/mobile-tab-bar", () => ({
+  MobileTabBar: () => <div data-testid="mobile-tab-bar">tabs</div>,
+}));
 
 import AppLayout from "@/app/(app)/layout";
 
@@ -41,5 +44,15 @@ describe("(app) layout", () => {
     expect(screen.getByTestId("appbar")).toBeInTheDocument();
     expect(screen.getByTestId("kid")).toBeInTheDocument();
     expect(screen.getByTestId("footer")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-tab-bar")).toBeInTheDocument();
+  });
+
+  it("pads the content area below md so the tab bar never covers it", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    const ui = await AppLayout({ children: <div data-testid="kid">kid</div> });
+    const { container } = render(ui);
+    const wrapper = container.querySelector("main")!.parentElement!;
+    expect(wrapper.className).toContain("pb-[calc(56px+env(safe-area-inset-bottom))]");
+    expect(wrapper.className).toContain("md:pb-0");
   });
 });
