@@ -16,8 +16,8 @@ vi.mock("@/components/profile/completeness-ring", () => ({
   CompletenessRing: ({ pct }: { pct: number }) => <div data-testid="ring">{pct}%</div>,
 }));
 vi.mock("@/components/profile/section-accordion", () => ({
-  SectionAccordion: ({ title, status }: { title: string; status: string }) => (
-    <div data-testid={`section-${title}`}>{title}:{status}</div>
+  SectionAccordion: ({ title, status, summary }: { title: string; status: string; summary: string }) => (
+    <div data-testid={`section-${title}`}>{title}:{status}:{summary}</div>
   ),
 }));
 
@@ -42,5 +42,26 @@ describe("/profile page", () => {
     expect(screen.getByTestId("ring")).toHaveTextContent("8%");
     expect(screen.getByTestId("section-Personal information")).toBeInTheDocument();
     expect(screen.getByTestId("section-Destination preferences")).toBeInTheDocument();
+  });
+
+  it("derives row summaries and ring from current profile data on each server render (refresh contract)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
+    getProfile.mockResolvedValueOnce({ sections: { personal: { name: "Aarav Sharma" } } });
+    const first = render(await ProfilePage());
+    expect(screen.getByTestId("section-Personal information")).toHaveTextContent("Aarav Sharma");
+    expect(screen.getByTestId("ring")).toHaveTextContent("8%");
+    first.unmount();
+
+    // After a section save, router.refresh() re-runs the page with fresh data:
+    getProfile.mockResolvedValueOnce({
+      sections: {
+        personal: { name: "Aarav Sharma", age: 23 },
+        career: { goal: "research" },
+      },
+    });
+    render(await ProfilePage());
+    expect(screen.getByTestId("section-Personal information")).toHaveTextContent("Aarav Sharma · 23");
+    expect(screen.getByTestId("section-Career goals")).toHaveTextContent(/research/i);
+    expect(screen.getByTestId("ring")).toHaveTextContent("15%");
   });
 });
