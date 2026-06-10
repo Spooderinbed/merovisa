@@ -29,6 +29,8 @@ const eslintConfig = defineConfig([
     // Prototype reference code, not production:
     "design-extract/**",
     "claudedesign/**",
+    // Agent worktrees (full repo copies) and other harness state:
+    ".claude/**",
   ]),
 ]);
 

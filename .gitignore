@@ -47,3 +47,6 @@ coverage/
 
 # Misc
 *.pem
+
+# Claude agent worktrees (full repo copies)
+.claude/worktrees/

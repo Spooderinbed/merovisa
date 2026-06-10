@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
@@ -9,6 +9,8 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     globals: true,
     css: false,
+    // Agent worktrees under .claude/ are full repo copies — never collect their tests.
+    exclude: [...configDefaults.exclude, "**/.claude/**"],
   },
   resolve: {
     alias: {
