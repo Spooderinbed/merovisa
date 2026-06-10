@@ -14,12 +14,14 @@ vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
 
-// select("id, kind").eq("owner", u).eq("status", "todo")  -> resolves the open-todo read
+// select(...).eq("owner", u).eq("status", "todo")  -> resolves the open-todo read
 const selectEqEq = vi.fn().mockResolvedValue({ data: [], error: null });
 const select = vi.fn(() => ({ eq: () => ({ eq: selectEqEq }) }));
 // update({...}).eq("owner", u).in("id", ids)  -> the auto-close write
+// update({...}).eq("owner", u).eq("id", id)   -> the per-row copy refresh
 const updateEqIn = vi.fn().mockResolvedValue({ error: null });
-const update = vi.fn(() => ({ eq: () => ({ in: updateEqIn }) }));
+const updateEqEq = vi.fn().mockResolvedValue({ error: null });
+const update = vi.fn(() => ({ eq: () => ({ in: updateEqIn, eq: updateEqEq }) }));
 const insert = vi.fn().mockResolvedValue({ data: null, error: null });
 const from = vi.fn(() => ({ select, insert, update }));
 const fakeAdmin = { from } as never;
@@ -38,7 +40,7 @@ const EMPTY_PROFILE_KINDS = [
 ];
 
 /** Make the open-todo read return these rows for the next invalidatePlan call. */
-function openTodos(rows: Array<{ id: number; kind: string }>) {
+function openTodos(rows: Array<Record<string, unknown> & { id: number; kind: string }>) {
   selectEqEq.mockResolvedValueOnce({ data: rows, error: null });
 }
 
@@ -50,6 +52,7 @@ describe("invalidatePlan", () => {
     listAllUniversities.mockReset();
     selectEqEq.mockReset().mockResolvedValue({ data: [], error: null });
     updateEqIn.mockReset().mockResolvedValue({ error: null });
+    updateEqEq.mockReset().mockResolvedValue({ error: null });
     insert.mockReset().mockResolvedValue({ data: null, error: null });
     select.mockClear();
     update.mockClear();
@@ -74,8 +77,21 @@ describe("invalidatePlan", () => {
     expect(kinds).toContain("upload-proof-of-funds");
   });
 
-  it("does not insert or close when all current generator items already exist as open todos", async () => {
-    openTodos(EMPTY_PROFILE_KINDS.map((k, i) => ({ id: i + 1, kind: k })));
+  /** Run invalidatePlan once on an empty plan and return the inserted rows —
+   *  the generator's current copy, usable as fully in-sync open todos. */
+  type CapturedRow = Record<string, unknown> & { id: number; kind: string };
+  async function captureGeneratedRows(): Promise<CapturedRow[]> {
+    await invalidatePlan(fakeAdmin, "u1");
+    const rows = insert.mock.calls[0]![0] as Array<Record<string, unknown> & { kind: string }>;
+    insert.mockClear();
+    update.mockClear();
+    updateEqIn.mockClear();
+    updateEqEq.mockClear();
+    return rows.map((r, i) => ({ ...r, id: i + 1 }));
+  }
+
+  it("does not insert, close, or rewrite when open todos match the generator exactly", async () => {
+    openTodos(await captureGeneratedRows());
 
     await invalidatePlan(fakeAdmin, "u1");
 
@@ -83,11 +99,39 @@ describe("invalidatePlan", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("refreshes generator-owned copy on open rows whose stored claims drifted (state untouched)", async () => {
+    const rows = await captureGeneratedRows();
+    const season = rows.find((r) => r.kind === "season-funds-six-months")!;
+    openTodos(
+      rows.map((r) =>
+        r.kind === "season-funds-six-months"
+          ? { ...r, lift_estimate: "Prevents the most common refusal reason for Nepal AL3 applicants" }
+          : r,
+      ),
+    );
+
+    await invalidatePlan(fakeAdmin, "u1");
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ lift_estimate: season.lift_estimate }),
+    );
+    // Copy refresh never touches user-owned state.
+    expect(update).not.toHaveBeenCalledWith(expect.objectContaining({ status: expect.anything() }));
+    expect(update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ started_at: expect.anything() }),
+    );
+    expect(updateEqEq).toHaveBeenCalledWith("id", season.id);
+  });
+
   it("auto-closes an open todo the generator no longer emits, leaving still-needed todos open", async () => {
-    // add-grade is still generated (empty profile) → leave alone.
+    // add-grade is still generated (empty profile) → leave alone (in-sync copy so
+    // the copy-refresh pass stays quiet — this test measures auto-close only).
     // add-work-docs is NOT generated for an empty profile → its condition is satisfied → close.
+    const addGrade = (await captureGeneratedRows()).find((r) => r.kind === "add-grade")!;
     openTodos([
-      { id: 1, kind: "add-grade" },
+      { ...addGrade, id: 1 },
       { id: 2, kind: "add-work-docs" },
     ]);
 

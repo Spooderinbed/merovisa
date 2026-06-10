@@ -44,11 +44,11 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
   });
   const generatedKinds = new Set(items.map((it) => it.kind));
 
-  // Read the user's open todos once — used both to detect satisfied items and to
-  // skip re-inserting kinds that are already open.
+  // Read the user's open todos once — used to detect satisfied items, to skip
+  // re-inserting kinds that are already open, and to refresh drifted copy.
   const { data: existing } = await adminDb
     .from("plan_items")
-    .select("id, kind")
+    .select("id, kind, impact, title, body, lift_estimate, time_estimate")
     .eq("owner", userId)
     .eq("status", "todo");
   const open = existing ?? [];
@@ -81,5 +81,31 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
 
   if (toInsert.length > 0) {
     await adminDb.from("plan_items").insert(toInsert);
+  }
+
+  // Copy refresh: title/body/impact/estimates are generator-owned, so open rows
+  // follow the current generator wording (e.g. honesty fixes reach existing
+  // users, not just new inserts). User-owned state — status, started_at — is
+  // never touched here.
+  const itemByKind = new Map(items.map((it) => [it.kind, it]));
+  for (const row of open) {
+    const it = itemByKind.get(row.kind);
+    if (!it) continue;
+    const next = {
+      impact: it.impact,
+      title: it.title,
+      body: it.body ?? null,
+      lift_estimate: it.liftEstimate ?? null,
+      time_estimate: it.timeEstimate ?? null,
+    };
+    const stale =
+      row.impact !== next.impact ||
+      row.title !== next.title ||
+      row.body !== next.body ||
+      row.lift_estimate !== next.lift_estimate ||
+      row.time_estimate !== next.time_estimate;
+    if (stale) {
+      await adminDb.from("plan_items").update(next).eq("owner", userId).eq("id", row.id);
+    }
   }
 }
