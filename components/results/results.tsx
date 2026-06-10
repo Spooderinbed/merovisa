@@ -2,6 +2,9 @@
 
 import { useRef } from "react";
 import type { AssessmentPayload } from "@/lib/results/types";
+import type { Destination } from "@/lib/scoring/types";
+import { isDestinationSupported } from "@/lib/scoring/types";
+import { UnsupportedDestinationNotice, NotSureFramingNotice } from "./destination-notice";
 import { VerdictCard } from "./verdict-card";
 import { FactorBars } from "./factor-bars";
 import { PolicyBanner } from "@/components/matches/policy-banner";
@@ -16,10 +19,12 @@ import { NextSteps } from "./next-steps";
 
 export function Results({
   payload,
+  destination,
   mode = "anonymous",
   assessmentId = null,
 }: {
   payload: AssessmentPayload;
+  destination: Destination;
   mode?: "anonymous" | "owned";
   assessmentId?: string | null;
 }) {
@@ -28,8 +33,19 @@ export function Results({
     conversionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   const owned = mode === "owned";
 
+  // Destination honesty: an unsupported corridor never silently renders the
+  // Australia readout — the user gets a plain "we don't cover this yet".
+  if (!isDestinationSupported(destination) && destination !== "not-sure") {
+    return (
+      <div className="mx-auto flex w-full max-w-narrow flex-col gap-6 px-5 py-10">
+        <UnsupportedDestinationNotice destination={destination} />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-narrow flex-col gap-6 px-5 py-10">
+      {destination === "not-sure" ? <NotSureFramingNotice /> : null}
       <VerdictCard verdict={payload.result.verdict} />
       <FactorBars dimensions={payload.result.dimensions} />
       {/* Honest corridor context behind the verdict — the same sourced figures

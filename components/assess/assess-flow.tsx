@@ -43,8 +43,15 @@ export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
     }
   };
 
-  if (phase === "results" && payload) {
-    return <Results payload={payload} mode={signedIn ? "owned" : "anonymous"} assessmentId={assessmentId} />;
+  if (phase === "results" && payload && profile) {
+    return (
+      <Results
+        payload={payload}
+        destination={profile.destination}
+        mode={signedIn ? "owned" : "anonymous"}
+        assessmentId={assessmentId}
+      />
+    );
   }
 
   if (phase === "recap" && profile) {

@@ -24,7 +24,7 @@ const aarav: StudentProfile = {
 describe("Results", () => {
   it("renders the verdict, factor bars, intake, matches, accuracy, and conversion", () => {
     const payload = assembleAssessment(aarav, new Date("2026-06-03"));
-    render(<Results payload={payload} />);
+    render(<Results payload={payload} destination="australia" />);
     expect(screen.getByText("Academic fit")).toBeInTheDocument();
     expect(screen.getByText(/Intake timing/i)).toBeInTheDocument();
     expect(screen.getByText(/matched your profile/)).toBeInTheDocument();
@@ -34,21 +34,21 @@ describe("Results", () => {
 
   it("surfaces the sourced corridor policy context (grant rate, DHA floor)", () => {
     const payload = assembleAssessment(aarav, new Date("2026-06-03"));
-    render(<Results payload={payload} />);
+    render(<Results payload={payload} destination="australia" />);
     expect(screen.getByText(/Current policy/i)).toBeInTheDocument();
     expect(screen.getByText(/grant rate/i)).toBeInTheDocument();
   });
 
   it("shows the sourced cost-to-apply breakdown", () => {
     const payload = assembleAssessment(aarav, new Date("2026-06-03"));
-    render(<Results payload={payload} />);
+    render(<Results payload={payload} destination="australia" />);
     expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /AUD 2,000/ })).toBeInTheDocument();
   });
 
   it("surfaces the refusal risk & recovery trust panel", () => {
     const payload = assembleAssessment(aarav, new Date("2026-06-03"));
-    render(<Results payload={payload} />);
+    render(<Results payload={payload} destination="australia" />);
     expect(screen.getByText(/Refusal risk & recovery/i)).toBeInTheDocument();
     expect(screen.getByText(/it is not your personal probability/i)).toBeInTheDocument();
   });
