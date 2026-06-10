@@ -41,6 +41,18 @@ export const DESTINATIONS = [
 ] as const;
 export type Destination = (typeof DESTINATIONS)[number];
 
+/**
+ * Corridors the product actually covers end-to-end (data + results + checklist).
+ * The wizard, /api/assess, and the Results gate all read this — "not-sure" is
+ * allowed as delegation but is not a supported corridor.
+ */
+export const SUPPORTED_DESTINATIONS = ["australia"] as const;
+export type SupportedDestination = (typeof SUPPORTED_DESTINATIONS)[number];
+
+export function isDestinationSupported(d: Destination): d is SupportedDestination {
+  return (SUPPORTED_DESTINATIONS as readonly Destination[]).includes(d);
+}
+
 export const FUNDING_SOURCES = [
   "self-funded",
   "parents-family",
