@@ -28,8 +28,10 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
         const dim: DimensionScore = dimensions[key];
         // Data-driven affordance: a dimension that ships no factors (e.g. profile
         // strength for a zero-gap bachelor's profile) gets a plain row — nothing
-        // that pretends to open onto empty content.
-        const expandable = dim.factors.length > 0;
+        // that pretends to open onto empty content. Stored payloads from older
+        // rule versions may lack the factors array entirely — same plain row.
+        const factors = dim.factors ?? [];
+        const expandable = factors.length > 0;
         const isOpen = expandable && open === key;
         const rowCls = "flex w-full flex-col gap-2 px-4 py-3 text-left";
         const rowContent = (
@@ -62,7 +64,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
             )}
             {isOpen ? (
               <ul className="flex flex-col gap-2 border-t border-line px-4 py-3">
-                {dim.factors.map((f, i) => (
+                {factors.map((f, i) => (
                   <li key={i} className="flex flex-col text-[15px]">
                     <span className={cn("font-medium", INFLUENCE_CLS[f.influence])}>{f.label}</span>
                     <span className="text-ink-soft">{humanizeFactorDetail(f.detail)}</span>
