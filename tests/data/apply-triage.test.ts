@@ -117,10 +117,11 @@ describe("rewriteFindingsFile", () => {
       expect(changed).toBe(true);
 
       const raw = readFileSync(path, "utf8");
-      const [first, second, tail] = raw.split("\r\n");
-      expect(tail).toBe(""); // trailing newline + CRLF preserved
-      expect(second).toBe(lineB); // untouched line byte-verbatim
-      const parsed = JSON.parse(first);
+      const parts = raw.split("\r\n");
+      expect(parts).toHaveLength(3);
+      expect(parts[2]).toBe(""); // trailing newline + CRLF preserved
+      expect(parts[1]).toBe(lineB); // untouched line byte-verbatim
+      const parsed = JSON.parse(parts[0]!);
       expect(parsed.triage).toBe("stale");
       expect(parsed.triage_reason).toBe("fee figure from 2025");
       expect(parsed.claim).toBe("a"); // other fields survive
