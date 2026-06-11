@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { computeFlips as impl } from "../../docs/research-briefs/_tools/flip-status.js";
+import {
+  computeFlips as impl,
+  applyChange as applyChangeImpl,
+} from "../../docs/research-briefs/_tools/flip-status.js";
 
 // flip-status.js is untyped CJS; annotate the real fn so strict TS sees the shapes.
 type Finding = Record<string, unknown>;
@@ -16,6 +19,7 @@ const computeFlips = impl as unknown as (a: {
   findings: Finding[];
   usedBy: Record<string, string[]>;
 }) => Result;
+const applyChange = applyChangeImpl as unknown as (finding: Finding, change: Change) => Finding;
 
 describe("flip-status computeFlips", () => {
   it("promotes a referenced pending finding to used, with used_by from code", () => {
@@ -89,5 +93,26 @@ describe("flip-status computeFlips", () => {
     expect(r.report.refToRejected).toEqual(["A.100"]);
     expect(r.report.promoted).toEqual([]);
     expect(r.changedById["A.100"]).toBeUndefined();
+  });
+});
+
+describe("applyChange (JSONL row rewrite)", () => {
+  it("clears triage + triage_reason when a finding is promoted to used", () => {
+    const out = applyChange(
+      { id: "X.1", status: "pending", claim: "c", triage: "ready", triage_reason: "r" },
+      { status: "used", used_by: ["au-genuine-student[0]"] },
+    );
+    expect(out.status).toBe("used");
+    expect(out.used_by).toEqual(["au-genuine-student[0]"]);
+    expect("triage" in out).toBe(false);
+    expect("triage_reason" in out).toBe(false);
+    expect(out.claim).toBe("c"); // untouched fields survive
+  });
+
+  it("removes used_by on demotion and never resurrects triage", () => {
+    const out = applyChange({ id: "X.2", status: "used", used_by: ["m"] }, { status: "pending" });
+    expect(out.status).toBe("pending");
+    expect("used_by" in out).toBe(false);
+    expect("triage" in out).toBe(false);
   });
 });

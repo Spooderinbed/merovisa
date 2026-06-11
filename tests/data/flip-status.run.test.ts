@@ -3,7 +3,10 @@ import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { DATA_MODULES } from "@/lib/data/schema/registry";
 import { collectFindingRefs as collectImpl } from "../../docs/research-briefs/_tools/reconcile.js";
-import { computeFlips as flipImpl } from "../../docs/research-briefs/_tools/flip-status.js";
+import {
+  computeFlips as flipImpl,
+  applyChange as applyChangeImpl,
+} from "../../docs/research-briefs/_tools/flip-status.js";
 
 /**
  * Write-mode runner for flip-status (mirrors the WRITE_GOLDENS pattern).
@@ -41,6 +44,7 @@ const computeFlips = flipImpl as unknown as (a: {
   findings: Finding[];
   usedBy: Record<string, string[]>;
 }) => { report: Report; changedById: Record<string, Change> };
+const applyChange = applyChangeImpl as unknown as (finding: Finding, change: Change) => Finding;
 
 /** id → recordPaths that reference it, across every registered module. */
 function buildUsedBy(): Record<string, string[]> {
@@ -93,10 +97,7 @@ function applyChanges(changedById: Record<string, Change>): number {
       const f = JSON.parse(line) as Finding;
       const ch = changedById[f.id];
       if (!ch) return line; // verbatim
-      f.status = ch.status;
-      if (ch.used_by) f.used_by = ch.used_by;
-      else delete f.used_by;
-      return JSON.stringify(f);
+      return JSON.stringify(applyChange(f, ch));
     });
     const result = processed.join(eol) + (trailingBlank ? eol : "");
     if (result !== raw) {

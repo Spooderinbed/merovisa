@@ -131,4 +131,22 @@ function computeFlips({ findings, usedBy }) {
   return { report, changedById };
 }
 
-module.exports = { computeFlips, componentMap, isRejected, sameRefs };
+/**
+ * Apply one computed change to a finding object, returning a new object with the
+ * same key order (minimal-diff JSONL rewrite). Promotion to `used` clears the
+ * human-owned triage fields — they are only valid while status is `pending`
+ * (docs/research-briefs/_tools/finding-schema.js), so a used row must not carry them.
+ */
+function applyChange(finding, change) {
+  const f = { ...finding };
+  f.status = change.status;
+  if (change.used_by) f.used_by = change.used_by;
+  else delete f.used_by;
+  if (change.status === "used") {
+    delete f.triage;
+    delete f.triage_reason;
+  }
+  return f;
+}
+
+module.exports = { computeFlips, componentMap, isRejected, sameRefs, applyChange };
