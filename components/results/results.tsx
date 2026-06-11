@@ -11,6 +11,7 @@ import { FactorBars } from "./factor-bars";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { CostToApply } from "./cost-to-apply";
 import { RefusalRecovery } from "./refusal-recovery";
+import { GenuineStudent } from "./genuine-student";
 import { IntakeTimingCard } from "./intake-timing";
 import { UniversityMatches } from "./university-matches";
 import { GatedTeasers } from "./gated-teasers";
@@ -62,6 +63,10 @@ export function Results({
       {/* Trust-defense: the honest truth about refusal — why applications fail, sector
           odds (HE emphasized, VET as contrast), recovery, and scams. Gov-sourced, not gated. */}
       <RefusalRecovery />
+      {/* The Genuine Student test explained — what it is, the four questions, how officers
+          weigh it (Direction 106), post-study honesty, and English red flags. Gov-sourced,
+          collapsible, not gated; sits under the refusal panel that names GS as a main ground. */}
+      <GenuineStudent />
       {/* Sourced out-of-pocket application costs (visa + Nepal-side fees), each
           figure one click from its origin. No engine input — informational. */}
       <CostToApply />

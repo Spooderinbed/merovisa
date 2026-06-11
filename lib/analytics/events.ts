@@ -15,7 +15,8 @@ export type SourceSurface =
   | "refusal-recovery"
   | "cost-to-apply"
   | "checklist"
-  | "matches";
+  | "matches"
+  | "genuine-student";
 
 export type AnalyticsEvents = {
   /** Wizard step mount. `step` is the WizardStepKey id. */
