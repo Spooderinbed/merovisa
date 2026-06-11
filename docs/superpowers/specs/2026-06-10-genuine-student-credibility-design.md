@@ -1,14 +1,14 @@
 # Genuine Student credibility module — design spec
 
 **Date:** 2026-06-10
-**Status:** DRAFT — awaiting user approval (slice ② of the user-ratified sequence; evidence basis: `docs/audits/2026-06-10-pending-ledger-cluster-triage.md`, Headline 1)
+**Status:** APPROVED by user 2026-06-10 with two copy tweaks (refusal-ground framing softened off any "#1" ranking; PR line tied to genuineness/eligibility + I.008 anchor) and one UX decision (collapsible `<details>` sections). Slice ② of the user-ratified sequence; evidence basis: `docs/audits/2026-06-10-pending-ledger-cluster-triage.md`, Headline 1.
 **Findings:** 49 gov-backed findings across three categories (F MD106/prompts/basics/post-study, E GS mechanics + English red flag, C GS framework). 3 practitioner rows stay pending (below).
 
 ## Problem
 
-The Genuine Student requirement is the #1 stated refusal axis (our own refusal panel lists it first)
-and the #1 agent-coaching surface in Nepal — consultancies sell "GS answer writing" and spread the
-myth that mentioning future migration intent kills your application. The product currently says
+The Genuine Student requirement is a central refusal axis (our own refusal panel lists it among the
+main grounds) and a heavily agent-coached surface in Nepal — consultancies sell "GS answer writing"
+and spread the myth that mentioning future migration intent kills your application. The product currently says
 almost nothing about it: one refusal-ground row and one plan card. A student leaves our results page
 knowing GS exists but not what it asks, how officers weigh it, or which agent claims about it are
 false. That's the trust-defense gap this module closes — from government sources only.
@@ -22,9 +22,16 @@ false. That's the trust-defense gap this module closes — from government sourc
    Cross-category findingRefs (C.*, E.*) reconcile globally — the established A.001/B.001 precedent.
    `lastVerified` = each category brief's verification date (resolved at build). Fact-only: no scorer reads it.
 2. **Results panel** `components/results/genuine-student.tsx`, rendered **directly after
-   `RefusalRecovery`** in `results.tsx` (refusal names Genuine Student as ground #1; this panel
-   explains the test it refers to). Same calm-authority shell as RefusalRecovery/CostToApply
+   `RefusalRecovery`** in `results.tsx` (refusal names Genuine Student among its main grounds; this
+   panel explains the test it refers to). Same calm-authority shell as RefusalRecovery/CostToApply
    (mono eyebrow, bg-tint aside, per-row source links). Both modes (anonymous + owned), not gated.
+   **Collapsible sections (UX tweak):** the five sections render as native `<details>`/`<summary>`
+   blocks — section 1 ("What it is") `open` by default, the rest collapsed — so the page footprint
+   stays near the refusal panel's despite 18 rows. Native `<details>` keeps all rows in the DOM
+   (accessible + crawlable + test-queryable) and needs no client state, so the **panel stays a
+   server component**; the per-row `SourceAnchor` client leaf provides the only interactivity.
+   `<summary>` styled as the mono-uppercase section header with a CSS chevron marker (calm-authority:
+   thin, no shadow).
 3. **Source links** use the analytics `SourceAnchor` with a new surface `"genuine-student"` added to
    the `SourceSurface` union (one-line catalog change + test pin update) — the lane can then measure
    whether GS sources get opened.
@@ -71,8 +78,15 @@ Each row renders `summary` with `label` as its linked source text (RefusalRecove
 | `ssvf-evidence-level` | Under the Simplified Student Visa Framework, documentation expectations also depend on your provider's evidence level — which is based on the student visas linked to that institution. | C.007, C.008 | immi SSVF page |
 
 ### Section 4 — Post-study honesty
-| `gs-pr-not-disqualifying` | Wanting to apply for permanent residence later does not count against you — the criterion explicitly acknowledges that post-study pathways exist for those eligible. | C.006, F.013, E.012 | immi GS page |
+| `gs-pr-not-disqualifying` | Wanting to apply for permanent residence later does not count against you — as long as your study plan and stay are genuine under the visa rules. Post-study pathways exist, but only for those who are eligible. | C.006, I.008, F.013, E.012 | immi GS page |
 | `gs-say-it-straight` | Study Australia says the requirement removed the old confusion about whether you can express a desire to migrate. | F.034 | studyaustralia.gov.au |
+
+> **I.008 note:** clause 500.212 (genuine applicant for entry and stay as a student) is **already
+> `used`** by the refusal module (`ground-genuine-student`); referencing it here is provenance reuse,
+> not a new flip. It anchors the "genuine under the visa rules" clause and is **not** one of the 49
+> pending→used findings. "temporary" deliberately dropped from the user's draft phrasing: GS replaced
+> the Genuine Temporary Entrant test (F.034), so re-introducing "temporary stay" risks the exact
+> intent-to-leave confusion this row clears.
 | `gs-485-reality` | The Temporary Graduate visa (485) lets you live, work and study in Australia temporarily after graduating — but applicants must generally be 35 or under, and since 1 July 2024 you can't apply for a student visa from inside Australia while holding it. | F.035, F.036, F.037, F.038 | immi 485 page |
 
 ### Section 5 — Evidence & what not to trust
@@ -86,8 +100,8 @@ Each row renders `summary` with `label` as its linked source text (RefusalRecove
 > Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student
 > requirement. You'll answer short questions in the visa form — your circumstances and ties, why
 > this course and this provider, and how it benefits you — each in 150 words or less, in English.
-> Answers backed by evidence carry more weight, and wanting PR later doesn't count against you.
-> Draft yours early; they anchor your whole application.
+> Answers backed by evidence carry more weight, and wanting permanent residence later doesn't count
+> against you as long as you're a genuine student. Draft yours early; they anchor your whole application.
 
 ### Checklist row (`gs-responses`, after-offer · visa · step)
 > **Genuine Student responses** — Short answers in the visa form — 150 words each, in English.
@@ -102,13 +116,16 @@ the working-with-agents module (ratified slice ③).
 
 ## Acceptance criteria (tests)
 
-1. Registry walk green: schema validates, every findingRef resolves (cross-category included),
-   reconcile passes; `golden-assessments.json` byte-identical (no scorer reads this module).
+1. Registry walk green: schema validates, every findingRef resolves (cross-category included — the
+   row's I.008 ref resolves to the already-`used` clause-500.212 finding), reconcile passes;
+   `golden-assessments.json` byte-identical (no scorer reads this module).
 2. FLIP_STATUS flips exactly the 49 findings pending→used with triage fields cleared in the same
-   change; F.040/F.041/F.055 remain pending with their triage intact (findings-integrity suite green).
-3. Panel renders all five sections; every row's source goes through `SourceAnchor` with
-   surface `"genuine-student"`; the disclaimer and the `gs-pr-not-disqualifying` row are
-   copy-locked verbatim by the component test (the trust-sensitive lines).
+   change; I.008 is untouched (already used); F.040/F.041/F.055 remain pending with their triage
+   intact (findings-integrity suite green).
+3. Panel renders all five sections as `<details>` with section 1 `open` and the rest collapsed (all
+   rows present in the DOM); every row's source goes through `SourceAnchor` with surface
+   `"genuine-student"`; the disclaimer and the `gs-pr-not-disqualifying` row are copy-locked verbatim
+   by the component test (the trust-sensitive lines).
 4. Generator test pins the enriched `prepare-gs-answers` body; checklist test pins the
    `gs-responses` row (stage, group, source) and its plan-link mirror states (fix-#5 pattern).
 5. `SourceSurface` union gains `"genuine-student"` (catalog type test updated).
