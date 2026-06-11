@@ -75,7 +75,10 @@ describe("generatePlan", () => {
     expect(gs).toBeTruthy();
     expect(gs?.impact).toBe("high");
     expect(gs?.title).toContain("Genuine Student");
-    expect(gs?.body).toContain("150 words");
+    expect(gs?.body).toContain("150 words or less, in English");
+    expect(gs?.body).toContain(
+      "wanting permanent residence later doesn't count against you as long as your study plan and stay are genuine under the visa rules",
+    );
   });
 
   it("does not add the Genuine Student item for a non-AU or unset destination", () => {

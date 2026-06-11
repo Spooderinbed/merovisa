@@ -43,12 +43,13 @@ describe("CHECKLIST_PLAN_LINKS", () => {
     }
   });
 
-  it("covers the three after-offer step rows and the translations note", () => {
+  it("covers the four after-offer step rows and the translations note", () => {
     expect(CHECKLIST_PLAN_LINKS).toEqual({
       "noc-application": "apply-for-noc",
       biometrics: "prepare-biometrics",
       "police-certificate": "prepare-police-certificate",
       "doc-preparation": "translate-certify-documents",
+      "gs-responses": "prepare-gs-answers",
     });
   });
 });
@@ -74,7 +75,9 @@ describe("planStatesForChecklist", () => {
   });
 
   it("omits kinds with no plan row and ignores unmapped plan kinds", () => {
-    expect(planStatesForChecklist([row("prepare-gs-answers", "todo")])).toEqual({});
+    // prepare-health-exam is a real VISA_PREP_KIND with no checklist mirror in
+    // CHECKLIST_PLAN_LINKS (prepare-gs-answers is now mapped via gs-responses).
+    expect(planStatesForChecklist([row("prepare-health-exam", "todo")])).toEqual({});
   });
 
   it("prefers the open row over older closed history", () => {

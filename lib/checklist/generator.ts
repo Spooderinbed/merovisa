@@ -14,6 +14,7 @@ import { AU_BIOMETRICS } from "@/lib/data/source/au-biometrics";
 import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
 import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
+import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -96,6 +97,7 @@ const PASSPORT_PRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "pre-enrolment"
 const PASSPORT_CENTRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "choose-centre")!.summary; // A.044
 const PASSPORT_NOTE =
   `If you still need a passport, start with ${PASSPORT_PRE.summary}, where you choose ${PASSPORT_CENTRE}.`;
+const GS_SOURCE = AU_GENUINE_STUDENT.find((r) => r.id === "gs-format")!; // IMMI_GS page
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -251,6 +253,17 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
   });
   add({ key: "coe", kind: "coe", label: "Confirmation of Enrolment (CoE)", group: "visa", stage: "after-offer", requirement: "required", note: VISA_REQ["coe"]!.summary, source: reqSource("coe") });
   add({ key: "oshc", kind: "oshc", label: "Overseas Student Health Cover (OSHC)", group: "visa", stage: "after-offer", requirement: "required", note: VISA_REQ["oshc"]!.summary, source: reqSource("oshc") });
+  add({
+    key: "gs-responses",
+    kind: null,
+    label: "Genuine Student responses",
+    group: "visa",
+    stage: "after-offer",
+    requirement: "required",
+    infoKind: "step",
+    note: "Short answers in the visa form — 150 words each, in English. Attach supporting evidence in ImmiAccount; evidence-backed answers carry more weight.",
+    source: { url: GS_SOURCE.source, lastVerified: GS_SOURCE.lastVerified },
+  });
   add({
     key: "medical", kind: "medical", label: "Panel medical exam",
     group: "visa", stage: "after-offer", requirement: "required",

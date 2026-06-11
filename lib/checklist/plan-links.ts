@@ -16,6 +16,7 @@ export const CHECKLIST_PLAN_LINKS: Record<string, string> = {
   biometrics: "prepare-biometrics",
   "police-certificate": "prepare-police-certificate",
   "doc-preparation": "translate-certify-documents",
+  "gs-responses": "prepare-gs-answers",
 };
 
 export type LinkedPlanState = "open" | "in-progress" | "done";

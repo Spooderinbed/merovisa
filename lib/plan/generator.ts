@@ -182,7 +182,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "prepare-gs-answers",
       impact: "high",
       title: "Prepare your Genuine Student answers",
-      body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer four questions — your current circumstances and ties, why this course and provider, how it benefits you, and anything else relevant — each in ${gs.responseLimitWords} words or less. Draft your answers early; they anchor your whole application.`,
+      body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer short questions in the visa form — your circumstances and ties, why this course and this provider, and how it benefits you — each in ${gs.responseLimitWords} words or less, in English. Answers backed by evidence carry more weight, and wanting permanent residence later doesn't count against you as long as your study plan and stay are genuine under the visa rules. Draft yours early; they anchor your whole application.`,
       timeEstimate: "2-4 hours",
     });
   }

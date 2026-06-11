@@ -132,6 +132,16 @@ describe("generateChecklist", () => {
     }
   });
 
+  it("includes the Genuine Student responses step after offer", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const gs = byKey(items, "gs-responses");
+    expect(gs?.stage).toBe("after-offer");
+    expect(gs?.group).toBe("visa");
+    expect(gs?.kind).toBeNull();
+    expect(gs?.infoKind).toBe("step");
+    expect(gs?.source?.url).toContain("genuine-student-requirement");
+  });
+
   it("sources the CoE item from DHA and states you need it for the visa", () => {
     const coe = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "coe");
     expect(coe?.note).toContain("student visa application");
