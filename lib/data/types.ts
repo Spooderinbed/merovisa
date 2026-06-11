@@ -865,3 +865,20 @@ export interface NepalRefusalRecovery extends Provenanced {
   source: string;  // canonical gov URL (DHA / ART / Home Affairs stats)
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Genuine Student credibility module (slice GS, category F + cross-category E/C/I refs).
+ * Prose-only rows explaining the Australian Genuine Student test: what it is, the questions,
+ * the MD106 weighing factors, post-study honesty, and evidence/English red flags. `section`
+ * groups rows into the panel's five `<details>` blocks. Fact-only — no scorer reads it;
+ * machine-checked against findings (see provenance.findingRefs). Rendered by
+ * components/results/genuine-student.tsx after RefusalRecovery.
+ */
+export interface GenuineStudentFact extends Provenanced {
+  id: string; // slug, e.g. "gs-since-2024"
+  section: "what-it-is" | "the-questions" | "how-weighed" | "post-study" | "evidence";
+  label: string;   // short source label — rendered as the row's link text
+  summary: string; // the rendered sentence
+  source: string;  // canonical gov URL shown as the row's link
+  lastVerified?: string; // ISO date
+}

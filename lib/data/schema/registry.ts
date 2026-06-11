@@ -86,6 +86,8 @@ import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process
 import { NepalPassportProcessSchema } from "@/lib/data/schema/nepal-passport-process.schema";
 import { NEPAL_REFUSAL_RECOVERY } from "@/lib/data/source/nepal-refusal-recovery";
 import { NepalRefusalRecoverySchema } from "@/lib/data/schema/nepal-refusal-recovery.schema";
+import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
+import { GenuineStudentSchema } from "@/lib/data/schema/au-genuine-student.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -708,5 +710,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "nepal-refusal-recovery",
     subRecordKeys: [],
     recordInterface: "NepalRefusalRecovery",
+  },
+  {
+    // Slice GS — Genuine Student credibility module (category F, with cross-category E/C/I
+    // refs). 20 prose rows / 49 findings: what GS is, the four questions, the MD106 weighing
+    // factors, post-study honesty, and evidence + English red flags. I.008 (clause 500.212)
+    // rides in findingRefs as the genuine-applicant anchor (already used by nepal-refusal-
+    // recovery). Rendered after RefusalRecovery on the results page. Fact-only: no scorer reads it.
+    category: "F",
+    exportName: "AU_GENUINE_STUDENT",
+    data: AU_GENUINE_STUDENT,
+    schema: GenuineStudentSchema,
+    recordLabel: "au-genuine-student",
+    subRecordKeys: [],
+    recordInterface: "GenuineStudentFact",
   },
 ];
