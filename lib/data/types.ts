@@ -882,3 +882,21 @@ export interface GenuineStudentFact extends Provenanced {
   source: string;  // canonical gov URL shown as the row's link
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Working-with-agents gov-core module (slice ③, category G). Prose-only rows explaining
+ * how to work safely with an agent in Australia: whether you need one, who can lawfully
+ * give immigration assistance, verifying the OMARA register, what an agent owes you, formal
+ * representation (Form 956), and the 2026 onshore-transfer commission ban. `section` groups
+ * rows into the panel's five `<details>` blocks. Fact-only — no scorer reads it; machine-checked
+ * against findings (provenance.findingRefs). Rendered by components/results/working-with-agents.tsx
+ * after GenuineStudent.
+ */
+export interface WorkingWithAgentsFact extends Provenanced {
+  id: string; // slug, e.g. "verify-marn"
+  section: "do-you-need-one" | "verify-register" | "what-they-owe" | "formal-representation" | "commission-ban";
+  label: string;   // short source label — rendered as the row's link text
+  summary: string; // the rendered sentence
+  source: string;  // canonical gov URL shown as the row's link
+  lastVerified?: string; // ISO date
+}

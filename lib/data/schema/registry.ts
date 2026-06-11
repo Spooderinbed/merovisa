@@ -88,6 +88,8 @@ import { NEPAL_REFUSAL_RECOVERY } from "@/lib/data/source/nepal-refusal-recovery
 import { NepalRefusalRecoverySchema } from "@/lib/data/schema/nepal-refusal-recovery.schema";
 import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
 import { GenuineStudentSchema } from "@/lib/data/schema/au-genuine-student.schema";
+import { AU_WORKING_WITH_AGENTS } from "@/lib/data/source/au-working-with-agents";
+import { WorkingWithAgentsSchema } from "@/lib/data/schema/au-working-with-agents.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -724,5 +726,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-genuine-student",
     subRecordKeys: [],
     recordInterface: "GenuineStudentFact",
+  },
+  {
+    // Slice 3 — working-with-agents gov core (category G). 16 prose rows / 16 findings:
+    // whether you need an agent, who may lawfully assist, verifying the OMARA register, what
+    // an agent owes you, Form 956 representation, and the 2026 onshore commission ban. All
+    // findingRefs are fresh category-G rows (no cross-category reuse). Rendered after
+    // GenuineStudent on the results page. Fact-only: no scorer reads it.
+    category: "G",
+    exportName: "AU_WORKING_WITH_AGENTS",
+    data: AU_WORKING_WITH_AGENTS,
+    schema: WorkingWithAgentsSchema,
+    recordLabel: "au-working-with-agents",
+    subRecordKeys: [],
+    recordInterface: "WorkingWithAgentsFact",
   },
 ];

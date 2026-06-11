@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=417 · pending=697
+**Status:** used=482 · pending=632
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -269,10 +269,10 @@
 | C.002 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 500 Student visa base application charge is from AUD2,000.00. |
 | C.003 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Subclass 500 Student visa can be applied for online in or outside Australia. |
 | C.004 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A valid Confirmation of Enrolment is required before DHA decides a Subclass 500 Student visa application. |
-| C.005 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Genuine Student requirement applies to Student visa applications lodged on or after 23 March 2024. |
-| C.006 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Future intentions to later apply for permanent residence do not count against an applicant under the Genuine … |
-| C.007 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s current student-visa framework is the Simplified Student Visa Framework. |
-| C.008 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA’s evidence-level framework, a student’s evidence level is based on student visas linked to the inst… |
+| C.005 | C | primary | process |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Genuine Student requirement applies to Student visa applications lodged on or after 23 March 2024. |
+| C.006 | C | primary | process |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Future intentions to later apply for permanent residence do not count against an applicant under the Genuine … |
+| C.007 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s current student-visa framework is the Simplified Student Visa Framework. |
+| C.008 | C | primary | process |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA’s evidence-level framework, a student’s evidence level is based on student visas linked to the inst… |
 | C.009 | C | primary | process | G19 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Document Checklist Tool asks for the student’s country of passport. |
 | C.010 | C | primary | process | G19 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Document Checklist Tool asks for the education provider or provider CRICOS code. |
 | C.011 | C | primary | process | G20 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for travel costs. |
@@ -397,10 +397,10 @@
 | C.130 | C | practitioner | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A VFS Australia “what happens at the centre” page says children under 5 years must attend the appointment but… |
 | C.131 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | ImmiAccount is the DHA online service used to apply, notify changes, check status or withdraw an application. |
 | C.132 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Document Checklist Tool is intended to be used before lodging a Student visa application to find out what… |
-| C.133 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Answers to the Genuine Student questions must be written in English. |
+| C.133 | C | primary | process |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Answers to the Genuine Student questions must be written in English. |
 | C.134 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The maximum length for each Genuine Student response is 150 words. |
-| C.135 | C | primary | process | G23 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | There is an additional Genuine Student question for applicants who previously held a Student visa. |
-| C.136 | C | primary | process | G23 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | There is an additional Genuine Student question for applicants lodging in Australia from a non-student visa. |
+| C.135 | C | primary | process | G23 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | There is an additional Genuine Student question for applicants who previously held a Student visa. |
+| C.136 | C | primary | process | G23 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | There is an additional Genuine Student question for applicants lodging in Australia from a non-student visa. |
 | C.137 | C | primary | process | G24 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If the student or agent organised OSHC, the application form requires the name of the health insurer, the pol… |
 | C.138 | C | primary | process | G24 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | If the education provider arranged OSHC, the application form requires the insurer name and the policy start … |
 | C.139 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | From 1 January 2025, onshore Student visa applicants must lodge with a Confirmation of Enrolment rather than … |
@@ -533,16 +533,16 @@
 | E.002 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Student visa application fees increased from AUD 710 to AUD 1,600 on 2024-07-01. |
 | E.003 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The financial capacity amount for student visa applicants is AUD 29,710. |
 | E.004 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The financial capacity amount increased from AUD 24,505 to AUD 29,710 on 2024-05-10. |
-| E.005 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | DHA prefers GS responses in the application form rather than a separate GS statement. |
-| E.006 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | Each Genuine Student response has a 150-word text limit. |
-| E.007 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | All Genuine Student responses must be in English. |
-| E.008 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | Student visa applicants must attach supporting documents to ImmiAccount along with GS responses. |
-| E.009 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | DHA gives more weight to GS statements supported by evidence. |
-| E.010 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | DHA considers reasons for not studying in the home country if a similar course is available there. |
-| E.011 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | DHA considers expected salary and other benefits in the home country or another country obtained with the pro… |
-| E.012 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | DHA says the GS criterion acknowledges that post-study pathways are available for those who may be eligible. |
-| E.013 | E | primary | red-flag |  | pending | lib/data/programs seed (+ course-career) | DHA does not accept English tests delivered completely online for visa purposes. |
-| E.014 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | English test results taken on or before 2025-08-06 may be used as visa evidence until 2028-08-06 inclusive, d… |
+| E.005 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | DHA prefers GS responses in the application form rather than a separate GS statement. |
+| E.006 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | Each Genuine Student response has a 150-word text limit. |
+| E.007 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | All Genuine Student responses must be in English. |
+| E.008 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | Student visa applicants must attach supporting documents to ImmiAccount along with GS responses. |
+| E.009 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | DHA gives more weight to GS statements supported by evidence. |
+| E.010 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | DHA considers reasons for not studying in the home country if a similar course is available there. |
+| E.011 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | DHA considers expected salary and other benefits in the home country or another country obtained with the pro… |
+| E.012 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | DHA says the GS criterion acknowledges that post-study pathways are available for those who may be eligible. |
+| E.013 | E | primary | red-flag |  | used | lib/data/programs seed (+ course-career) | DHA does not accept English tests delivered completely online for visa purposes. |
+| E.014 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | English test results taken on or before 2025-08-06 may be used as visa evidence until 2028-08-06 inclusive, d… |
 | E.015 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | The Temporary Graduate visa Post-Higher Education Work stream permits a stay of 2 to 3 years. |
 | E.016 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | The Temporary Graduate visa Post-Vocational Education Work stream usually permits a stay of up to 18 months. |
 | E.017 | E | primary | process |  | pending | lib/data/programs seed (+ course-career) | The Australian study requirement requires course or courses to be CRICOS registered. |
@@ -705,44 +705,44 @@
 | E.174 | E | primary | process | G31 | pending | lib/data/programs seed (+ course-career) | UTS Master of Pharmacy graduates must complete an Intern Training Program to be eligible for pharmacist regis… |
 | E.175 | E | anecdotal | red-flag |  | pending | lib/data/programs seed (+ course-career) | Separate current 2026 official provider data for Certificate III/IV in Commercial Cookery, Diploma of Hospita… |
 | E.176 | E | anecdotal | red-flag |  | pending | lib/data/programs seed (+ course-career) | A complete cross-provider CRICOS lookup for every requested course was not fully verified in this pass. |
-| F.001 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | The Genuine Student requirement applies to student visa applications lodged on or after 23 March 2024. |
-| F.002 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Student visa applications lodged before 23 March 2024 continue to be assessed under the Genuine Temporary Ent… |
-| F.003 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Genuine Student answers must be written in English. |
-| F.004 | F | primary | data |  | pending | app/(app)/journey GS/SOP/rec-letters content | Genuine Student answers are capped at 150 words per question. |
-| F.005 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | There is an additional Genuine Student question for applicants who previously held a student visa or who are … |
-| F.006 | F | primary | process | G32 | pending | app/(app)/journey GS/SOP/rec-letters content | One Genuine Student prompt asks for details of the applicant’s current circumstances, including ties to famil… |
-| F.007 | F | primary | process | G32 | pending | app/(app)/journey GS/SOP/rec-letters content | One Genuine Student prompt asks why the applicant wants to study the course in Australia with the particular … |
-| F.008 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | The course-choice prompt must also explain the applicant’s understanding of the requirements of the intended … |
-| F.009 | F | primary | process | G32 | pending | app/(app)/journey GS/SOP/rec-letters content | One Genuine Student prompt asks how completing the course will benefit the applicant. |
-| F.010 | F | primary | process | G33 | pending | app/(app)/journey GS/SOP/rec-letters content | The Department says Genuine Student assessment considers the applicant’s circumstances. |
-| F.011 | F | primary | process | G33 | pending | app/(app)/journey GS/SOP/rec-letters content | The Department says Genuine Student assessment considers the applicant’s immigration history. |
-| F.012 | F | primary | process | G33 | pending | app/(app)/journey GS/SOP/rec-letters content | The Department says Genuine Student assessment considers compliance with visa conditions and any other releva… |
-| F.013 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | The Genuine Student criterion acknowledges that post-study pathways are available for applicants who may be e… |
-| F.014 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should not use the listed Genuine Student factors as a checklist. |
-| F.015 | F | primary | red-flag | G34 | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says closer scrutiny may be appropriate if a student intends to study in a field unrelated … |
-| F.016 | F | primary | red-flag | G34 | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says closer scrutiny may be appropriate where there are apparent inconsistencies in the inf… |
-| F.017 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider whether the applicant has reasonable reasons for not t… |
-| F.018 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the applicant’s personal ties to the home country, suc… |
-| F.019 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the applicant’s economic circumstances in the home cou… |
-| F.020 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the applicant’s knowledge of living in Australia and o… |
-| F.021 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the level of research the applicant has undertaken int… |
-| F.022 | F | primary | red-flag |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider whether the student visa is being used to maintain ong… |
-| F.023 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says value-of-course assessment should consider whether the course is consistent with past … |
-| F.024 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says value-of-course assessment should consider the remuneration the applicant could expect… |
-| F.025 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says immigration-history assessment includes previous Australian and other-country visa app… |
-| F.026 | F | primary | red-flag |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider whether a previous student visa holder demonstrated lo… |
-| F.027 | F | primary | red-flag |  | pending | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider study gaps of concern and patterns of changing or defe… |
+| F.001 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | The Genuine Student requirement applies to student visa applications lodged on or after 23 March 2024. |
+| F.002 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Student visa applications lodged before 23 March 2024 continue to be assessed under the Genuine Temporary Ent… |
+| F.003 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Genuine Student answers must be written in English. |
+| F.004 | F | primary | data |  | used | app/(app)/journey GS/SOP/rec-letters content | Genuine Student answers are capped at 150 words per question. |
+| F.005 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | There is an additional Genuine Student question for applicants who previously held a student visa or who are … |
+| F.006 | F | primary | process | G32 | used | app/(app)/journey GS/SOP/rec-letters content | One Genuine Student prompt asks for details of the applicant’s current circumstances, including ties to famil… |
+| F.007 | F | primary | process | G32 | used | app/(app)/journey GS/SOP/rec-letters content | One Genuine Student prompt asks why the applicant wants to study the course in Australia with the particular … |
+| F.008 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | The course-choice prompt must also explain the applicant’s understanding of the requirements of the intended … |
+| F.009 | F | primary | process | G32 | used | app/(app)/journey GS/SOP/rec-letters content | One Genuine Student prompt asks how completing the course will benefit the applicant. |
+| F.010 | F | primary | process | G33 | used | app/(app)/journey GS/SOP/rec-letters content | The Department says Genuine Student assessment considers the applicant’s circumstances. |
+| F.011 | F | primary | process | G33 | used | app/(app)/journey GS/SOP/rec-letters content | The Department says Genuine Student assessment considers the applicant’s immigration history. |
+| F.012 | F | primary | process | G33 | used | app/(app)/journey GS/SOP/rec-letters content | The Department says Genuine Student assessment considers compliance with visa conditions and any other releva… |
+| F.013 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | The Genuine Student criterion acknowledges that post-study pathways are available for applicants who may be e… |
+| F.014 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should not use the listed Genuine Student factors as a checklist. |
+| F.015 | F | primary | red-flag | G34 | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says closer scrutiny may be appropriate if a student intends to study in a field unrelated … |
+| F.016 | F | primary | red-flag | G34 | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says closer scrutiny may be appropriate where there are apparent inconsistencies in the inf… |
+| F.017 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider whether the applicant has reasonable reasons for not t… |
+| F.018 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the applicant’s personal ties to the home country, suc… |
+| F.019 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the applicant’s economic circumstances in the home cou… |
+| F.020 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the applicant’s knowledge of living in Australia and o… |
+| F.021 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider the level of research the applicant has undertaken int… |
+| F.022 | F | primary | red-flag |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider whether the student visa is being used to maintain ong… |
+| F.023 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says value-of-course assessment should consider whether the course is consistent with past … |
+| F.024 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says value-of-course assessment should consider the remuneration the applicant could expect… |
+| F.025 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says immigration-history assessment includes previous Australian and other-country visa app… |
+| F.026 | F | primary | red-flag |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider whether a previous student visa holder demonstrated lo… |
+| F.027 | F | primary | red-flag |  | used | app/(app)/journey GS/SOP/rec-letters content | Direction No. 106 says decision makers should consider study gaps of concern and patterns of changing or defe… |
 | F.028 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA tells student visa applicants to upload a current Confirmation of Enrolment to ImmiAccount. |
 | F.029 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA says non-English supporting documents must be accompanied by English translations. |
 | F.030 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA says translation evidence for documents translated outside Australia must include the translator’s full n… |
 | F.031 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA says student visa applicants must apply online. |
 | F.032 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA says student visa applicants must hold a valid Confirmation of Enrolment when the Department decides the … |
 | F.033 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA says a decision-ready application helps applicants get a faster outcome. |
-| F.034 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | Study Australia says the new Genuine Student requirement removes confusion about whether applicants can expre… |
-| F.035 | F | primary | data |  | pending | app/(app)/journey GS/SOP/rec-letters content | The Post-Higher Education Work stream of subclass 485 allows holders to live, work and study in Australia tem… |
-| F.036 | F | primary | data |  | pending | app/(app)/journey GS/SOP/rec-letters content | The Temporary Graduate visa overview says applicants must generally be 35 years of age or under when they app… |
-| F.037 | F | primary | data |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA says the maximum eligible age for Post-Higher Education Work stream applicants was reduced to 35 years of… |
-| F.038 | F | primary | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | DHA says that from 1 July 2024 Temporary Graduate visa holders cannot apply for a Student visa while in Austr… |
+| F.034 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | Study Australia says the new Genuine Student requirement removes confusion about whether applicants can expre… |
+| F.035 | F | primary | data |  | used | app/(app)/journey GS/SOP/rec-letters content | The Post-Higher Education Work stream of subclass 485 allows holders to live, work and study in Australia tem… |
+| F.036 | F | primary | data |  | used | app/(app)/journey GS/SOP/rec-letters content | The Temporary Graduate visa overview says applicants must generally be 35 years of age or under when they app… |
+| F.037 | F | primary | data |  | used | app/(app)/journey GS/SOP/rec-letters content | DHA says the maximum eligible age for Post-Higher Education Work stream applicants was reduced to 35 years of… |
+| F.038 | F | primary | process |  | used | app/(app)/journey GS/SOP/rec-letters content | DHA says that from 1 July 2024 Temporary Graduate visa holders cannot apply for a Student visa while in Austr… |
 | F.039 | F | practitioner | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | AHC Lawyers summarises the post-2024 GS application as covering current circumstances, course choice, course … |
 | F.040 | F | practitioner | process |  | pending | app/(app)/journey GS/SOP/rec-letters content | AHC Lawyers says the revised student-visa declaration requires applicants to acknowledge that only a limited … |
 | F.041 | F | practitioner | data |  | pending | app/(app)/journey GS/SOP/rec-letters content | KIEC says there are 4 GS questions and a 150-word limit per question. |
@@ -882,29 +882,29 @@
 | G.071 | G | primary | contact |  | pending | app/(app)/journey/working-with-agents | TAFE Queensland lists an OEC Global Education branch in Chiang Mai, Thailand. |
 | G.072 | G | primary | contact |  | pending | app/(app)/journey/working-with-agents | TAFE Queensland lists an OEC Global Education branch in Ho Chi Minh City, Vietnam. |
 | G.073 | G | primary | data |  | pending | app/(app)/journey/working-with-agents | Greenwich College lists OEC Global Education in Bangkok, Thailand as an education agent. |
-| G.074 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | Only registered migration agents, Australian legal practitioners and exempt persons can lawfully provide immi… |
-| G.075 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | You do not have to use a registered migration agent to apply for a visa. |
-| G.076 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | OMARA says a registered migration agent may be especially helpful if a case is complex. |
-| G.077 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | The OMARA public register can be searched by MARN. |
+| G.074 | G | primary | process |  | used | app/(app)/journey/working-with-agents | Only registered migration agents, Australian legal practitioners and exempt persons can lawfully provide immi… |
+| G.075 | G | primary | process |  | used | app/(app)/journey/working-with-agents | You do not have to use a registered migration agent to apply for a visa. |
+| G.076 | G | primary | process |  | used | app/(app)/journey/working-with-agents | OMARA says a registered migration agent may be especially helpful if a case is complex. |
+| G.077 | G | primary | process |  | used | app/(app)/journey/working-with-agents | The OMARA public register can be searched by MARN. |
 | G.078 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | The OMARA public register can be searched by business location. |
-| G.079 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | Exempt persons must not charge a fee for immigration assistance. |
-| G.080 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | Form 956 is used to appoint a registered migration agent, legal practitioner or exempt person. |
-| G.081 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | When an authorised recipient is appointed, the Department sends all written communication about the visa matt… |
+| G.079 | G | primary | process |  | used | app/(app)/journey/working-with-agents | Exempt persons must not charge a fee for immigration assistance. |
+| G.080 | G | primary | process |  | used | app/(app)/journey/working-with-agents | Form 956 is used to appoint a registered migration agent, legal practitioner or exempt person. |
+| G.081 | G | primary | process |  | used | app/(app)/journey/working-with-agents | When an authorised recipient is appointed, the Department sends all written communication about the visa matt… |
 | G.082 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | An authorised recipient must not provide immigration assistance unless they are also a registered migration a… |
 | G.083 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | Registered migration agents can create an organisation ImmiAccount. |
-| G.084 | G | primary | red-flag |  | pending | app/(app)/journey/working-with-agents | DHA says people paying for immigration assistance should use a registered migration agent with OMARA. |
-| G.085 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | OMARA says a registered migration agent must meet professional standards to remain on the register. |
+| G.084 | G | primary | red-flag |  | used | app/(app)/journey/working-with-agents | DHA says people paying for immigration assistance should use a registered migration agent with OMARA. |
+| G.085 | G | primary | process |  | used | app/(app)/journey/working-with-agents | OMARA says a registered migration agent must meet professional standards to remain on the register. |
 | G.086 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | OMARA says a registered migration agent must act ethically. |
-| G.087 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | OMARA says discussing the service agreement and fees is step five in choosing a registered migration agent. |
-| G.088 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | OMARA says a registered migration agent must give clients documents from the Department. |
-| G.089 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | OMARA says a registered migration agent must update clients on the progress of their visa application. |
-| G.090 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | Australian providers are banned from paying commissions to agents for onshore transfers that occur after 31 M… |
+| G.087 | G | primary | process |  | used | app/(app)/journey/working-with-agents | OMARA says discussing the service agreement and fees is step five in choosing a registered migration agent. |
+| G.088 | G | primary | process |  | used | app/(app)/journey/working-with-agents | OMARA says a registered migration agent must give clients documents from the Department. |
+| G.089 | G | primary | process |  | used | app/(app)/journey/working-with-agents | OMARA says a registered migration agent must update clients on the progress of their visa application. |
+| G.090 | G | primary | process |  | used | app/(app)/journey/working-with-agents | Australian providers are banned from paying commissions to agents for onshore transfers that occur after 31 M… |
 | G.091 | G | primary | process |  | pending | app/(app)/journey/working-with-agents | The Australian Government’s 2026 integrity analysis judged a ban on commissions for onshore transfers to be t… |
-| G.092 | G | primary | red-flag |  | pending | app/(app)/journey/working-with-agents | The 2026 integrity analysis says the new definition of education agent commission is designed to capture hidd… |
+| G.092 | G | primary | red-flag |  | used | app/(app)/journey/working-with-agents | The 2026 integrity analysis says the new definition of education agent commission is designed to capture hidd… |
 | G.093 | G | primary | red-flag |  | pending | app/(app)/journey/working-with-agents | Some submissions to the 2026 integrity analysis said the ban would address financially motivated agent behavi… |
-| G.094 | G | primary | data |  | pending | app/(app)/journey/working-with-agents | The 2026 integrity analysis uses AUD 510 as the average agent commission for onshore transfers in 2025. |
+| G.094 | G | primary | data |  | used | app/(app)/journey/working-with-agents | The 2026 integrity analysis uses AUD 510 as the average agent commission for onshore transfers in 2025. |
 | G.095 | G | primary | data |  | pending | app/(app)/journey/working-with-agents | The 2026 integrity analysis assumes students who still transfer using agents may pay AUD 255 per enrolment fo… |
-| G.096 | G | primary | red-flag |  | pending | app/(app)/journey/working-with-agents | The 2026 integrity analysis warns that transferring students paying fees directly to agents could become more… |
+| G.096 | G | primary | red-flag |  | used | app/(app)/journey/working-with-agents | The 2026 integrity analysis warns that transferring students paying fees directly to agents could become more… |
 | G.097 | G | practitioner | data |  | pending | app/(app)/journey/working-with-agents | Onederland publishes a professional-fee range of AUD 950-1,500 for a Student visa subclass 500 application. |
 | G.098 | G | practitioner | data |  | pending | app/(app)/journey/working-with-agents | Tern Visa says student visa migration-agent service fees range from AUD 2,000-5,000. |
 | G.099 | G | practitioner | data |  | pending | app/(app)/journey/working-with-agents | AHC Lawyers says temporary-visa legal fees start from AUD 2,500 and can reach AUD 5,000. |
