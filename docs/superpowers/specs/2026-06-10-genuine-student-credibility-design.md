@@ -101,7 +101,7 @@ Each row renders `summary` with `label` as its linked source text (RefusalRecove
 > requirement. You'll answer short questions in the visa form — your circumstances and ties, why
 > this course and this provider, and how it benefits you — each in 150 words or less, in English.
 > Answers backed by evidence carry more weight, and wanting permanent residence later doesn't count
-> against you as long as you're a genuine student. Draft yours early; they anchor your whole application.
+> against you as long as your study plan and stay are genuine under the visa rules. Draft yours early; they anchor your whole application.
 
 ### Checklist row (`gs-responses`, after-offer · visa · step)
 > **Genuine Student responses** — Short answers in the visa form — 150 words each, in English.

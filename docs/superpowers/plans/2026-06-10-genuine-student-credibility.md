@@ -775,7 +775,7 @@ In `tests/plan/generator.test.ts`, find the assertion on the `prepare-gs-answers
     const gs = plan.find((p) => p.kind === "prepare-gs-answers")!;
     expect(gs.body).toContain("150 words or less, in English");
     expect(gs.body).toContain(
-      "wanting permanent residence later doesn't count against you as long as you're a genuine student",
+      "wanting permanent residence later doesn't count against you as long as your study plan and stay are genuine under the visa rules",
     );
 ```
 
@@ -787,7 +787,7 @@ Expected: FAIL on the new substring (body still has the old copy).
 In `lib/plan/generator.ts`, replace the `prepare-gs-answers` `body` (the block under `// GENUINE STUDENT`, ~lines 178–188):
 
 ```ts
-      body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer short questions in the visa form — your circumstances and ties, why this course and this provider, and how it benefits you — each in ${gs.responseLimitWords} words or less, in English. Answers backed by evidence carry more weight, and wanting permanent residence later doesn't count against you as long as you're a genuine student. Draft yours early; they anchor your whole application.`,
+      body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer short questions in the visa form — your circumstances and ties, why this course and this provider, and how it benefits you — each in ${gs.responseLimitWords} words or less, in English. Answers backed by evidence carry more weight, and wanting permanent residence later doesn't count against you as long as your study plan and stay are genuine under the visa rules. Draft yours early; they anchor your whole application.`,
 ```
 
 (The `gs` const and `responseLimitWords` are already in scope from `AU_STUDENT_VISA_REQUIREMENTS`; `responseLimitWords` is 150.)
