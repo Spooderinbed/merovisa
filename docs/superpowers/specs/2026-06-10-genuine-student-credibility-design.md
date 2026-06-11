@@ -27,7 +27,7 @@ false. That's the trust-defense gap this module closes — from government sourc
    (mono eyebrow, bg-tint aside, per-row source links). Both modes (anonymous + owned), not gated.
    **Collapsible sections (UX tweak):** the five sections render as native `<details>`/`<summary>`
    blocks — section 1 ("What it is") `open` by default, the rest collapsed — so the page footprint
-   stays near the refusal panel's despite 18 rows. Native `<details>` keeps all rows in the DOM
+   stays near the refusal panel's despite 20 rows. Native `<details>` keeps all rows in the DOM
    (accessible + crawlable + test-queryable) and needs no client state, so the **panel stays a
    server component**; the per-row `SourceAnchor` client leaf provides the only interactivity.
    `<summary>` styled as the mono-uppercase section header with a CSS chevron marker (calm-authority:
@@ -94,7 +94,7 @@ Each row renders `summary` with `label` as its linked source text (RefusalRecove
 | `gs-online-tests` | DHA does not accept English tests delivered completely online. | E.013 | immi English page |
 | `gs-test-validity` | English test results from on or before 6 August 2025 can be used as visa evidence until 6 August 2028, depending on the visa. | E.014 | immi English page |
 
-18 rows / 49 findings. Coverage check: C.005–C.008, C.133, C.135–136 (7) + E.005–E.014 (10) + F.001–F.027 less F.013 reorder (26) + F.013, F.034–F.038 (6) = 49.
+20 rows / 49 findings (+ I.008 cross-ref, already used). Coverage check: C.005–C.008, C.133, C.135–136 (7) + E.005–E.014 (10) + F.001–F.027 less F.013 reorder (26) + F.013, F.034–F.038 (6) = 49.
 
 ### Plan body (`prepare-gs-answers`, generator-composed from this module)
 > Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student
