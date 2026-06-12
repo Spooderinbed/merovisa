@@ -25,8 +25,8 @@ rows never get plan mirrors (two completion authorities). The info row is the mi
   original letter from the employer; fixed-deposit or savings interest a bank certificate; foreign income a
   recommendation letter authenticated by the Nepali embassy there or that country's embassy in Nepal. For an
   English income statement, include citizenship and relationship certificates."**
-  - Open wording question: "typically certified at the local ward office" generalizes from one
-    municipality's FAQ. Alternatives at sign-off: name Lalitpur only, or keep the hedged "typically".
+  - **Sign-off 2026-06-13: hedged-general framing approved as drafted** ("typically certified at the
+    local ward office — Lalitpur Metropolitan City publishes the document list").
 
 **Plan** (`lib/plan/generator.ts`): new kind `certify-sponsor-income`, emitted when
 `finance.source ∈ {parents-family, mixed}`; appended **last** to `VISA_PREP_KINDS`; mirrored via
@@ -64,8 +64,9 @@ the MoEST No Objection Letter) — the NOC→bank-instrument link. Draft sentenc
 `prepare-fund-remittance` body: **"Banks also offer NOC-linked instruments — Standard Chartered Nepal, for
 example, issues its education USD prepaid card against the Ministry's No Objection Letter and wires tuition
 by outward telex transfer."**
-- Open question: naming one commercial bank in product copy is a first (implicit-endorsement risk). Options:
-  ship as drafted (attributed example) · drop B.094/095 from the slice (rows stay `ready`).
+- **Sign-off 2026-06-13: DROPPED from this slice** — single-bank endorsement on a trust surface declined;
+  B.094/B.095 stay `ready` in the ledger; the fact can ship later under multi-bank framing if more banks
+  corroborate. The remittance note is untouched this slice.
 
 ## Mechanics & gates
 
