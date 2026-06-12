@@ -23,9 +23,11 @@ const IMMI_ACCURATE =
   "https://immi.homeaffairs.gov.au/help-support/meeting-our-requirements/providing-accurate-information";
 const HOMEAFFAIRS_STATS =
   "https://www.homeaffairs.gov.au/research-and-stats/files/student-temporary-grad-program-report-june-2025.pdf";
-const IMMI_REVIEW =
-  "https://immi.homeaffairs.gov.au/visas/getting-a-visa/fees-and-charges/fees-and-charges-for-other-services/review-of-decisions";
+const ART_CHANGES =
+  "https://www.art.gov.au/about/news-and-updates/changes-conduct-student-visa-reviews";
 const ART_IMMIGRATION = "https://www.art.gov.au/applying-review/immigration-and-citizenship";
+const ART_PROCESSING =
+  "https://www.art.gov.au/about-us/accountability-and-reporting/processing-times";
 const ART_FEES = "https://www.art.gov.au/help-and-resources/fees";
 const IMMI_MINISTERIAL =
   "https://immi.homeaffairs.gov.au/what-we-do/status-resolution-service/ministerial-intervention";
@@ -116,13 +118,41 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
     kind: "recovery-path",
     label: "Tribunal review",
     summary:
-      "If you're refused, you can ask the Administrative Review Tribunal to review the decision.",
-    source: IMMI_REVIEW,
+      "If you're refused, you can ask the Administrative Review Tribunal to review the decision — but since 1 June 2026 it decides most student-visa refusal reviews on the papers, without holding an oral hearing.",
+    source: ART_CHANGES,
     lastVerified: VERIFIED,
     provenance: {
-      findingRefs: ["I.044"],
-      source: IMMI_REVIEW,
-      note: "The Administrative Review Tribunal has jurisdiction to review certain visa decisions made under the Migration Act 1958 (I.044).",
+      findingRefs: ["I.044", "I.051"],
+      source: ART_CHANGES,
+      note: "ART has jurisdiction to review certain visa decisions under the Migration Act 1958 (I.044, immi.homeaffairs.gov.au review-of-decisions); from 1 June 2026 it must decide most student-visa refusal reviews without an oral hearing (I.051).",
+    },
+  },
+  {
+    id: "recovery-deadline",
+    kind: "recovery-path",
+    label: "Review deadline",
+    summary:
+      "The deadline to apply for review is strict — the Tribunal has no power to extend it.",
+    source: ART_IMMIGRATION,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.050"],
+      source: ART_IMMIGRATION,
+      note: "ART says it has no power to extend the time limit to apply for a review (I.050).",
+    },
+  },
+  {
+    id: "recovery-timeline",
+    kind: "recovery-path",
+    label: "Review timing",
+    summary:
+      "Be ready to wait — about half of student refusal reviews finish within 19 months of applying.",
+    source: ART_PROCESSING,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.048"],
+      source: ART_PROCESSING,
+      note: "ART processing-times: 50% of student refusal reviews finalised 1 Nov 2025–30 Apr 2026 were finalised within 1 year and 7 months (about 19 months) from lodgement (I.048).",
     },
   },
   {

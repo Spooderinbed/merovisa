@@ -53,6 +53,27 @@ describe("RefusalRecovery", () => {
     );
   });
 
+  it("tells the post-1-June-2026 ART truth: paper-only review, strict deadline, realistic timing", () => {
+    render(<RefusalRecovery />);
+    // Paper-only change (I.051) folded into the Tribunal-review row.
+    expect(
+      screen.getByText(
+        /since 1 June 2026 it decides most student-visa refusal reviews on the papers, without holding an oral hearing/i,
+      ),
+    ).toBeInTheDocument();
+    // Non-extendable deadline (I.050).
+    expect(screen.getByText(/the Tribunal has no power to extend it/i)).toBeInTheDocument();
+    // Realistic ~19-month timing (I.048) — "about half" / "19 months" are the user-approved words.
+    expect(
+      screen.getByText(/about half of student refusal reviews finish within 19 months of applying/i),
+    ).toBeInTheDocument();
+    // The reworded row now links to the ART change notice, not the generic immi review page.
+    expect(screen.getByRole("link", { name: "Tribunal review" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("changes-conduct-student-visa-reviews"),
+    );
+  });
+
   it("shows the not-legal-advice disclaimer", () => {
     render(<RefusalRecovery />);
     expect(screen.getByText(/not legal advice/i)).toBeInTheDocument();

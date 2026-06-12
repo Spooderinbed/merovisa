@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=482 · pending=632
+**Status:** used=485 · pending=629
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1061,10 +1061,10 @@
 | I.045 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The ART application fee for a review of most migration decisions is AUD 3,580. |
 | I.046 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The ART may grant a fee reduction to 50% of the full migration review fee on financial hardship grounds. |
 | I.047 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART’s 17 June 2025 notice said the fee for review of a reviewable migration decision would increase to AUD 3,… |
-| I.048 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 50% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
+| I.048 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 50% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
 | I.049 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 95% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
-| I.050 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART says it has no power to extend the time limit to apply for a review. |
-| I.051 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | From 1 June 2026 the ART must decide most student visa refusal reviews without an oral hearing. |
+| I.050 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | ART says it has no power to extend the time limit to apply for a review. |
+| I.051 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | From 1 June 2026 the ART must decide most student visa refusal reviews without an oral hearing. |
 | I.052 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | If a student visa refusal review had already received a hearing listing notice before the 1 June 2026 change,… |
 | I.053 | I | primary | process | G41 | pending | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to affirm the original decision. |
 | I.054 | I | primary | process | G41 | pending | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to set aside the original decision and substitute a new decision. |
