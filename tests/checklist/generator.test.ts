@@ -112,6 +112,15 @@ describe("generateChecklist", () => {
     expect(byKey(l2, "fin-bank")?.note).not.toContain("stable, documented balance");
   });
 
+  it("the permanently rejected F2 wording never returns (F2-A closure)", () => {
+    const blob = JSON.stringify(
+      generateChecklist({ program: baseProgram, sections: { finance: { source: "self-funded" } }, uploadedKinds: noKinds }),
+    );
+    expect(blob).not.toMatch(/Assessment Level/i);
+    expect(blob).not.toMatch(/case officers?/i);
+    expect(blob).not.toMatch(/AUD 5,000/);
+  });
+
   it("adds employment docs when work title is set", () => {
     const items = generateChecklist({ program: baseProgram, sections: { work: { title: "Analyst" } }, uploadedKinds: noKinds });
     expect(byKey(items, "employment-letter")).toBeTruthy();

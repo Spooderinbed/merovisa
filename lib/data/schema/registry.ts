@@ -99,7 +99,12 @@ import {
 } from "@/lib/data/policy/au-cost-of-living";
 import { AU_SUBCLASS_500_APPLICATION_CHARGE_AUD } from "@/lib/data/policy/au-visa-fees";
 import { NEPAL_AU_STUDENT_VISA_GRANT_RATE } from "@/lib/data/policy/visa-outcomes";
-import { DhaLivingSchema, GrantRateCohortsSchema } from "@/lib/data/schema/scoring-config.schema";
+import { AU_DOCUMENT_CHECKLIST_TOOL } from "@/lib/data/policy/au-document-checklist-tool";
+import {
+  DhaLivingSchema,
+  GrantRateCohortsSchema,
+  DctToolSchema,
+} from "@/lib/data/schema/scoring-config.schema";
 
 export interface DataModuleEntry {
   /** Research category this module integrates (A–J). Also locates findings/<category>.jsonl. */
@@ -323,6 +328,19 @@ export const DATA_MODULES: DataModuleEntry[] = [
     data: NEPAL_AU_STUDENT_VISA_GRANT_RATE,
     schema: GrantRateCohortsSchema,
     recordLabel: "nepal-visa-grant-rate",
+    subRecordKeys: [],
+    recordInterface: "Sourced",
+  },
+  {
+    // The DHA Document Checklist Tool pointer rendered in the policy banner
+    // (F2-A apply, C.146): the gov mechanism that turns passport country +
+    // provider into the exact attachment list. A single sourced value (the
+    // tool URL). Fact-only: no scorer reads it.
+    category: "C",
+    exportName: "AU_DOCUMENT_CHECKLIST_TOOL",
+    data: AU_DOCUMENT_CHECKLIST_TOOL,
+    schema: DctToolSchema,
+    recordLabel: "au-document-checklist-tool",
     subRecordKeys: [],
     recordInterface: "Sourced",
   },

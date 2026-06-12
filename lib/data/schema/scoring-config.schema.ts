@@ -56,6 +56,8 @@ export const DhaCapacityGateSchema = sourced(
     forceReachCap: z.number().min(0).max(100),
   }),
 );
+/** A sourced URL pointer (e.g. the DHA Document Checklist Tool the policy banner links). */
+export const DctToolSchema = sourced(z.string().url());
 /** Grant rate (%) by application cohort, each bound cited to its finding. Named fields (not min/max) so the offshore/onshore meaning survives a quarter where the two invert. */
 export const GrantRateCohortsSchema = sourced(
   z.object({ offshore: z.number().min(0).max(100), onshore: z.number().min(0).max(100) }),

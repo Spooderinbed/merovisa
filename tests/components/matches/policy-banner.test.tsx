@@ -9,6 +9,9 @@ describe("PolicyBanner", () => {
     // the banner now claims only what the ledger can ground, in our-recommendation voice.
     expect(screen.getByText(/heightened financial-evidence scrutiny/i)).toBeInTheDocument();
     expect(screen.queryByText(/Assessment Level/i)).not.toBeInTheDocument();
+    // F2-A closure: the stronger unsourced wording is permanently rejected.
+    expect(screen.queryByText(/case officer/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/AUD 5,000/)).not.toBeInTheDocument();
     expect(screen.getByText(/29,710/)).toBeInTheDocument();
     // Read-through F9: 29,710 is the living-cost component, not the whole financial requirement.
     expect(screen.getByText(/living-cost requirement/i)).toBeInTheDocument();
@@ -19,5 +22,17 @@ describe("PolicyBanner", () => {
     expect(screen.getByText(/76\.5%/)).toBeInTheDocument();
     expect(screen.getByText(/78\.7%/)).toBeInTheDocument();
     expect(screen.getByText(/outside Australia/i)).toBeInTheDocument();
+  });
+
+  it("renders the gov Document Checklist Tool pointer (F2-A a1, C.146)", () => {
+    render(<PolicyBanner />);
+    expect(
+      screen.getByText(/shows exactly what to attach for your passport country and provider/i),
+    ).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Document Checklist Tool/i });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool",
+    );
   });
 });

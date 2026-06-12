@@ -285,5 +285,14 @@ describe("generatePlan", () => {
       expect(proof?.liftEstimate).toBe("Core financial evidence for your visa case");
       expect(season?.liftEstimate).toBe("Addresses a documented refusal ground — financial capacity");
     });
+
+    it("the permanently rejected F2 wording never returns (F2-A closure)", () => {
+      const blob = JSON.stringify(
+        generatePlan({ sections: {}, primaryDestinationId: null, matches: [], policy }),
+      );
+      expect(blob).not.toMatch(/Assessment Level/i);
+      expect(blob).not.toMatch(/case officers?/i);
+      expect(blob).not.toMatch(/AUD 5,000/);
+    });
   });
 });

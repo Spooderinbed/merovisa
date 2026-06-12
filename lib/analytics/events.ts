@@ -17,7 +17,8 @@ export type SourceSurface =
   | "checklist"
   | "matches"
   | "genuine-student"
-  | "working-with-agents";
+  | "working-with-agents"
+  | "policy-banner";
 
 export type AnalyticsEvents = {
   /** Wizard step mount. `step` is the WizardStepKey id. */

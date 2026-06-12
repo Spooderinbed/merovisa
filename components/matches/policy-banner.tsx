@@ -3,6 +3,8 @@ import {
   DHA_LIVING_COSTS_AUD_EFFECTIVE,
   NEPAL_AU_VISA_GRANT_RATE_BAND,
 } from "@/lib/programs/policy";
+import { AU_DOCUMENT_CHECKLIST_TOOL } from "@/lib/data/policy/au-document-checklist-tool";
+import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 export function PolicyBanner() {
   return (
@@ -14,6 +16,22 @@ export function PolicyBanner() {
         <li>
           Nepal applications face heightened financial-evidence scrutiny &mdash; plan for 6 months of
           bank seasoning and a strong Genuine Student case.
+        </li>
+        <li>
+          DHA&rsquo;s{" "}
+          <SourceAnchor
+            surface="policy-banner"
+            href={AU_DOCUMENT_CHECKLIST_TOOL.value}
+            title={
+              AU_DOCUMENT_CHECKLIST_TOOL.provenance.lastVerified
+                ? `verified ${AU_DOCUMENT_CHECKLIST_TOOL.provenance.lastVerified}`
+                : undefined
+            }
+            className="text-ink underline underline-offset-2 hover:text-primary"
+          >
+            Document Checklist Tool
+          </SourceAnchor>{" "}
+          shows exactly what to attach for your passport country and provider.
         </li>
         <li>
           DHA living-cost requirement: <strong className="text-ink">AUD {DHA_LIVING_COSTS_AUD.toLocaleString()}</strong>{" "}
