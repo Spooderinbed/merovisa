@@ -11,7 +11,13 @@ destination *content* record's verification date — not a verification of the s
 actually ran on. The single gov host also overclaims: the scoring config's inputs mix DHA figures,
 test-threshold sources, an FX heuristic, and internal weights.
 
-## Design (mechanical, no scoring change)
+## Design v2 — payload-carried (mechanical, no scoring change)
+
+**Mid-design discovery:** `components/results/results.tsx` is `"use client"` and renders `VerdictCard`,
+so the card sits inside a client bundle — importing `lib/data/scoring-config` from it would ship the
+scoring rules (weights, cutoffs, gates execute at module load; not tree-shakeable) into client JS,
+violating the architecture rule "never expose scoring rules in client JS". The constant therefore
+computes server-side and travels as data on the existing server→client seam: the assessment payload.
 
 1. **`lib/data/scoring-config.ts` — one additive export.** `CONFIG_RULES_VERIFIED`: the **oldest**
    `lastVerified` across the dated `CONFIG_PROVENANCE` entries — i.e. "every externally-sourced rule
@@ -19,21 +25,34 @@ test-threshold sources, an FX heuristic, and internal weights.
    figures sit at 06-05/06-07). Internal-heuristic entries carry no `lastVerified` (nothing external to
    verify) and are excluded from the floor. Min, not max: a max date would claim freshness most inputs
    don't have. No engine read-path touched; **no RULE_VERSION / CONFIG_VERSION bump** (no behavior change).
-2. **`components/results/verdict-card.tsx`.** Line becomes **"Assessment rules verified {date}"** (the
-   user's copy), date = `CONFIG_RULES_VERIFIED`. The `AUSTRALIA` import and the `· {sourceHost}` suffix
-   go away — no single host can honestly cover the mixed inputs, and per-figure source links already
-   render at the factor level (`SourceLine`, scorer-wiring slice 2). No version string rendered:
-   `config-v3` / `v0.3.0` are internal jargon (user guardrail), and the engine already stamps both into
-   the stored result for traceability.
-3. **Tests (locks-first).**
-   - `tests/data/config-rules-verified.test.ts`: the constant is a `YYYY-MM-DD` string, equals the
-     min recomputed from `CONFIG_PROVENANCE` in-test, and is ≤ every dated entry.
-   - `tests/components/results/verdict-card.test.tsx` (new): renders the card; pins
-     "Assessment rules verified {CONFIG_RULES_VERIFIED}" (imported constant, not a literal); asserts
-     the old "Based on rules verified" framing and the `immi.homeaffairs.gov.au` host are gone; and
-     **reads the component source to assert it no longer imports `lib/data/destination/australia`** —
-     the user-required proof that the line cannot come from the destination config. (The structural
-     check matters because both dates are currently the same string, `2026-06-02`.)
+2. **Payload carries the date.** `AssessmentPayload` gains optional `rulesVerified?: string`;
+   `assembleAssessment` (server-only — it already imports the engine) stamps `CONFIG_RULES_VERIFIED`.
+   Semantically better than a live import even ignoring bundling: the date travels with the verdict it
+   describes, so a future config re-verification can't silently re-stamp an old stored snapshot. The
+   **engine result is untouched** (it's what the goldens snapshot; it already carries
+   ruleVersion/configVersion for traceability).
+3. **`components/results/verdict-card.tsx`.** Gains optional prop `rulesVerified?: string`; renders
+   **"Assessment rules verified {date}"** (the user's copy) only when present. The `AUSTRALIA` import
+   and the `· {sourceHost}` suffix go away — no single host can honestly cover the mixed inputs, and
+   per-figure source links already render at the factor level (`SourceLine`, scorer-wiring slice 2).
+   No version string rendered: `config-v3` / `v0.3.0` are internal jargon (user guardrail). Removing
+   the `AUSTRALIA` import also drops that content record from the client bundle — a small net win.
+   **Legacy stored payloads** (no field) render no provenance line: absent beats wrong, and the old
+   line's date was unrelated to the rules anyway; fresh assessments (anonymous TTL is 3 days) and
+   signed-in re-scores pick the field up immediately. Both call sites pass it through
+   (`results.tsx` and the dashboard `snapshot-card.tsx`, each already holding the payload).
+4. **Tests (locks-first).**
+   - `tests/data/config-rules-verified.test.ts` (new): the constant is a `YYYY-MM-DD` string, equals
+     the min recomputed from `CONFIG_PROVENANCE` in-test, and is ≤ every dated entry.
+   - `tests/results/assemble.test.ts` (extend): `payload.rulesVerified` equals the imported
+     `CONFIG_RULES_VERIFIED` — the wiring lock proving the date originates in the scoring config.
+   - `tests/components/results/verdict-card.test.tsx` (new): with the prop, pins
+     "Assessment rules verified {date}"; without it, the line is absent; the old "Based on rules
+     verified" framing and the `immi.homeaffairs.gov.au` host are gone; and **reads the component
+     source to assert it no longer references `destination/australia`** — the user-required proof the
+     line cannot come from the destination config. (The structural check matters because both dates
+     are currently the same string, `2026-06-02`.) The proof chain is config → assemble lock →
+     payload prop → render lock, with no scoring value in the client graph.
 
 ## Gates (user guardrails restated)
 
