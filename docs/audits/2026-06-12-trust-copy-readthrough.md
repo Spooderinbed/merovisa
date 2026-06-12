@@ -164,7 +164,8 @@ R1 "a main ground", never "#1 refusal ground" · R2 the PR line's wording incl. 
 
 # Fix batch
 
-> **④·3b status (2026-06-12, commit `ba5a6bc`): APPLIED — F1 · F2 Option B (plus a fourth F2 line the slice sweep found on the marketing `/how` page, which claimed the seasoning rule came "directly from the Department of Home Affairs") · F3 · F4 · F7 · F10 · F11 · F12 · F13 · F14 · F15. OPEN, awaiting the user's call — F5 · F6 · F8 · F9. DEFERRED — F16 (mechanical wiring, separate slice). Watch items stay watch. F2 Option A queued as a research task: properly source the Nepal/SSVF financial-evidence scrutiny claim (see the PROJECT_STATUS backlog).**
+> **④·3b status (2026-06-12, commit `ba5a6bc`): APPLIED — F1 · F2 Option B (plus a fourth F2 line the slice sweep found on the marketing `/how` page, which claimed the seasoning rule came "directly from the Department of Home Affairs") · F3 · F4 · F7 · F10 · F11 · F12 · F13 · F14 · F15.**
+> **④·3c status (2026-06-12, commit `c33bb8b`): APPLIED — F5 · F6 · F8 · F9, as proposed, plus two user-approved extensions: "travel" added to the F8 body's first sentence (A.011–A.013; matches the checklist finance note), and the F9 defect class swept on the marketing `/how` page ("the financial floor (AUD 29,710 living costs plus first-year tuition)" → "the financial-capacity rules (AUD 29,710 per year for living costs, plus travel and first-year tuition evidence)"). Every changed line is copy-locked. REMAINING — F16 (mechanical wiring, separate slice — now the only open row). Watch items stay watch. F2 Option A queued as a research task: properly source the Nepal/SSVF financial-evidence scrutiny claim (see the PROJECT_STATUS backlog).**
 
 ## MUST-FIX NOW (2 entries, 4 lines)
 
@@ -195,20 +196,24 @@ R1 "a main ground", never "#1 refusal ground" · R2 the PR line's wording incl. 
 
 **F5 · `odds.accuracy.english` — "confirmed eligibility" overpromises.** *(advice-boundary lens)*
 - Proposed gain text: "Verify your English score → band-level verification".
+- ④·3c: applied verbatim (`lib/results/accuracy.ts`); the gain string is copy-locked.
 
 **F6 · `mirror.checklist.ahpra` — unsourced eligibility claim.** *(advice-boundary lens)*
 - Current: "Nursing programs require registration with the Australian Health Practitioner Regulation Agency (AHPRA)." No source attached; as stated it is also imprecise about *when/who* registers.
 - Proposed: "Nursing pathways involve registration with the Australian Health Practitioner Regulation Agency (AHPRA) — confirm your program's requirements with the provider." Ledger follow-up: source AHPRA student-registration properly and restore a firmer line.
+- ④·3c: applied verbatim (`lib/checklist/generator.ts`); note copy-locked. The AHPRA-sourcing follow-up (with W7) stays in the backlog.
 
 **F7 · `agents.owes.fee-agreement` — "agreeing the written" outruns G.087's "discussing".** *(precision lens)*
 - Proposed: "OMARA lists discussing the service agreement and fees as a step in choosing an agent — settle both upfront."
 
 **F8 · `mirror.plan.proof-of-funds` — "Class A institution" reads as part of DHA's rule.** *(precision lens)*
 - DHA's evidence paths (B.007–B.010) say "financial institution"; Class A is Nepali banking vocabulary. Separate the DHA rule from local practice: "…or your parents' or partner's annual income. In Nepal, a bank statement or loan sanction letter from a Class A commercial bank is the usual route."
+- ④·3c: applied, with the user-approved travel addition to the first sentence — "DHA expects evidence covering travel, AUD 29,710 living costs, and first-year tuition." Both sentences copy-locked (`tests/plan/generator.test.ts`).
 
 **F9 · `odds.banner.dha-floor` — "financial floor" implies the whole requirement; 29,710 is the living-cost component.** *(main agent)*
 - A.015/B.002 define the living-cost figure; the full DHA requirement also covers travel + tuition (A.011–A.013 — the checklist note gets this right).
 - Proposed: "DHA living-cost requirement: AUD 29,710 per year (effective 2024-05-10) — travel and tuition evidence come on top."
+- ④·3c: applied verbatim on the banner (copy-locked; "financial floor" asserted absent). Same defect class swept on the marketing `/how` page (user-approved): "the financial-capacity rules (AUD 29,710 per year for living costs, plus travel and first-year tuition evidence)".
 
 **F10 · `agents.commission.ban` — missing the principal-course scope.** *(main agent; live page)*
 - The live page defines the banned "onshore transfer" as switching providers after starting in Australia **before completing the principal course**; initial enrolments and post-completion enrolments stay commissionable. "Between onshore providers" can read as all transfers.
