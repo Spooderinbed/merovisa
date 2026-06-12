@@ -153,3 +153,16 @@ export const CONFIG_PROVENANCE: Readonly<Record<string, Provenance>> = Object.fr
   VERDICT_CUTOFFS: verdictCutoffs.provenance,
   PROFILE_STRENGTH_POINTS: profileStrength.provenance,
 });
+
+/**
+ * The verdict card's provenance floor (F16): the oldest `lastVerified` across
+ * the dated CONFIG_PROVENANCE entries — every externally-sourced rule input was
+ * verified on or after this date. Internal-heuristic entries carry no
+ * `lastVerified` (nothing external to verify) and are excluded. Min, not max:
+ * a max date would claim freshness most inputs don't have. Server-side only —
+ * it rides the assessment payload (assemble), never a client import.
+ */
+export const CONFIG_RULES_VERIFIED: string = Object.values(CONFIG_PROVENANCE)
+  .map((p) => p.lastVerified)
+  .filter((d): d is string => Boolean(d))
+  .sort()[0]!;

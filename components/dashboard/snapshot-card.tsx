@@ -30,7 +30,7 @@ export function SnapshotCard({
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         Your standing for {destinationLabel ?? "your destination"}
       </span>
-      <VerdictCard verdict={primary.result.verdict} />
+      <VerdictCard verdict={primary.result.verdict} rulesVerified={primary.rulesVerified} />
       <FactorBars dimensions={primary.result.dimensions} />
     </div>
   );

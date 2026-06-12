@@ -9,4 +9,6 @@ export interface AssessmentPayload {
   matchedCount: number;
   intake: IntakeTiming;
   accuracy: ProfileAccuracy;
+  /** Oldest verification date across the scoring config's sourced inputs (F16). Absent on legacy stored payloads. */
+  rulesVerified?: string;
 }

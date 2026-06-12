@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { assembleAssessment } from "@/lib/results/assemble";
-import { CONFIG_VERSION } from "@/lib/data/scoring-config";
+import { CONFIG_VERSION, CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
 import type { StudentProfile } from "@/lib/scoring/types";
 
 const aarav: StudentProfile = {
@@ -36,5 +36,13 @@ describe("assembleAssessment", () => {
     // persists which data figures it used (Phase 6, no DB migration).
     const payload = assembleAssessment(aarav, new Date("2026-06-03"));
     expect(payload.result.configVersion).toBe(CONFIG_VERSION);
+  });
+
+  it("stamps the rules-verified floor from the scoring config (F16)", () => {
+    // The verdict card renders this date; it must originate in the scoring
+    // config's provenance — not the destination-config record — and it rides
+    // the payload so the date stays true to the snapshot it describes.
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    expect(payload.rulesVerified).toBe(CONFIG_RULES_VERIFIED);
   });
 });

@@ -56,7 +56,7 @@ export function Results({
   return (
     <div className="mx-auto flex w-full max-w-narrow flex-col gap-6 px-5 py-10">
       {destination === "not-sure" ? <NotSureFramingNotice /> : null}
-      <VerdictCard verdict={payload.result.verdict} />
+      <VerdictCard verdict={payload.result.verdict} rulesVerified={payload.rulesVerified} />
       <FactorBars dimensions={payload.result.dimensions} />
       {/* Honest corridor context behind the verdict — the same sourced figures
           the matches page shows (grant rate as a cohort range, AL3, DHA floor). */}

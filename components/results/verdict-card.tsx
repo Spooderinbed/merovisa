@@ -1,5 +1,4 @@
 import type { Verdict } from "@/lib/scoring/types";
-import { AUSTRALIA } from "@/lib/data/destination/australia";
 
 const VERDICT_META: Record<Verdict, { label: string; line: string; cls: string }> = {
   strong: {
@@ -19,18 +18,19 @@ const VERDICT_META: Record<Verdict, { label: string; line: string; cls: string }
   },
 };
 
-export function VerdictCard({ verdict }: { verdict: Verdict }) {
+export function VerdictCard({ verdict, rulesVerified }: { verdict: Verdict; rulesVerified?: string }) {
   const meta = VERDICT_META[verdict];
-  const sourceHost = AUSTRALIA.source.replace(/^https?:\/\//, "").split("/")[0];
   return (
     <section className="animate-rise rounded-lg border border-line bg-surface p-6">
       <span className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12.5px] ${meta.cls}`}>
         {meta.label}
       </span>
       <h2 className="mt-4 text-[clamp(24px,3vw,32px)]">{meta.line}</h2>
-      <p className="mt-3 font-mono text-[12.5px] text-ink-faint">
-        Based on rules verified {AUSTRALIA.lastVerified} · {sourceHost}
-      </p>
+      {rulesVerified ? (
+        <p className="mt-3 font-mono text-[12.5px] text-ink-faint">
+          Assessment rules verified {rulesVerified}
+        </p>
+      ) : null}
     </section>
   );
 }
