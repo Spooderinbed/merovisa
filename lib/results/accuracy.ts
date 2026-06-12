@@ -22,7 +22,7 @@ export function computeProfileAccuracy(profile: StudentProfile): ProfileAccuracy
   if (profile.englishStatus === "taken") {
     completeness += 3;
   } else {
-    suggestions.push({ id: "english", label: "Verify your English score", gain: "confirmed eligibility" });
+    suggestions.push({ id: "english", label: "Verify your English score", gain: "band-level verification" });
   }
 
   const level = completeness >= 75 ? "Complete" : completeness >= 40 ? "Verified" : "Basic";

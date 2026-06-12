@@ -168,7 +168,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     source: program.source ? { url: program.source, lastVerified: program.lastVerified || undefined } : undefined,
   });
   if (isNursing) {
-    add({ key: "ahpra", kind: null, label: "AHPRA registration", group: "academic", stage: "now", requirement: "required", infoKind: "note", note: "Nursing programs require registration with the Australian Health Practitioner Regulation Agency (AHPRA)." });
+    add({ key: "ahpra", kind: null, label: "AHPRA registration", group: "academic", stage: "now", requirement: "required", infoKind: "note", note: "Nursing pathways involve registration with the Australian Health Practitioner Regulation Agency (AHPRA) — confirm your program's requirements with the provider." });
   }
 
   // FINANCIAL (now, by funding source)

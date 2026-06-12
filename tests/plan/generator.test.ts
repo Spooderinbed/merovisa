@@ -25,6 +25,12 @@ describe("generatePlan", () => {
     expect(proof?.body).toContain("loan from a government or financial institution");
     expect(proof?.body).toContain("scholarship or sponsorship");
     expect(proof?.body).toContain("parents' or partner's annual income");
+    // Read-through F8 (+travel): DHA's rule covers travel too, and the Class A convention is
+    // Nepali banking practice — a separate sentence, not part of DHA's wording.
+    expect(proof?.body).toMatch(/covering travel, AUD 29[,.]?710 living costs, and first-year tuition/);
+    expect(proof?.body).toContain(
+      "In Nepal, a bank statement or loan sanction letter from a Class A commercial bank is the usual route.",
+    );
   });
 
   it("when english.overall set + reportUploaded=false, asks to upload report instead of asking for score", () => {

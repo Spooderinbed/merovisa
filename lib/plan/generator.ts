@@ -124,7 +124,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "upload-proof-of-funds",
       impact: "high",
       title: "Add proof of funds",
-      body: `DHA expects evidence covering AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living costs plus first-year tuition. It accepts ${oxfordOr(EVIDENCE_PATHS)}. A bank statement or loan sanction letter from a Class A institution is the usual proof.`,
+      body: `DHA expects evidence covering travel, AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living costs, and first-year tuition. It accepts ${oxfordOr(EVIDENCE_PATHS)}. In Nepal, a bank statement or loan sanction letter from a Class A commercial bank is the usual route.`,
       liftEstimate: "Core financial evidence for your visa case",
       timeEstimate: "1-3 days",
     });

@@ -57,6 +57,10 @@ describe("generateChecklist", () => {
     const items = generateChecklist({ program: { ...baseProgram, field: "nursing" }, sections: {}, uploadedKinds: noKinds });
     expect(byKey(items, "english")?.note).toContain("each band ≥ 7");
     expect(byKey(items, "ahpra")).toMatchObject({ kind: null, status: "info", group: "academic" });
+    // Read-through F6: no source backs a blanket "require" — pathway framing + confirm with the provider.
+    expect(byKey(items, "ahpra")?.note).toBe(
+      "Nursing pathways involve registration with the Australian Health Practitioner Regulation Agency (AHPRA) — confirm your program's requirements with the provider.",
+    );
   });
 
   it("self-funded → bank statement required, no sponsor income", () => {

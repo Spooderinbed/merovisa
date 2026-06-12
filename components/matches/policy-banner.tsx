@@ -16,8 +16,8 @@ export function PolicyBanner() {
           bank seasoning and a strong Genuine Student case.
         </li>
         <li>
-          DHA financial floor: <strong className="text-ink">AUD {DHA_LIVING_COSTS_AUD.toLocaleString()}</strong>{" "}
-          per year (effective {DHA_LIVING_COSTS_AUD_EFFECTIVE}).
+          DHA living-cost requirement: <strong className="text-ink">AUD {DHA_LIVING_COSTS_AUD.toLocaleString()}</strong>{" "}
+          per year (effective {DHA_LIVING_COSTS_AUD_EFFECTIVE}) &mdash; travel and tuition evidence come on top.
         </li>
         <li>
           Nepal student-visa grant rate (DHA, Apr&ndash;Jun 2025):{" "}

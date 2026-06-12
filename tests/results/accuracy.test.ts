@@ -30,6 +30,9 @@ describe("computeProfileAccuracy", () => {
   it("suggests verifying English when it has not been taken", () => {
     const a = computeProfileAccuracy({ ...base, englishStatus: "not-taken", englishScore: undefined });
     expect(a.completeness).toBe(25);
-    expect(a.suggestions.some((s) => s.id === "english")).toBe(true);
+    const english = a.suggestions.find((s) => s.id === "english");
+    expect(english?.label).toBe("Verify your English score");
+    // Read-through F5: an unverified score can't promise eligibility — only band-level checking.
+    expect(english?.gain).toBe("band-level verification");
   });
 });

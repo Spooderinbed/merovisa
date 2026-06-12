@@ -10,6 +10,10 @@ describe("PolicyBanner", () => {
     expect(screen.getByText(/heightened financial-evidence scrutiny/i)).toBeInTheDocument();
     expect(screen.queryByText(/Assessment Level/i)).not.toBeInTheDocument();
     expect(screen.getByText(/29,710/)).toBeInTheDocument();
+    // Read-through F9: 29,710 is the living-cost component, not the whole financial requirement.
+    expect(screen.getByText(/living-cost requirement/i)).toBeInTheDocument();
+    expect(screen.getByText(/travel and tuition evidence come on top/i)).toBeInTheDocument();
+    expect(screen.queryByText(/financial floor/i)).not.toBeInTheDocument();
     // Offshore (the from-Nepal cohort) and onshore shown as distinct, labelled
     // figures — not a bare range whose top number is the rosier onshore rate.
     expect(screen.getByText(/76\.5%/)).toBeInTheDocument();
