@@ -91,6 +91,8 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
     lastVerified: VERIFIED,
     provenance: {
       findingRefs: ["I.034"],
+      volatility: "volatile",
+      reverifyBy: "2026-12-31",
       source: HOMEAFFAIRS_STATS,
       note: "Home Affairs student & temporary graduate program report: outside-Australia Higher Education grant rate 85.3% for 1 Apr–30 Jun 2025 (I.034).",
     },
@@ -108,6 +110,8 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
     lastVerified: VERIFIED,
     provenance: {
       findingRefs: ["I.035"],
+      volatility: "volatile",
+      reverifyBy: "2026-12-31",
       source: HOMEAFFAIRS_STATS,
       note: "Home Affairs student & temporary graduate program report: outside-Australia VET grant rate 36.3% for 1 Apr–30 Jun 2025 (I.035).",
     },

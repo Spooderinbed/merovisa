@@ -4,7 +4,7 @@
 
 **Total findings:** 1114  ·  **entity+attr clusters:** 41
 
-**Status:** used=485 · pending=629
+**Status:** used=485 · pending=621 · rejected:out-of-scope=1 · rejected:dynamic-data=2 · rejected:ephemeral-jobad=3 · rejected:promo-window=1 · rejected:superseded=1
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -342,7 +342,7 @@
 | C.075 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The National Innovation visa is a permanent visa for exceptionally talented migrants from across the world. |
 | C.076 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | An invitation is needed to apply for the National Innovation visa. |
 | C.077 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Visitor visa Tourist stream for offshore applicants lets a person visit Australia for up to 12 months as … |
-| C.078 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Visitor visa category was less than 1 day in April 2026. |
+| C.078 | C | primary | data |  | rejected:out-of-scope | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s median processing time for the Visitor visa category was less than 1 day in April 2026. |
 | C.079 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Subclass 600 applicants are told to include documents proving they have enough money to support themselves du… |
 | C.080 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Form 1149 says a sponsor for the Subclass 600 Sponsored Family stream must be an Australian citizen or perman… |
 | C.081 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Form 1149 says holders of Subclass 600 Sponsored Family stream visitor visas are not permitted to work in Aus… |
@@ -411,8 +411,8 @@
 | C.144 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | DHA’s current processing page says offshore Student visa applications lodged on or after 14 November 2025 are… |
 | D.001 | D | anecdotal | data |  | pending | supabase seed_universities migration | The requested D1 import schema should use the columns `id,name,country,city,ranking_tier,md115_tier,cricos_pr… |
 | D.002 | D | primary | process |  | pending | supabase seed_universities migration | Nepal’s official NOC portal says an NOC is a No Objection Certificate granted by the Government of Nepal for … |
-| D.003 | D | primary | data |  | pending | supabase seed_universities migration | Nepal Rastra Bank listed the AUD buy rate at NPR 109.26 on 2026-06-05. |
-| D.004 | D | primary | data |  | pending | supabase seed_universities migration | Nepal Rastra Bank listed the AUD sell rate at NPR 109.69 on 2026-06-05. |
+| D.003 | D | primary | data |  | rejected:dynamic-data | supabase seed_universities migration | Nepal Rastra Bank listed the AUD buy rate at NPR 109.26 on 2026-06-05. |
+| D.004 | D | primary | data |  | rejected:dynamic-data | supabase seed_universities migration | Nepal Rastra Bank listed the AUD sell rate at NPR 109.69 on 2026-06-05. |
 | D.005 | D | primary | process |  | pending | supabase seed_universities migration | Under MD115, student-visa prioritisation is determined by the education provider of the main CoE. |
 | D.006 | D | primary | process |  | pending | supabase seed_universities migration | For packaged courses with different providers, student-visa priority is usually set by the final course in th… |
 | D.007 | D | primary | process |  | pending | supabase seed_universities migration | Tertiary packaged students can be granted a Student visa to the end of the last course for up to six years if… |
@@ -686,9 +686,9 @@
 | E.155 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A Lower Secondary English Teacher job in Nepal advertised a salary of NPR 30,000–40,000 per month. |
 | E.156 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A Pre-primary teacher job in Nepal advertised a salary starting from NPR 30,000. |
 | E.157 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A Module Leader job in Nepal advertised a salary of NPR 80,000–100,000. |
-| E.158 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A WHO Nepal Data Analysis Associate role listed an annual net base salary starting at NPR 1,883,521. |
-| E.159 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A Monitoring and Evaluation Officer role in Nepal advertised a salary of NPR 45,000–50,000 per month. |
-| E.160 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A Finance Assistant role in Nepal advertised a starting salary of NPR 33,602 per month. |
+| E.158 | E | practitioner | data |  | rejected:ephemeral-jobad | lib/data/programs seed (+ course-career) | A WHO Nepal Data Analysis Associate role listed an annual net base salary starting at NPR 1,883,521. |
+| E.159 | E | practitioner | data |  | rejected:ephemeral-jobad | lib/data/programs seed (+ course-career) | A Monitoring and Evaluation Officer role in Nepal advertised a salary of NPR 45,000–50,000 per month. |
+| E.160 | E | practitioner | data |  | rejected:ephemeral-jobad | lib/data/programs seed (+ course-career) | A Finance Assistant role in Nepal advertised a starting salary of NPR 33,602 per month. |
 | E.161 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A Contract Engineer role in Nepal advertised a salary of NPR 100,000 per month. |
 | E.162 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | A Logistics Officer role in Nepal advertised a salary of NPR 40,000–70,000 per month. |
 | E.163 | E | practitioner | data |  | pending | lib/data/programs seed (+ course-career) | An Outbound Tour Officer role in Nepal advertised a salary of NPR 40,000+ per month. |
@@ -928,7 +928,7 @@
 | H.009 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Qatar Airways operates flights from Kathmandu to Doha. |
 | H.010 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Qatar Airways Student Club offers 10% off the first booking. |
 | H.011 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Qatar Airways Student Club includes an extra 10kg or one additional checked bag depending on route. |
-| H.012 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Singapore Airlines student fares include 10% off selected fares. |
+| H.012 | H | primary | data |  | rejected:promo-window | app/(app)/journey pre-departure/post-arrival/working | Singapore Airlines student fares include 10% off selected fares. |
 | H.013 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Singapore Airlines student privileges can include up to 50kg of checked baggage on Australia travel. |
 | H.014 | H | primary | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Singapore Airlines student privileges include a fee waiver on the first booking change. |
 | H.015 | H | practitioner | data |  | pending | app/(app)/journey pre-departure/post-arrival/working | Skyscanner says the cheapest time to book Kathmandu–Sydney is around 40 days in advance. |
@@ -1054,7 +1054,7 @@
 | I.038 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal recorded 12,008 Higher Education visa grants in Australia in 2024-25 to 30 June 2025. |
 | I.039 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal recorded 3,781 Vocational Education and Training visa grants in Australia in 2024-25 to 30 June 2025. |
 | I.040 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal was the third-largest source country for student visa grants in 2024-25 to 30 June 2025 with 31,869 gra… |
-| I.041 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA reported that student visa grants to citizens of Nepal increased by 64.3% compared with the same period i… |
+| I.041 | I | primary | data |  | rejected:superseded | app/(app)/journey/refusal-recovery (+ plan rules) | DHA reported that student visa grants to citizens of Nepal increased by 64.3% compared with the same period i… |
 | I.042 | I | anecdotal | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal-specific Subclass 500 refusal breakdown by legal ground is unverified — needs confirmation. |
 | I.043 | I | anecdotal | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | Nepal-specific refusal-rate differences by provider tier or university tier are unverified — needs confirmati… |
 | I.044 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The Administrative Review Tribunal has jurisdiction to review certain visa decisions made under the Migration… |

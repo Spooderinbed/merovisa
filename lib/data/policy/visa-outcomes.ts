@@ -25,6 +25,8 @@ export const NEPAL_AU_STUDENT_VISA_GRANT_RATE: Sourced<{ offshore: number; onsho
   value: { offshore: 76.5, onshore: 78.7 },
   provenance: {
     findingRefs: ["I.032", "I.033"],
+    volatility: "volatile",
+    reverifyBy: "2026-12-31",
     source: DHA_STUDENT_PROGRAM_REPORT_SOURCE,
     effectiveDate: "2025-06-30",
     lastVerified: "2026-06-07",
