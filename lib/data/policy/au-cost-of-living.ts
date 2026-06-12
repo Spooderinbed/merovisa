@@ -26,6 +26,8 @@ export const AU_DHA_LIVING_CAPACITY_AUD: Sourced<number> = {
   value: 29_710,
   provenance: {
     findingRefs: ["A.015", "B.002"],
+    volatility: "annual",
+    reverifyBy: "2027-06-07",
     source: DHA_SOURCE,
     effectiveDate: "2024-05-10",
     lastVerified: "2026-06-07",
@@ -37,6 +39,8 @@ export const AU_DHA_PARTNER_CAPACITY_AUD: Sourced<number> = {
   value: 10_394,
   provenance: {
     findingRefs: ["B.003"],
+    volatility: "annual",
+    reverifyBy: "2027-06-07",
     source: DHA_SOURCE,
     effectiveDate: "2024-05-10",
     lastVerified: "2026-06-07",
@@ -48,6 +52,8 @@ export const AU_DHA_CHILD_CAPACITY_AUD: Sourced<number> = {
   value: 4_449,
   provenance: {
     findingRefs: ["B.004"],
+    volatility: "annual",
+    reverifyBy: "2027-06-07",
     source: DHA_SOURCE,
     effectiveDate: "2024-05-10",
     lastVerified: "2026-06-07",
@@ -59,6 +65,8 @@ export const AU_DHA_SCHOOL_COSTS_AUD: Sourced<number> = {
   value: 13_502,
   provenance: {
     findingRefs: ["B.005"],
+    volatility: "annual",
+    reverifyBy: "2027-06-07",
     source: DHA_SOURCE,
     effectiveDate: "2024-05-10",
     lastVerified: "2026-06-07",
@@ -73,6 +81,8 @@ export const AU_DHA_INCOME_METHOD_THRESHOLD_AUD: Sourced<number> = {
   value: 87_856,
   provenance: {
     findingRefs: ["B.006"],
+    volatility: "annual",
+    reverifyBy: "2027-06-07",
     source: DHA_SSVF_SOURCE,
     lastVerified: "2026-06-07",
     note: "DHA annual personal-income threshold accepted from a parent or partner as proof of financial capacity (AUD), in lieu of the savings/deposit method.",

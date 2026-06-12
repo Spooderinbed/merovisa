@@ -20,6 +20,8 @@ export const AU_SUBCLASS_500_APPLICATION_CHARGE_AUD: Sourced<number> = {
   value: 2_000,
   provenance: {
     findingRefs: ["A.001", "B.001"],
+    volatility: "annual",
+    reverifyBy: "2026-07-01",
     source: DHA_STUDENT_500_SOURCE,
     lastVerified: "2026-06-07",
     note: "DHA Subclass 500 base visa application charge for the primary applicant (AUD).",

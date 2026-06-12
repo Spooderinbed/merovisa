@@ -28,7 +28,7 @@ export const AU_TAX_FIGURES: AuTaxFigure[] = [
     source:
       "https://www.ato.gov.au/individuals-and-families/coming-to-australia-or-going-overseas/coming-to-australia/tax-free-threshold-for-newcomers-to-australia",
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.059"] },
+    provenance: { findingRefs: ["H.059"], volatility: "annual", reverifyBy: "2026-07-01" },
   },
   {
     id: "dasp-taxed-element",
@@ -37,7 +37,7 @@ export const AU_TAX_FIGURES: AuTaxFigure[] = [
     unit: "%",
     source: ATO_DASP_SOURCE,
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.060"], note: "Applies to non-WHM temporary residents." },
+    provenance: { findingRefs: ["H.060"], volatility: "annual", reverifyBy: "2026-07-01", note: "Applies to non-WHM temporary residents." },
   },
   {
     id: "dasp-untaxed-element",
@@ -46,7 +46,7 @@ export const AU_TAX_FIGURES: AuTaxFigure[] = [
     unit: "%",
     source: ATO_DASP_SOURCE,
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.061"], note: "Applies to non-WHM temporary residents." },
+    provenance: { findingRefs: ["H.061"], volatility: "annual", reverifyBy: "2026-07-01", note: "Applies to non-WHM temporary residents." },
   },
   {
     id: "dasp-whm",
@@ -57,6 +57,8 @@ export const AU_TAX_FIGURES: AuTaxFigure[] = [
     lastVerified: "2026-06-05",
     provenance: {
       findingRefs: ["H.062"],
+      volatility: "annual",
+      reverifyBy: "2026-07-01",
       note: "The 65% working-holiday-maker rate is often misapplied to non-WHM students.",
     },
   },

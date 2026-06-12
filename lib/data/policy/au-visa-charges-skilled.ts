@@ -16,7 +16,7 @@ export const AU_SKILLED_VISA_CHARGES: AuSkilledVisaCharge[] = [
     source:
       "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/skilled-work-regional-provisional-491/application",
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["C.060"] },
+    provenance: { findingRefs: ["C.060"], volatility: "annual", reverifyBy: "2026-07-01" },
   },
   {
     id: "regional-191",
@@ -26,7 +26,7 @@ export const AU_SKILLED_VISA_CHARGES: AuSkilledVisaCharge[] = [
     source:
       "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/skilled-regional-191/regional-provisional",
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["C.064"] },
+    provenance: { findingRefs: ["C.064"], volatility: "annual", reverifyBy: "2026-07-01" },
   },
   {
     id: "skilled-189",
@@ -36,7 +36,7 @@ export const AU_SKILLED_VISA_CHARGES: AuSkilledVisaCharge[] = [
     source:
       "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/skilled-independent-189/points-tested",
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["C.068"] },
+    provenance: { findingRefs: ["C.068"], volatility: "annual", reverifyBy: "2026-07-01" },
   },
   {
     id: "employer-186",
@@ -46,6 +46,6 @@ export const AU_SKILLED_VISA_CHARGES: AuSkilledVisaCharge[] = [
     source:
       "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/employer-nomination-scheme-186",
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["C.073"] },
+    provenance: { findingRefs: ["C.073"], volatility: "annual", reverifyBy: "2026-07-01" },
   },
 ];

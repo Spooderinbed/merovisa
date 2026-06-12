@@ -166,6 +166,8 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
     lastVerified: VERIFIED,
     provenance: {
       findingRefs: ["I.045"],
+      volatility: "annual",
+      reverifyBy: "2026-07-01",
       source: ART_IMMIGRATION,
       note: "ART application fee for a review of most migration decisions is AUD 3,580 (I.045).",
     },

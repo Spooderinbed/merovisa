@@ -41,7 +41,7 @@ export const AU_STUDENT_WORKER_WAGES: AuWorkerWage[] = [
     status: "current",
     source: FAIRWORK_MIN_WAGE_SOURCE,
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.066"], effectiveDate: "2025-07-01" },
+    provenance: { findingRefs: ["H.066"], volatility: "annual", reverifyBy: "2026-07-01", effectiveDate: "2025-07-01" },
   },
   {
     id: "national-minimum-wage-announced-2026",
@@ -53,6 +53,8 @@ export const AU_STUDENT_WORKER_WAGES: AuWorkerWage[] = [
     lastVerified: "2026-06-05",
     provenance: {
       findingRefs: ["H.067"],
+      volatility: "annual",
+      reverifyBy: "2026-07-01",
       effectiveDate: "2026-07-01",
       note: "Announced in the 2026 Annual Wage Review; operative 1 July 2026, not yet in force as of 2026-06-05.",
     },
@@ -66,7 +68,7 @@ export const AU_STUDENT_WORKER_WAGES: AuWorkerWage[] = [
     penaltyDay: "ordinary",
     source: HOSPITALITY_AWARD_SOURCE,
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.068"], note: HOSPITALITY_CASUAL_NOTE },
+    provenance: { findingRefs: ["H.068"], volatility: "annual", reverifyBy: "2026-07-01", note: HOSPITALITY_CASUAL_NOTE },
   },
   {
     id: "hospitality-casual-saturday",
@@ -77,7 +79,7 @@ export const AU_STUDENT_WORKER_WAGES: AuWorkerWage[] = [
     penaltyDay: "saturday",
     source: HOSPITALITY_AWARD_SOURCE,
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.069"], note: HOSPITALITY_CASUAL_NOTE },
+    provenance: { findingRefs: ["H.069"], volatility: "annual", reverifyBy: "2026-07-01", note: HOSPITALITY_CASUAL_NOTE },
   },
   {
     id: "hospitality-casual-sunday",
@@ -88,7 +90,7 @@ export const AU_STUDENT_WORKER_WAGES: AuWorkerWage[] = [
     penaltyDay: "sunday",
     source: HOSPITALITY_AWARD_SOURCE,
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.070"], note: HOSPITALITY_CASUAL_NOTE },
+    provenance: { findingRefs: ["H.070"], volatility: "annual", reverifyBy: "2026-07-01", note: HOSPITALITY_CASUAL_NOTE },
   },
   {
     id: "hospitality-casual-public-holiday",
@@ -99,6 +101,6 @@ export const AU_STUDENT_WORKER_WAGES: AuWorkerWage[] = [
     penaltyDay: "public-holiday",
     source: HOSPITALITY_AWARD_SOURCE,
     lastVerified: "2026-06-05",
-    provenance: { findingRefs: ["H.071"], note: HOSPITALITY_CASUAL_NOTE },
+    provenance: { findingRefs: ["H.071"], volatility: "annual", reverifyBy: "2026-07-01", note: HOSPITALITY_CASUAL_NOTE },
   },
 ];
