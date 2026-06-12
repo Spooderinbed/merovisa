@@ -900,3 +900,25 @@ export interface WorkingWithAgentsFact extends Provenanced {
   source: string;  // canonical gov URL shown as the row's link
   lastVerified?: string; // ISO date
 }
+
+/**
+ * Nepal-side sponsor income certification (slice ⑥, category A): Lalitpur Metropolitan
+ * City's published income-type → required-documents map, consumed by the plan + checklist
+ * generators (the sponsor-income-cert step). Fact-only — no scorer reads it; machine-checked
+ * against findings (provenance.findingRefs).
+ */
+export interface NepalIncomeCertificationFact extends Provenanced {
+  id: string; // slug, e.g. "rental-income"
+  incomeType:
+    | "rental"
+    | "business-agriculture"
+    | "salary-pension"
+    | "fixed-deposit-interest"
+    | "foreign-income"
+    | "english-statement"
+    | "land-valuation"
+    | "sponsor-relationship";
+  summary: string; // the certification requirement sentence
+  source: string;  // the Lalitpur FAQ URL
+  lastVerified?: string; // ISO date
+}

@@ -25,7 +25,7 @@ const DHA_SOURCE = "https://immi.homeaffairs.gov.au/news-media/archive/article?i
 export const AU_DHA_LIVING_CAPACITY_AUD: Sourced<number> = {
   value: 29_710,
   provenance: {
-    findingRefs: ["A.015", "B.002"],
+    findingRefs: ["A.015", "B.002", "C.015", "E.003"],
     volatility: "annual",
     reverifyBy: "2027-06-07",
     source: DHA_SOURCE,
@@ -38,7 +38,7 @@ export const AU_DHA_LIVING_CAPACITY_AUD: Sourced<number> = {
 export const AU_DHA_PARTNER_CAPACITY_AUD: Sourced<number> = {
   value: 10_394,
   provenance: {
-    findingRefs: ["B.003"],
+    findingRefs: ["B.003", "C.016"],
     volatility: "annual",
     reverifyBy: "2027-06-07",
     source: DHA_SOURCE,
@@ -51,7 +51,7 @@ export const AU_DHA_PARTNER_CAPACITY_AUD: Sourced<number> = {
 export const AU_DHA_CHILD_CAPACITY_AUD: Sourced<number> = {
   value: 4_449,
   provenance: {
-    findingRefs: ["B.004"],
+    findingRefs: ["B.004", "C.017"],
     volatility: "annual",
     reverifyBy: "2027-06-07",
     source: DHA_SOURCE,
@@ -64,7 +64,7 @@ export const AU_DHA_CHILD_CAPACITY_AUD: Sourced<number> = {
 export const AU_DHA_SCHOOL_COSTS_AUD: Sourced<number> = {
   value: 13_502,
   provenance: {
-    findingRefs: ["B.005"],
+    findingRefs: ["B.005", "C.018"],
     volatility: "annual",
     reverifyBy: "2027-06-07",
     source: DHA_SOURCE,

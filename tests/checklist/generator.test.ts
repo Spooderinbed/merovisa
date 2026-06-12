@@ -134,6 +134,23 @@ describe("generateChecklist", () => {
     expect(agent?.source?.url).toContain("portal.mara.gov.au");
   });
 
+  it("emits the sponsor income certification step only when sponsor income is in play (slice 6)", () => {
+    const note =
+      "In Nepal, sponsor income is typically certified at the local ward office — Lalitpur Metropolitan City publishes the document list: rental income needs the tenancy agreement; business or agricultural income the business-registration certificate plus audit report; salary or pension the original letter from the employer; fixed-deposit or savings interest a bank certificate; foreign income a recommendation letter authenticated by the Nepali embassy there or that country's embassy in Nepal. For an English income statement, include citizenship and relationship certificates.";
+    const fam = generateChecklist({ program: baseProgram, sections: { finance: { source: "parents-family" } }, uploadedKinds: noKinds });
+    const step = byKey(fam, "sponsor-income-cert");
+    expect(step?.kind).toBeNull();
+    expect(step?.group).toBe("financial");
+    expect(step?.stage).toBe("now");
+    expect(step?.requirement).toBe("recommended");
+    expect(step?.infoKind).toBe("step");
+    expect(step?.note).toBe(note);
+    expect(step?.source?.url).toContain("lalitpurmun.gov.np");
+    expect(byKey(generateChecklist({ program: baseProgram, sections: { finance: { source: "mixed" } }, uploadedKinds: noKinds }), "sponsor-income-cert")).toBeTruthy();
+    expect(byKey(generateChecklist({ program: baseProgram, sections: { finance: { source: "self-funded" } }, uploadedKinds: noKinds }), "sponsor-income-cert")).toBeUndefined();
+    expect(byKey(generateChecklist({ program: baseProgram, sections: { finance: { source: "education-loan" } }, uploadedKinds: noKinds }), "sponsor-income-cert")).toBeUndefined();
+  });
+
   it("adds employment docs when work title is set", () => {
     const items = generateChecklist({ program: baseProgram, sections: { work: { title: "Analyst" } }, uploadedKinds: noKinds });
     expect(byKey(items, "employment-letter")).toBeTruthy();

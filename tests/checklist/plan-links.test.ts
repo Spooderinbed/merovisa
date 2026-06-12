@@ -21,7 +21,13 @@ const row = (kind: string, status: PlanItemRow["status"], extra?: Partial<PlanIt
 });
 
 describe("CHECKLIST_PLAN_LINKS", () => {
-  const items = generateChecklist({ program, sections: {}, uploadedKinds: new Set<DocumentKind>() });
+  // parents-family finance so the conditional sponsor-income-cert row is emitted too —
+  // every mapped key must be producible by the generator under its emitting conditions.
+  const items = generateChecklist({
+    program,
+    sections: { finance: { source: "parents-family" } },
+    uploadedKinds: new Set<DocumentKind>(),
+  });
 
   it("maps only checklist keys the generator actually emits", () => {
     const keys = new Set(items.map((i) => i.key));
@@ -43,7 +49,7 @@ describe("CHECKLIST_PLAN_LINKS", () => {
     }
   });
 
-  it("covers the four after-offer step rows, the translations note, and the agent check", () => {
+  it("covers the after-offer step rows, the translations note, the agent check, and the sponsor-income step", () => {
     expect(CHECKLIST_PLAN_LINKS).toEqual({
       "noc-application": "apply-for-noc",
       biometrics: "prepare-biometrics",
@@ -51,6 +57,7 @@ describe("CHECKLIST_PLAN_LINKS", () => {
       "doc-preparation": "translate-certify-documents",
       "gs-responses": "prepare-gs-answers",
       "agent-marn": "verify-agent-marn",
+      "sponsor-income-cert": "certify-sponsor-income",
     });
   });
 });

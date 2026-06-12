@@ -11,7 +11,7 @@ import type { Sourced } from "@/lib/data/types";
 export const AU_DOCUMENT_CHECKLIST_TOOL: Sourced<string> = {
   value: "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool",
   provenance: {
-    findingRefs: ["C.146"],
+    findingRefs: ["C.146", "I.021", "I.022", "I.023", "I.024"],
     source: "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool",
     lastVerified: "2026-06-12",
     note: "Generates the per-combination evidence list; its financial-capacity entry covers travel, 12 months living costs, tuition and school costs, or the parent/spouse income method.",

@@ -305,5 +305,21 @@ describe("generatePlan", () => {
       expect(agent?.liftEstimate).toBeUndefined();
       expect(agent?.timeEstimate).toBe("10 minutes");
     });
+
+    it("emits certify-sponsor-income only for sponsor-backed funding (slice 6, user-locked copy)", () => {
+      const body =
+        "If a parent or family member funds your study, their income needs to be documented, not just stated. Ward offices certify each income type with specific papers — Lalitpur Metropolitan City's published list: rental income needs the tenancy agreement; business or agricultural income the business-registration certificate plus audit report; salary or pension the original letter from the employer; fixed-deposit or savings interest a bank certificate; foreign income a recommendation letter authenticated by the Nepali embassy in that country or that country's embassy in Nepal. For the English income statement, include citizenship and relationship certificates. Gather the set for your sponsor's income type before you go.";
+      const items = generatePlan({ sections: { finance: { source: "parents-family" } }, primaryDestinationId: "australia", matches: [], policy });
+      const cert = items.find((i) => i.kind === "certify-sponsor-income");
+      expect(cert?.title).toBe("Certify your sponsor's income at the ward office");
+      expect(cert?.body).toBe(body);
+      expect(cert?.impact).toBe("medium");
+      expect(cert?.liftEstimate).toBeUndefined();
+      expect(cert?.timeEstimate).toBe("1-2 days");
+      const mixed = generatePlan({ sections: { finance: { source: "mixed" } }, primaryDestinationId: null, matches: [], policy });
+      expect(mixed.some((i) => i.kind === "certify-sponsor-income")).toBe(true);
+      const self = generatePlan({ sections: { finance: { source: "self-funded" } }, primaryDestinationId: null, matches: [], policy });
+      expect(self.some((i) => i.kind === "certify-sponsor-income")).toBe(false);
+    });
   });
 });

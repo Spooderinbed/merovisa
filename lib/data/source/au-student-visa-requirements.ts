@@ -50,9 +50,9 @@ export const AU_STUDENT_VISA_REQUIREMENTS: AuStudentVisaRequirement[] = [
     source: DHA_EVIDENTIARY,
     lastVerified: "2026-06-05",
     provenance: {
-      findingRefs: ["A.011", "A.012", "A.013"],
+      findingRefs: ["A.011", "A.012", "A.013", "C.011", "C.012", "C.013", "C.014"],
       source: DHA_EVIDENTIARY,
-      note: "Coverage requirement only; the AUD 29,710 living figure is sourced via AU_DHA_LIVING_CAPACITY_AUD (A.015/B.002).",
+      note: "Coverage requirement only; the AUD 29,710 living figure is sourced via AU_DHA_LIVING_CAPACITY_AUD (A.015/B.002). C.011–C.014 corroborate the four-component formula from the DHA financial-capacity page (slice ⑥ pass).",
     },
   },
   {

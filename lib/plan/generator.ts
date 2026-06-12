@@ -141,6 +141,22 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
     });
   }
 
+  // SPONSOR INCOME CERTIFICATION (ward office) — when a sponsor's income is part of the case.
+  // Copy backed by nepal-income-certification (A.104–A.110/A.112/A.114, Lalitpur FAQ); hedged
+  // "typically" because the map is one municipality's published list (slice ⑥ sign-off 2026-06-13).
+  if (s.finance?.source === "parents-family" || s.finance?.source === "mixed") {
+    out.push({
+      kind: "certify-sponsor-income",
+      impact: "medium",
+      title: "Certify your sponsor's income at the ward office",
+      body:
+        "If a parent or family member funds your study, their income needs to be documented, not just stated. " +
+        "Ward offices certify each income type with specific papers — Lalitpur Metropolitan City's published list: rental income needs the tenancy agreement; business or agricultural income the business-registration certificate plus audit report; salary or pension the original letter from the employer; fixed-deposit or savings interest a bank certificate; foreign income a recommendation letter authenticated by the Nepali embassy in that country or that country's embassy in Nepal. " +
+        "For the English income statement, include citizenship and relationship certificates. Gather the set for your sponsor's income type before you go.",
+      timeEstimate: "1-2 days",
+    });
+  }
+
   // STUDY GAP
   if (s.gap?.years && s.gap.years >= 1 && !(s.gap.reasons?.length)) {
     out.push({

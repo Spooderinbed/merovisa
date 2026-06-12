@@ -19,7 +19,7 @@ const DHA_STUDENT_500_SOURCE =
 export const AU_SUBCLASS_500_APPLICATION_CHARGE_AUD: Sourced<number> = {
   value: 2_000,
   provenance: {
-    findingRefs: ["A.001", "B.001"],
+    findingRefs: ["A.001", "B.001", "E.001"],
     volatility: "annual",
     reverifyBy: "2026-07-01",
     source: DHA_STUDENT_500_SOURCE,

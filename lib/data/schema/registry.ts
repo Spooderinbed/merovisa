@@ -90,6 +90,8 @@ import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
 import { GenuineStudentSchema } from "@/lib/data/schema/au-genuine-student.schema";
 import { AU_WORKING_WITH_AGENTS } from "@/lib/data/source/au-working-with-agents";
 import { WorkingWithAgentsSchema } from "@/lib/data/schema/au-working-with-agents.schema";
+import { NEPAL_INCOME_CERTIFICATION } from "@/lib/data/source/nepal-income-certification";
+import { NepalIncomeCertificationSchema } from "@/lib/data/schema/nepal-income-certification.schema";
 import {
   AU_DHA_LIVING_CAPACITY_AUD,
   AU_DHA_PARTNER_CAPACITY_AUD,
@@ -758,5 +760,18 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordLabel: "au-working-with-agents",
     subRecordKeys: [],
     recordInterface: "WorkingWithAgentsFact",
+  },
+  {
+    // Slice ⑥ — Nepal sponsor income certification (category A). 9 prose rows: Lalitpur
+    // Metropolitan City's income-type → required-documents map (A.104–A.110/A.112/A.114),
+    // consumed by the plan + checklist generators (sponsor-income-cert step). Fact-only:
+    // no scorer reads it.
+    category: "A",
+    exportName: "NEPAL_INCOME_CERTIFICATION",
+    data: NEPAL_INCOME_CERTIFICATION,
+    schema: NepalIncomeCertificationSchema,
+    recordLabel: "nepal-income-certification",
+    subRecordKeys: [],
+    recordInterface: "NepalIncomeCertificationFact",
   },
 ];

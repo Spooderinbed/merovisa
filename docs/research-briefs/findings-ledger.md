@@ -4,7 +4,7 @@
 
 **Total findings:** 1118  ·  **entity+attr clusters:** 41
 
-**Status:** used=486 · pending=624 · rejected:out-of-scope=1 · rejected:dynamic-data=2 · rejected:ephemeral-jobad=3 · rejected:promo-window=1 · rejected:superseded=1
+**Status:** used=509 · pending=601 · rejected:out-of-scope=1 · rejected:dynamic-data=2 · rejected:ephemeral-jobad=3 · rejected:promo-window=1 · rejected:superseded=1
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -111,17 +111,17 @@
 | A.101 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s FAQ says applicants who departed Nepal through an airport other than Tribhuvan International A… |
 | A.102 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says a character certificate issued for foreign affairs, migration and study purp… |
 | A.103 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Nepal Police’s OPCR service says applicants abroad can print and download the Police Clearance Certificate PD… |
-| A.104 | A | primary | data | G9 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says rental-income certification requires a copy of the tenancy agreement. |
-| A.105 | A | primary | data | G9 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says business or agricultural-business income certification requires a copy … |
-| A.106 | A | primary | data | G9 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says business or agricultural-business income certification requires a copy … |
-| A.107 | A | primary | data | G9 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says salary or pension income certification requires the original letter fro… |
-| A.108 | A | primary | data | G9 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says fixed-deposit or savings-interest income certification requires a bank … |
-| A.109 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says foreign-income certification requires a recommendation letter authentic… |
-| A.110 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says an English income statement application must include copies of the citi… |
+| A.104 | A | primary | data | G9 | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says rental-income certification requires a copy of the tenancy agreement. |
+| A.105 | A | primary | data | G9 | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says business or agricultural-business income certification requires a copy … |
+| A.106 | A | primary | data | G9 | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says business or agricultural-business income certification requires a copy … |
+| A.107 | A | primary | data | G9 | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says salary or pension income certification requires the original letter fro… |
+| A.108 | A | primary | data | G9 | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says fixed-deposit or savings-interest income certification requires a bank … |
+| A.109 | A | primary | process |  | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says foreign-income certification requires a recommendation letter authentic… |
+| A.110 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says an English income statement application must include copies of the citi… |
 | A.111 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says student cases must include a copy and original of the I-20 or Confirmat… |
-| A.112 | A | primary | data | G10 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says land valuation at current market rate requires a copy of the land owner… |
+| A.112 | A | primary | data | G10 | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says land valuation at current market rate requires a copy of the land owner… |
 | A.113 | A | primary | data | G10 | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says land valuation at current market rate requires a copy of the current fi… |
-| A.114 | A | primary | data |  | pending | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says a sponsor-student land-valuation case must include a relationship-certi… |
+| A.114 | A | primary | data |  | used | lib/documents/types.ts (+ plan rules) | Lalitpur Metropolitan City’s FAQ says a sponsor-student land-valuation case must include a relationship-certi… |
 | A.115 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | For property-tax determination on a house built before 2021, Lalitpur Metropolitan City’s FAQ lists a ward re… |
 | A.116 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | For property-tax determination on a house built after 2021, Lalitpur Metropolitan City’s FAQ lists the map-pa… |
 | A.117 | A | primary | process |  | pending | lib/documents/types.ts (+ plan rules) | If a house was built without map approval, Lalitpur Metropolitan City’s FAQ says a technical field inspection… |
@@ -275,14 +275,14 @@
 | C.008 | C | primary | process |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Under DHA’s evidence-level framework, a student’s evidence level is based on student visas linked to the inst… |
 | C.009 | C | primary | process | G19 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Document Checklist Tool asks for the student’s country of passport. |
 | C.010 | C | primary | process | G19 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The Document Checklist Tool asks for the education provider or provider CRICOS code. |
-| C.011 | C | primary | process | G20 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for travel costs. |
-| C.012 | C | primary | process | G20 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for 12 months of living costs. |
-| C.013 | C | primary | process | G20 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for tuition fees for the student and accompanying family members. |
-| C.014 | C | primary | process | G20 | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for school costs for school-aged dependants. |
-| C.015 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a Student visa primary applicant is AUD29,710. |
-| C.016 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a spouse or de facto partner is AUD10,394. |
-| C.017 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a dependent child is AUD4,449. |
-| C.018 | C | primary | data |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA annual school-cost amount is AUD13,502. |
+| C.011 | C | primary | process | G20 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for travel costs. |
+| C.012 | C | primary | process | G20 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for 12 months of living costs. |
+| C.013 | C | primary | process | G20 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for tuition fees for the student and accompanying family members. |
+| C.014 | C | primary | process | G20 | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | A Subclass 500 applicant must show funds for school costs for school-aged dependants. |
+| C.015 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a Student visa primary applicant is AUD29,710. |
+| C.016 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a spouse or de facto partner is AUD10,394. |
+| C.017 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA minimum financial-capacity amount for a dependent child is AUD4,449. |
+| C.018 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | The current DHA annual school-cost amount is AUD13,502. |
 | C.019 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Student visa holders can work up to 48 hours a fortnight when the course is in session. |
 | C.020 | C | primary | process |  | pending | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Family members of a Student visa holder cannot work before the student’s course starts. |
 | C.021 | C | primary | data |  | used | lib/data/destination/australia-visa-classes.ts (+ journey/visa-lodge) | Family members of a Student visa holder can work up to 48 hours a fortnight while the course is in session. |
@@ -533,9 +533,9 @@
 | D.118 | D | anecdotal | process |  | pending | supabase seed_universities migration | Published provider-wide deposit norms expressed as “one semester” or “two semesters” were not verified consis… |
 | D.119 | D | anecdotal | process |  | pending | supabase seed_universities migration | Provider-wide Nepal TU bachelor’s percentage minima were not captured comprehensively from primary pages in t… |
 | D.120 | D | anecdotal | red-flag |  | pending | supabase seed_universities migration | A public provider-by-provider MD115 “green/amber/red” risk-tier list was not re-verified from DHA or provider… |
-| E.001 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The Student visa subclass 500 main applicant charge is from AUD 2,000. |
+| E.001 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | The Student visa subclass 500 main applicant charge is from AUD 2,000. |
 | E.002 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | Student visa application fees increased from AUD 710 to AUD 1,600 on 2024-07-01. |
-| E.003 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The financial capacity amount for student visa applicants is AUD 29,710. |
+| E.003 | E | primary | data |  | used | lib/data/programs seed (+ course-career) | The financial capacity amount for student visa applicants is AUD 29,710. |
 | E.004 | E | primary | data |  | pending | lib/data/programs seed (+ course-career) | The financial capacity amount increased from AUD 24,505 to AUD 29,710 on 2024-05-10. |
 | E.005 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | DHA prefers GS responses in the application form rather than a separate GS statement. |
 | E.006 | E | primary | process |  | used | lib/data/programs seed (+ course-career) | Each Genuine Student response has a 150-word text limit. |
@@ -1038,10 +1038,10 @@
 | I.018 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | On 10 May 2024 DHA increased the minimum annual living-cost amount for a dependent partner to AUD 10,394. |
 | I.019 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | On 10 May 2024 DHA increased the minimum annual living-cost amount for a dependent child to AUD 4,449. |
 | I.020 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | On 10 May 2024 DHA increased the annual school-cost amount to AUD 13,502. |
-| I.021 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover travel costs. |
-| I.022 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover 12 months of living costs. |
-| I.023 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover tuition fees for the applicant and … |
-| I.024 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover school costs for school-aged depend… |
+| I.021 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover travel costs. |
+| I.022 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover 12 months of living costs. |
+| I.023 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover tuition fees for the applicant and … |
+| I.024 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says financial capacity evidence must cover school costs for school-aged depend… |
 | I.025 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says the applicant must provide evidence of an approved minimum English test sc… |
 | I.026 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA’s Document Checklist Tool says OSHC must cover the applicant from at least one week before the course sta… |
 | I.027 | I | primary | red-flag |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says providing altered, edited, or digitally manipulated documents for visa purposes is unlawful. |

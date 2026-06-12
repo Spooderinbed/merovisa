@@ -16,6 +16,7 @@ import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certifi
 import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
 import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
 import { AU_WORKING_WITH_AGENTS } from "@/lib/data/source/au-working-with-agents";
+import { NEPAL_INCOME_CERTIFICATION } from "@/lib/data/source/nepal-income-certification";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -100,6 +101,10 @@ const PASSPORT_NOTE =
   `If you still need a passport, start with ${PASSPORT_PRE.summary}, where you choose ${PASSPORT_CENTRE}.`;
 const GS_SOURCE = AU_GENUINE_STUDENT.find((r) => r.id === "gs-format")!; // IMMI_GS page
 const AGENT_VERIFY = AU_WORKING_WITH_AGENTS.find((r) => r.id === "verify-marn")!; // OMARA portal search (G.077)
+const INCOME_CERT = NEPAL_INCOME_CERTIFICATION[0]!; // all rows share the Lalitpur FAQ source
+// Hedged "typically": the map is one municipality's published list (slice ⑥ sign-off 2026-06-13).
+const SPONSOR_INCOME_NOTE =
+  "In Nepal, sponsor income is typically certified at the local ward office — Lalitpur Metropolitan City publishes the document list: rental income needs the tenancy agreement; business or agricultural income the business-registration certificate plus audit report; salary or pension the original letter from the employer; fixed-deposit or savings interest a bank certificate; foreign income a recommendation letter authenticated by the Nepali embassy there or that country's embassy in Nepal. For an English income statement, include citizenship and relationship certificates.";
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -189,6 +194,21 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
       infoKind: kind === null ? "note" : undefined,
     });
   };
+  // Sponsor-income map (slice ⑥): an info step beside the vault-bound fin-sponsor row —
+  // the vault row keeps the vault as its authority (medical-row rule); this row mirrors
+  // the certify-sponsor-income plan action instead.
+  const addSponsorIncomeCert = () =>
+    add({
+      key: "sponsor-income-cert",
+      kind: null,
+      label: "Sponsor income certification (ward office)",
+      group: "financial",
+      stage: "now",
+      requirement: "recommended",
+      infoKind: "step",
+      note: SPONSOR_INCOME_NOTE,
+      source: { url: INCOME_CERT.source, lastVerified: INCOME_CERT.lastVerified },
+    });
   switch (sections.finance?.source) {
     case "self-funded":
       addFinance("fin-bank", "bank-statement", "Bank statement", "required");
@@ -196,6 +216,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     case "parents-family":
       addFinance("fin-bank", "bank-statement", "Bank statement", "required");
       addFinance("fin-sponsor", "sponsor-income", "Sponsor income (tax return)", "required");
+      addSponsorIncomeCert();
       break;
     case "education-loan":
       addFinance("fin-loan", "loan-sanction", "Education loan sanction letter", "required");
@@ -205,6 +226,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
       addFinance("fin-bank", "bank-statement", "Bank statement", "required");
       addFinance("fin-loan", "loan-sanction", "Education loan sanction letter", "required");
       addFinance("fin-sponsor", "sponsor-income", "Sponsor income (tax return)", "recommended");
+      addSponsorIncomeCert();
       break;
     case "scholarship-dependent":
       addFinance("fin-scholarship", null, "Scholarship / sponsorship award letter", "required");

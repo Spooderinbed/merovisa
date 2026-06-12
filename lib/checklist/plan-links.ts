@@ -18,6 +18,7 @@ export const CHECKLIST_PLAN_LINKS: Record<string, string> = {
   "doc-preparation": "translate-certify-documents",
   "gs-responses": "prepare-gs-answers",
   "agent-marn": "verify-agent-marn",
+  "sponsor-income-cert": "certify-sponsor-income",
 };
 
 export type LinkedPlanState = "open" | "in-progress" | "done";
