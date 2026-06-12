@@ -164,6 +164,8 @@ R1 "a main ground", never "#1 refusal ground" · R2 the PR line's wording incl. 
 
 # Fix batch
 
+> **④·3b status (2026-06-12, commit `ba5a6bc`): APPLIED — F1 · F2 Option B (plus a fourth F2 line the slice sweep found on the marketing `/how` page, which claimed the seasoning rule came "directly from the Department of Home Affairs") · F3 · F4 · F7 · F10 · F11 · F12 · F13 · F14 · F15. OPEN, awaiting the user's call — F5 · F6 · F8 · F9. DEFERRED — F16 (mechanical wiring, separate slice). Watch items stay watch. F2 Option A queued as a research task: properly source the Nepal/SSVF financial-evidence scrutiny claim (see the PROJECT_STATUS backlog).**
+
 ## MUST-FIX NOW (2 entries, 4 lines)
 
 **F1 · `refusal.scam.bogus-documents` — "bans" overstates the sourced consequence.** *(found by: advice-boundary lens; confirmed against live page)*
