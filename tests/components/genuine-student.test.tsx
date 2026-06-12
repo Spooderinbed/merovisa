@@ -25,6 +25,15 @@ describe("GenuineStudent", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows all four GS form questions, including the open one (read-through F3)", () => {
+    render(<GenuineStudent />);
+    expect(
+      screen.getByText(
+        "Anything else you think matters — the form ends with an open question for any other relevant information.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("links rows to their government sources", () => {
     render(<GenuineStudent />);
     expect(screen.getAllByRole("link", { name: "Direction 106" })[0]).toHaveAttribute(

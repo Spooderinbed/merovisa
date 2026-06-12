@@ -24,7 +24,7 @@ export interface CostLine {
   currency: "AUD" | "NPR";
   source: string;
   lastVerified?: string;
-  /** Short qualifier shown after the label, e.g. "often waived". */
+  /** Short qualifier shown after the label, e.g. "sometimes waived". */
   note?: string;
 }
 
@@ -75,7 +75,7 @@ export function selectCostToApply(): CostToApplyBreakdown {
 
   const visa = AU_SUBCLASS_500_APPLICATION_CHARGE_AUD;
 
-  // Provider application fees vary (0–150) and are often waived; surface the range
+  // Provider application fees vary (0–150) and are sometimes waived; surface the range
   // and anchor its upper bound on the dearest provider's page rather than pretend
   // a single figure applies everywhere.
   const providerAmounts = AU_PROVIDER_APPLICATION_FEES.map((p) => p.amountAud);
@@ -99,7 +99,7 @@ export function selectCostToApply(): CostToApplyBreakdown {
       currency: "AUD",
       source: dearestProvider.source,
       lastVerified: dearestProvider.lastVerified,
-      note: "varies by university; often waived",
+      note: "varies by university; sometimes waived",
     },
   ];
 

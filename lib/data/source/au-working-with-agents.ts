@@ -109,7 +109,7 @@ export const AU_WORKING_WITH_AGENTS: WorkingWithAgentsFact[] = [
     section: "what-they-owe",
     label: "Choosing an agent",
     summary:
-      "OMARA lists agreeing the written service agreement and fees as a step in choosing an agent — settle it upfront.",
+      "OMARA lists discussing the service agreement and fees as a step in choosing an agent — settle both upfront.",
     source: MARA_CHOOSE_STEPS,
     lastVerified: VERIFIED,
     provenance: { findingRefs: ["G.087"], source: MARA_CHOOSE_STEPS },
@@ -149,10 +149,14 @@ export const AU_WORKING_WITH_AGENTS: WorkingWithAgentsFact[] = [
     section: "commission-ban",
     label: "Study Australia",
     summary:
-      "Education providers cannot pay agent commissions for student transfers between onshore providers after 31 March 2026.",
+      "Education providers cannot pay agent commissions when a student switches providers in Australia before finishing their principal course (transfers after 31 March 2026).",
     source: STUDY_AU_COMMISSIONS,
-    lastVerified: VERIFIED,
-    provenance: { findingRefs: ["G.090"], source: STUDY_AU_COMMISSIONS },
+    lastVerified: "2026-06-12",
+    provenance: {
+      findingRefs: ["G.090"],
+      source: STUDY_AU_COMMISSIONS,
+      note: "Onshore transfer = switching providers after starting in Australia, before completing the principal course — the same Study Australia page's definition (live-confirmed 2026-06-12, read-through F10).",
+    },
   },
   {
     id: "hidden-commissions",

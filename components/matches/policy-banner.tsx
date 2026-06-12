@@ -1,6 +1,4 @@
 import {
-  NEPAL_ASSESSMENT_LEVEL,
-  NEPAL_ASSESSMENT_LEVEL_EFFECTIVE,
   DHA_LIVING_COSTS_AUD,
   DHA_LIVING_COSTS_AUD_EFFECTIVE,
   NEPAL_AU_VISA_GRANT_RATE_BAND,
@@ -14,8 +12,8 @@ export function PolicyBanner() {
       </span>
       <ul className="flex flex-col gap-1">
         <li>
-          Assessment Level <strong className="text-ink">{NEPAL_ASSESSMENT_LEVEL}</strong> in effect since{" "}
-          <span className="font-mono">{NEPAL_ASSESSMENT_LEVEL_EFFECTIVE}</span>. Expect 6-month bank seasoning + Genuine Student narrative.
+          Nepal applications face heightened financial-evidence scrutiny &mdash; plan for 6 months of
+          bank seasoning and a strong Genuine Student case.
         </li>
         <li>
           DHA financial floor: <strong className="text-ink">AUD {DHA_LIVING_COSTS_AUD.toLocaleString()}</strong>{" "}

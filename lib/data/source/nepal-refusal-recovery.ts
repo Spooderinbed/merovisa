@@ -209,7 +209,7 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
     kind: "scam-warning",
     label: "Visa scams",
     summary:
-      "Australia issues no work permits, visa labels, or Labour Market Impact Assessments — anyone offering these is running a scam.",
+      "Australia issues no work permits, visa labels, or Labour Market Impact Assessments — DHA lists offers of these among visa scams.",
     source: IMMI_SCAMS,
     lastVerified: VERIFIED,
     provenance: {
@@ -223,7 +223,7 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
     kind: "scam-warning",
     label: "Bogus documents",
     summary:
-      "Bogus or false documents can lead to refusal, cancellation, and bans on future applications.",
+      "Bogus or false documents can lead to refusal, cancellation, and restrictions on future applications.",
     source: IMMI_ACCURATE,
     lastVerified: VERIFIED,
     provenance: {

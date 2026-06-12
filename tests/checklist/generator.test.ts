@@ -101,11 +101,11 @@ describe("generateChecklist", () => {
     expect(byKey(items, "fin-bank")?.source).toBeUndefined();
   });
 
-  it("adds the AL3 seasoning note by default; omits it for L2", () => {
+  it("adds the L3 seasoning recommendation by default; omits it for L2", () => {
     const l3 = generateChecklist({ program: baseProgram, sections: { finance: { source: "self-funded" } }, uploadedKinds: noKinds });
-    expect(byKey(l3, "fin-bank")?.note).toContain("Level 3");
+    expect(byKey(l3, "fin-bank")?.note).toContain("stable, documented balance");
     const l2 = generateChecklist({ program: baseProgram, sections: { finance: { source: "self-funded" } }, uploadedKinds: noKinds, nepalAssessmentLevel: "L2" });
-    expect(byKey(l2, "fin-bank")?.note).not.toContain("Level 3");
+    expect(byKey(l2, "fin-bank")?.note).not.toContain("stable, documented balance");
   });
 
   it("adds employment docs when work title is set", () => {

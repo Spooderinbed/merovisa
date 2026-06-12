@@ -2,6 +2,7 @@ import type { ProfileSections } from "@/lib/profiles/sections";
 import type { MatchResult } from "@/lib/matches/types";
 import type { PlanItem } from "./types";
 import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
+import { NEPAL_L3_BANK_SEASONING_MONTHS } from "@/lib/programs/policy";
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
 import { AU_FINANCIAL_EVIDENCE } from "@/lib/data/source/au-financial-evidence";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
@@ -146,7 +147,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "document-gap-reasons",
       impact: "medium",
       title: "Document your study gap reasons",
-      body: "Genuine Student narrative needs a coherent explanation for any gap ≥ 1 year. Note what you did (work, family, prep) per year.",
+      body: "Officers weigh study gaps that lack explanation (Direction 106). For a gap of a year or more, note what you did per year — work, family, preparation — so your narrative holds together.",
       timeEstimate: "1 hour",
     });
   }
@@ -165,8 +166,8 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
     out.push({
       kind: "season-funds-six-months",
       impact: "high",
-      title: "Season your bank statements for 6 months",
-      body: "Nepal returned to Assessment Level 3 in Jan 2026. DHA case officers now expect 6 months of stable balance + source-of-funds documentation for any deposit > AUD 5,000.",
+      title: `Build ${NEPAL_L3_BANK_SEASONING_MONTHS} months of stable bank history`,
+      body: `Nepal student applications face heightened financial-evidence scrutiny. We recommend ${NEPAL_L3_BANK_SEASONING_MONTHS} months of stable, documented balance — large or sudden deposits need source-of-funds evidence, or they weaken your financial case.`,
       // "Documented refusal ground" per nepal-refusal-recovery ground-capacity; no
       // sourced frequency ranking exists, so no "most common", and seasoning
       // addresses the ground rather than preventing refusal.
@@ -182,7 +183,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "prepare-gs-answers",
       impact: "high",
       title: "Prepare your Genuine Student answers",
-      body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer short questions in the visa form — your circumstances and ties, why this course and this provider, and how it benefits you — each in ${gs.responseLimitWords} words or less, in English. Answers backed by evidence carry more weight, and wanting permanent residence later doesn't count against you as long as your study plan and stay are genuine under the visa rules. Draft yours early; they anchor your whole application.`,
+      body: `Every Australian student visa (lodged since 23 March 2024) is assessed on the Genuine Student requirement. You'll answer short questions in the visa form — your circumstances and ties, why this course and this provider, how it benefits you, and anything else you want considered — each in ${gs.responseLimitWords} words or less, in English. Answers backed by evidence carry more weight, and wanting permanent residence later doesn't count against you as long as your study plan and stay are genuine under the visa rules. Draft yours early; they anchor your whole application.`,
       timeEstimate: "2-4 hours",
     });
   }
@@ -303,7 +304,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "add-safer-options",
       impact: "medium",
       title: "Add safer university options",
-      body: `Your current matches are all reach. Add 2–3 mid-tier programs (e.g. RMIT, UTS, Macquarie) to balance the application portfolio.`,
+      body: "Your current matches are all reach. Add 2–3 universities whose published requirements sit closer to your profile (e.g. RMIT, UTS, Macquarie) to balance your portfolio.",
       timeEstimate: "1 hour",
     });
   }

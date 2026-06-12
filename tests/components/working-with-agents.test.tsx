@@ -22,7 +22,7 @@ describe("WorkingWithAgents", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Education providers cannot pay agent commissions for student transfers between onshore providers after 31 March 2026.",
+        "Education providers cannot pay agent commissions when a student switches providers in Australia before finishing their principal course (transfers after 31 March 2026).",
       ),
     ).toBeInTheDocument();
     expect(

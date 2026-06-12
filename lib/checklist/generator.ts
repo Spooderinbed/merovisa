@@ -174,7 +174,7 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
   // FINANCIAL (now, by funding source)
   const tuition = program.tuitionMin != null ? `AUD ${program.tuitionMin.toLocaleString()}` : "first-year tuition";
   const dhaNote = `DHA expects evidence covering your travel, at least AUD ${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()} living costs, and ${tuition} (plus costs for any accompanying family members). ${LIVING_COST_INDICATIVE.summary}`;
-  const seasoning = level === "L3" ? ` Under Nepal Assessment Level 3, season your balance for ${NEPAL_L3_BANK_SEASONING_MONTHS} months with source-of-funds evidence.` : "";
+  const seasoning = level === "L3" ? ` We recommend ${NEPAL_L3_BANK_SEASONING_MONTHS} months of stable, documented balance with source-of-funds evidence.` : "";
   const financeNote = dhaNote + seasoning;
   let financeNoteAttached = false;
   const addFinance = (key: string, kind: DocumentKind | null, label: string, requirement: ChecklistRequirement) => {

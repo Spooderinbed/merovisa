@@ -22,9 +22,8 @@ export default function HowItWorksPage() {
           </h2>
           <p className="mt-3 text-[17px] text-ink-soft">
             Visa rules come directly from the Department of Home Affairs at immi.homeaffairs.gov.au — the Genuine
-            Student requirement, the financial floor (AUD 29,710 living costs plus first-year tuition), and the
-            six-month bank seasoning rule that applies to Nepal under Assessment Level 3. We do not interpret or
-            paraphrase policy; we pull the published thresholds and link to the exact page. University data comes
+            Student requirement and the financial floor (AUD 29,710 living costs plus first-year tuition). We do
+            not interpret or paraphrase policy; we pull the published thresholds and link to the exact page. University data comes
             from the CRICOS register and each provider&apos;s own program pages. Every data point displays the date
             it was last verified. When a threshold changes, the displayed date changes too — there is no silent
             staleness.

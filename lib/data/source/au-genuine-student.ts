@@ -86,6 +86,20 @@ export const AU_GENUINE_STUDENT: GenuineStudentFact[] = [
     lastVerified: VERIFIED,
     provenance: { findingRefs: ["F.009"], source: IMMI_GS },
   },
+  {
+    id: "gs-q-anything-else",
+    section: "the-questions",
+    label: "Genuine Student",
+    summary:
+      "Anything else you think matters — the form ends with an open question for any other relevant information.",
+    source: IMMI_GS,
+    lastVerified: "2026-06-12",
+    provenance: {
+      findingRefs: ["A.020"],
+      source: IMMI_GS,
+      note: "The fourth GS form question (A.020, already used via au-student-visa-requirements); GS page live-confirmed 2026-06-12 (trust-copy read-through F3).",
+    },
+  },
   // ── How officers actually weigh it (Direction 106) ───────────────────────────
   {
     id: "md106-not-checklist",
@@ -122,7 +136,7 @@ export const AU_GENUINE_STUDENT: GenuineStudentFact[] = [
     section: "how-weighed",
     label: "Direction 106",
     summary:
-      "Whether a similar course is available at home or in the region, and your reasons for studying it in Australia instead.",
+      "Whether a similar course is available at home or in the region, and whether you have reasonable reasons for studying it in Australia instead.",
     source: DIRECTION_106,
     lastVerified: VERIFIED,
     provenance: {
@@ -233,10 +247,15 @@ export const AU_GENUINE_STUDENT: GenuineStudentFact[] = [
     id: "gs-online-tests",
     section: "evidence",
     label: "English requirement",
-    summary: "DHA does not accept English tests delivered completely online.",
+    summary:
+      "DHA does not accept English tests delivered completely online (at-home or remote-proctored) for visa purposes — tests taken at a secure test centre are accepted.",
     source: IMMI_ENGLISH,
-    lastVerified: VERIFIED,
-    provenance: { findingRefs: ["E.013"], source: IMMI_ENGLISH },
+    lastVerified: "2026-06-12",
+    provenance: {
+      findingRefs: ["E.013"],
+      source: IMMI_ENGLISH,
+      note: "Scope (at-home/remote-proctored, visa purposes) and the secure-centre acceptance are the same DHA English page's wording (E.013; live-confirmed 2026-06-12, read-through F12).",
+    },
   },
   {
     id: "gs-test-validity",

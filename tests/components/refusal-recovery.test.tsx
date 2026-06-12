@@ -74,6 +74,22 @@ describe("RefusalRecovery", () => {
     );
   });
 
+  it("copy-locks the corrected scam-warning lines (trust-copy read-through F1/F4)", () => {
+    render(<RefusalRecovery />);
+    // F1: I.028 + the live DHA page say "restrictions", not "bans".
+    expect(
+      screen.getByText(
+        "Bogus or false documents can lead to refusal, cancellation, and restrictions on future applications.",
+      ),
+    ).toBeInTheDocument();
+    // F4: the scam conclusion is attributed to DHA, not asserted in our voice.
+    expect(
+      screen.getByText(
+        "Australia issues no work permits, visa labels, or Labour Market Impact Assessments — DHA lists offers of these among visa scams.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows the not-legal-advice disclaimer", () => {
     render(<RefusalRecovery />);
     expect(screen.getByText(/not legal advice/i)).toBeInTheDocument();
