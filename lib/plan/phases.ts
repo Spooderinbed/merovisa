@@ -11,6 +11,7 @@ export const VISA_PREP_KINDS = [
   "prepare-health-exam",
   "prepare-biometrics",
   "prepare-police-certificate",
+  "verify-agent-marn",
 ] as const;
 
 const ORDER = new Map<string, number>(VISA_PREP_KINDS.map((k, i) => [k, i]));

@@ -15,6 +15,7 @@ import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
 import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
 import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
+import { AU_WORKING_WITH_AGENTS } from "@/lib/data/source/au-working-with-agents";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -98,6 +99,7 @@ const PASSPORT_CENTRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "choose-cent
 const PASSPORT_NOTE =
   `If you still need a passport, start with ${PASSPORT_PRE.summary}, where you choose ${PASSPORT_CENTRE}.`;
 const GS_SOURCE = AU_GENUINE_STUDENT.find((r) => r.id === "gs-format")!; // IMMI_GS page
+const AGENT_VERIFY = AU_WORKING_WITH_AGENTS.find((r) => r.id === "verify-marn")!; // OMARA portal search (G.077)
 
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
@@ -240,6 +242,20 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
 
   // VISA (after-offer)
   add({ key: "offer-letter", kind: "offer-letter", label: "University offer letter", group: "visa", stage: "after-offer", requirement: "required", note: "Issued when a university accepts you." });
+  // VISA group, stage now — verify an agent before paying anyone, not after an offer.
+  // Conditional-framed (no has-agent profile field); the plan mirror is the completion
+  // authority and the dismissal surface.
+  add({
+    key: "agent-marn",
+    kind: null,
+    label: "Agent registration check",
+    group: "visa",
+    stage: "now",
+    requirement: "recommended",
+    infoKind: "step",
+    note: "If you're using an agent, confirm them on the OMARA public register (search by MARN) before paying — DHA's guidance for anyone charging for immigration help.",
+    source: { url: AGENT_VERIFY.source, lastVerified: AGENT_VERIFY.lastVerified },
+  });
   add({
     key: "noc-application",
     kind: null,

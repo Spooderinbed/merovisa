@@ -262,6 +262,23 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
     });
   }
 
+  // AGENT VERIFICATION (OMARA) — conditional-framed trust guidance, dismissible by design
+  // (no has-agent profile field; non-agent users dismiss it). Copy composed from the
+  // au-working-with-agents rows G.084 (pay → use registered), G.077 (register searchable
+  // by MARN) and G.075 (you can apply yourself); the checklist mirror carries the source link.
+  if (inputs.primaryDestinationId === "australia") {
+    out.push({
+      kind: "verify-agent-marn",
+      impact: "medium",
+      title: "If you're using an agent, verify their MARN",
+      body:
+        "If you pay for immigration help, DHA's own guidance is to use a registered migration agent listed with OMARA. " +
+        "Confirm your agent on the OMARA public register — search it by their MARN (Migration Agent Registration Number) — before you pay or sign anything. " +
+        "Not using an agent? Dismiss this step — you can apply for the visa yourself.",
+      timeEstimate: "10 minutes",
+    });
+  }
+
   // PASSPORT (Nepal-side prerequisite) — destination-agnostic; show only if no passport uploaded.
   // Gate is strict === false: omitted (undefined) means do not emit (older/direct callers).
   if (inputs.hasPassport === false) {

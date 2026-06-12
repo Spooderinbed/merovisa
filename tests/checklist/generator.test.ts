@@ -121,6 +121,19 @@ describe("generateChecklist", () => {
     expect(blob).not.toMatch(/AUD 5,000/);
   });
 
+  it("adds the agent registration check (verify-MARN) as recommended now-stage guidance", () => {
+    const items = generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds });
+    const agent = byKey(items, "agent-marn");
+    expect(agent?.kind).toBeNull();
+    expect(agent?.group).toBe("visa");
+    expect(agent?.stage).toBe("now");
+    expect(agent?.requirement).toBe("recommended");
+    expect(agent?.note).toBe(
+      "If you're using an agent, confirm them on the OMARA public register (search by MARN) before paying — DHA's guidance for anyone charging for immigration help.",
+    );
+    expect(agent?.source?.url).toContain("portal.mara.gov.au");
+  });
+
   it("adds employment docs when work title is set", () => {
     const items = generateChecklist({ program: baseProgram, sections: { work: { title: "Analyst" } }, uploadedKinds: noKinds });
     expect(byKey(items, "employment-letter")).toBeTruthy();

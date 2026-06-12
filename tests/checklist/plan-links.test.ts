@@ -43,13 +43,14 @@ describe("CHECKLIST_PLAN_LINKS", () => {
     }
   });
 
-  it("covers the four after-offer step rows and the translations note", () => {
+  it("covers the four after-offer step rows, the translations note, and the agent check", () => {
     expect(CHECKLIST_PLAN_LINKS).toEqual({
       "noc-application": "apply-for-noc",
       biometrics: "prepare-biometrics",
       "police-certificate": "prepare-police-certificate",
       "doc-preparation": "translate-certify-documents",
       "gs-responses": "prepare-gs-answers",
+      "agent-marn": "verify-agent-marn",
     });
   });
 });

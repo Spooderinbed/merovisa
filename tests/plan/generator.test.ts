@@ -294,5 +294,16 @@ describe("generatePlan", () => {
       expect(blob).not.toMatch(/case officers?/i);
       expect(blob).not.toMatch(/AUD 5,000/);
     });
+
+    it("adds the verify-agent-marn action with the conditional framing (user-locked copy)", () => {
+      const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+      const agent = items.find((i) => i.kind === "verify-agent-marn");
+      expect(agent?.title).toBe("If you're using an agent, verify their MARN");
+      expect(agent?.body).toBe(
+        "If you pay for immigration help, DHA's own guidance is to use a registered migration agent listed with OMARA. Confirm your agent on the OMARA public register — search it by their MARN (Migration Agent Registration Number) — before you pay or sign anything. Not using an agent? Dismiss this step — you can apply for the visa yourself.",
+      );
+      expect(agent?.liftEstimate).toBeUndefined();
+      expect(agent?.timeEstimate).toBe("10 minutes");
+    });
   });
 });
