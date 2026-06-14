@@ -14,6 +14,7 @@ import { RefusalRecovery } from "./refusal-recovery";
 import { GenuineStudent } from "./genuine-student";
 import { WorkingWithAgents } from "./working-with-agents";
 import { IntakeTimingCard } from "./intake-timing";
+import { PreferenceNote } from "@/components/matches/preference-note";
 import { UniversityMatches } from "./university-matches";
 import { GatedTeasers } from "./gated-teasers";
 import { AccuracyMeter } from "./accuracy-meter";
@@ -75,6 +76,7 @@ export function Results({
           figure one click from its origin. No engine input — informational. */}
       <CostToApply />
       <IntakeTimingCard intake={payload.intake} />
+      <PreferenceNote note={payload.preferenceNote} />
       <UniversityMatches
         matches={payload.matches}
         total={payload.matchedCount}

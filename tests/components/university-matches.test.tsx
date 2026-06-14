@@ -41,4 +41,13 @@ describe("UniversityMatches", () => {
     await userEvent.click(screen.getByRole("button", { name: /Unlock all/ }));
     expect(onUnlock).toHaveBeenCalledOnce();
   });
+
+  it("renders a preference chip when one is set on a surfaced match", () => {
+    const chipped: UniversityMatch[] = [
+      { ...matches[0]!, preferenceChip: { text: "Lower tuition" } },
+      ...matches.slice(1),
+    ];
+    render(<UniversityMatches matches={chipped} total={12} onUnlock={vi.fn()} />);
+    expect(screen.getByText("Lower tuition")).toBeInTheDocument();
+  });
 });

@@ -20,9 +20,16 @@ function MatchCard({ m }: { m: UniversityMatch }) {
     <article className="rounded-md border border-line bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="text-ink">{m.university.name}</span>
-        <span className={cn("rounded-pill px-2.5 py-0.5 font-mono text-[11.5px]", LEVEL_CLS[m.matchLevel])}>
-          {LEVEL_LABEL[m.matchLevel]}
-        </span>
+        <div className="flex items-center gap-2">
+          {m.preferenceChip ? (
+            <span className="inline-flex items-center rounded-pill border border-line px-2.5 py-0.5 font-mono text-[11px] text-ink-soft">
+              {m.preferenceChip.text}
+            </span>
+          ) : null}
+          <span className={cn("rounded-pill px-2.5 py-0.5 font-mono text-[11.5px]", LEVEL_CLS[m.matchLevel])}>
+            {LEVEL_LABEL[m.matchLevel]}
+          </span>
+        </div>
       </div>
       <p className="mt-1 text-[15px] text-ink-soft">
         {m.university.city} · {formatUsd(m.university.tuitionUsdPerYear.min)}–
