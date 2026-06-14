@@ -45,4 +45,23 @@ describe("assembleAssessment", () => {
     const payload = assembleAssessment(aarav, new Date("2026-06-03"));
     expect(payload.rulesVerified).toBe(CONFIG_RULES_VERIFIED);
   });
+
+  it("carries the preference note for the chosen goal (PR -> 485 context)", () => {
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    expect(payload.preferenceNote?.kind).toBe("pr-context");
+  });
+
+  it("ranks by lowest cost when that goal is chosen and chips the cheaper universities", () => {
+    const payload = assembleAssessment({ ...aarav, goal: "lowest-cost" }, new Date("2026-06-03"));
+    expect(payload.preferenceNote).toEqual({
+      kind: "ranked",
+      text: "Ordered by your priority: lowest total cost.",
+    });
+    // at least one surfaced match earns the Lower tuition chip
+    expect(payload.matches.some((m) => m.preferenceChip?.text === "Lower tuition")).toBe(true);
+    // tuition is non-decreasing within the first (strong) band
+    const strong = payload.matches.filter((m) => m.matchLevel === "strong");
+    const tuitions = strong.map((m) => m.university.tuitionUsdPerYear.min);
+    expect([...tuitions].sort((a, b) => a - b)).toEqual(tuitions);
+  });
 });
