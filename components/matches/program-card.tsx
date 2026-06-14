@@ -30,7 +30,7 @@ export function ProgramCard({
   match: MatchResult;
   isShortlisted: boolean;
 }) {
-  const { program: p, university: u, verdict, reasons } = match;
+  const { program: p, university: u, verdict, reasons, preferenceChip } = match;
   const isEstimated = p.dataQuality === "derived";
   const qualityWord = isEstimated ? "Estimated" : "Verified";
   const checked = freshness(p.lastVerified);
@@ -46,11 +46,18 @@ export function ProgramCard({
           </span>
           <h3 className="text-[18px] font-medium text-ink">{p.name}</h3>
         </div>
-        <span
-          className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12px] ${VERDICT_CLS[verdict]}`}
-        >
-          {VERDICT_LABEL[verdict]}
-        </span>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {preferenceChip ? (
+            <span className="inline-flex items-center rounded-pill border border-line px-2.5 py-0.5 font-mono text-[11px] text-ink-soft">
+              {preferenceChip.text}
+            </span>
+          ) : null}
+          <span
+            className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12px] ${VERDICT_CLS[verdict]}`}
+          >
+            {VERDICT_LABEL[verdict]}
+          </span>
+        </div>
       </header>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink-soft">
         {p.tuitionMin != null && (

@@ -6,12 +6,14 @@ import { getProfile } from "@/lib/profiles/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { listShortlistForUser } from "@/lib/matches/repo";
 import { computeMatches } from "@/lib/matches/compute";
+import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/preference";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { MatchesTabs } from "@/components/matches/matches-tabs";
 import { VerdictGroup } from "@/components/matches/verdict-group";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { CostToApply } from "@/components/results/cost-to-apply";
+import { PreferenceNote } from "@/components/matches/preference-note";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
 export default async function MatchesPage() {
@@ -34,7 +36,12 @@ export default async function MatchesPage() {
   const sections: ProfileSections = (profile?.sections as ProfileSections | undefined) ?? {};
   const inputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
 
-  const matches = computeMatches(inputs, programs, universities);
+  const { items: matches, note: preferenceNote } = applyPreference(
+    computeMatches(inputs, programs, universities),
+    sections.career?.goal ?? null,
+    signedInPreferenceAdapter,
+    new Date(),
+  );
   const shortlistedIds = new Set(shortlist.map((s) => s.programId));
   const strong = matches.filter((m) => m.verdict === "strong");
   const possible = matches.filter((m) => m.verdict === "possible");
@@ -42,6 +49,7 @@ export default async function MatchesPage() {
 
   const universitiesPanel = (
     <div className="flex flex-col gap-6">
+      <PreferenceNote note={preferenceNote} />
       <VerdictGroup verdict="strong" matches={strong} shortlistedIds={shortlistedIds} />
       <VerdictGroup verdict="possible" matches={possible} shortlistedIds={shortlistedIds} />
       <VerdictGroup verdict="reach" matches={reach} shortlistedIds={shortlistedIds} />

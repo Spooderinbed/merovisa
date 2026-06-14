@@ -72,4 +72,9 @@ describe("ProgramCard", () => {
     render(<ProgramCard match={m} isShortlisted={false} />);
     expect(screen.getByRole("link", { name: /Document checklist/i })).toHaveAttribute("href", "/checklist/p1");
   });
+
+  it("renders a preference chip when one is set", () => {
+    render(<ProgramCard match={{ ...m, preferenceChip: { text: "Tier-1 ranked" } }} isShortlisted={false} />);
+    expect(screen.getByText("Tier-1 ranked")).toBeInTheDocument();
+  });
 });
