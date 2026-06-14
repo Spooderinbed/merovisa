@@ -11,6 +11,8 @@ export interface UniversityMatch {
   university: UniversityData;
   matchLevel: MatchLevel;
   reason: string;
+  /** Set by the preference pass; absent on the eligibility-only path. */
+  preferenceChip?: { text: string } | null;
 }
 
 export function effectiveEnglish(profile: Partial<StudentProfile>): number {
