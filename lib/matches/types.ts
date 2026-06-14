@@ -8,13 +8,15 @@ export interface MatchReason {
   positive: boolean;
 }
 
+export type PreferenceChip = { text: string };
+
 export interface MatchResult {
   program: Program;
   university: University;
   verdict: MatchVerdict;
   reasons: MatchReason[];
   /** Set by the preference pass (lib/matches/preference.ts); absent on the eligibility-only path. */
-  preferenceChip?: { text: string } | null;
+  preferenceChip?: PreferenceChip | null;
   scoreSnapshot: {
     gradeGap: number;
     englishGap: number;

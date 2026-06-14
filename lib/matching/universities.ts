@@ -4,6 +4,7 @@
 import type { FieldOfStudy, StudentProfile } from "@/lib/scoring/types";
 import { AU_UNIVERSITIES } from "@/lib/data/universities/au";
 import type { UniversityData } from "@/lib/data/types";
+import type { PreferenceChip } from "@/lib/matches/types";
 
 export type MatchLevel = "strong" | "possible" | "reach";
 
@@ -12,7 +13,7 @@ export interface UniversityMatch {
   matchLevel: MatchLevel;
   reason: string;
   /** Set by the preference pass; absent on the eligibility-only path. */
-  preferenceChip?: { text: string } | null;
+  preferenceChip?: PreferenceChip | null;
 }
 
 export function effectiveEnglish(profile: Partial<StudentProfile>): number {
