@@ -1,7 +1,7 @@
 # Preference-fit matching (Slice ⑦)
 
 **Date:** 2026-06-14
-**Status:** Approved (design) — pending spec review
+**Status:** Approved — ready for implementation plan
 **Lane:** value-triage / trust-maintenance
 
 ## Problem
@@ -146,7 +146,7 @@ Only the active goal's chip type ever appears, so a card shows at most one prefe
 - ranked: `Ordered by your priority: {highest-ranked university | lowest total cost | fastest admission}.`
 - deferred (employment): `We don't yet have program-level employment data, so these matches stay ordered by eligibility.`
 - deferred (research): `We don't yet have program-level research data, so these matches stay ordered by eligibility.`
-- deferred (fastest-admission, anonymous only): `Intake timing is shared across these universities, so these matches stay ordered by eligibility.`
+- deferred (fastest-admission, anonymous only): `Intake timing is shared across these university-level results, so these matches stay ordered by eligibility. Program-level intake sorting appears after sign-in.`
 - PR-context: `You chose permanent residency. Australia has post-study pathways such as the `**Subclass 485 Temporary Graduate visa**` after eligible study. We don't rank individual programs by PR outcome, so these matches stay ordered by eligibility.`
   (the bold span links the 485 via `au-temporary-graduate-visa.ts`, SourceAnchor pattern)
 
@@ -203,10 +203,11 @@ signed-out user sees free. The note renders above the gate for everyone.
   pathway's existence, not a number).
 - **Copy** — all user-facing strings signed off above; no further copy ships without sign-off.
 
-## Open nuance (for spec review)
+## Resolved: anonymous fastest-admission
 
 `fastest-admission` is honestly **deferred in the anonymous list** because
 `UniversityData` carries no per-university intake (intakes are corridor-level). It
-ranks once signed in (program-level). If you'd rather the anonymous list say nothing
-at all for that goal (vs. the explicit "intake timing is shared…" note), that's the
-one copy lever still open.
+ranks once signed in (program-level). **Decision:** keep an explicit note — a silent
+fall-through would feel broken since the student chose this goal in the wizard — and
+say sorting returns at program level after sign-in. The locked copy is in the Copy
+section above.
