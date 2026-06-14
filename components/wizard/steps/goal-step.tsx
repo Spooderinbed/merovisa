@@ -19,7 +19,7 @@ export function GoalStep({ profile, setField, callouts }: StepProps) {
     <StepShell
       eyebrow="Step 9"
       title="What matters most to you?"
-      subtext="This shapes how we rank your matches — same profile, different priorities, different results."
+      subtext="We use this to order and label your matches around what you care about — where we have the data to."
       callouts={callouts}
     >
       <div role="radiogroup" aria-label="Priority" className="flex flex-col gap-3">
