@@ -32,16 +32,18 @@ const RANKED_LABEL: Record<"highest-ranked" | "lowest-cost" | "fastest-admission
   "fastest-admission": "fastest admission",
 };
 
-/** Soonest intake strictly after `now` across the tokens; null if none parse. Deterministic given `now`. */
+/** Soonest intake in a strictly-future month across the tokens; null if none parse. Month-granular, so it is independent of `now`'s time of day. */
 export function parseNearestIntake(tokens: string[], now: Date): { at: number; label: string } | null {
+  const nowMonths = now.getFullYear() * 12 + now.getMonth();
   let best: { at: number; label: string } | null = null;
   for (const token of tokens) {
     const mi = MONTH_TOKENS[token.slice(0, 3).toLowerCase()];
     if (mi === undefined) continue;
-    const candidate = new Date(now.getFullYear(), mi, 1);
-    if (candidate.getTime() <= now.getTime()) candidate.setFullYear(now.getFullYear() + 1);
-    const at = candidate.getTime();
-    if (best === null || at < best.at) best = { at, label: `${MONTHS[mi]} ${candidate.getFullYear()}` };
+    // Roll to next year when this year's month is the current month or earlier.
+    let year = now.getFullYear();
+    if (year * 12 + mi <= nowMonths) year += 1;
+    const at = new Date(year, mi, 1).getTime();
+    if (best === null || at < best.at) best = { at, label: `${MONTHS[mi]} ${year}` };
   }
   return best;
 }
@@ -63,7 +65,9 @@ function median(values: number[]): number | null {
 }
 
 function withinSixMonths(at: number, now: Date): boolean {
-  return at <= new Date(now.getFullYear(), now.getMonth() + 6, now.getDate()).getTime();
+  const d = new Date(at);
+  const months = (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth());
+  return months >= 0 && months <= 6;
 }
 
 function chipFor(goal: Goal, s: PreferenceSignals, bandMedian: number | null, now: Date): PreferenceChip | null {

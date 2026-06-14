@@ -97,6 +97,13 @@ describe("applyPreference — fastest-admission", () => {
       text: "Intake timing is shared across these university-level results, so these matches stay ordered by eligibility. Program-level intake sorting appears after sign-in.",
     });
   });
+
+  it("does not chip a 7-months-out intake when now is end-of-month (no Date overflow)", () => {
+    const endOfAug = new Date(2026, 7, 31); // 31 Aug 2026
+    const mar = { at: new Date(2027, 2, 1).getTime(), label: "Mar 2027" }; // 7 months out
+    const out = applyPreference([item("mar", { intake: mar })], "fastest-admission", adapter, endOfAug);
+    expect(out.items[0]!.preferenceChip).toBeNull();
+  });
 });
 
 describe("applyPreference — never crosses bands", () => {
@@ -158,5 +165,17 @@ describe("parseNearestIntake", () => {
   it("returns null for empty or unparseable tokens", () => {
     expect(parseNearestIntake([], NOW)).toBeNull();
     expect(parseNearestIntake(["someday"], NOW)).toBeNull();
+  });
+
+  it("excludes the current month regardless of time of day", () => {
+    const midJulAfternoon = new Date(2026, 6, 15, 14, 30); // 15 Jul 2026, 14:30
+    expect(parseNearestIntake(["jul"], midJulAfternoon)).toEqual({
+      at: new Date(2027, 6, 1).getTime(),
+      label: "Jul 2027",
+    });
+    expect(parseNearestIntake(["aug"], midJulAfternoon)).toEqual({
+      at: new Date(2026, 7, 1).getTime(),
+      label: "Aug 2026",
+    });
   });
 });
