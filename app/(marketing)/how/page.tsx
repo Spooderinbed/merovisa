@@ -39,7 +39,7 @@ export default function HowItWorksPage() {
             The four scoring dimensions
           </h2>
           <p className="mt-3 text-[17px] text-ink-soft">
-            Academic fit maps your Nepal TU percentage to an Australian WAM band and compares it against each
+            Academic fit compares your Nepal TU percentage directly against each
             program&apos;s published entry minimum. Financial readiness compares your declared budget and funding
             source against the DHA expected costs for the duration of your course — living costs plus tuition, not
             just the first year. Visa case strength scores the Genuine Student narrative inputs: how you explain
@@ -70,14 +70,14 @@ export default function HowItWorksPage() {
         {/* Section 4 */}
         <div>
           <h2 className="text-[20px] font-medium leading-snug">
-            What changes when you upload documents
+            How document uploads work today
           </h2>
           <p className="mt-3 text-[17px] text-ink-soft">
-            Before you upload, verdicts are computed from what you declare. Uploading an IELTS scorecard,
-            academic transcript, or bank statement replaces a declared value with a verified one. The cascade
-            is immediate: your dashboard verdict refreshes, your plan items regenerate, and every program
-            match score updates to reflect the verified figure. You can see which values are declared and
-            which are verified at any point in the profile section of your dashboard.
+            Your verdict and match scores are computed from the values you declare. Uploading an IELTS
+            scorecard, academic transcript, or bank statement keeps your documents organized for your
+            application checklist and plan — we store them so you can track what you&apos;ve gathered. We
+            don&apos;t yet read figures out of uploaded files, so uploading doesn&apos;t change your verdict
+            or match scores on its own.
           </p>
         </div>
       </div>

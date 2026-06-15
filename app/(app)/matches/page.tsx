@@ -82,8 +82,8 @@ export default async function MatchesPage() {
         </span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">Where your profile fits today.</h1>
         <p className="max-w-[64ch] text-[16px] text-ink-soft">
-          Strong / Possible / Reach against each program&apos;s published thresholds. Grade
-          conversion follows the Nepal TU &rarr; Australian WAM table from our research.
+          Strong / Possible / Reach against each program&apos;s published thresholds. We compare
+          your Nepal TU percentage directly against each program&apos;s minimum.
         </p>
       </header>
       <PolicyBanner />

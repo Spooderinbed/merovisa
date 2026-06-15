@@ -90,7 +90,7 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       kind: "add-grade",
       impact: "high",
       title: "Add your academic grade",
-      body: "We use your Nepal TU percentage to derive an Australian WAM band and compare against each program's minimum.",
+      body: "We compare your Nepal TU percentage directly against each program's published minimum.",
       liftEstimate: "Required for any match scoring",
       timeEstimate: "1 minute",
     });

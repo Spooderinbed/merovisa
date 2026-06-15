@@ -15,7 +15,7 @@ export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
           style={{ width: `${accuracy.completeness}%` }}
         />
       </span>
-      <p className="mt-4 text-[15px] text-ink-soft">Sharpen your results:</p>
+      <p className="mt-4 text-[15px] text-ink-soft">Make your assessment more complete:</p>
       <ul className="mt-2 flex flex-col gap-2">
         {accuracy.suggestions.map((s) => (
           <li key={s.id} className="flex items-center justify-between gap-3 text-[15px]">

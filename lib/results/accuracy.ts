@@ -15,8 +15,8 @@ export interface ProfileAccuracy {
 export function computeProfileAccuracy(profile: StudentProfile): ProfileAccuracy {
   let completeness = 25; // wizard complete, all self-reported
   const suggestions: AccuracySuggestion[] = [
-    { id: "transcript", label: "Upload your transcript", gain: "exact grade verification" },
-    { id: "financials", label: "Add financial documents", gain: "precise budget assessment" },
+    { id: "transcript", label: "Upload your transcript", gain: "keep it on file for your application" },
+    { id: "financials", label: "Add financial documents", gain: "keep it on file for your application" },
   ];
 
   if (profile.englishStatus === "taken") {
