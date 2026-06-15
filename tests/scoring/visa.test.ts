@@ -105,3 +105,35 @@ describe("scoreVisa — DHA visa English floor (Australia)", () => {
     expect(ielts(6.0).value).toBeGreaterThan(ielts(5.5).value);
   });
 });
+
+// #3 — prior student-visa refusals are a real DHA Subclass 500 risk factor. The
+// immigration section collects them, and the visa dimension now penalises them:
+// one refusal -15, multiple -35. None/undefined is unpenalised. The reason copy
+// is calm and constructive, never fear language.
+describe("scoreVisa — prior visa refusals (audit #3)", () => {
+  const none = scoreVisa({ ...baseProfile, priorRefusals: "none" });
+  const hasRefusalFactor = (s: ReturnType<typeof scoreVisa>) =>
+    s.factors.find((f) => /refusal/i.test(f.label));
+
+  it("does not penalise a clean history (none and undefined are identical, no factor)", () => {
+    expect(none.value).toBe(scoreVisa({ ...baseProfile }).value);
+    expect(hasRefusalFactor(none)).toBeUndefined();
+  });
+
+  it("penalises one prior refusal by 15 with a calm risk factor", () => {
+    const one = scoreVisa({ ...baseProfile, priorRefusals: "one" });
+    expect(one.value).toBe(none.value - 15);
+    const f = hasRefusalFactor(one);
+    expect(f?.influence).toBe("risk");
+    expect(f?.label).toMatch(/one prior visa refusal/i);
+    expect(f?.detail).not.toMatch(/reject|denied|hopeless|will fail/i);
+  });
+
+  it("penalises multiple prior refusals by 35 — steeper than one", () => {
+    const multiple = scoreVisa({ ...baseProfile, priorRefusals: "multiple" });
+    const one = scoreVisa({ ...baseProfile, priorRefusals: "one" });
+    expect(multiple.value).toBe(none.value - 35);
+    expect(multiple.value).toBeLessThan(one.value);
+    expect(hasRefusalFactor(multiple)?.label).toMatch(/multiple prior visa refusals/i);
+  });
+});

@@ -10,6 +10,13 @@ import {
   CONFIG_PROVENANCE,
 } from "@/lib/data/scoring-config";
 
+// Prior student-visa refusals are one of the strongest real-world DHA Subclass
+// 500 risk factors, so the visa dimension applies a flat, rule-level penalty
+// (versioned by RULE_VERSION, not the sourced-config layer — it's a scoring rule,
+// not an externally-sourced figure). Magnitudes are an internal heuristic: one
+// refusal is a yellow flag, multiple is a serious credibility problem.
+const REFUSAL_VISA_PENALTY: Record<"one" | "multiple", number> = { one: -15, multiple: -35 };
+
 export function scoreVisa(profile: StudentProfile): DimensionScore {
   const gap = computeGapYears(profile.graduationYear);
 
@@ -46,6 +53,12 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
     // [visaFloor, threshold): meets the visa floor → no adjustment.
   } else if (profile.englishStatus === "not-taken") {
     score += ENGLISH_NOT_TAKEN_PENALTY;
+  }
+
+  // Prior visa refusals (declared in the immigration section) lower the case.
+  const refusals = profile.priorRefusals;
+  if (refusals === "one" || refusals === "multiple") {
+    score += REFUSAL_VISA_PENALTY[refusals];
   }
 
   const value = Math.max(0, Math.min(100, Math.round(score)));
@@ -112,6 +125,22 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
       label: "No English test taken",
       influence: "risk",
       detail: "Required for student visa — book a test to strengthen your case.",
+    });
+  }
+
+  if (refusals === "one") {
+    factors.push({
+      label: "One prior visa refusal",
+      influence: "risk",
+      detail:
+        "A previous refusal is a factor officers weigh — address it directly with a clear, well-documented explanation.",
+    });
+  } else if (refusals === "multiple") {
+    factors.push({
+      label: "Multiple prior visa refusals",
+      influence: "risk",
+      detail:
+        "Repeat refusals carry real weight — a strong, well-evidenced Genuine Student case is essential to move forward.",
     });
   }
 

@@ -54,5 +54,6 @@ export function sectionsToStudentProfile(sections: ProfileSections): StudentProf
     fundingSource: finance?.source ?? "self-funded",
     goal: career?.goal ?? "permanent-residency",
     dependents: dependentsFromFamily(sections.family),
+    priorRefusals: sections.immigration?.refusals,
   };
 }

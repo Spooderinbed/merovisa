@@ -105,6 +105,12 @@ export interface StudentProfile {
    * in the Australia financial gate — see lib/scoring/financial.ts.
    */
   dependents?: { partner: boolean; children: number };
+  /**
+   * Prior student-visa refusals (immigration section). A real DHA Subclass 500
+   * risk factor — penalised in the visa dimension (see lib/scoring/visa.ts).
+   * Omitted/undefined = none (the anonymous wizard doesn't collect it).
+   */
+  priorRefusals?: "none" | "one" | "multiple";
 }
 
 export const VERDICTS = ["strong", "possible", "reach"] as const;

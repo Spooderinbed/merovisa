@@ -10,7 +10,9 @@ import { DIMENSION_WEIGHTS, CONFIG_VERSION } from "@/lib/data/scoring-config";
 // below the visa's financial-capacity floor caps the dimension into 'possible'/'reach').
 // v0.3.0: visa dimension applies the DHA visa English floor — a visa-valid IELTS
 // 6.0–6.4 is no longer penalised as a course-threshold shortfall.
-const RULE_VERSION = "v0.3.0";
+// v0.4.0: visa dimension penalises declared prior student-visa refusals
+// (lib/scoring/visa.ts) — one −15, multiple −35.
+const RULE_VERSION = "v0.4.0";
 
 export function runAssessment(profile: StudentProfile): AssessmentResult {
   const academic = scoreAcademic(profile);

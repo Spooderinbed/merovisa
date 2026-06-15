@@ -32,6 +32,13 @@ import type { AssessmentResult, Currency, StudentProfile } from "@/lib/scoring/t
  * isolates the effect — identical profiles whose only difference, a partner,
  * drops an otherwise-strong Australia verdict to possible.
  *
+ * RULE_VERSION v0.4.0 (config-v3 unchanged) added prior visa refusals → the visa
+ * dimension (lib/scoring/visa.ts): one refusal −15, multiple −35. No pre-existing
+ * fixture carries refusals, so every prior case keeps its dimension values and
+ * only its `ruleVersion` field moved to v0.4.0; the `refusal-one-penalised` /
+ * `refusal-multiple-penalised` cases below (siblings of strong-clear) isolate the
+ * penalty — only the visa dimension drops by 15 / 35.
+ *
  * Determinism: the only time-dependent input is the graduation gap
  * (`computeGapYears` reads `new Date()`). Each profile's `graduationYear` is
  * expressed relative to the current year, so the *gap* — and therefore the whole
@@ -384,6 +391,48 @@ const CASES: Case[] = [
       dependents: { partner: true, children: 0 },
     },
   },
+  {
+    name: "refusal-one-penalised",
+    note: "identical to strong-clear but with one prior visa refusal → visa dimension −15 (rule v0.4.0); isolates the single-refusal penalty",
+    profile: {
+      homeCountry: "Nepal",
+      educationLevel: "masters",
+      gradeSystem: "percentage-nepal",
+      grade: 86,
+      fieldOfStudy: "computer-science",
+      graduationYear: gradYear(0),
+      gapReasons: [],
+      englishStatus: "taken",
+      englishScore: 7.5,
+      destination: "australia",
+      budget: 60000,
+      budgetCurrency: "USD",
+      fundingSource: "self-funded",
+      goal: "permanent-residency",
+      priorRefusals: "one",
+    },
+  },
+  {
+    name: "refusal-multiple-penalised",
+    note: "identical to strong-clear but with multiple prior visa refusals → visa dimension −35 (rule v0.4.0); isolates the multiple-refusal penalty",
+    profile: {
+      homeCountry: "Nepal",
+      educationLevel: "masters",
+      gradeSystem: "percentage-nepal",
+      grade: 86,
+      fieldOfStudy: "computer-science",
+      graduationYear: gradYear(0),
+      gapReasons: [],
+      englishStatus: "taken",
+      englishScore: 7.5,
+      destination: "australia",
+      budget: 60000,
+      budgetCurrency: "USD",
+      fundingSource: "self-funded",
+      goal: "permanent-residency",
+      priorRefusals: "multiple",
+    },
+  },
 ];
 
 function compute(profile: StudentProfile): GoldenOutput {
@@ -463,5 +512,19 @@ describe("scoring characterization goldens", () => {
     expect(alone.dimensions.academic).toEqual(partner.dimensions.academic);
     expect(alone.dimensions.visa).toEqual(partner.dimensions.visa);
     expect(alone.dimensions.profileStrength).toEqual(partner.dimensions.profileStrength);
+  });
+
+  it("isolates the #3 refusal penalty: prior refusals lower only the visa dimension", () => {
+    if (WRITE) return;
+    const clean = ACTUAL["strong-clear"]!;
+    const one = ACTUAL["refusal-one-penalised"]!;
+    const multiple = ACTUAL["refusal-multiple-penalised"]!;
+    expect(one.dimensions.visa.value).toBe(clean.dimensions.visa.value - 15);
+    expect(multiple.dimensions.visa.value).toBe(clean.dimensions.visa.value - 35);
+    // Only visa moves — academic / financial / profileStrength are untouched.
+    expect(one.dimensions.academic).toEqual(clean.dimensions.academic);
+    expect(one.dimensions.financial).toEqual(clean.dimensions.financial);
+    expect(one.dimensions.profileStrength).toEqual(clean.dimensions.profileStrength);
+    expect(multiple.dimensions.financial).toEqual(clean.dimensions.financial);
   });
 });

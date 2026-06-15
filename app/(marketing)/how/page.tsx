@@ -42,9 +42,9 @@ export default function HowItWorksPage() {
             Academic fit compares your Nepal TU percentage directly against each
             program&apos;s published entry minimum. Financial readiness compares your declared budget and funding
             source against the DHA expected costs for the duration of your course — living costs plus tuition, not
-            just the first year. Visa case strength scores the Genuine Student narrative inputs: how you explain
+            just the first year. Visa case strength scores the Genuine Student narrative inputs — how you explain
             a study gap, how clearly you state your study purpose, and what ties you have to Nepal after
-            graduation. Profile strength reflects assessment completeness — English score, work history, and
+            graduation — and weighs any prior visa refusals you declare. Profile strength reflects assessment completeness — English score, work history, and
             whether you have uploaded documents that replace assumed values.
           </p>
         </div>

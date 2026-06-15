@@ -73,7 +73,7 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "strong-boundary": {
@@ -120,7 +120,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "possible-boundary-high": {
@@ -167,7 +167,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "possible-mid": {
@@ -234,7 +234,7 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "possible-boundary-low": {
@@ -286,7 +286,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "reach-weighted-boundary": {
@@ -338,7 +338,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "reach-min-dimension": {
@@ -390,7 +390,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "possible-min-dimension": {
@@ -442,7 +442,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "germany-threshold": {
@@ -495,7 +495,7 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "not-sure-destination": {
@@ -563,7 +563,7 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "higher-secondary-no-english": {
@@ -625,7 +625,7 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "unknown-currency-passthrough": {
@@ -688,7 +688,7 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "long-gap-below-english": {
@@ -748,7 +748,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "booked-english-aud": {
@@ -799,7 +799,7 @@
         "factors": []
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "dependents-alone-clears": {
@@ -876,7 +876,7 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   },
   "dependents-partner-capped": {
@@ -953,7 +953,171 @@
         ]
       }
     },
-    "ruleVersion": "v0.3.0",
+    "ruleVersion": "v0.4.0",
+    "configVersion": "config-v3"
+  },
+  "refusal-one-penalised": {
+    "verdict": "strong",
+    "weighted": 83,
+    "dimensions": {
+      "academic": {
+        "value": 78,
+        "factors": [
+          {
+            "label": "Strong grade (86%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Computer Science."
+          },
+          {
+            "label": "Master's degree completed",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens academic standing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 92,
+        "factors": [
+          {
+            "label": "Budget above typical range",
+            "influence": "positive",
+            "detail": "Comfortably covers Australia costs."
+          },
+          {
+            "label": "Meets DHA financial-capacity requirement",
+            "influence": "positive",
+            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition).",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
+          },
+          {
+            "label": "Self-funded",
+            "influence": "positive",
+            "detail": "Strongest funding signal for visa officers."
+          }
+        ]
+      },
+      "visa": {
+        "value": 83,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.5",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          },
+          {
+            "label": "One prior visa refusal",
+            "influence": "risk",
+            "detail": "A previous refusal is a factor officers weigh — address it directly with a clear, well-documented explanation."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 81,
+        "factors": [
+          {
+            "label": "Master's degree",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens profile."
+          },
+          {
+            "label": "Strong English (7.5)",
+            "influence": "positive",
+            "detail": "High IELTS opens up more selective programs."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.4.0",
+    "configVersion": "config-v3"
+  },
+  "refusal-multiple-penalised": {
+    "verdict": "strong",
+    "weighted": 78,
+    "dimensions": {
+      "academic": {
+        "value": 78,
+        "factors": [
+          {
+            "label": "Strong grade (86%)",
+            "influence": "positive",
+            "detail": "Above the typical threshold for Computer Science."
+          },
+          {
+            "label": "Master's degree completed",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens academic standing."
+          }
+        ]
+      },
+      "financial": {
+        "value": 92,
+        "factors": [
+          {
+            "label": "Budget above typical range",
+            "influence": "positive",
+            "detail": "Comfortably covers Australia costs."
+          },
+          {
+            "label": "Meets DHA financial-capacity requirement",
+            "influence": "positive",
+            "detail": "Budget covers the ~AUD 74,210 the student visa expects (AUD 29,710 living + AUD 44,500 first-year tuition).",
+            "source": {
+              "url": "https://immi.homeaffairs.gov.au/news-media/archive/article?itemId=1196",
+              "lastVerified": "2026-06-07"
+            }
+          },
+          {
+            "label": "Self-funded",
+            "influence": "positive",
+            "detail": "Strongest funding signal for visa officers."
+          }
+        ]
+      },
+      "visa": {
+        "value": 63,
+        "factors": [
+          {
+            "label": "Recent graduate",
+            "influence": "positive",
+            "detail": "No gap — strong timing signal for visa."
+          },
+          {
+            "label": "IELTS 7.5",
+            "influence": "positive",
+            "detail": "Meets the 6.5 threshold for australia."
+          },
+          {
+            "label": "Multiple prior visa refusals",
+            "influence": "risk",
+            "detail": "Repeat refusals carry real weight — a strong, well-evidenced Genuine Student case is essential to move forward."
+          }
+        ]
+      },
+      "profileStrength": {
+        "value": 81,
+        "factors": [
+          {
+            "label": "Master's degree",
+            "influence": "positive",
+            "detail": "Postgraduate level strengthens profile."
+          },
+          {
+            "label": "Strong English (7.5)",
+            "influence": "positive",
+            "detail": "High IELTS opens up more selective programs."
+          }
+        ]
+      }
+    },
+    "ruleVersion": "v0.4.0",
     "configVersion": "config-v3"
   }
 }
