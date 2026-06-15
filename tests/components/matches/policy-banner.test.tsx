@@ -24,6 +24,15 @@ describe("PolicyBanner", () => {
     expect(screen.getByText(/outside Australia/i)).toBeInTheDocument();
   });
 
+  it("frames the 6-month seasoning as our recommendation, not a DHA rule", () => {
+    render(<PolicyBanner />);
+    // The duration is our guidance (DHA publishes none), so it must read as a recommendation.
+    expect(
+      screen.getByText(/we recommend planning for around 6 months of bank seasoning/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/plan for 6 months of/i)).not.toBeInTheDocument();
+  });
+
   it("links each headline figure to its DHA source with a verified date", () => {
     render(<PolicyBanner />);
     // Living-cost figure → the DHA capacity article; grant rate → the DHA program report.

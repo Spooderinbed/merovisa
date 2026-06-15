@@ -15,8 +15,8 @@ export function PolicyBanner() {
       </span>
       <ul className="flex flex-col gap-1">
         <li>
-          Nepal applications face heightened financial-evidence scrutiny &mdash; plan for 6 months of
-          bank seasoning and a strong Genuine Student case.
+          Nepal applications face heightened financial-evidence scrutiny &mdash; we recommend planning for
+          around 6 months of bank seasoning and a strong Genuine Student case.
         </li>
         <li>
           DHA&rsquo;s{" "}
