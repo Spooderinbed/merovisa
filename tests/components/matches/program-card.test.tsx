@@ -17,7 +17,7 @@ const m: MatchResult = {
     minEnglish: 6.5,
     minEnglishBand: 6,
     intakes: ["feb"],
-    source: "https://x",
+    source: "https://www.monash.edu/study/courses/master-of-it",
     lastVerified: "2026-01-01",
     dataQuality: "primary",
     notes: null,
@@ -51,21 +51,40 @@ describe("ProgramCard", () => {
     expect(screen.getByRole("button", { name: /Shortlisted/i })).toBeInTheDocument();
   });
 
-  it("labels a verified (primary) program and cites the source", () => {
+  it("labels data quality from the program's dataQuality (Verified for primary)", () => {
     render(<ProgramCard match={m} isShortlisted={false} />);
     expect(screen.getByText(/Verified/i)).toBeInTheDocument();
     expect(screen.getByText(/checked Jan 2026/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Source/i })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Provider site/i })).not.toBeInTheDocument();
   });
 
-  it("labels a derived program as estimated and softens the link to the provider site", () => {
+  it("calls a derived program estimated, regardless of its link", () => {
     const derived: MatchResult = { ...m, program: { ...m.program, dataQuality: "derived" } };
     render(<ProgramCard match={derived} isShortlisted={false} />);
     expect(screen.getByText(/Estimated/i)).toBeInTheDocument();
     expect(screen.getByText(/checked Jan 2026/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Provider site/i })).toBeInTheDocument();
     expect(screen.queryByText(/Verified/i)).not.toBeInTheDocument();
+  });
+
+  // The link label tracks URL shape, not data quality: "Source" only when the link
+  // lands on the program page; a bare provider homepage reads honestly as "Provider site".
+  it("labels a deep program link 'Source', even when the figures are estimated", () => {
+    const deep: MatchResult = {
+      ...m,
+      program: { ...m.program, dataQuality: "derived", source: "https://www.monash.edu/study/courses/master-of-it" },
+    };
+    render(<ProgramCard match={deep} isShortlisted={false} />);
+    expect(screen.getByRole("link", { name: /^Source/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Provider site/i })).not.toBeInTheDocument();
+  });
+
+  it("softens a bare provider homepage to 'Provider site', even when verified", () => {
+    const bare: MatchResult = {
+      ...m,
+      program: { ...m.program, dataQuality: "primary", source: "https://www.monash.edu" },
+    };
+    render(<ProgramCard match={bare} isShortlisted={false} />);
+    expect(screen.getByRole("link", { name: /Provider site/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Source/i })).not.toBeInTheDocument();
   });
 
   it("links to the program's document checklist", () => {

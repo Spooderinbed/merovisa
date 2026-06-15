@@ -23,6 +23,18 @@ function freshness(iso: string): string {
   return `${name} ${year}`;
 }
 
+/**
+ * True when the URL points past the bare host — a real program/threshold page —
+ * rather than just the provider's homepage. Drives the link label so we only
+ * promise "Source" when the link actually lands on the program; a bare provider
+ * domain is labelled honestly as "Provider site". Independent of dataQuality,
+ * which describes the figures, not where the link goes.
+ */
+function isDeepLink(url: string): boolean {
+  const path = url.replace(/^https?:\/\//, "").split("/").slice(1).join("/");
+  return path.replace(/[/?#]+$/, "").length > 0;
+}
+
 export function ProgramCard({
   match,
   isShortlisted,
@@ -35,7 +47,7 @@ export function ProgramCard({
   const qualityWord = isEstimated ? "Estimated" : "Verified";
   const checked = freshness(p.lastVerified);
   const provenance = checked ? `${qualityWord} · checked ${checked}` : qualityWord;
-  const linkLabel = isEstimated ? "Provider site" : "Source";
+  const linkLabel = isDeepLink(p.source) ? "Source" : "Provider site";
   const provenanceTone = isEstimated ? "text-ink-soft" : "text-ink-faint";
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">

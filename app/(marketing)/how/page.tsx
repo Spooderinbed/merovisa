@@ -60,8 +60,9 @@ export default function HowItWorksPage() {
             Each program has a published grade minimum and an English requirement. We compare your inputs to
             those thresholds directly. Strong means you meet every published requirement. Possible means a small
             gap — typically one academic band or slightly below the English floor. Reach means a significant
-            gap on one or more dimensions. We never invent a verdict. Every band shown links to the specific
-            program threshold it is derived from, so you can verify the comparison yourself.
+            gap on one or more dimensions. We never invent a verdict. Each band links out to the provider &mdash; the
+            program page where we have it, the provider&apos;s site otherwise &mdash; so you can check the published
+            requirement yourself.
           </p>
         </div>
 
