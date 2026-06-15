@@ -42,6 +42,13 @@ describe("UniversityMatches", () => {
     expect(onUnlock).toHaveBeenCalledOnce();
   });
 
+  it("cites each surfaced match's source with a verified date", () => {
+    render(<UniversityMatches matches={matches} total={12} onUnlock={vi.fn()} />);
+    // The three free cards each carry a host link + verified date; the blurred locked rows don't.
+    expect(screen.getAllByRole("link", { name: /example\.edu/i })).toHaveLength(3);
+    expect(screen.getAllByText(/verified 2026-06-02/i)).toHaveLength(3);
+  });
+
   it("renders a preference chip when one is set on a surfaced match", () => {
     const chipped: UniversityMatch[] = [
       { ...matches[0]!, preferenceChip: { text: "Lower tuition" } },

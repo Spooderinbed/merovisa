@@ -1,5 +1,6 @@
 import type { UniversityMatch } from "@/lib/matching/universities";
 import { Button } from "@/components/ui/button";
+import { SourceLine } from "@/components/results/source-line";
 import { cn, formatUsd } from "@/lib/utils";
 import { track } from "@/lib/analytics/events";
 
@@ -36,6 +37,7 @@ function MatchCard({ m }: { m: UniversityMatch }) {
         {formatUsd(m.university.tuitionUsdPerYear.max)}/yr
       </p>
       <p className="mt-1 text-[15px] text-ink-soft">{m.reason}</p>
+      <SourceLine url={m.university.source} lastVerified={m.university.lastVerified} surface="matches" />
     </article>
   );
 }
