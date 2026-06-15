@@ -69,14 +69,10 @@ describe("ConversionPaths", () => {
     fetchMock.mockRestore();
   });
 
-  it("posts a lead and acknowledges it inline", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
+  it("offers no email-delivery or come-back-later path (no send/retrieval system exists)", () => {
     render(<ConversionPaths assessmentId={ASSESSMENT_UUID} />);
-    await userEvent.type(screen.getByLabelText(/Email me my results/i), "student@example.com");
-    await userEvent.click(screen.getByRole("button", { name: /Email me my results/i }));
-    expect(fetchMock).toHaveBeenCalledWith("/api/leads", expect.objectContaining({ method: "POST" }));
-    expect(await screen.findByText(/We'll send your results to student@example.com/i)).toBeInTheDocument();
-    fetchMock.mockRestore();
+    expect(screen.queryByText(/Email me my results/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/come back later/i)).not.toBeInTheDocument();
   });
 
   it("disables the Google button when there is no assessment id", () => {
