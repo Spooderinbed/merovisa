@@ -37,6 +37,12 @@ describe("PlanItemCard", () => {
     expect(screen.getByText(/verified 2026-06-07/i)).toBeInTheDocument();
   });
 
+  it("renders a source line per source for a multi-source item", () => {
+    render(<PlanItemCard item={{ ...item, kind: "prepare-fund-remittance" }} />);
+    // Two NRB pages back this step (study-remittance rules + the annual report).
+    expect(screen.getAllByRole("link", { name: /www\.nrb\.org\.np/i })).toHaveLength(2);
+  });
+
   it("renders no source line for an item with no sourced figure", () => {
     render(<PlanItemCard item={item} />); // kind "k"
     expect(screen.queryByText(/^verified /i)).toBeNull();

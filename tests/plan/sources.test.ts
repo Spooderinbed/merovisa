@@ -4,6 +4,11 @@ import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living"
 import { AU_HEALTH_BIOMETRIC_FACTS } from "@/lib/data/source/au-health-biometric-facts";
 import { NEPAL_NOC_JOURNEY } from "@/lib/data/source/nepal-noc-journey";
 import { AU_WORKING_WITH_AGENTS } from "@/lib/data/source/au-working-with-agents";
+import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-document-processing-times";
+import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
+import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
+import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
+import { NEPAL_INCOME_CERTIFICATION } from "@/lib/data/source/nepal-income-certification";
 
 /**
  * The plan source map (lib/plan/sources.ts) holds LITERAL URLs/dates so it can be
@@ -38,6 +43,53 @@ describe("plan sources drift guard", () => {
     const src = sourcesFor("verify-agent-marn")[0]!;
     expect(src.url).toBe(marn.source);
     expect(src.lastVerified).toBe(marn.lastVerified);
+  });
+
+  it("prepare-health-exam → DHA health-examination validity", () => {
+    const fact = AU_HEALTH_BIOMETRIC_FACTS.find((r) => r.id === "health-examination-validity")!;
+    const src = sourcesFor("prepare-health-exam")[0]!;
+    expect(src.url).toBe(fact.source);
+    expect(src.lastVerified).toBe(fact.lastVerified);
+  });
+
+  it("prepare-police-certificate → Nepal Police OPCR (one portal for turnaround + validity)", () => {
+    const turnaround = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "police-character-standard")!;
+    const validity = NEPAL_POLICE_CERTIFICATE.find((r) => r.id === "opcr-validity")!;
+    const src = sourcesFor("prepare-police-certificate")[0]!;
+    expect(src.url).toBe(turnaround.source);
+    expect(src.url).toBe(validity.source); // both OPCR figures share the one portal URL
+    expect(src.lastVerified).toBe(turnaround.lastVerified);
+  });
+
+  it("start-passport-process → Department of Passports", () => {
+    const passport = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "passport-central")!;
+    const src = sourcesFor("start-passport-process")[0]!;
+    expect(src.url).toBe(passport.source);
+    expect(src.lastVerified).toBe(passport.lastVerified);
+  });
+
+  it("prepare-gs-answers → DHA Genuine Student requirement", () => {
+    const gs = AU_STUDENT_VISA_REQUIREMENTS.find((r) => r.id === "genuine-student")!;
+    const src = sourcesFor("prepare-gs-answers")[0]!;
+    expect(src.url).toBe(gs.source);
+    expect(src.lastVerified).toBe(gs.lastVerified);
+  });
+
+  it("prepare-fund-remittance → NRB study-remittance rules + NRB annual report (two pages)", () => {
+    const study = NEPAL_SOURCE_OF_FUNDS.find((r) => r.id === "noc-requirement")!;
+    const annual = NEPAL_SOURCE_OF_FUNDS.find((r) => r.id === "forex-portal-confirmation")!;
+    const [bankReq, forex] = sourcesFor("prepare-fund-remittance");
+    expect(bankReq!.url).toBe(study.source);
+    expect(bankReq!.lastVerified).toBe(study.lastVerified);
+    expect(forex!.url).toBe(annual.source);
+    expect(forex!.lastVerified).toBe(annual.lastVerified);
+  });
+
+  it("certify-sponsor-income → Lalitpur Metropolitan City FAQ", () => {
+    const lmc = NEPAL_INCOME_CERTIFICATION.find((r) => r.id === "rental-income")!;
+    const src = sourcesFor("certify-sponsor-income")[0]!;
+    expect(src.url).toBe(lmc.source);
+    expect(src.lastVerified).toBe(lmc.lastVerified);
   });
 
   it("season-funds-six-months carries no source (a recommendation, not a published figure)", () => {
