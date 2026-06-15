@@ -3,6 +3,8 @@ export type RiskLevel = "calm" | "caution" | "warning";
 
 export interface MarketingDestination {
   id: string;
+  /** Whether the assessment engine fully covers this corridor end-to-end (only Australia today). */
+  supported: boolean;
   name: string;
   flag: string;
   tagline: string;
@@ -21,6 +23,7 @@ export interface MarketingDestination {
 export const MARKETING_DESTINATIONS: MarketingDestination[] = [
   {
     id: "au",
+    supported: true,
     name: "Australia",
     flag: "🇦🇺",
     tagline: "Strong post-study work rights, clear financial rules.",
@@ -41,6 +44,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
   },
   {
     id: "ca",
+    supported: false,
     name: "Canada",
     flag: "🇨🇦",
     tagline: "Provincial caps in effect — apply early.",
@@ -61,6 +65,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
   },
   {
     id: "uk",
+    supported: false,
     name: "United Kingdom",
     flag: "🇬🇧",
     tagline: "Fast visa decisions; dependant rules tightened.",
@@ -81,6 +86,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
   },
   {
     id: "de",
+    supported: false,
     name: "Germany",
     flag: "🇩🇪",
     tagline: "Low/no tuition at public universities.",
@@ -101,6 +107,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
   },
   {
     id: "us",
+    supported: false,
     name: "United States",
     flag: "🇺🇸",
     tagline: "Largest choice; interview-based visa.",
@@ -121,6 +128,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
   },
   {
     id: "ie",
+    supported: false,
     name: "Ireland",
     flag: "🇮🇪",
     tagline: "English-speaking EU; growing tech sector.",

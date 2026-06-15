@@ -14,4 +14,11 @@ describe("DestinationCard", () => {
     expect(screen.getByText(/2026-05-28/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Australia/i })).toHaveAttribute("href", "/destinations/au");
   });
+
+  it("shows 'Not yet available' instead of a verdict for an unsupported corridor", () => {
+    const ca = getMarketingDestination("ca")!;
+    render(<DestinationCard destination={ca} />);
+    expect(screen.getByText(/Not yet available/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Possible/i)).not.toBeInTheDocument();
+  });
 });

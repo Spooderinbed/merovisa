@@ -21,9 +21,15 @@ export function DestinationCard({ destination }: { destination: MarketingDestina
           </span>
           <span className="text-[19px] font-medium text-ink">{destination.name}</span>
         </div>
-        <span className={`inline-flex items-center rounded-pill px-2.5 py-0.5 font-mono text-[11.5px] ${v.cls}`}>
-          {v.label}
-        </span>
+        {destination.supported ? (
+          <span className={`inline-flex items-center rounded-pill px-2.5 py-0.5 font-mono text-[11.5px] ${v.cls}`}>
+            {v.label}
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-2.5 py-0.5 font-mono text-[11.5px] text-ink-soft">
+            Not yet available
+          </span>
+        )}
       </div>
       <p className="text-[15px] text-ink-soft">{destination.tagline}</p>
       <hr className="border-line" />

@@ -33,9 +33,15 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
           {c.flag}
         </span>
         <h1 className="text-[clamp(36px,4.6vw,52px)] leading-[1.05]">{c.name}</h1>
-        <span className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[13px] ${v.cls}`}>
-          {v.label}
-        </span>
+        {c.supported ? (
+          <span className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[13px] ${v.cls}`}>
+            {v.label}
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-3 py-1 font-mono text-[13px] text-ink-soft">
+            Not yet available
+          </span>
+        )}
       </div>
 
       <p className="mt-3 max-w-[640px] text-[17px] text-ink-soft">{c.tagline}</p>
@@ -88,14 +94,20 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
       {/* CTA */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-transparent bg-primary-tint p-6">
         <div className="flex flex-col gap-1">
-          <span className="text-[18px] font-medium text-ink">Check your standing for {c.name}</span>
-          <span className="text-[15px] text-ink-soft">Two minutes, no sign-up to start.</span>
+          <span className="text-[18px] font-medium text-ink">
+            {c.supported ? `Check your standing for ${c.name}` : `We don't assess Nepal → ${c.name} yet`}
+          </span>
+          <span className="text-[15px] text-ink-soft">
+            {c.supported
+              ? "Two minutes, no sign-up to start."
+              : "Australia is the corridor we fully cover today."}
+          </span>
         </div>
         <Link
           href="/assess"
           className="inline-flex items-center gap-2 rounded-pill bg-primary px-[22px] py-3 text-[16px] font-medium text-on-primary hover:bg-primary-ink"
         >
-          Check eligibility →
+          {c.supported ? "Check eligibility →" : "See where you stand for Australia →"}
         </Link>
       </div>
     </section>
