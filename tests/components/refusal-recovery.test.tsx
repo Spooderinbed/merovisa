@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { RefusalRecovery } from "@/components/results/refusal-recovery";
 
 describe("RefusalRecovery", () => {
-  it("renders the four gov-sourced sections", () => {
+  it("renders the five gov-sourced sections", () => {
     render(<RefusalRecovery />);
     expect(screen.getByText(/Refusal risk & recovery/i)).toBeInTheDocument();
     // Exact/anchored matchers for the headings — a loose /If you're refused/ would
@@ -11,6 +11,7 @@ describe("RefusalRecovery", () => {
     expect(screen.getByText("Why applications are refused")).toBeInTheDocument();
     expect(screen.getByText(/^Honest odds/)).toBeInTheDocument();
     expect(screen.getByText("If you're refused")).toBeInTheDocument();
+    expect(screen.getByText("What a review can result in")).toBeInTheDocument();
     expect(screen.getByText("What not to trust")).toBeInTheDocument();
   });
 
@@ -93,5 +94,56 @@ describe("RefusalRecovery", () => {
   it("shows the not-legal-advice disclaimer", () => {
     render(<RefusalRecovery />);
     expect(screen.getByText(/not legal advice/i)).toBeInTheDocument();
+  });
+
+  it("adds the 'What a review can result in' section with the three ART outcomes (remit in plain language)", () => {
+    render(<RefusalRecovery />);
+    expect(screen.getByText("What a review can result in")).toBeInTheDocument();
+    expect(
+      screen.getByText(/it agrees with the original decision, so the refusal stands/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/set the refusal aside and make a new decision in its place/i),
+    ).toBeInTheDocument();
+    // Plain-language remit, per the owner directive — exact copy-lock.
+    expect(
+      screen.getByText(
+        "It can remit the case — that means sending it back to the Department for a new decision.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("adds the inserted ART recovery rows (eligibility, 2-year tail, transitional hearings, ministerial referral)", () => {
+    render(<RefusalRecovery />);
+    expect(
+      screen.getByText(/whether the decision can be reviewed and whether you can apply/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/95% of these reviews finish within 2 years of applying/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/hearing notice before 1 June 2026, that hearing still goes ahead/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /the Tribunal can refer a matter for ministerial intervention — this is separate from a normal appeal/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("links the new ART rows to their government sources", () => {
+    render(<RefusalRecovery />);
+    expect(screen.getByRole("link", { name: "Sent back" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("art.gov.au/after-applying/possible-outcomes"),
+    );
+    expect(screen.getByRole("link", { name: "Longer cases" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("art.gov.au"),
+    );
+    expect(screen.getByRole("link", { name: "Ministerial referrals" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("immi.homeaffairs.gov.au"),
+    );
   });
 });

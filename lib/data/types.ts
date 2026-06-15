@@ -855,7 +855,7 @@ export interface NepalPassportProcess extends Provenanced {
  */
 export interface NepalRefusalRecovery extends Provenanced {
   id: string; // slug, e.g. "ground-genuine-student"
-  kind: "refusal-ground" | "grant-rate" | "recovery-path" | "scam-warning";
+  kind: "refusal-ground" | "grant-rate" | "recovery-path" | "review-outcome" | "scam-warning";
   label: string;   // short source/topic label — rendered as the row's link text
   summary: string; // the rendered sentence (display numbers live here)
   sector?: "higher-education" | "vet"; // grant-rate records only — drives HE-primary emphasis

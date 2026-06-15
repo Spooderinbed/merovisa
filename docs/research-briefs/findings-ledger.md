@@ -4,7 +4,7 @@
 
 **Total findings:** 1118  ·  **entity+attr clusters:** 41
 
-**Status:** used=509 · pending=601 · rejected:out-of-scope=1 · rejected:dynamic-data=2 · rejected:ephemeral-jobad=3 · rejected:promo-window=1 · rejected:superseded=1
+**Status:** used=516 · pending=594 · rejected:out-of-scope=1 · rejected:dynamic-data=2 · rejected:ephemeral-jobad=3 · rejected:promo-window=1 · rejected:superseded=1
 
 | ID | topic | conf | type | cluster | status | target | claim |
 |----|-------|------|------|---------|--------|--------|-------|
@@ -1066,20 +1066,20 @@
 | I.046 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The ART may grant a fee reduction to 50% of the full migration review fee on financial hardship grounds. |
 | I.047 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART’s 17 June 2025 notice said the fee for review of a reviewable migration decision would increase to AUD 3,… |
 | I.048 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 50% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
-| I.049 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 95% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
+| I.049 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | ART reports that 95% of student refusal reviews finalised between 1 November 2025 and 30 April 2026 were fina… |
 | I.050 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | ART says it has no power to extend the time limit to apply for a review. |
 | I.051 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | From 1 June 2026 the ART must decide most student visa refusal reviews without an oral hearing. |
-| I.052 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | If a student visa refusal review had already received a hearing listing notice before the 1 June 2026 change,… |
-| I.053 | I | primary | process | G41 | pending | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to affirm the original decision. |
-| I.054 | I | primary | process | G41 | pending | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to set aside the original decision and substitute a new decision. |
-| I.055 | I | primary | process | G41 | pending | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to remit the decision to the original decision maker for reconsideration. |
-| I.056 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | ART says the Department’s decision letter will tell the applicant whether the Tribunal can review the decisio… |
+| I.052 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | If a student visa refusal review had already received a hearing listing notice before the 1 June 2026 change,… |
+| I.053 | I | primary | process | G41 | used | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to affirm the original decision. |
+| I.054 | I | primary | process | G41 | used | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to set aside the original decision and substitute a new decision. |
+| I.055 | I | primary | process | G41 | used | app/(app)/journey/refusal-recovery (+ plan rules) | One possible ART review outcome is to remit the decision to the original decision maker for reconsideration. |
+| I.056 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | ART says the Department’s decision letter will tell the applicant whether the Tribunal can review the decisio… |
 | I.057 | I | primary | process |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says the Minister’s intervention powers are not available if there is no review decision by a merits revi… |
 | I.058 | I | primary | process |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | DHA says a person must make arrangements to leave Australia even if they have requested ministerial intervent… |
 | I.059 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Home Affairs FOI data recorded 197 Ministerial Intervention requests received in April 2025. |
 | I.060 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | Home Affairs FOI data recorded 34 interventions by the Minister in April 2025. |
 | I.061 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The same FOI file says one Ministerial Intervention request may include multiple persons. |
-| I.062 | I | primary | data |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | The same FOI file says tribunal-initiated Ministerial Intervention requests include requests referred by the … |
+| I.062 | I | primary | data |  | used | app/(app)/journey/refusal-recovery (+ plan rules) | The same FOI file says tribunal-initiated Ministerial Intervention requests include requests referred by the … |
 | I.063 | I | practitioner | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | AHC Lawyers says many student visa refusals involve not meeting the Genuine Student criteria. |
 | I.064 | I | practitioner | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | AHC Lawyers says many student visa refusals involve financial capacity issues. |
 | I.065 | I | practitioner | red-flag |  | pending | app/(app)/journey/refusal-recovery (+ plan rules) | AHC Lawyers says many student visa refusals involve inconsistencies in documents. |

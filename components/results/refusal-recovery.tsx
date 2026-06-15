@@ -6,6 +6,7 @@ const SECTIONS: { kind: NepalRefusalRecovery["kind"]; heading: string }[] = [
   { kind: "refusal-ground", heading: "Why applications are refused" },
   { kind: "grant-rate", heading: "Honest odds — by sector" },
   { kind: "recovery-path", heading: "If you're refused" },
+  { kind: "review-outcome", heading: "What a review can result in" },
   { kind: "scam-warning", heading: "What not to trust" },
 ];
 

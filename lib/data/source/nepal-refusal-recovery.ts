@@ -28,6 +28,7 @@ const ART_CHANGES =
 const ART_IMMIGRATION = "https://www.art.gov.au/applying-review/immigration-and-citizenship";
 const ART_PROCESSING =
   "https://www.art.gov.au/about-us/accountability-and-reporting/processing-times";
+const ART_OUTCOMES = "https://www.art.gov.au/after-applying/possible-outcomes";
 const ART_FEES = "https://www.art.gov.au/help-and-resources/fees";
 const IMMI_MINISTERIAL =
   "https://immi.homeaffairs.gov.au/what-we-do/status-resolution-service/ministerial-intervention";
@@ -118,6 +119,20 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
   },
   // ── If you're refused ───────────────────────────────────────────────────────
   {
+    id: "recovery-can-apply",
+    kind: "recovery-path",
+    label: "Can you apply?",
+    summary:
+      "Your refusal letter from the Department says whether the decision can be reviewed and whether you can apply.",
+    source: ART_IMMIGRATION,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.056"],
+      source: ART_IMMIGRATION,
+      note: "ART: the Department's decision letter states whether the Tribunal can review the decision and whether the applicant may apply (I.056).",
+    },
+  },
+  {
     id: "recovery-review",
     kind: "recovery-path",
     label: "Tribunal review",
@@ -129,6 +144,19 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
       findingRefs: ["I.044", "I.051"],
       source: ART_CHANGES,
       note: "ART has jurisdiction to review certain visa decisions under the Migration Act 1958 (I.044, immi.homeaffairs.gov.au review-of-decisions); from 1 June 2026 it must decide most student-visa refusal reviews without an oral hearing (I.051).",
+    },
+  },
+  {
+    id: "recovery-hearing-transitional",
+    kind: "recovery-path",
+    label: "Hearings already set",
+    summary: "If you got a hearing notice before 1 June 2026, that hearing still goes ahead.",
+    source: ART_CHANGES,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.052"],
+      source: ART_CHANGES,
+      note: "ART: a student refusal review that received a hearing listing notice before the 1 June 2026 change keeps its hearing (I.052).",
     },
   },
   {
@@ -157,6 +185,19 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
       findingRefs: ["I.048"],
       source: ART_PROCESSING,
       note: "ART processing-times: 50% of student refusal reviews finalised 1 Nov 2025–30 Apr 2026 were finalised within 1 year and 7 months (about 19 months) from lodgement (I.048).",
+    },
+  },
+  {
+    id: "recovery-timeline-longtail",
+    kind: "recovery-path",
+    label: "Longer cases",
+    summary: "The long tail is real: 95% of these reviews finish within 2 years of applying.",
+    source: ART_PROCESSING,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.049"],
+      source: ART_PROCESSING,
+      note: "ART processing-times: 95% of student refusal reviews finalised 1 Nov 2025–30 Apr 2026 were finalised within 2 years of lodgement (I.049).",
     },
   },
   {
@@ -201,6 +242,61 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
       findingRefs: ["I.057", "I.059", "I.060"],
       source: IMMI_MINISTERIAL,
       note: "The Minister's intervention powers are not available without a merits-review tribunal decision (I.057); Home Affairs FOI data recorded 197 requests and 34 interventions in April 2025 (I.059/I.060) — a limited, conditional last resort.",
+    },
+  },
+  {
+    id: "recovery-ministerial-referral",
+    kind: "recovery-path",
+    label: "Ministerial referrals",
+    summary:
+      "In some cases, the Tribunal can refer a matter for ministerial intervention — this is separate from a normal appeal.",
+    source: IMMI_MINISTERIAL,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.062"],
+      source: IMMI_MINISTERIAL,
+      note: "DHA FOI file fa-250500998: tribunal-initiated ministerial-intervention requests include those referred by the ART and former AAT (I.062). Displayed source is the student-facing ministerial-intervention page; the FOI finding rides in findingRefs (the slice G/I source-display pattern).",
+    },
+  },
+  // ── What a review can result in (ART possible outcomes) ──────────────────────
+  {
+    id: "outcome-affirm",
+    kind: "review-outcome",
+    label: "Decision stands",
+    summary:
+      "The Tribunal can affirm the refusal — it agrees with the original decision, so the refusal stands.",
+    source: ART_OUTCOMES,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.053"],
+      source: ART_OUTCOMES,
+      note: "ART possible-outcomes: one outcome is to affirm the original decision (I.053).",
+    },
+  },
+  {
+    id: "outcome-set-aside",
+    kind: "review-outcome",
+    label: "New decision",
+    summary: "It can set the refusal aside and make a new decision in its place.",
+    source: ART_OUTCOMES,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.054"],
+      source: ART_OUTCOMES,
+      note: "ART possible-outcomes: one outcome is to set aside the original decision and substitute a new decision (I.054).",
+    },
+  },
+  {
+    id: "outcome-remit",
+    kind: "review-outcome",
+    label: "Sent back",
+    summary: "It can remit the case — that means sending it back to the Department for a new decision.",
+    source: ART_OUTCOMES,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.055"],
+      source: ART_OUTCOMES,
+      note: "ART possible-outcomes: one outcome is to remit the decision to the original decision-maker for reconsideration (I.055).",
     },
   },
   // ── What not to trust ───────────────────────────────────────────────────────

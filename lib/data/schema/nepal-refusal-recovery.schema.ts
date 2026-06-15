@@ -9,7 +9,7 @@ import { ProvenanceSchema, HttpUrl, IsoDate } from "./common";
  */
 const NepalRefusalRecoveryRecordSchema = z.object({
   id: z.string().min(1),
-  kind: z.enum(["refusal-ground", "grant-rate", "recovery-path", "scam-warning"]),
+  kind: z.enum(["refusal-ground", "grant-rate", "recovery-path", "review-outcome", "scam-warning"]),
   label: z.string().min(1),
   summary: z.string().min(1),
   sector: z.enum(["higher-education", "vet"]).optional(),
