@@ -1,9 +1,22 @@
 # Consultancy refusal-reasons — source-policy decision packet (I.063–I.070)
 
 - **Date:** 2026-06-16
-- **Status:** DECISION PACKET — awaiting owner approval. No code, no ledger flips, no panel change made by this document.
-- **Scope:** the eight consultancy-sourced refusal-reason findings I.063–I.070 (AHC Lawyers ×4, Aussizz ×4), all currently `status: pending`, `triage: needs-human-call`.
-- **Decision owner:** product/editorial (you). This packet *recommends*; it does not act.
+- **Status:** APPROVED — keep-out policy (2026-06-15). **UPDATED 2026-06-16** with the GS-factor gov-research follow-up — see the addendum directly below, which corrects the I.066/I.070 classification.
+- **Scope:** the eight consultancy-sourced refusal-reason findings I.063–I.070 (AHC Lawyers ×4, Aussizz ×4).
+- **Decision owner:** product/editorial (you).
+
+---
+
+## Addendum — GS-factor gov-research follow-up (2026-06-16)
+
+This corrects the record below. The original packet classed **I.066 (immigration history)** and **I.070 (course relevance)** as **Class C — "not on file from gov, needs future research."** **That was wrong:** it was based on a category-I-only scan that missed the category-F Genuine-Student module (slice ②). Both factors are in fact **already on file from gov, already `used`, and already displayed in the GS panel**, sourced to **Ministerial Direction No. 106**:
+
+- **Immigration history** → `au-genuine-student.ts` row `md106-history` (findings F.011/F.012/F.025/F.026), Direction 106 **§9**.
+- **Course relevance / progression** → rows `md106-course-value` (F.023/F.024) + `md106-scrutiny` (F.015/16/22/27), Direction 106 **§8(5)** and **§11(1)(b)**.
+
+**Verification (read-only workflow, 6 agents, 2026-06-16):** both factors confirmed *verbatim* from two live primary gov sources — the Direction 106 PDF (downloaded directly: §9 immigration history, §8(5) value-of-course, §11(1)(b)(iv) logical course progression) and the DHA Genuine Student page. **Direction 106 is current** ("Revocation: Nil," commenced 23 Mar 2024; the DHA GS page **updated 13/01/2026** still names it as the governing instrument; Directions 107/108/111/115 concern other subjects and do not supersede its GS factors). Side-finding: **s499 migration directions are exempt from the Federal Register of Legislation**, so the Home Affairs PDF — which we already cite — is the correct authoritative source, not legislation.gov.au.
+
+**Therefore I.066/I.070 are repeat-of-gov (Class A), not Class C.** No new rows needed; the content already ships, gov-sourced and current. **Disposition: `triage: stale`** (same as the other repeats), applied 2026-06-16. The owner chose to **leave the GS-panel rows concise** — Direction 106 lists ~5 finer sub-factors (visa cancellation, refused entry, the overstay/left-before-cease test, compliance with other countries' migration laws, the employment-prospects limb) that our one-line rows deliberately abstract; expanding them was declined to honor the panel's calm-authority concision and Direction 106's own "do not treat the factors as a checklist" instruction (F.014). No consultancy source involved at any point.
 
 ---
 
@@ -39,8 +52,8 @@ Classification key:
 | **I.069** | Aussizz | GS refusals when the statement is vague/copied/irrelevant | `ground-genuine-student` + I.006 (more weight to evidenced GS) + I.003 (answer the questions, not a templated statement) | **A** | Keep out — substance is gov-backed; "copied/templated" is a writing tip for a future guide, not a refusal row |
 | **I.067** | Aussizz | Unexplained deposits / sudden large transfers | Partially: source-of-funds slice C (genuine access to funds) | **B** | Keep out of panel — candidate for a future "how to evidence your funds" guide, gov-rewritten from DHA source-of-funds guidance |
 | **I.068** | Aussizz | Weak / unverifiable sponsor income | Partially: `certify-sponsor-income` plan item, source-of-funds slice C | **B** | Keep out of panel — same future-guide path as I.067 |
-| **I.066** | AHC | Previous immigration history is a factor | **Not on file from gov** (it *is* a legislated GS consideration) | **C** | Keep out now — candidate for a future gov-sourced row once the GS-factor list is researched from DHA / Ministerial Direction. Never cite AHC for it |
-| **I.070** | Aussizz | No clear link between prior education and chosen course | **Not on file from gov** (course relevance *is* a legislated GS consideration) | **C** | Keep out now — same gov-research path as I.066 |
+| **I.066** | AHC | Previous immigration history is a factor | ~~Not on file from gov~~ → **GS panel `md106-history`, Direction 106 §9** (F.011/012/025/026) — see addendum | ~~C~~ → **A** | Keep out — already shipped, gov-sourced & current. `stale` |
+| **I.070** | Aussizz | No clear link between prior education and chosen course | ~~Not on file from gov~~ → **GS panel `md106-course-value`/`md106-scrutiny`, Direction 106 §8(5)/§11(1)(b)** (F.023/024/026) — see addendum | ~~C~~ → **A** | Keep out — already shipped, gov-sourced & current. `stale` |
 
 ---
 
@@ -49,16 +62,16 @@ Classification key:
 **Adopt a keep-out source policy: none of I.063–I.070 go on the gov-only trust panel, and no consultancy source is placed on a trust surface.** Rationale by bucket:
 
 - **Class A (I.063, I.064, I.065, I.069) — nothing to do.** The panel already says all four, in government language, with government links. Adding a consultancy echo only dilutes sourcing (risk #2) and bolts on an unquantified "many" (risk #1).
-- **Class C (I.066 immigration history, I.070 course relevance) — real, but route through gov, not consultancy.** Both are genuine Genuine-Student factors. The honest way to surface them is a small **gov-research follow-up** that sources the GS-factor list from DHA's Genuine Student guidance / the Ministerial Direction, then adds two rows in our own gov-sourced voice. Until that research exists, they stay out. The consultancy finding becomes a *research pointer*, never a displayed source.
+- **Class C (I.066 immigration history, I.070 course relevance) — SUPERSEDED by the 2026-06-16 addendum.** The gov-research follow-up found both are *already* gov-sourced and shipping in the GS panel (Direction 106, verified current). They are repeat-of-gov (Class A), not "needs future research." Disposition: `stale`. No new rows; no consultancy.
 - **Class B (I.067 deposits, I.068 sponsor income) — defer to a future guide.** These are "how to evidence your money" tips, not refusal-panel material. If/when we build an application-strengthening guide, rewrite them from DHA's source-of-funds / financial-capacity guidance (slice C territory). Consultancy stays a pointer.
 
-Net: the trust panel stays 100% gov-sourced; the genuinely additive ideas (2 GS factors, 2 finance tips) get a gov-sourced home *later* if you want them; the consultancies are never quoted to a student.
+Net: the trust panel stays 100% gov-sourced; the consultancies are never quoted to a student. *(Per the 2026-06-16 addendum: the two GS factors already have a gov-sourced home — the GS panel — so only the 2 finance tips remain as optional future-guide material.)*
 
 ### Ledger disposition (only if you approve)
 Record the decision on the findings without changing the gov posture:
-- I.063/064/065/069 → `triage: stale` *(superseded by gov rows already shipped)* — or keep `needs-human-call` with a note pointing here. Recommend **stale**.
-- I.066/070 → keep `needs-human-call`, retag `triage_reason` to "additive GS factor — needs gov source, see 2026-06-16 packet" (future gov-research slice).
-- I.067/068 → keep `needs-human-call`, retag to "additive finance tip — future guide, gov-rewrite, see packet".
+- I.063/064/065/069 → `triage: stale` *(superseded by gov rows already shipped)*. **Applied 2026-06-15.**
+- I.066/070 → `triage: stale` *(repeat-of-gov via the GS panel, Direction 106 — verified current, see addendum)*. **Applied 2026-06-16** (was retagged needs-human-call on 2026-06-15, then corrected to stale after the GS-factor research).
+- I.067/068 → keep `needs-human-call`, retagged "additive finance tip — future guide, gov-rewrite, see packet". **Applied 2026-06-15.**
 
 No `value_status` change, no flip to `used`, no panel edit. (This packet does **not** make these edits — they wait on your "yes.")
 
@@ -67,7 +80,7 @@ No `value_status` change, no flip to `used`, no panel edit. (This packet does **
 ## Alternatives considered (and why not)
 
 - **Practitioner-context section** ("What practitioners say", citing AHC/Aussizz). Rejected — it is exactly the trust-posture change we're trying to avoid; it makes the consultancy link a feature rather than a leak.
-- **Gov-only rewrite now.** Reasonable but premature: the GS-factor gov research (Class C) isn't done, and doing it well is its own small slice, not a same-session add. Recommended as a *future* option, not now.
+- **Gov-only rewrite now.** Was deferred as premature; the 2026-06-16 GS-factor research then showed it's *moot* — the two GS factors are already gov-sourced and shipping in the GS panel, so there was nothing to rewrite.
 - **Wire everything as-is.** Rejected on both cross-cutting risks above.
 
 ---
