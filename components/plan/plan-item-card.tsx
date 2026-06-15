@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import type { PlanItemRow } from "@/lib/plan/types";
 import { completionFor } from "@/lib/plan/completion";
+import { sourcesFor } from "@/lib/plan/sources";
+import { SourceLine } from "@/components/results/source-line";
 import { ImpactPill } from "./impact-pill";
 import { track } from "@/lib/analytics/events";
 
@@ -133,6 +135,9 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
         )}
       </header>
       {item.body ? <p className="text-[15px] text-ink-soft">{item.body}</p> : null}
+      {sourcesFor(item.kind).map((src) => (
+        <SourceLine key={src.url} url={src.url} lastVerified={src.lastVerified} surface="plan" />
+      ))}
       <footer className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-[12px] text-ink-faint">
         {item.liftEstimate ? <span>&uarr; {item.liftEstimate}</span> : null}
         {item.timeEstimate ? <span>&#8987; {item.timeEstimate}</span> : null}

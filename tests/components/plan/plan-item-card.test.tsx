@@ -31,6 +31,22 @@ describe("PlanItemCard", () => {
     expect(screen.getByText(/High impact/i)).toBeInTheDocument();
   });
 
+  it("renders a source line under a figure-bearing item", () => {
+    render(<PlanItemCard item={{ ...item, kind: "upload-proof-of-funds" }} />);
+    expect(screen.getByRole("link", { name: /immi\.homeaffairs\.gov\.au/i })).toBeInTheDocument();
+    expect(screen.getByText(/verified 2026-06-07/i)).toBeInTheDocument();
+  });
+
+  it("renders no source line for an item with no sourced figure", () => {
+    render(<PlanItemCard item={item} />); // kind "k"
+    expect(screen.queryByText(/^verified /i)).toBeNull();
+  });
+
+  it("renders no source line for the seasoning recommendation (not a published figure)", () => {
+    render(<PlanItemCard item={{ ...item, kind: "season-funds-six-months" }} />);
+    expect(screen.queryByText(/^verified /i)).toBeNull();
+  });
+
   it("POSTs status=done on Done click", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

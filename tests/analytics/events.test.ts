@@ -63,7 +63,7 @@ describe("catalog payload guardrails (acceptance 2 + 4)", () => {
       "strong" | "possible" | "reach"
     >();
     expectTypeOf<AnalyticsEvents["source_link_clicked"]["surface"]>().toEqualTypeOf<
-      "factor-bars" | "refusal-recovery" | "cost-to-apply" | "checklist" | "matches" | "genuine-student" | "working-with-agents" | "policy-banner" | "preference-note"
+      "factor-bars" | "refusal-recovery" | "cost-to-apply" | "checklist" | "matches" | "genuine-student" | "working-with-agents" | "policy-banner" | "preference-note" | "plan"
     >();
     expectTypeOf<AnalyticsEvents["dashboard_cta_clicked"]["state"]>().toEqualTypeOf<
       "profile-incomplete" | "next" | "waiting" | "caught-up"
