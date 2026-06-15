@@ -24,6 +24,15 @@ describe("PolicyBanner", () => {
     expect(screen.getByText(/outside Australia/i)).toBeInTheDocument();
   });
 
+  it("links each headline figure to its DHA source with a verified date", () => {
+    render(<PolicyBanner />);
+    // Living-cost figure → the DHA capacity article; grant rate → the DHA program report.
+    expect(screen.getByRole("link", { name: /immi\.homeaffairs\.gov\.au/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /www\.homeaffairs\.gov\.au/i })).toBeInTheDocument();
+    // Both carry their last-verified date so the numbers don't read as magically authoritative.
+    expect(screen.getAllByText(/verified 2026-06-07/i).length).toBeGreaterThanOrEqual(2);
+  });
+
   it("renders the gov Document Checklist Tool pointer (F2-A a1, C.146)", () => {
     render(<PolicyBanner />);
     expect(
