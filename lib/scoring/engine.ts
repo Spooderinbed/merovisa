@@ -12,7 +12,11 @@ import { DIMENSION_WEIGHTS, CONFIG_VERSION } from "@/lib/data/scoring-config";
 // 6.0–6.4 is no longer penalised as a course-threshold shortfall.
 // v0.4.0: visa dimension penalises declared prior student-visa refusals
 // (lib/scoring/visa.ts) — one −15, multiple −35.
-const RULE_VERSION = "v0.4.0";
+// v0.5.0: academic dimension normalises the grade to a 0-100 percentage by
+// gradeSystem (lib/scoring/grade-normalize.ts) — CGPA systems (cgpa-4/10/5) are
+// now scored correctly instead of being read as a raw percentage (which floored
+// any CGPA grade to 0 and forced 'reach'). Percentage systems are unchanged.
+const RULE_VERSION = "v0.5.0";
 
 export function runAssessment(profile: StudentProfile): AssessmentResult {
   const academic = scoreAcademic(profile);
