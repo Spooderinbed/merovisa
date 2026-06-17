@@ -20,6 +20,7 @@ import { GatedTeasers } from "./gated-teasers";
 import { AccuracyMeter } from "./accuracy-meter";
 import { ConversionPaths } from "./conversion-paths";
 import { NextSteps } from "./next-steps";
+import { Disclosure } from "@/components/ui/disclosure";
 
 export function Results({
   payload,
@@ -59,22 +60,10 @@ export function Results({
       {destination === "not-sure" ? <NotSureFramingNotice /> : null}
       <VerdictCard verdict={payload.result.verdict} rulesVerified={payload.rulesVerified} />
       <FactorBars dimensions={payload.result.dimensions} />
-      {/* Honest corridor context behind the verdict — the same sourced figures
-          the matches page shows (grant rate as a cohort range, AL3, DHA floor). */}
-      <PolicyBanner />
-      {/* Trust-defense: the honest truth about refusal — why applications fail, sector
-          odds (HE emphasized, VET as contrast), recovery, and scams. Gov-sourced, not gated. */}
-      <RefusalRecovery />
-      {/* The Genuine Student test explained — what it is, the four questions, how officers
-          weigh it (Direction 106), post-study honesty, and English red flags. Gov-sourced,
-          collapsible, not gated; sits under the refusal panel that names GS as a main ground. */}
-      <GenuineStudent />
-      {/* Trust-defense triptych closes here: who to trust for help. Gov-sourced (OMARA/DHA +
-          the 2026 commission ban), collapsible, not gated. */}
-      <WorkingWithAgents />
-      {/* Sourced out-of-pocket application costs (visa + Nepal-side fees), each
-          figure one click from its origin. No engine input — informational. */}
-      <CostToApply />
+      {/* Core path reads first: verdict → factors → timing → matches → cost → next step.
+          The heavy government-reference panels follow, folded into a collapsed
+          "Know before you go" disclosure so a first-time anonymous student is not met
+          by a wall of reference cards. No content is removed — it is all trust-defense. */}
       <IntakeTimingCard intake={payload.intake} />
       <PreferenceNote note={payload.preferenceNote} />
       <UniversityMatches
@@ -83,8 +72,33 @@ export function Results({
         onUnlock={scrollToConversion}
         unlocked={owned}
       />
+      {/* Sourced out-of-pocket application costs (visa + Nepal-side fees), each
+          figure one click from its origin. No engine input — informational. Stays
+          top-level: cost-to-apply is part of the core "what's next" path. */}
+      <CostToApply />
       <GatedTeasers onUnlock={scrollToConversion} unlocked={owned} />
       <AccuracyMeter accuracy={payload.accuracy} />
+      {/* Government reference, collapsed by default. Holds the corridor policy context
+          plus the trust-defense triptych — every figure still gov-sourced and linked,
+          nothing gated, nothing removed; just tucked behind one accessible toggle. */}
+      <Disclosure
+        title="Know before you go"
+        subtitle="Corridor policy, refusal risk, credibility, and choosing help — straight from government sources."
+      >
+        {/* Honest corridor context behind the verdict — the same sourced figures
+            the matches page shows (grant rate as a cohort range, AL3, DHA floor). */}
+        <PolicyBanner />
+        {/* Trust-defense: the honest truth about refusal — why applications fail, sector
+            odds (HE emphasized, VET as contrast), recovery, and scams. Gov-sourced, not gated. */}
+        <RefusalRecovery />
+        {/* The Genuine Student test explained — what it is, the four questions, how officers
+            weigh it (Direction 106), post-study honesty, and English red flags. Gov-sourced,
+            not gated; sits under the refusal panel that names GS as a main ground. */}
+        <GenuineStudent />
+        {/* Trust-defense triptych closes here: who to trust for help. Gov-sourced (OMARA/DHA +
+            the 2026 commission ban), not gated. */}
+        <WorkingWithAgents />
+      </Disclosure>
       {owned ? (
         <NextSteps />
       ) : (
