@@ -5,7 +5,6 @@ import { listDocumentsByKinds } from "@/lib/documents/repo";
 import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSection } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
-import { reScoreAssessment } from "@/lib/assessments/re-score";
 import type { DocumentKind } from "@/lib/documents/types";
 
 export async function DELETE(
@@ -53,11 +52,6 @@ export async function DELETE(
         }
       } catch (err) {
         console.error("[documents/delete] patchProfileSection failed", err);
-      }
-      try {
-        await reScoreAssessment(admin, userId);
-      } catch (err) {
-        console.error("[documents/delete] reScoreAssessment failed", err);
       }
       try {
         await invalidatePlan(admin, userId);
