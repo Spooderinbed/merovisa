@@ -96,4 +96,19 @@ describe("ProgramCard", () => {
     render(<ProgramCard match={{ ...m, preferenceChip: { text: "Tier-1 ranked" } }} isShortlisted={false} />);
     expect(screen.getByText("Tier-1 ranked")).toBeInTheDocument();
   });
+
+  it("surfaces the program notes as a 'Good to know' caveat", () => {
+    const withNotes: MatchResult = {
+      ...m,
+      program: { ...m.program, notes: "AHPRA registration required" },
+    };
+    render(<ProgramCard match={withNotes} isShortlisted={false} />);
+    expect(screen.getByText(/Good to know/i)).toBeInTheDocument();
+    expect(screen.getByText(/AHPRA registration required/i)).toBeInTheDocument();
+  });
+
+  it("renders no caveat when the program has no notes", () => {
+    render(<ProgramCard match={m} isShortlisted={false} />);
+    expect(screen.queryByText(/Good to know/i)).not.toBeInTheDocument();
+  });
 });
