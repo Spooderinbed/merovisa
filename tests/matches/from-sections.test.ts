@@ -36,5 +36,29 @@ describe("sectionsToMatchInputs", () => {
     expect(result.userEnglishBand).toBeNull();
     expect(result.userBudgetAud).toBeNull();
     expect(result.userField).toBeNull();
+    expect(result.userTargetLevel).toBeNull();
+  });
+
+  test("derives target level from current academic degree (bachelors -> masters)", () => {
+    const result = sectionsToMatchInputs({ academic: { degree: "bachelors" } }, policy);
+    expect(result.userTargetLevel).toBe("masters");
+  });
+
+  test("derives target level from current academic degree (higher-secondary -> bachelors)", () => {
+    const result = sectionsToMatchInputs({ academic: { degree: "higher-secondary" } }, policy);
+    expect(result.userTargetLevel).toBe("bachelors");
+  });
+
+  test("derives target level for masters-holder (masters -> masters, no doctorate in catalogue)", () => {
+    const result = sectionsToMatchInputs({ academic: { degree: "masters" } }, policy);
+    expect(result.userTargetLevel).toBe("masters");
+  });
+
+  test("explicit intended-study.level overrides the degree-based mapping", () => {
+    const result = sectionsToMatchInputs(
+      { academic: { degree: "bachelors" }, "intended-study": { level: "bachelors", field: "nursing" } },
+      policy,
+    );
+    expect(result.userTargetLevel).toBe("bachelors");
   });
 });

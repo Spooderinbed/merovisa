@@ -1,4 +1,4 @@
-import type { Program, University } from "@/lib/programs/types";
+import type { Program, University, ProgramLevel } from "@/lib/programs/types";
 
 export type MatchVerdict = "strong" | "possible" | "reach";
 
@@ -48,6 +48,13 @@ export interface MatchInputs {
   userBudgetAud: number | null;
   /** Intended study field — from profile.intended-study.field */
   userField: string | null;
+  /**
+   * Target program level the user is eligible to apply for — from
+   * profile.intended-study.level, else mapped from current academic.degree
+   * (higher-secondary → bachelors, bachelors/masters → masters). Null when no
+   * academic data is available, in which case the level filter is skipped.
+   */
+  userTargetLevel: ProgramLevel | null;
   /** Policy flags */
   policy: { nepalAssessmentLevel: "L2" | "L3" };
 }
