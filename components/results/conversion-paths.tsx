@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ASSESSMENT_TTL_DAYS } from "@/lib/assessments/expiry";
+import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
 function expiryDate(now: Date = new Date()): string {
   const d = new Date(now.getTime() + ASSESSMENT_TTL_DAYS * 24 * 60 * 60 * 1000);
@@ -10,29 +10,6 @@ function expiryDate(now: Date = new Date()): string {
 }
 
 export function ConversionPaths({ assessmentId }: { assessmentId: string | null }) {
-  const continueWithGoogle = async () => {
-    if (!assessmentId) return;
-    // Fetch a signed claim token before redirecting to OAuth.
-    let claimToken: string | null = null;
-    try {
-      const res = await fetch("/api/results/sign-claim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assessmentId }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { token?: string };
-        claimToken = data.token ?? null;
-      }
-    } catch {
-      // If signing fails, proceed without claim — user can claim later.
-    }
-    const supabase = createSupabaseBrowserClient();
-    const params = claimToken ? `?claim=${encodeURIComponent(claimToken)}` : "";
-    const redirectTo = `${window.location.origin}/auth/callback${params}`;
-    await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-  };
-
   // Creating a Google account is the only way to keep an anonymous assessment —
   // there is no email-delivery or anonymous-retrieval path, so we don't imply one.
   return (
@@ -44,7 +21,7 @@ export function ConversionPaths({ assessmentId }: { assessmentId: string | null 
           get updates as visa rules change.
         </p>
         <div className="mt-4">
-          <Button size="lg" onClick={continueWithGoogle} disabled={!assessmentId}>
+          <Button size="lg" onClick={() => void startClaimOAuth(assessmentId)} disabled={!assessmentId}>
             Continue with Google
           </Button>
         </div>

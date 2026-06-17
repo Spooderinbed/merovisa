@@ -19,6 +19,7 @@ import { UniversityMatches } from "./university-matches";
 import { GatedTeasers } from "./gated-teasers";
 import { AccuracyMeter } from "./accuracy-meter";
 import { ConversionPaths } from "./conversion-paths";
+import { ConversionPrompt } from "./conversion-prompt";
 import { NextSteps } from "./next-steps";
 
 export function Results({
@@ -59,6 +60,10 @@ export function Results({
       {destination === "not-sure" ? <NotSureFramingNotice /> : null}
       <VerdictCard verdict={payload.result.verdict} rulesVerified={payload.rulesVerified} />
       <FactorBars dimensions={payload.result.dimensions} />
+      {/* Capture the conversion moment while the verdict is still on screen —
+          anonymous only; signed-in users already own the assessment. The full
+          ConversionPaths card still sits at the bottom for those who scroll. */}
+      {owned ? null : <ConversionPrompt assessmentId={assessmentId} />}
       {/* Honest corridor context behind the verdict — the same sourced figures
           the matches page shows (grant rate as a cohort range, AL3, DHA floor). */}
       <PolicyBanner />
@@ -80,7 +85,7 @@ export function Results({
       <UniversityMatches
         matches={payload.matches}
         total={payload.matchedCount}
-        onUnlock={scrollToConversion}
+        assessmentId={assessmentId}
         unlocked={owned}
       />
       <GatedTeasers onUnlock={scrollToConversion} unlocked={owned} />

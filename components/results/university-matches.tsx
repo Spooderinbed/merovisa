@@ -1,8 +1,11 @@
+"use client";
+
 import type { UniversityMatch } from "@/lib/matching/universities";
 import { Button } from "@/components/ui/button";
 import { SourceLine } from "@/components/results/source-line";
 import { cn, formatUsd } from "@/lib/utils";
 import { track } from "@/lib/analytics/events";
+import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
 const LEVEL_CLS = {
   strong: "bg-strong-tint text-strong",
@@ -45,16 +48,24 @@ function MatchCard({ m }: { m: UniversityMatch }) {
 export function UniversityMatches({
   matches,
   total,
-  onUnlock,
+  assessmentId = null,
   unlocked = false,
 }: {
   matches: UniversityMatch[];
   total: number;
-  onUnlock: () => void;
+  assessmentId?: string | null;
   unlocked?: boolean;
 }) {
   const free = matches.slice(0, 3);
   const locked = matches.slice(3);
+
+  // Every anonymous unlock starts Google OAuth directly (via the shared
+  // sign-claim → signInWithOAuth flow), instead of scrolling to a separate CTA.
+  const unlock = () => {
+    track("gate_cta_clicked");
+    void startClaimOAuth(assessmentId);
+  };
+
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
@@ -70,6 +81,7 @@ export function UniversityMatches({
             <MatchCard key={m.university.id} m={m} />
           ))}
           {locked.length > 0 ? (
+            // >3 matches: peek-through blur over the remaining rows, unlock overlaid.
             <div className="relative overflow-hidden rounded-md border border-line bg-surface">
               <div className="flex flex-col gap-3 p-4 blur-[6px] select-none" aria-hidden>
                 {locked.slice(0, 3).map((m) => (
@@ -80,17 +92,19 @@ export function UniversityMatches({
                 ))}
               </div>
               <div className="absolute inset-0 grid place-items-center bg-surface/60">
-                <Button
-                  onClick={() => {
-                    track("gate_cta_clicked");
-                    onUnlock();
-                  }}
-                >
+                <Button onClick={unlock} disabled={!assessmentId}>
                   Unlock all {total} matches →
                 </Button>
               </div>
             </div>
-          ) : null}
+          ) : (
+            // ≤3 matches: nothing to blur, but anonymous users still need a way in.
+            <div className="rounded-md border border-line bg-surface p-4 text-center">
+              <Button onClick={unlock} disabled={!assessmentId}>
+                Sign in to save your matches →
+              </Button>
+            </div>
+          )}
         </>
       )}
     </section>
