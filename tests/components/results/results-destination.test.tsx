@@ -31,7 +31,7 @@ describe("Results destination gate", () => {
       screen.getByRole("link", { name: /See where you stand for Australia/ }),
     ).toHaveAttribute("href", "/assess?new=1");
     // No silent fallback: none of the Australia readout renders.
-    expect(screen.queryByText(/CURRENT POLICY/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Intake timing/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/University matches/i)).not.toBeInTheDocument();
   });
 
@@ -40,13 +40,15 @@ describe("Results destination gate", () => {
     expect(
       screen.getByText(/Australia is the only corridor we fully cover today/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/CURRENT POLICY/i)).toBeInTheDocument();
+    // The core assessment readout is present (intake is a top-level core panel).
+    expect(screen.getByText(/Intake timing/i)).toBeInTheDocument();
   });
 
   it("australia: renders the assessment with no destination notice", () => {
     render(<Results payload={payload} destination="australia" />);
     expect(screen.queryByText(/We don't cover/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Australia is the only corridor/)).not.toBeInTheDocument();
-    expect(screen.getByText(/CURRENT POLICY/i)).toBeInTheDocument();
+    // The core assessment readout is present (intake is a top-level core panel).
+    expect(screen.getByText(/Intake timing/i)).toBeInTheDocument();
   });
 });
