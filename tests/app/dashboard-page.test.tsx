@@ -31,9 +31,7 @@ vi.mock("@/components/dashboard/prompt-card", () => ({
 vi.mock("@/components/dashboard/greeting", () => ({
   Greeting: ({ name }: { name: string | null }) => <div data-testid="greet">{name ?? "anon"}</div>,
 }));
-vi.mock("@/components/dashboard/journey-timeline", () => ({ JourneyTimeline: () => <div data-testid="jt" /> }));
 vi.mock("@/components/dashboard/stats-row",       () => ({ StatsRow:        () => <div data-testid="sr" /> }));
-vi.mock("@/components/dashboard/recent-updates",  () => ({ RecentUpdates:   () => <div data-testid="ru" /> }));
 
 import DashboardPage from "@/app/(app)/dashboard/page";
 
@@ -63,7 +61,7 @@ describe("/dashboard page", () => {
     startedAt: null,
   };
 
-  it("renders all five sections for a signed-in user", async () => {
+  it("renders the kept sections for a signed-in user", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
     getPrimaryAssessmentForUser.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
@@ -78,9 +76,36 @@ describe("/dashboard page", () => {
     expect(screen.getByTestId("greet")).toHaveTextContent("Aarav Sharma");
     expect(screen.getByTestId("snap")).toHaveTextContent("has-snap");
     expect(screen.getByTestId("prompt")).toBeInTheDocument();
-    expect(screen.getByTestId("jt")).toBeInTheDocument();
     expect(screen.getByTestId("sr")).toBeInTheDocument();
-    expect(screen.getByTestId("ru")).toBeInTheDocument();
+  });
+
+  it("does not render the fake 'Your journey' tracker (no per-user stage data backs it)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
+    getPrimaryAssessmentForUser.mockResolvedValue({
+      result: { result: { verdict: "strong", dimensions: {} } },
+      destination_id: "australia",
+    });
+    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listShortlistForUser.mockResolvedValue([]);
+    listDocumentsForUser.mockResolvedValue([]);
+    const ui = await DashboardPage();
+    render(ui);
+    expect(screen.queryByText(/Your journey/i)).not.toBeInTheDocument();
+  });
+
+  it("does not render the always-empty 'Recent updates' panel (no source yet)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
+    getPrimaryAssessmentForUser.mockResolvedValue({
+      result: { result: { verdict: "strong", dimensions: {} } },
+      destination_id: "australia",
+    });
+    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listShortlistForUser.mockResolvedValue([]);
+    listDocumentsForUser.mockResolvedValue([]);
+    const ui = await DashboardPage();
+    render(ui);
+    expect(screen.queryByText(/Recent updates/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No updates yet/i)).not.toBeInTheDocument();
   });
 
   it("renders the empty snapshot when user has no primary assessment", async () => {
