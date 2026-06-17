@@ -50,3 +50,6 @@ coverage/
 
 # Claude agent worktrees (full repo copies)
 .claude/worktrees/
+
+# context-budget hook session state
+.claude/.context-budget-state.json
