@@ -2,6 +2,7 @@ import type { MatchInputs } from "./types";
 import type { ProfileSections } from "@/lib/profiles/sections";
 import type { EducationLevel } from "@/lib/scoring/types";
 import type { ProgramLevel } from "@/lib/programs/types";
+import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
 
 /**
  * Maps a student's *current* education level to the program level they
@@ -33,19 +34,31 @@ export function sectionsToMatchInputs(
   policy: { nepalAssessmentLevel: "L2" | "L3" },
 ): MatchInputs {
   const english = sections.english;
+  const test = english?.test;
+  const isIelts = test === undefined || test === "ielts";
+
+  // The program thresholds are IELTS bands, so the user's score is converted to its
+  // IELTS equivalent before comparison (undefined/IELTS test ⇒ unchanged).
+  const overall =
+    english?.overall != null ? toIeltsEquivalent(english.overall, test) : null;
+
+  // Per-subskill scores are only IELTS bands for an IELTS test. For PTE/TOEFL the
+  // raw sub-scores are not IELTS bands, so the band proxy falls back to the
+  // converted overall rather than mis-reading a raw PTE 50 as an IELTS 50.
   const hasBands =
     english?.listening != null &&
     english?.reading != null &&
     english?.writing != null &&
     english?.speaking != null;
 
-  const minBand = hasBands
-    ? Math.min(english!.listening!, english!.reading!, english!.writing!, english!.speaking!)
-    : (english?.overall ?? null);
+  const minBand =
+    isIelts && hasBands
+      ? Math.min(english!.listening!, english!.reading!, english!.writing!, english!.speaking!)
+      : overall;
 
   return {
     userGradePercent: sections.academic?.gradePercent ?? null,
-    userEnglishOverall: english?.overall ?? null,
+    userEnglishOverall: overall,
     userEnglishBand: minBand != null && minBand > 0 ? minBand : null,
     userBudgetAud: budgetToAud(sections.finance?.total ?? null, sections.finance?.currency ?? null),
     userField: sections["intended-study"]?.field ?? null,

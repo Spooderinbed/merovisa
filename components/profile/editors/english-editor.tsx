@@ -20,6 +20,14 @@ const TESTS = [
   { value: "toefl", label: "TOEFL" },
 ];
 
+// Overall-score scale per test (the score is stored in the test's own scale and
+// converted to an IELTS band server-side). Defaults to IELTS when no test is set.
+const OVERALL_SCALE: Record<string, { max: number; step: number }> = {
+  ielts: { max: 9, step: 0.5 },
+  pte: { max: 90, step: 1 },
+  toefl: { max: 120, step: 1 },
+};
+
 export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
   const [test, setTest] = useState<string>(initial.test ?? "");
   const [overall, setOverall] = useState<string>(initial.overall?.toString() ?? "");
@@ -28,6 +36,7 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
   const [writing, setWriting] = useState<string>(initial.writing?.toString() ?? "");
   const [speaking, setSpeaking] = useState<string>(initial.speaking?.toString() ?? "");
   const { status, save } = useSectionSave("english");
+  const overallScale = OVERALL_SCALE[test] ?? OVERALL_SCALE.ielts!;
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +64,7 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="ee-overall" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Overall score</label>
-        <input id="ee-overall" type="number" min={0} max={9} step={0.5} value={overall} onChange={(e) => setOverall(e.target.value)}
+        <input id="ee-overall" type="number" min={0} max={overallScale.max} step={overallScale.step} value={overall} onChange={(e) => setOverall(e.target.value)}
           className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
       </div>
       <div className="grid grid-cols-2 gap-3">

@@ -48,7 +48,12 @@ describe("ProfileSectionPatchBodySchema — other sections", () => {
     [{ section: "intended-study", patch: { level: "phd" } }, false],
     [{ section: "intended-study", patch: { field: "cs" } }, false],
     [{ section: "english", patch: { test: "ielts", overall: 7 } }, true],
-    [{ section: "english", patch: { overall: 10 } }, false],
+    // `overall` is the score in the chosen test's own scale (PTE ≤90, TOEFL ≤120),
+    // so a 10 is now valid; the envelope cap is the widest scale (120).
+    [{ section: "english", patch: { test: "pte", overall: 58 } }, true],
+    [{ section: "english", patch: { overall: 10 } }, true],
+    [{ section: "english", patch: { overall: 120 } }, true],
+    [{ section: "english", patch: { overall: 121 } }, false],
     [{ section: "gap", patch: { years: 2, reasons: ["worked"] } }, true],
     [{ section: "gap", patch: { years: -1 } }, false],
     [{ section: "work", patch: { title: "Junior Dev", years: 1 } }, true],
