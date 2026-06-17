@@ -1,6 +1,6 @@
 "use client";
 
-import type { EnglishStatus } from "@/lib/scoring/types";
+import type { EnglishStatus, EnglishTest } from "@/lib/scoring/types";
 import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { StepShell } from "@/components/wizard/step-shell";
@@ -12,13 +12,40 @@ const STATUSES = [
   { value: "taken" as EnglishStatus, label: "Taken" },
 ];
 
+const TESTS = [
+  { value: "ielts" as EnglishTest, label: "IELTS" },
+  { value: "pte" as EnglishTest, label: "PTE" },
+  { value: "toefl" as EnglishTest, label: "TOEFL" },
+];
+
+// Per-test score control config + the default score each test starts at (its
+// IELTS-6.5 equivalent), used when "Taken" is chosen or the test is switched.
+const TEST_SCALE: Record<EnglishTest, { min: number; max: number; step: number; default: number; label: string }> = {
+  ielts: { min: 4, max: 9, step: 0.5, default: 6.5, label: "IELTS band" },
+  pte: { min: 10, max: 90, step: 1, default: 58, label: "PTE score" },
+  toefl: { min: 0, max: 120, step: 1, default: 79, label: "TOEFL iBT score" },
+};
+
 export function EnglishStep({ profile, setField, callouts }: StepProps) {
   const status = profile.englishStatus;
-  const score = profile.englishScore ?? 6.5;
+  const test: EnglishTest = profile.englishTest ?? "ielts";
+  const scale = TEST_SCALE[test];
+  const score = profile.englishScore ?? scale.default;
+
   const onStatus = (next: EnglishStatus) => {
-    if (next === "taken") setField({ englishStatus: "taken", englishScore: profile.englishScore ?? 6.5 });
-    else setField({ englishStatus: next, englishScore: undefined });
+    if (next === "taken") {
+      setField({ englishStatus: "taken", englishScore: profile.englishScore ?? scale.default });
+    } else {
+      setField({ englishStatus: next, englishScore: undefined });
+    }
   };
+
+  const onTest = (next: EnglishTest) => {
+    // Reset the score to the new test's default so a carried-over value can't sit
+    // outside the new scale (e.g. an IELTS 6.5 left in a PTE field).
+    setField({ englishTest: next, englishScore: TEST_SCALE[next].default });
+  };
+
   return (
     <StepShell
       eyebrow="Step 6"
@@ -28,19 +55,27 @@ export function EnglishStep({ profile, setField, callouts }: StepProps) {
     >
       <Segmented ariaLabel="English status" options={STATUSES} value={status} onChange={onStatus} />
       {status === "taken" ? (
-        <div className="mt-2 flex flex-col gap-2 rounded-md border border-line bg-surface p-4">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[15px] text-ink-soft">IELTS band</span>
-            <span className="font-mono text-[15px] text-ink">{score.toFixed(1)}</span>
+        <div className="mt-2 flex flex-col gap-3 rounded-md border border-line bg-surface p-4">
+          <div className="flex flex-col gap-2">
+            <span className="text-[13px] text-ink-soft">Which test?</span>
+            <Segmented ariaLabel="English test" options={TESTS} value={test} onChange={onTest} />
           </div>
-          <Slider
-            ariaLabel="IELTS band"
-            min={4}
-            max={9}
-            step={0.5}
-            value={score}
-            onChange={(v) => setField({ englishScore: v })}
-          />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[15px] text-ink-soft">{scale.label}</span>
+              <span className="font-mono text-[15px] text-ink">
+                {test === "ielts" ? score.toFixed(1) : score}
+              </span>
+            </div>
+            <Slider
+              ariaLabel={scale.label}
+              min={scale.min}
+              max={scale.max}
+              step={scale.step}
+              value={score}
+              onChange={(v) => setField({ englishScore: v })}
+            />
+          </div>
         </div>
       ) : null}
     </StepShell>

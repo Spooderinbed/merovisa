@@ -1,5 +1,6 @@
 import type { DimensionScore, StudentProfile } from "./types";
 import { computeGapYears } from "./gap";
+import { toIeltsEquivalent } from "./english-equivalent";
 import {
   GAP_REASON_WEIGHT,
   ENGLISH_THRESHOLD_BY_DEST,
@@ -44,11 +45,17 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
   // *course* threshold (6.5): a visa-valid score in [floor, threshold) is neither
   // rewarded nor penalised; above the threshold earns the per-band bonus, and only
   // below the visa floor is a real risk (the same threshold-anchored curve as before).
+  // Convert the raw test score to its IELTS-band equivalent so PTE/TOEFL are
+  // compared against the IELTS-denominated DHA thresholds (undefined test ⇒ IELTS).
   const threshold = ENGLISH_THRESHOLD_BY_DEST[profile.destination];
   const visaFloor = ENGLISH_VISA_FLOOR_BY_DEST[profile.destination];
-  if (profile.englishStatus === "taken" && profile.englishScore !== undefined) {
-    if (profile.englishScore >= threshold || profile.englishScore < visaFloor) {
-      score += (profile.englishScore - threshold) * ENGLISH_BAND_DELTA_POINTS;
+  const ieltsScore =
+    profile.englishScore !== undefined
+      ? toIeltsEquivalent(profile.englishScore, profile.englishTest)
+      : undefined;
+  if (profile.englishStatus === "taken" && ieltsScore !== undefined) {
+    if (ieltsScore >= threshold || ieltsScore < visaFloor) {
+      score += (ieltsScore - threshold) * ENGLISH_BAND_DELTA_POINTS;
     }
     // [visaFloor, threshold): meets the visa floor → no adjustment.
   } else if (profile.englishStatus === "not-taken") {
@@ -94,18 +101,18 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
     });
   }
 
-  if (profile.englishStatus === "taken" && profile.englishScore !== undefined) {
+  if (profile.englishStatus === "taken" && ieltsScore !== undefined) {
     const floorProv = CONFIG_PROVENANCE.ENGLISH_VISA_FLOOR_BY_DEST;
     const floorUrl = floorProv?.source;
     const floorSource = floorUrl ? { url: floorUrl, lastVerified: floorProv?.lastVerified } : undefined;
-    const ielts = `IELTS ${profile.englishScore.toFixed(1)}`;
-    if (profile.englishScore >= threshold) {
+    const ielts = `IELTS ${ieltsScore.toFixed(1)}`;
+    if (ieltsScore >= threshold) {
       factors.push({
         label: ielts,
         influence: "positive",
         detail: `Meets the ${threshold} threshold for ${profile.destination}.`,
       });
-    } else if (profile.englishScore >= visaFloor) {
+    } else if (ieltsScore >= visaFloor) {
       factors.push({
         label: ielts,
         influence: "neutral",

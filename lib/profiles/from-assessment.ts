@@ -47,7 +47,8 @@ export function profileSectionsFromAssessment(
 
   // english
   const score = get<number>("englishScore");
-  if (score !== undefined) out.english = { test: "ielts", overall: score };
+  const englishTest = get<"ielts" | "pte" | "toefl">("englishTest");
+  if (score !== undefined) out.english = { test: englishTest ?? "ielts", overall: score };
 
   // gap
   const gapReasons = get<GapReason[]>("gapReasons");

@@ -48,6 +48,7 @@ export function sectionsToStudentProfile(sections: ProfileSections): StudentProf
     graduationYear,
     gapReasons: gap?.reasons ?? [],
     englishStatus: hasScore ? "taken" : hasTest ? "booked" : "not-taken",
+    englishTest: english?.test,
     englishScore: english?.overall,
     budget: finance?.total ?? 0,
     budgetCurrency: finance?.currency ?? "NPR",

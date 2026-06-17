@@ -35,7 +35,10 @@ const IntendedStudyPatch = z.object({
 });
 const EnglishPatch = z.object({
   test: z.enum(["ielts","pte","toefl"]).optional(),
-  overall: z.number().min(0).max(9).optional(),
+  // `overall` is the score in the chosen test's own scale (IELTS ≤9, PTE ≤90,
+  // TOEFL ≤120); the upper bound is the widest scale. Per-subskill bands stay on
+  // the IELTS 0–9 scale (a PTE/TOEFL applicant fills overall only).
+  overall: z.number().min(0).max(120).optional(),
   listening: z.number().min(0).max(9).optional(),
   reading: z.number().min(0).max(9).optional(),
   writing: z.number().min(0).max(9).optional(),
