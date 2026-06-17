@@ -1,5 +1,6 @@
 import type { DimensionScore, StudentProfile, FieldOfStudy } from "./types";
 import { FIELD_COMPETITIVENESS, LEVEL_BONUS } from "@/lib/data/scoring-config";
+import { normalizeGradeToPercentage } from "./grade-normalize";
 
 const FIELD_LABEL: Record<FieldOfStudy, string> = {
   "computer-science": "Computer Science",
@@ -18,9 +19,10 @@ const FIELD_LABEL: Record<FieldOfStudy, string> = {
 
 export function scoreAcademic(profile: StudentProfile): DimensionScore {
   const fieldDifficulty = FIELD_COMPETITIVENESS[profile.fieldOfStudy];
-  // Normalised grade — percentage-nepal is already 0-100. CGPA conversion is handled
-  // upstream when we expand source countries (out of scope for Plan 1).
-  const normalisedGrade = profile.grade;
+  // Normalise the grade to a 0-100 percentage scale keyed by gradeSystem so every
+  // system (percentage / CGPA) is comparable to the percentage-based baseline.
+  // Percentage systems pass through; CGPA systems map via grade/scaleMax*100.
+  const normalisedGrade = normalizeGradeToPercentage(profile.grade, profile.gradeSystem);
   // Higher field difficulty raises the typical admission threshold.
   const baseline = 60 + (fieldDifficulty - 0.7) * 40;
   const delta = normalisedGrade - baseline;
@@ -31,7 +33,7 @@ export function scoreAcademic(profile: StudentProfile): DimensionScore {
 
   if (normalisedGrade >= baseline + 8) {
     factors.push({
-      label: `Strong grade (${normalisedGrade}%)`,
+      label: `Strong grade (${Math.round(normalisedGrade)}%)`,
       influence: "positive",
       detail: `Above the typical threshold for ${FIELD_LABEL[profile.fieldOfStudy]}.`,
     });
