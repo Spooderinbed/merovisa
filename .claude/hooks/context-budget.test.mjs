@@ -57,6 +57,10 @@ test('occupancyFromLines: sums input + cache tokens', () => {
 test('occupancyFromLines: no usage anywhere => null', () => {
   assert.equal(occupancyFromLines(['{"type":"user"}', 'not json', '']), null);
 });
+test('occupancyFromLines: reads top-level usage (no message wrapper)', () => {
+  const line = JSON.stringify({ usage: { input_tokens: 70_000, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } });
+  assert.equal(occupancyFromLines([line]), 70_000);
+});
 
 // --- pure: shouldEmit (debounce) ---
 test('shouldEmit: SAFE never emits', () => {
@@ -134,5 +138,35 @@ test('integration: missing transcript path => exit 0, no output', () => {
   const res = runHook({ session_id: 's1', cwd: dir }, dir);
   assert.equal(res.status, 0);
   assert.equal(res.stdout.trim(), '');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('integration: a new session re-emits after SOFT (debounce resets)', () => {
+  const dir = tempProject();
+  const transcript = path.join(dir, 't.jsonl');
+  writeFileSync(transcript, usageLine(80_000) + '\n');
+  const first = runHook({ transcript_path: transcript, session_id: 'sA', cwd: dir }, dir);
+  assert.notEqual(first.stdout.trim(), '');
+  const newSession = runHook({ transcript_path: transcript, session_id: 'sB', cwd: dir }, dir);
+  assert.notEqual(newSession.stdout.trim(), ''); // different session => reset => emits
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('integration: invalid stdin => exit 0, no output', () => {
+  const res = spawnSync(process.execPath, [SCRIPT], { input: 'not json at all', encoding: 'utf8' });
+  assert.equal(res.status, 0);
+  assert.equal(res.stdout.trim(), '');
+});
+
+test('integration: large transcript still detects latest usage (tail + fallback)', () => {
+  const dir = tempProject();
+  const transcript = path.join(dir, 't.jsonl');
+  // Earlier usage line, then a very large trailing non-JSON line (> tail window)
+  // so detection must fall back to a full read.
+  writeFileSync(transcript, usageLine(130_000) + '\n' + 'x'.repeat(300_000) + '\n');
+  const res = runHook({ transcript_path: transcript, session_id: 'big', cwd: dir }, dir);
+  assert.equal(res.status, 0);
+  const out = JSON.parse(res.stdout);
+  assert.match(out.hookSpecificOutput.additionalContext, /\/compact/);
   rmSync(dir, { recursive: true, force: true });
 });

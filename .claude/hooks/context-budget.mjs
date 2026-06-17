@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // context-budget hook — nudges toward a focused /compact before context rot.
 // Registered as a Claude Code UserPromptSubmit hook. Policy: .claude/skills/context-budget/SKILL.md
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, openSync, fstatSync, readSync, closeSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -29,7 +29,7 @@ export function occupancyFromLines(lines) {
     try { obj = JSON.parse(line); } catch { continue; }
     const usage = obj?.message?.usage ?? obj?.usage;
     if (usage && typeof usage.input_tokens === 'number') {
-      return (usage.input_tokens || 0)
+      return usage.input_tokens
         + (usage.cache_read_input_tokens || 0)
         + (usage.cache_creation_input_tokens || 0);
     }
@@ -38,6 +38,7 @@ export function occupancyFromLines(lines) {
 }
 
 export function buildReminder(tier, tokens, budget = EFFECTIVE_BUDGET) {
+  if (tier === TIER.SAFE) return '';
   const pct = Math.round((tokens / budget) * 100);
   const k = Math.round(tokens / 1000);
   if (tier === TIER.HARD) {
@@ -55,6 +56,22 @@ export function shouldEmit(tier, lastTier) {
   if (tier === TIER.SAFE) return false;
   if (tier === TIER.HARD) return true;
   return tier > lastTier;
+}
+
+// Read up to the last `maxBytes` of a file as lines, so we don't load huge
+// transcripts in full on every prompt. `partial` is true when the file was
+// larger than the window (the first line may then be truncated).
+function readLinesTail(filePath, maxBytes = 262144) {
+  const fd = openSync(filePath, 'r');
+  try {
+    const size = fstatSync(fd).size;
+    const start = Math.max(0, size - maxBytes);
+    const buf = Buffer.alloc(size - start);
+    if (buf.length) readSync(fd, buf, 0, buf.length, start);
+    return { lines: buf.toString('utf8').split('\n'), partial: start > 0 };
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function readStdin() {
@@ -80,11 +97,16 @@ export function main() {
   const transcriptPath = payload?.transcript_path;
   if (!transcriptPath) return;
 
-  let lines;
-  try { lines = readFileSync(transcriptPath, 'utf8').split('\n'); }
-  catch { return; }
-
-  const tokens = occupancyFromLines(lines);
+  let tokens;
+  try {
+    const tail = readLinesTail(transcriptPath);
+    tokens = occupancyFromLines(tail.lines);
+    // If the latest usage sat beyond the tail window (e.g. a very large final
+    // turn), fall back to a full read so detection stays correct.
+    if (tokens == null && tail.partial) {
+      tokens = occupancyFromLines(readFileSync(transcriptPath, 'utf8').split('\n'));
+    }
+  } catch { return; }
   if (tokens == null) return;
 
   const tier = resolveTier(tokens);
