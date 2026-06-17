@@ -52,4 +52,18 @@ describe("Results", () => {
     expect(screen.getByText(/Refusal risk & recovery/i)).toBeInTheDocument();
     expect(screen.getByText(/it is not your personal probability/i)).toBeInTheDocument();
   });
+
+  it("promotes a compact OAuth CTA near the verdict in anonymous mode", () => {
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    render(<Results payload={payload} destination="australia" assessmentId="11815637-f603-4821-8dd0-d9e52560c4f6" />);
+    // Both the compact prompt and the bottom card offer Google sign-in for anonymous users.
+    expect(screen.getAllByRole("button", { name: /Continue with Google/i }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("hides the conversion CTAs for signed-in (owned) results", () => {
+    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    render(<Results payload={payload} destination="australia" mode="owned" />);
+    expect(screen.queryByRole("button", { name: /Continue with Google/i })).toBeNull();
+    expect(screen.queryByText(/expires in 3 days/i)).toBeNull();
+  });
 });
