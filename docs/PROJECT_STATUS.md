@@ -1,5 +1,7 @@
 # MyVisa — project status & phase log
 
+> **Current work state now lives on the kanban board** (`docs/kanban/` — open `board.html`, read `board.md`, or ask Claude to "show me the board"). This file remains the **phase log / history**: what works, known issues, decisions. For "what's being worked on right now," see the board.
+
 **Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist now shipped too, 2026-06-08) · **signed-in flows manually smoked green + prod build verified 2026-06-08**
 **Tests:** 749 passing across 162 test files
 **Typecheck:** clean
