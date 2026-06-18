@@ -61,4 +61,14 @@ describe("patchProfileSection", () => {
       "patchProfileSection update failed: db error",
     );
   });
+
+  it("throws when the new-profile upsert fallback fails to write", async () => {
+    // data:null everywhere → getProfile finds no row, the UPDATE matches 0 rows,
+    // and the upsert fallback returns null (no id). A genuinely failed first-ever
+    // save must surface, not resolve as success (MV-02 no silent failures).
+    const { client } = fakeSupabase({ data: null, error: null });
+    await expect(patchProfileSection(client, "u1", "personal", { name: "New" })).rejects.toThrow(
+      /upsert fallback failed/i,
+    );
+  });
 });

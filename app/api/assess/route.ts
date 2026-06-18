@@ -90,21 +90,31 @@ export async function POST(request: Request): Promise<Response> {
         })
         .select("id")
         .single();
-      if (!error && data) id = data.id;
+      if (error || !data) {
+        // PostgREST reports a failed write as a value, not a throw — surface it
+        // instead of returning 200 with id:null. Skip the dependent writes.
+        console.error("[/api/assess] assessment insert failed", { owner: user.id, err: error });
+        persistFailed = true;
+      } else {
+        id = data.id;
 
-      const existingProfile = await getProfile(supabase, user.id);
-      if (!existingProfile) {
-        const googleName = user.user_metadata?.full_name as string | undefined;
-        const sections = profileSectionsFromAssessment(parsed.data as unknown as Record<string, unknown>, { name: googleName }, { nowYear: new Date().getUTCFullYear() });
-        const { pct } = computeCompleteness(sections);
-        await upsertProfile(adminDb, { owner: user.id, sections, completeness: pct });
-      }
+        const existingProfile = await getProfile(supabase, user.id);
+        if (!existingProfile) {
+          const googleName = user.user_metadata?.full_name as string | undefined;
+          const sections = profileSectionsFromAssessment(parsed.data as unknown as Record<string, unknown>, { name: googleName }, { nowYear: new Date().getUTCFullYear() });
+          const { pct } = computeCompleteness(sections);
+          const bootstrapId = await upsertProfile(adminDb, { owner: user.id, sections, completeness: pct });
+          if (!bootstrapId) {
+            console.error("[/api/assess] profile bootstrap upsert failed", { owner: user.id });
+          }
+        }
 
-      await invalidatePlan(adminDb, user.id);
-      try {
-        await reScoreAssessment(adminDb, user.id);
-      } catch (err) {
-        console.error("[/api/assess] reScoreAssessment failed", err);
+        await invalidatePlan(adminDb, user.id);
+        try {
+          await reScoreAssessment(adminDb, user.id);
+        } catch (err) {
+          console.error("[/api/assess] reScoreAssessment failed", err);
+        }
       }
     } else {
       id = await createAnonymousAssessment(adminDb, {
@@ -114,6 +124,11 @@ export async function POST(request: Request): Promise<Response> {
         ruleVersion: payload.result.ruleVersion,
         expiresAt: assessmentExpiry(),
       });
+      // Anonymous assessments are ephemeral (3-day) — a persist miss still shows
+      // the payload (id:null) by design, but log it so the funnel gap is visible.
+      if (id === null) {
+        console.error("[/api/assess] anonymous assessment persist failed");
+      }
     }
   } catch (err) {
     console.error("[/api/assess] persist failed", err);

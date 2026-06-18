@@ -110,4 +110,18 @@ describe("POST /api/documents/upload", () => {
     expect(invalidatePlan).not.toHaveBeenCalled();
     expect(reScoreAssessment).not.toHaveBeenCalled();
   });
+
+  it("returns 500 and removes the orphaned file when the row insert fails", async () => {
+    // The file uploaded to Storage but the documents row never persisted — the
+    // route must not report success (id:null/stored) and must clean up the orphan.
+    insertDocument.mockResolvedValue(null);
+    const res = await POST(uploadReq("bank-statement"));
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.status).not.toBe("stored");
+    // Orphaned object rolled back (upload succeeded, then remove on the new path).
+    expect(storageRemove).toHaveBeenCalled();
+    // No false flag-flip after a failed primary write.
+    expect(patchProfileSection).not.toHaveBeenCalled();
+  });
 });

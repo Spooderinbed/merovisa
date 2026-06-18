@@ -32,19 +32,15 @@ function serverFrom() {
   return chain;
 }
 // Admin client: storage.from().remove(); from("documents").delete().eq().eq()
+// The chain is thenable so `await ...delete().eq().eq()` resolves to adminDelete()
+// — letting a test inject a { error } and assert the route surfaces it.
 function adminDeleteChain() {
   const chain = {
     delete: () => chain,
     eq: () => chain,
+    then: (resolve: (r: unknown) => unknown) => resolve(adminDelete()),
   };
-  // Final eq() resolves the delete; make eq itself awaitable via adminDelete.
-  return new Proxy(chain, {
-    get(target, prop) {
-      if (prop === "eq") return () => adminDelete() ?? chain;
-      if (prop === "delete") return () => chain;
-      return Reflect.get(target, prop);
-    },
-  });
+  return chain;
 }
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -107,5 +103,23 @@ describe("DELETE /api/documents/[id]", () => {
     expect(patchProfileSection).not.toHaveBeenCalled();
     expect(invalidatePlan).not.toHaveBeenCalled();
     expect(reScoreAssessment).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 (never ok:true) when the documents row delete fails", async () => {
+    adminDelete.mockReturnValue(Promise.resolve({ error: { message: "delete boom" } }));
+    const res = await DELETE(deleteReq(), { params });
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).not.toBe(true);
+    // No false flag-flip / plan work after a failed primary delete.
+    expect(patchProfileSection).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when removing the stored file fails", async () => {
+    adminRemove.mockResolvedValue({ error: { message: "storage boom" } });
+    const res = await DELETE(deleteReq(), { params });
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).not.toBe(true);
   });
 });

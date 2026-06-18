@@ -55,7 +55,11 @@ export function DocumentCard({
 
   const handleDelete = async () => {
     if (!doc) return;
-    await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/documents/${doc.id}`, { method: "DELETE" }).catch(() => null);
+    if (!res?.ok) {
+      setNotification("Couldn't delete — please try again");
+      return;
+    }
     setDoc(null);
     setNotification(null);
   };
