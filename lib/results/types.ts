@@ -11,6 +11,8 @@ export interface AssessmentPayload {
   accuracy: ProfileAccuracy;
   /** Oldest verification date across the scoring config's sourced inputs (F16). Absent on legacy stored payloads. */
   rulesVerified?: string;
+  /** A scoring-critical input is past its reverifyBy as of scoring time — the verdict card degrades (MV-04). Absent on legacy stored payloads. */
+  rulesStale?: boolean;
   /** How the chosen goal shaped the match order. Absent on legacy stored payloads. */
   preferenceNote?: PreferenceNote | null;
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { AssessmentPayload } from "@/lib/results/types";
 import { VerdictCard } from "@/components/results/verdict-card";
 import { FactorBars } from "@/components/results/factor-bars";
+import { scoringRulesStale } from "@/lib/data/scoring-freshness";
 
 export function SnapshotCard({
   primary,
@@ -30,7 +31,14 @@ export function SnapshotCard({
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         Your standing for {destinationLabel ?? "your destination"}
       </span>
-      <VerdictCard verdict={primary.result.verdict} rulesVerified={primary.rulesVerified} />
+      {/* Recompute staleness live (server component): a stored verdict can age past
+          a rule's reverifyBy between visits, so the dashboard reflects "as of now",
+          not the flag captured when the assessment was scored. */}
+      <VerdictCard
+        verdict={primary.result.verdict}
+        rulesVerified={primary.rulesVerified}
+        rulesStale={scoringRulesStale()}
+      />
       <FactorBars dimensions={primary.result.dimensions} />
     </div>
   );

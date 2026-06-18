@@ -8,6 +8,7 @@ import { computeIntakeTiming } from "@/lib/timing/intake";
 import { computeProfileAccuracy } from "./accuracy";
 import { AUSTRALIA } from "@/lib/data/destination/australia";
 import { CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
+import { scoringRulesStale } from "@/lib/data/scoring-freshness";
 import type { AssessmentPayload } from "./types";
 
 // MVP: "not-sure" delegates the corridor choice to us, and NotSureFramingNotice
@@ -43,6 +44,7 @@ export function assembleAssessment(
     intake: computeIntakeTiming(scored, AUSTRALIA, now),
     accuracy: computeProfileAccuracy(scored),
     rulesVerified: CONFIG_RULES_VERIFIED,
+    rulesStale: scoringRulesStale(now),
     preferenceNote,
   };
 }

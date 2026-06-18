@@ -50,6 +50,15 @@ describe("assembleAssessment", () => {
     expect(payload.rulesVerified).toBe(CONFIG_RULES_VERIFIED);
   });
 
+  it("stamps the scoring-freshness flag from the config, respecting the clock (MV-04)", () => {
+    // The verdict card degrades when a scoring-critical input is past its
+    // reverifyBy. The flag must originate in the scoring config's provenance and
+    // be computed against the assessment's clock — false while every input is
+    // current, true once the dated DHA inputs age out.
+    expect(assemble(aarav, new Date("2026-06-03")).rulesStale).toBe(false);
+    expect(assemble(aarav, new Date("2099-01-01")).rulesStale).toBe(true);
+  });
+
   it("carries the preference note for the chosen goal (PR -> 485 context)", () => {
     const payload = assemble(aarav, new Date("2026-06-03"));
     expect(payload.preferenceNote?.kind).toBe("pr-context");

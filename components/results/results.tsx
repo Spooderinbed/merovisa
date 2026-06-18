@@ -59,7 +59,11 @@ export function Results({
   return (
     <div className="mx-auto flex w-full max-w-narrow flex-col gap-6 px-5 py-10">
       {destination === "not-sure" ? <NotSureFramingNotice /> : null}
-      <VerdictCard verdict={payload.result.verdict} rulesVerified={payload.rulesVerified} />
+      <VerdictCard
+        verdict={payload.result.verdict}
+        rulesVerified={payload.rulesVerified}
+        rulesStale={payload.rulesStale}
+      />
       <FactorBars dimensions={payload.result.dimensions} />
       {/* Capture the conversion moment while the verdict is still on screen —
           anonymous only; signed-in users already own the assessment. The full

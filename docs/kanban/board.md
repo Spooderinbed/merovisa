@@ -16,19 +16,19 @@
 - **MV-09** · P3 · Replace hardcoded FX rates — _Static currency rates in budgetToAud → a real lookup._
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
 
-## Ready (WIP 5) — 2
+## Ready (WIP 5) — 1
 
-- **MV-04** · P2 · [Data-freshness UX + stale-fact CI](cards/MV-04-data-freshness-ux.md) — _Stale scoring-critical facts must degrade visibly instead of showing a stale 'strong' verdict as current._
 - **MV-03** · P3 · [Wire or relabel the dead work input](cards/MV-03-work-input-field.md) — _Collected but no scorer reads it. Default: honestly relabel optional._
 
 ## In progress (WIP 1) — 0
 
 _empty_
 
-## In review (WIP 3) — 2
+## In review (WIP 3) — 3
 
 - **MV-01** · P1 · [Consolidate the two match engines](cards/MV-01-match-engine-consolidation.md) — _DONE pending review: anon results now read the same DB catalogue + shared computeMatches as signed-in; GPA normalized at the boundary (root cause in from-assessment); program-level anon results; backcompat shape-guard. Gate green (typecheck/lint/test 1086 pass). Pushed to origin/feat/context-budget (8f06f00); PR not yet opened (gh unauthed — founder opens via compare link)._
 - **MV-02** · P2 · [Surface swallowed errors](cards/MV-02-surface-swallowed-errors.md) — _DONE pending review (local, not pushed): a 13-agent audit found 4 real swallows (profile/section, documents DELETE, documents upload, assess signed-in insert) + 5 already-correct routes. All 4 now return a real error status + structured log on a failed write; document-card delete now guards on res.ok; leads catch now logs. Gate green: typecheck/lint/1106 tests (+8). TDD failing-path test per fix._
+- **MV-04** · P2 · [Data-freshness UX + stale-fact CI](cards/MV-04-data-freshness-ux.md) — _DONE pending review (local, not pushed): scoring-critical facts (CONFIG_PROVENANCE) now have a runtime freshness check — past reverifyBy degrades the verdict card (amber warn, treat-as-indicative) instead of showing a stale verdict as current, plus a CI guard (tests/data/scoring-freshness.test.ts) that goes red when a verdict input ages out. Dormant today (armed until 2027-06-07). Gate green: typecheck/lint/1114 tests (+8). No scorer value changed; goldens byte-identical._
 
 ## Blocked — 3
 
