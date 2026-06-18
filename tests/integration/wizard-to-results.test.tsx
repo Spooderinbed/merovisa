@@ -16,7 +16,14 @@ const CURRENT_YEAR = new Date().getFullYear();
  */
 describe("wizard → results seam", () => {
   it("produces a valid profile that assembles into a coherent payload", async () => {
-    const user = userEvent.setup();
+    // `delay: null` skips user-event's per-interaction setTimeout(0) waits.
+    // With the default `delay: 0`, every one of the 15 clicks below ends by
+    // awaiting a real macrotask; under full-suite CPU contention those timer
+    // callbacks fire late and the accumulated lag intermittently pushes this
+    // test past the default timeout. The events still dispatch and React still
+    // flushes synchronously inside each click, so behavior is unchanged — only
+    // the load-sensitive real-timer waits are removed.
+    const user = userEvent.setup({ delay: null });
     const onComplete = vi.fn();
     render(<Wizard onComplete={onComplete} />);
 
@@ -70,5 +77,10 @@ describe("wizard → results seam", () => {
     // Guards against grade re-scaling regressions: a 70% applicant should NOT
     // clear every Australian university as a "strong" match.
     expect(payload.matches.every((m) => m.matchLevel === "strong")).toBe(false);
-  });
+    // Generous explicit timeout (default is 5000ms): `delay: null` above already
+    // removes the load-sensitive real-timer waits, but this keeps a wide safety
+    // margin so a pathological CPU-contention spike on the remaining synchronous
+    // render work can never reintroduce the flake — while still failing fast on a
+    // genuine hang.
+  }, 15000);
 });
