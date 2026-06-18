@@ -16,8 +16,7 @@
     { "id": "MV-04", "col": "ready", "pri": "P2", "owner": "agent", "file": "cards/MV-04-data-freshness-ux.md", "title": "Data-freshness UX + stale-fact CI", "summary": "Stale scoring-critical facts must degrade visibly instead of showing a stale 'strong' verdict as current.", "created": "2026-06-18", "entered": "2026-06-18" },
     { "id": "MV-03", "col": "ready", "pri": "P3", "owner": "agent", "file": "cards/MV-03-work-input-field.md", "title": "Wire or relabel the dead work input", "summary": "Collected but no scorer reads it. Default: honestly relabel optional.", "created": "2026-06-18", "entered": "2026-06-18" },
 
-    { "id": "MV-A1", "col": "inreview", "pri": "", "owner": "founder", "badge": "GO", "file": "cards/MV-A1-push-branch.md", "title": "Push feat/context-budget / open PR", "summary": "9 slices, 1075 tests green, merged locally, NOT pushed. Awaiting your GO.", "created": "2026-06-18", "entered": "2026-06-18" },
-    { "id": "MV-A2", "col": "inreview", "pri": "", "owner": "founder", "badge": "GO", "file": "cards/MV-A2-supabase-migration.md", "title": "Apply Supabase advisor migration", "summary": "Migration committed, not applied + enable leaked-password protection. Awaiting your GO (dev-branch first).", "created": "2026-06-18", "entered": "2026-06-18" },
+    { "id": "MV-A2", "col": "blocked", "pri": "", "owner": "founder", "badge": "founder: pwd toggle", "file": "cards/MV-A2-supabase-migration.md", "title": "Apply Supabase advisor migration", "summary": "Migration applied to prod; 3 advisor findings cleared (verified 2026-06-18). Only the leaked-password dashboard toggle remains — founder-only.", "created": "2026-06-18", "entered": "2026-06-18" },
 
     { "id": "MV-10", "col": "blocked", "pri": "P2", "owner": "agent", "badge": "blocked: OSHC", "file": "cards/MV-10-cost-estimate-tab.md", "title": "Cost-estimate tab", "summary": "Blocked on sourcing OSHC (overseas student health cover) data. Stays an honest 'coming soon' until then.", "created": "2026-06-18", "entered": "2026-06-18" },
 
@@ -27,6 +26,7 @@
     { "id": "MV-09", "col": "backlog", "pri": "P3", "owner": "agent", "file": null, "title": "Replace hardcoded FX rates", "summary": "Static currency rates in budgetToAud → a real lookup.", "created": "2026-06-18", "entered": "2026-06-18" },
     { "id": "MV-11", "col": "backlog", "pri": "P3", "owner": "agent", "file": null, "title": "AI guide", "summary": "Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable.", "created": "2026-06-18", "entered": "2026-06-18" },
 
+    { "id": "MV-A1", "col": "done", "pri": "", "owner": "agent", "file": "cards/MV-A1-push-branch.md", "title": "Push feat/context-budget", "summary": "Pushed to origin/feat/context-budget (upstream set). PR link ready; open via GitHub URL (gh not authed).", "created": "2026-06-18", "entered": "2026-06-18", "done": "2026-06-18" },
     { "id": "MV-D0", "col": "done", "pri": "", "owner": "agent", "file": "../audits/2026-06-18-EXECUTION-CHECKPOINT.md", "title": "Phase 0 + Phase 1 (9 slices)", "summary": "GPA normalize · conversion/auth · doc re-score removed · matches filter · dashboard cleanup · English test-type · results IA · scholarships · program notes. 1075 tests green.", "created": "2026-06-18", "entered": "2026-06-18", "done": "2026-06-18" }
   ]
 }

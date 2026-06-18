@@ -1,7 +1,7 @@
 # MV-A1 — Push `feat/context-budget` / open PR
 
 **Priority:** P1   **Owner:** founder (approval) → agent (execute)
-**Status:** 🟣 In Review — awaiting the founder's explicit GO (outward-facing action).
+**Status:** ✅ Done — pushed 2026-06-18 on founder GO.
 **Goal:** Get Phase 0 + Phase 1 off the local branch and into the remote / a PR.
 
 ## Context links
@@ -9,9 +9,9 @@
 - Remote: `origin https://github.com/Spooderinbed/merovisa.git`
 
 ## Acceptance criteria
-- [ ] Founder says GO.
-- [ ] `feat/context-budget` pushed to origin (and/or a PR opened with a summary of the 9 slices).
-- [ ] CI (if any) green on the remote.
+- [x] Founder says GO.
+- [x] `feat/context-budget` pushed to origin (`-u`, upstream set). PR not yet opened — `gh` unauthenticated; founder can open via the GitHub link.
+- [ ] CI (if any) green on the remote. _No CI configured in-repo; nothing to gate on._
 
 ## Dependencies / blocked-by
 - **Founder GO** (held back per the standing rule: nothing outward-facing without explicit approval).
@@ -25,6 +25,9 @@
 
 ## Decision log
 - 2026-06-18 — Held for founder GO; 9 slices merged locally, 1075 tests green, not pushed.
+- 2026-06-18 — Founder GO received; pushed.
 
 ## Done evidence
-_pending — not pushed._
+- `git push -u origin feat/context-budget` → `* [new branch] feat/context-budget -> feat/context-budget`; upstream now tracks `origin/feat/context-budget`.
+- PR open link (gh not authed): https://github.com/Spooderinbed/merovisa/pull/new/feat/context-budget
+- Pushed up to commit `671ead3` (the 4 doc/kanban/test commits + the prior Phase 0/1 work).

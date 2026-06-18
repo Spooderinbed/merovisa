@@ -28,15 +28,16 @@
 
 _empty_
 
-## In review (WIP 3) — 2
+## In review (WIP 3) — 0
 
-- **MV-A1** · [Push feat/context-budget / open PR](cards/MV-A1-push-branch.md) `awaiting GO` — _9 slices, 1075 tests green, merged locally, NOT pushed. Awaiting your GO._
-- **MV-A2** · [Apply Supabase advisor migration](cards/MV-A2-supabase-migration.md) `awaiting GO` — _Migration committed, not applied + enable leaked-password protection. Awaiting your GO (dev-branch first)._
+_empty_
 
-## Blocked — 1
+## Blocked — 2
 
+- **MV-A2** · [Apply Supabase advisor migration](cards/MV-A2-supabase-migration.md) — _Migration applied to prod; 3 advisor findings cleared (verified 2026-06-18). Only the leaked-password dashboard toggle remains — founder-only._
 - **MV-10** · P2 · [Cost-estimate tab](cards/MV-10-cost-estimate-tab.md) `blocked: OSHC` — _Blocked on sourcing OSHC (overseas student health cover) data. Stays an honest 'coming soon' until then._
 
-## Done — 1
+## Done — 2
 
+- **MV-A1** · [Push feat/context-budget](cards/MV-A1-push-branch.md) — _Pushed to origin/feat/context-budget (upstream set). PR link ready; open via GitHub URL (gh not authed)._
 - **MV-D0** · [Phase 0 + Phase 1 (9 slices)](../audits/2026-06-18-EXECUTION-CHECKPOINT.md) — _GPA normalize · conversion/auth · doc re-score removed · matches filter · dashboard cleanup · English test-type · results IA · scholarships · program notes. 1075 tests green._
