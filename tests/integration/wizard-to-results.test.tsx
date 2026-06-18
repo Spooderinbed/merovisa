@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Wizard } from "@/components/wizard/wizard";
 import { ProfileSchema } from "@/lib/validation/profile";
 import { assembleAssessment } from "@/lib/results/assemble";
+import { TEST_PROGRAMS, TEST_UNIVERSITIES } from "../fixtures/catalog";
 import type { StudentProfile } from "@/lib/scoring/types";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -69,14 +70,14 @@ describe("wizard → results seam", () => {
     expect(profile.grade).toBe(70);
 
     // And it must assemble into a coherent results payload.
-    const payload = assembleAssessment(profile, new Date("2026-06-03"));
+    const payload = assembleAssessment(profile, TEST_PROGRAMS, TEST_UNIVERSITIES, new Date("2026-06-03"));
     expect(payload.result.verdict).toBeDefined();
     expect(payload.matches.length).toBeGreaterThan(0);
     expect(payload.matchedCount).toBe(payload.matches.length);
 
     // Guards against grade re-scaling regressions: a 70% applicant should NOT
-    // clear every Australian university as a "strong" match.
-    expect(payload.matches.every((m) => m.matchLevel === "strong")).toBe(false);
+    // clear every Australian program as a "strong" match.
+    expect(payload.matches.every((m) => m.verdict === "strong")).toBe(false);
     // Generous explicit timeout (default is 5000ms): `delay: null` above already
     // removes the load-sensitive real-timer waits, but this keeps a wide safety
     // margin so a pathological CPU-contention spike on the remaining synchronous

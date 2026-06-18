@@ -56,6 +56,16 @@ matches filter actually reach the top of the conversion funnel.
 6. **Cleanup:** delete `lib/matching/universities.ts` only after `assemble.ts` (and any other importer) no longer references it. Move/keep its test coverage as `from-student-profile` tests.
 7. **GREEN:** `npm run typecheck` · `npm run lint` · `npm test` all pass; record evidence below; move card to In review.
 
+## Design refined post-verification + Codex (2026-06-18)
+Three findings during step-1 verification materially refined the plan:
+1. **Data-model mismatch** — the results card renders per-university **USD** tuition (`UniversityMatch.university.tuitionUsdPerYear`), but the DB `University` has **no tuition** (it's per-`Program`, **AUD**). So the card's "thin map to `UniversityMatch`" is lossy/fake. → Anon results go **program-level** (`AssessmentPayload.matches: MatchResult[]`), same model as signed-in. The blur/unlock gate in `university-matches.tsx` is kept; its card renders program info (uni·city, program name, AUD tuition, verdict, reasons), keyed by `program.id`.
+2. **Root cause is upstream** — `lib/profiles/from-assessment.ts:40` persists the raw anon `grade` (a CGPA like 3.5) straight into `academic.gradePercent` and **drops `gradeSystem`**, so the **signed-in path inherits the CGPA bug** (wrong verdict on re-score AND wrong matches). Fix the invariant at the boundary: **`gradePercent` is always a true 0–100 percentage**, normalized via `normalizeGradeToPercentage(grade, gradeSystem)` in `from-assessment`. No double-normalization downstream because `sectionsToStudentProfile` defaults `gradeSystem` to a pass-through system.
+3. **DI over async** (Codex-agreed) — `assembleAssessment(profile, programs, universities, now)` stays a pure function (keeps ~6 test files passing fixtures, no `server-only` coupling); the 3 callers (`api/assess`, `api/dev/sign-in`, `re-score.ts`) fetch the catalog and pass it in.
+
+Other Codex traps folded in: use `signedInPreferenceAdapter` for anon (delete `anonymousPreferenceAdapter`); `policy.nepalAssessmentLevel = NEPAL_ASSESSMENT_LEVEL` (= **"L3"**, not L2); export+reuse `budgetToAud` + the target-level map from `from-sections.ts` (no drift); key cards by `program.id`. **Backcompat:** `assessments.result` stores the payload + a `profile_snapshot`; `/assessment/[id]` gets a shape-guard — legacy `UniversityMatch[]` payloads recompute matches from `profile_snapshot` + live catalog instead of crashing.
+
+**Intentional anon difference (documented):** the anon adapter keeps `effectiveEnglish`'s provisional baseline (booked→6.5, not-taken→6.0) so a pre-test student isn't shown all-"reach"; signed-in uses null→0. Equivalence (anon == signed-in) is asserted for the **taken-english** case (where inputs are truly equal). RULE_VERSION/goldens untouched — the **verdict** scorer (`runAssessment`) is unchanged; only matching changes.
+
 ## Agent resume notes (cold start)
 The understand+design phase is DONE — see "Engines as mapped" + "DESIGN DECISION" + "Implementation plan" above. Pick up at **Implementation plan step 1** (verify the 3 facts), then TDD red→green. Don't re-run the Explore mapping; it's captured. The one thing the Explore agent got wrong and you must NOT copy: its "convert the seed to Program[]" step — use the DB instead (see DESIGN DECISION).
 
@@ -63,5 +73,19 @@ The understand+design phase is DONE — see "Engines as mapped" + "DESIGN DECISI
 - 2026-06-18 — Created. Codex + Claude ranked this the #1 next slice (correctness gap, touches every first-time user).
 - 2026-06-18 — Moved to In progress. Mapped both engines (Explore). Locked the design: anonymous must read the **same DB catalog** as signed-in (not a converted seed) to satisfy the equivalence criterion; shared core = `computeMatches`; anon gets a new `from-student-profile` adapter that also wires GPA normalization. Plan written above. Paused before edits to compact (context full); implementation runs next in clean context.
 
-## Done evidence
+## Done evidence (2026-06-18 — implementation complete, ready for review)
+**Gate — all green:** `npm run typecheck` exit 0 · `npm run lint` clean (the one `build.mjs` warning is pre-existing, unrelated) · `npm test` **1086/1086 pass (195 files)**. Goldens passed **unchanged** → the verdict scorer (`runAssessment`) is untouched, so **RULE_VERSION was not bumped** (criterion 5 satisfied: anonymous *scoring* outputs don't change; only matching does).
+
+**Acceptance criteria:**
+- ✅ Anon match set == signed-in for an equivalent profile — `tests/matches/anon-equivalence.test.ts` proves `computeMatches(profileToMatchInputs(profile))` deep-equals `computeMatches(sectionsToMatchInputs(from-assessment(profile)))` over a shared catalogue for percentage, CGPA, and off-field reps.
+- ✅ CGPA no longer collapses to academic 0 / forced reach — `from-student-profile` wires `normalizeGradeToPercentage`; equivalence test asserts a CGPA student gets strong/possible, not all-reach.
+- ✅ Anon sees only field/level-eligible programs — equivalence test asserts a bachelor's holder sees only masters (not `uts-bit`).
+- ✅ One shared core — both paths now call `computeMatches` + `signedInPreferenceAdapter`; the anonymous `matchUniversities` engine + its static seed are deleted.
+- ✅ Goldens reviewed; no RULE_VERSION bump (verdict scorer unchanged).
+
+**Files changed:** NEW `lib/matches/from-student-profile.ts`, `lib/results/legacy.ts`, `tests/fixtures/catalog.ts`, `tests/matches/from-student-profile.test.ts`, `tests/matches/anon-equivalence.test.ts`, `tests/results/legacy.test.ts`. EDIT `lib/results/assemble.ts` (DI signature), `lib/results/types.ts` (`matches: MatchResult[]`), `lib/profiles/from-assessment.ts` (root-cause CGPA normalize), `lib/matches/from-sections.ts` (export `budgetToAud` + target-level map), `lib/matches/preference.ts` (drop `anonymousPreferenceAdapter`), `components/results/university-matches.tsx` (program-level render), `app/api/assess/route.ts` · `app/api/dev/sign-in/route.ts` · `lib/assessments/re-score.ts` (fetch+inject catalogue), `app/(focused)/assessment/[id]/page.tsx` (legacy shape-guard), `lib/data/types.ts` (drop dead `UniversityData`). DELETE `lib/matching/universities.ts`, `lib/data/universities/au.ts`, `tests/matching/universities.test.ts`.
+
+**Follow-up flagged (separate, pre-existing):** the profile editor lets a signed-in user pick `gradeSystem = cgpa-4` AND type a CGPA into `gradePercent`, which the matches adapter then reads as a percentage (verdict path normalizes, matches path doesn't) — violating the gradePercent invariant from a path that bypasses `from-assessment`. Out of MV-01 scope; flagged for its own card.
+
+## Done evidence (superseded)
 _pending — understand+design complete; implementation not started_

@@ -7,6 +7,7 @@ import { assembleAssessment } from "@/lib/results/assemble";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
 import { upsertProfile } from "@/lib/profiles/repo";
+import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import type { StudentProfile } from "@/lib/scoring/types";
@@ -155,7 +156,11 @@ async function seedDevUserIfNeeded(
   const existing = await getPrimaryAssessmentForUser(admin, userId);
   if (existing) return;
 
-  const payload = assembleAssessment(SAMPLE_PROFILE, new Date());
+  const [programs, universities] = await Promise.all([
+    listAllPrograms(admin),
+    listAllUniversities(admin),
+  ]);
+  const payload = assembleAssessment(SAMPLE_PROFILE, programs, universities, new Date());
 
   const { error: insertError } = await admin.from("assessments").insert({
     owner: userId,

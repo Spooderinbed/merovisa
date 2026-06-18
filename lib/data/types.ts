@@ -69,20 +69,6 @@ export interface DestinationCountryData {
   lastVerified: string;
 }
 
-export interface UniversityData {
-  id: string;
-  country: string;
-  name: string;
-  city: string;
-  rankingTier: 1 | 2 | 3;
-  fieldsOffered: FieldOfStudy[];
-  tuitionUsdPerYear: { min: number; max: number };
-  minGradePercent: number;
-  minEnglishScore: number;
-  source: string;
-  lastVerified: string;
-}
-
 export interface FieldOfStudyData {
   id: FieldOfStudy;
   label: string;

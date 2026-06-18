@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Results } from "@/components/results/results";
 import { assembleAssessment } from "@/lib/results/assemble";
+import { TEST_PROGRAMS, TEST_UNIVERSITIES } from "../fixtures/catalog";
 import type { StudentProfile } from "@/lib/scoring/types";
+
+const assemble = (profile: StudentProfile, now: Date) =>
+  assembleAssessment(profile, TEST_PROGRAMS, TEST_UNIVERSITIES, now);
 
 const aarav: StudentProfile = {
   homeCountry: "Nepal",
@@ -23,7 +27,7 @@ const aarav: StudentProfile = {
 
 describe("Results", () => {
   it("renders the core path (verdict, factor bars, intake, matches, cost, accuracy, conversion) top-level", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     render(<Results payload={payload} destination="australia" />);
     expect(screen.getByText("Academic fit")).toBeInTheDocument();
     expect(screen.getByText(/Intake timing/i)).toBeInTheDocument();
@@ -34,14 +38,14 @@ describe("Results", () => {
   });
 
   it("shows the sourced cost-to-apply breakdown top-level (part of the core 'what's next' path)", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     render(<Results payload={payload} destination="australia" />);
     expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /AUD 2,000/ })).toBeInTheDocument();
   });
 
   it("folds the government-reference panels into a collapsed 'Know before you go' disclosure", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     render(<Results payload={payload} destination="australia" />);
 
     // The disclosure trigger is present...
@@ -55,7 +59,7 @@ describe("Results", () => {
   });
 
   it("reveals the corridor policy + trust-defense panels once the disclosure is expanded", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     render(<Results payload={payload} destination="australia" />);
 
     fireEvent.click(screen.getByRole("button", { name: /Know before you go/i }));
@@ -72,14 +76,14 @@ describe("Results", () => {
   });
 
   it("promotes a compact OAuth CTA near the verdict in anonymous mode", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     render(<Results payload={payload} destination="australia" assessmentId="11815637-f603-4821-8dd0-d9e52560c4f6" />);
     // Both the compact prompt and the bottom card offer Google sign-in for anonymous users.
     expect(screen.getAllByRole("button", { name: /Continue with Google/i }).length).toBeGreaterThanOrEqual(2);
   });
 
   it("hides the conversion CTAs for signed-in (owned) results", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     render(<Results payload={payload} destination="australia" mode="owned" />);
     expect(screen.queryByRole("button", { name: /Continue with Google/i })).toBeNull();
     expect(screen.queryByText(/expires in 3 days/i)).toBeNull();

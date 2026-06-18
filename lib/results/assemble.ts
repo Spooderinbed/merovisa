@@ -1,7 +1,9 @@
 import type { StudentProfile } from "@/lib/scoring/types";
+import type { Program, University } from "@/lib/programs/types";
 import { runAssessment } from "@/lib/scoring/engine";
-import { matchUniversities } from "@/lib/matching/universities";
-import { applyPreference, anonymousPreferenceAdapter } from "@/lib/matches/preference";
+import { computeMatches } from "@/lib/matches/compute";
+import { profileToMatchInputs } from "@/lib/matches/from-student-profile";
+import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/preference";
 import { computeIntakeTiming } from "@/lib/timing/intake";
 import { computeProfileAccuracy } from "./accuracy";
 import { AUSTRALIA } from "@/lib/data/destination/australia";
@@ -15,13 +17,23 @@ import type { AssessmentPayload } from "./types";
 // (lib/scoring/financial.ts), inflating an under-funded verdict. Genuinely
 // unsupported corridors do NOT fall back here — they are stopped upstream
 // (app/api/assess returns 422; UnsupportedDestinationNotice renders).
-export function assembleAssessment(profile: StudentProfile, now: Date = new Date()): AssessmentPayload {
+// The catalogue (programs + universities) is dependency-injected rather than
+// fetched here so this stays a pure function: the anonymous path now reads the SAME
+// DB catalogue the signed-in path does (callers pass lib/programs/repo results),
+// while the test suite passes fixtures. This is what makes an anonymous student's
+// match set equal the one they get after signing in.
+export function assembleAssessment(
+  profile: StudentProfile,
+  programs: Program[],
+  universities: University[],
+  now: Date = new Date(),
+): AssessmentPayload {
   const scored: StudentProfile =
     profile.destination === "not-sure" ? { ...profile, destination: "australia" } : profile;
   const { items: matches, note: preferenceNote } = applyPreference(
-    matchUniversities(scored),
+    computeMatches(profileToMatchInputs(scored), programs, universities),
     scored.goal,
-    anonymousPreferenceAdapter,
+    signedInPreferenceAdapter,
     now,
   );
   return {

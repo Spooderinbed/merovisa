@@ -1,12 +1,11 @@
 import type { AssessmentResult } from "@/lib/scoring/types";
-import type { UniversityMatch } from "@/lib/matching/universities";
-import type { PreferenceNote } from "@/lib/matches/types";
+import type { MatchResult, PreferenceNote } from "@/lib/matches/types";
 import type { IntakeTiming } from "@/lib/timing/intake";
 import type { ProfileAccuracy } from "./accuracy";
 
 export interface AssessmentPayload {
   result: AssessmentResult;
-  matches: UniversityMatch[];
+  matches: MatchResult[];
   matchedCount: number;
   intake: IntakeTiming;
   accuracy: ProfileAccuracy;

@@ -1,6 +1,5 @@
 import type { Goal } from "@/lib/scoring/types";
 import type { MatchResult, PreferenceNote, PreferenceChip } from "@/lib/matches/types";
-import type { UniversityMatch } from "@/lib/matching/universities";
 import { AU_TEMPORARY_GRADUATE_VISA } from "@/lib/data/source/au-temporary-graduate-visa";
 
 export interface PreferenceSignals {
@@ -155,24 +154,17 @@ export function applyPreference<T>(
   return { items: decorated, note: buildNote(goal, rankable) };
 }
 
-/** Binds the engine to the signed-in program-level result shape. */
+/**
+ * Binds the engine to the program-level result shape. Both the signed-in matches
+ * page and the anonymous results path use this — anonymous matches are now
+ * program-level (DB-sourced), so a single adapter serves both.
+ */
 export const signedInPreferenceAdapter: PreferenceAdapter<MatchResult> = {
   band: (m) => m.verdict,
   signals: (m, now) => ({
     rankingTier: m.university.rankingTier,
     tuition: m.program.tuitionMin,
     nearestIntake: parseNearestIntake(m.program.intakes, now),
-  }),
-  withChip: (m, chip) => ({ ...m, preferenceChip: chip }),
-};
-
-/** Binds the engine to the anonymous university-level result shape (no per-university intake). */
-export const anonymousPreferenceAdapter: PreferenceAdapter<UniversityMatch> = {
-  band: (m) => m.matchLevel,
-  signals: (m) => ({
-    rankingTier: m.university.rankingTier,
-    tuition: m.university.tuitionUsdPerYear.min,
-    nearestIntake: null,
   }),
   withChip: (m, chip) => ({ ...m, preferenceChip: chip }),
 };

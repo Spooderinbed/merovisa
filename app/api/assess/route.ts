@@ -4,6 +4,8 @@ import { isDestinationSupported } from "@/lib/scoring/types";
 import { assembleAssessment } from "@/lib/results/assemble";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
+import type { Program, University } from "@/lib/programs/types";
 import { createAnonymousAssessment, getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { assessmentExpiry } from "@/lib/assessments/expiry";
 import { getProfile, upsertProfile } from "@/lib/profiles/repo";
@@ -46,7 +48,23 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const payload = assembleAssessment(parsed.data);
+  // The match set reads the live program/university catalogue — the same source the
+  // signed-in matches page uses — so an anonymous student sees the same matches they
+  // will after signing in. Resilient: listAll* return [] on error, so a catalogue
+  // hiccup degrades to an empty match list rather than failing the assessment.
+  let programs: Program[] = [];
+  let universities: University[] = [];
+  try {
+    const catalogDb = createSupabaseAdminClient();
+    [programs, universities] = await Promise.all([
+      listAllPrograms(catalogDb),
+      listAllUniversities(catalogDb),
+    ]);
+  } catch (err) {
+    console.error("[/api/assess] catalog fetch failed", err);
+  }
+
+  const payload = assembleAssessment(parsed.data, programs, universities);
 
   let id: string | null = null;
   let persistFailed = false;

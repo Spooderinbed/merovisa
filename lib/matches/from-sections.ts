@@ -10,7 +10,7 @@ import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
  * (0 doctorate), so a masters-holder is mapped to masters rather than a level we
  * cannot serve.
  */
-const TARGET_LEVEL_BY_CURRENT_EDUCATION: Record<EducationLevel, ProgramLevel> = {
+export const TARGET_LEVEL_BY_CURRENT_EDUCATION: Record<EducationLevel, ProgramLevel> = {
   "higher-secondary": "bachelors",
   bachelors: "masters",
   masters: "masters",
@@ -68,7 +68,7 @@ export function sectionsToMatchInputs(
 }
 
 /** Budget conversion — rough static rates. Replace with FX lookup later. */
-function budgetToAud(total: number | null, currency: string | null): number | null {
+export function budgetToAud(total: number | null, currency: string | null): number | null {
   if (total == null) return null;
   switch (currency) {
     case "AUD": return total;

@@ -11,6 +11,10 @@ vi.mock("@/lib/profiles/repo", () => ({
 vi.mock("@/lib/assessments/repo", () => ({
   getPrimaryAssessmentForUser: (...a: unknown[]) => mockGetPrimary(...a),
 }));
+vi.mock("@/lib/programs/repo", () => ({
+  listAllPrograms: vi.fn().mockResolvedValue([]),
+  listAllUniversities: vi.fn().mockResolvedValue([]),
+}));
 
 import { reScoreAssessment } from "@/lib/assessments/re-score";
 

@@ -18,6 +18,13 @@ vi.mock("@/lib/profiles/repo", () => ({
   getProfile: vi.fn().mockResolvedValue(null),
   upsertProfile: vi.fn().mockResolvedValue(null),
 }));
+vi.mock("@/lib/programs/repo", async () => {
+  const { TEST_PROGRAMS, TEST_UNIVERSITIES } = await import("../fixtures/catalog");
+  return {
+    listAllPrograms: vi.fn().mockResolvedValue(TEST_PROGRAMS),
+    listAllUniversities: vi.fn().mockResolvedValue(TEST_UNIVERSITIES),
+  };
+});
 
 import { POST } from "@/app/api/assess/route";
 

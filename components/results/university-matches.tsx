@@ -1,9 +1,9 @@
 "use client";
 
-import type { UniversityMatch } from "@/lib/matching/universities";
+import type { MatchResult } from "@/lib/matches/types";
 import { Button } from "@/components/ui/button";
 import { SourceLine } from "@/components/results/source-line";
-import { cn, formatUsd } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics/events";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
@@ -19,28 +19,44 @@ const LEVEL_LABEL = {
   reach: "Reach",
 } as const;
 
-function MatchCard({ m }: { m: UniversityMatch }) {
+function tuition(p: MatchResult["program"]): string | null {
+  if (p.tuitionMin == null) return null;
+  const max = (p.tuitionMax ?? p.tuitionMin).toLocaleString();
+  return `AUD ${p.tuitionMin.toLocaleString()}–${max}/yr`;
+}
+
+function MatchCard({ m }: { m: MatchResult }) {
+  const { program: p, university: u, verdict, reasons, preferenceChip } = m;
+  const fee = tuition(p);
   return (
     <article className="rounded-md border border-line bg-surface p-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-ink">{m.university.name}</span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+            {u.name} · {u.city}
+          </span>
+          <span className="text-ink">{p.name}</span>
+        </div>
         <div className="flex items-center gap-2">
-          {m.preferenceChip ? (
+          {preferenceChip ? (
             <span className="inline-flex items-center rounded-pill border border-line px-2.5 py-0.5 font-mono text-[11px] text-ink-soft">
-              {m.preferenceChip.text}
+              {preferenceChip.text}
             </span>
           ) : null}
-          <span className={cn("rounded-pill px-2.5 py-0.5 font-mono text-[11.5px]", LEVEL_CLS[m.matchLevel])}>
-            {LEVEL_LABEL[m.matchLevel]}
+          <span className={cn("rounded-pill px-2.5 py-0.5 font-mono text-[11.5px]", LEVEL_CLS[verdict])}>
+            {LEVEL_LABEL[verdict]}
           </span>
         </div>
       </div>
-      <p className="mt-1 text-[15px] text-ink-soft">
-        {m.university.city} · {formatUsd(m.university.tuitionUsdPerYear.min)}–
-        {formatUsd(m.university.tuitionUsdPerYear.max)}/yr
-      </p>
-      <p className="mt-1 text-[15px] text-ink-soft">{m.reason}</p>
-      <SourceLine url={m.university.source} lastVerified={m.university.lastVerified} surface="matches" />
+      {fee ? <p className="mt-1 text-[15px] text-ink-soft">{fee}</p> : null}
+      <ul className="mt-1 flex flex-col gap-0.5 text-[14px]">
+        {reasons.map((r, i) => (
+          <li key={i} className={r.positive ? "text-strong" : "text-ink-soft"}>
+            {r.positive ? "✓" : "·"} {r.text}
+          </li>
+        ))}
+      </ul>
+      <SourceLine url={p.source} lastVerified={p.lastVerified} surface="matches" />
     </article>
   );
 }
@@ -51,7 +67,7 @@ export function UniversityMatches({
   assessmentId = null,
   unlocked = false,
 }: {
-  matches: UniversityMatch[];
+  matches: MatchResult[];
   total: number;
   assessmentId?: string | null;
   unlocked?: boolean;
@@ -74,20 +90,20 @@ export function UniversityMatches({
       </div>
 
       {unlocked ? (
-        matches.map((m) => <MatchCard key={m.university.id} m={m} />)
+        matches.map((m) => <MatchCard key={m.program.id} m={m} />)
       ) : (
         <>
           {free.map((m) => (
-            <MatchCard key={m.university.id} m={m} />
+            <MatchCard key={m.program.id} m={m} />
           ))}
           {locked.length > 0 ? (
             // >3 matches: peek-through blur over the remaining rows, unlock overlaid.
             <div className="relative overflow-hidden rounded-md border border-line bg-surface">
               <div className="flex flex-col gap-3 p-4 blur-[6px] select-none" aria-hidden>
                 {locked.slice(0, 3).map((m) => (
-                  <div key={m.university.id} className="flex items-center justify-between">
-                    <span className="text-ink">{m.university.name}</span>
-                    <span className="font-mono text-[11.5px] text-ink-faint">{LEVEL_LABEL[m.matchLevel]}</span>
+                  <div key={m.program.id} className="flex items-center justify-between">
+                    <span className="text-ink">{m.program.name}</span>
+                    <span className="font-mono text-[11.5px] text-ink-faint">{LEVEL_LABEL[m.verdict]}</span>
                   </div>
                 ))}
               </div>

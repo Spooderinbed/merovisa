@@ -23,13 +23,13 @@
 - **MV-04** · P2 · [Data-freshness UX + stale-fact CI](cards/MV-04-data-freshness-ux.md) — _Stale scoring-critical facts must degrade visibly instead of showing a stale 'strong' verdict as current._
 - **MV-03** · P3 · [Wire or relabel the dead work input](cards/MV-03-work-input-field.md) — _Collected but no scorer reads it. Default: honestly relabel optional._
 
-## In progress (WIP 1) — 1
-
-- **MV-01** · P1 · [Consolidate the two match engines](cards/MV-01-match-engine-consolidation.md) — _WIP: understand+design done (engines mapped, shared-core decision made). Plan on the card; implementation pending. The GPA fix + field/level filter don't reach anonymous users yet._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-01** · P1 · [Consolidate the two match engines](cards/MV-01-match-engine-consolidation.md) — _DONE pending review: anon results now read the same DB catalogue + shared computeMatches as signed-in; GPA normalized at the boundary (root cause in from-assessment); program-level anon results; backcompat shape-guard. Gate green (typecheck/lint/test 1086 pass). Local commit, not pushed._
 
 ## Blocked — 2
 

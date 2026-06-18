@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { assembleAssessment } from "@/lib/results/assemble";
 import { CONFIG_VERSION, CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
+import { TEST_PROGRAMS, TEST_UNIVERSITIES } from "../fixtures/catalog";
 import type { StudentProfile } from "@/lib/scoring/types";
+
+const assemble = (profile: StudentProfile, now: Date) =>
+  assembleAssessment(profile, TEST_PROGRAMS, TEST_UNIVERSITIES, now);
 
 const aarav: StudentProfile = {
   homeCountry: "Nepal",
@@ -22,7 +26,7 @@ const aarav: StudentProfile = {
 
 describe("assembleAssessment", () => {
   it("returns a complete payload", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     expect(payload.result.verdict).toBeDefined();
     expect(payload.matchedCount).toBe(payload.matches.length);
     expect(payload.matches.length).toBeGreaterThan(0);
@@ -34,7 +38,7 @@ describe("assembleAssessment", () => {
     // The whole payload is serialized into assessments.result (Json), so the
     // config version must ride inside result — that is how a new assessment
     // persists which data figures it used (Phase 6, no DB migration).
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     expect(payload.result.configVersion).toBe(CONFIG_VERSION);
   });
 
@@ -42,17 +46,17 @@ describe("assembleAssessment", () => {
     // The verdict card renders this date; it must originate in the scoring
     // config's provenance — not the destination-config record — and it rides
     // the payload so the date stays true to the snapshot it describes.
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     expect(payload.rulesVerified).toBe(CONFIG_RULES_VERIFIED);
   });
 
   it("carries the preference note for the chosen goal (PR -> 485 context)", () => {
-    const payload = assembleAssessment(aarav, new Date("2026-06-03"));
+    const payload = assemble(aarav, new Date("2026-06-03"));
     expect(payload.preferenceNote?.kind).toBe("pr-context");
   });
 
   it("ranks by lowest cost when that goal is chosen and chips the cheaper universities", () => {
-    const payload = assembleAssessment({ ...aarav, goal: "lowest-cost" }, new Date("2026-06-03"));
+    const payload = assemble({ ...aarav, goal: "lowest-cost" }, new Date("2026-06-03"));
     expect(payload.preferenceNote).toEqual({
       kind: "ranked",
       text: "Ordered by your priority: lowest total cost.",
@@ -60,8 +64,8 @@ describe("assembleAssessment", () => {
     // at least one surfaced match earns the Lower tuition chip
     expect(payload.matches.some((m) => m.preferenceChip?.text === "Lower tuition")).toBe(true);
     // tuition is non-decreasing within the first (strong) band
-    const strong = payload.matches.filter((m) => m.matchLevel === "strong");
-    const tuitions = strong.map((m) => m.university.tuitionUsdPerYear.min);
+    const strong = payload.matches.filter((m) => m.verdict === "strong");
+    const tuitions = strong.map((m) => m.program.tuitionMin ?? 0);
     expect([...tuitions].sort((a, b) => a - b)).toEqual(tuitions);
   });
 
@@ -77,8 +81,8 @@ describe("assembleAssessment", () => {
       budgetCurrency: "USD",
       fundingSource: "self-funded",
     };
-    const notSure = assembleAssessment(underfunded, new Date("2026-06-03"));
-    const australia = assembleAssessment(
+    const notSure = assemble(underfunded, new Date("2026-06-03"));
+    const australia = assemble(
       { ...underfunded, destination: "australia" },
       new Date("2026-06-03"),
     );

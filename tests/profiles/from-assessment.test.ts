@@ -33,6 +33,17 @@ describe("profileSectionsFromAssessment", () => {
     expect(out.career?.goal).toBe("permanent-residency");
   });
 
+  it("normalizes a CGPA grade to a true percentage at the boundary (gradePercent invariant)", () => {
+    // A CGPA anon student who signs in must not have 3.5 persisted as '3.5%'. The
+    // boundary normalizes once so every downstream reader treats gradePercent as a
+    // real percentage — this is what keeps the signed-in verdict + matches correct.
+    const out = profileSectionsFromAssessment(
+      { ...wizardProfile, gradeSystem: "cgpa-4", grade: 3.5 },
+      {},
+    );
+    expect(out.academic?.gradePercent).toBe(87.5);
+  });
+
   it("omits personal.name when no fallback given and snapshot has no name", () => {
     expect(profileSectionsFromAssessment(wizardProfile, {}).personal?.name).toBeUndefined();
   });
