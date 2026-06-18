@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "board": "node docs/kanban/build.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
