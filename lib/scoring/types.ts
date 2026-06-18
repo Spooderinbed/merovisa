@@ -30,6 +30,15 @@ export type FieldOfStudy = (typeof FIELDS_OF_STUDY)[number];
 export const ENGLISH_STATUSES = ["not-taken", "booked", "taken"] as const;
 export type EnglishStatus = (typeof ENGLISH_STATUSES)[number];
 
+/**
+ * English tests the product collects a score for. The set matches what
+ * lib/data/source/au-english-tests.ts supports a numeric IELTS-equivalence for and
+ * what the wizard/profile editor expose. `englishScore` is the score in the chosen
+ * test's OWN scale; lib/scoring/english-equivalent.ts maps it to an IELTS band.
+ */
+export const ENGLISH_TESTS = ["ielts", "pte", "toefl"] as const;
+export type EnglishTest = (typeof ENGLISH_TESTS)[number];
+
 export const DESTINATIONS = [
   "australia",
   "canada",
@@ -93,6 +102,14 @@ export interface StudentProfile {
   graduationYear: number;
   gapReasons: GapReason[];
   englishStatus: EnglishStatus;
+  /**
+   * The English test the score belongs to. Omitted/undefined = IELTS, so all
+   * pre-existing data and the IELTS-default wizard are unchanged. Drives the
+   * score→IELTS conversion (lib/scoring/english-equivalent.ts) at every threshold
+   * comparison — a PTE 58 is otherwise mis-read as a failing IELTS 5.8.
+   */
+  englishTest?: EnglishTest;
+  /** Score in the chosen test's own scale (IELTS band, PTE 10–90, TOEFL iBT 0–120). */
   englishScore?: number;
   destination: Destination;
   budget: number;

@@ -7,7 +7,6 @@ import { getDocumentByKind, insertDocument, deleteDocument } from "@/lib/documen
 import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSection } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
-import { reScoreAssessment } from "@/lib/assessments/re-score";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
 import {
   sanitizeFilename,
@@ -113,11 +112,6 @@ export async function POST(request: Request): Promise<Response> {
       }
     } catch (err) {
       console.error("[documents/upload] patchProfileSection failed", err);
-    }
-    try {
-      await reScoreAssessment(admin, userId);
-    } catch (err) {
-      console.error("[documents/upload] reScoreAssessment failed", err);
     }
     try {
       await invalidatePlan(admin, userId);

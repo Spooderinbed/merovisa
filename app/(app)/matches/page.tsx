@@ -13,6 +13,7 @@ import { MatchesTabs } from "@/components/matches/matches-tabs";
 import { VerdictGroup } from "@/components/matches/verdict-group";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { CostToApply } from "@/components/results/cost-to-apply";
+import { ScholarshipsPanel } from "@/components/matches/scholarships-panel";
 import { PreferenceNote } from "@/components/matches/preference-note";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
@@ -61,12 +62,7 @@ export default async function MatchesPage() {
     </div>
   );
 
-  const scholarshipsPanel = (
-    <p className="text-[15px] text-ink-soft">
-      Coming soon — we&apos;ll surface scholarships you may qualify for based on your
-      destination, field, and grade.
-    </p>
-  );
+  const scholarshipsPanel = <ScholarshipsPanel />;
   const costPanel = (
     <p className="text-[15px] text-ink-soft">
       Coming soon — a live cost estimate covering tuition, DHA living costs, OSHC, and

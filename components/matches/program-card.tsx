@@ -94,6 +94,15 @@ export function ProgramCard({
           </li>
         ))}
       </ul>
+      {p.notes ? (
+        <p className="rounded-md border border-line bg-bg-tint px-3 py-2 text-[13px] text-ink-soft">
+          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+            Good to know
+          </span>
+          <br />
+          {p.notes}
+        </p>
+      ) : null}
       <footer className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-col gap-0.5">
           <span className={`font-mono text-[11px] uppercase tracking-wide ${provenanceTone}`}>

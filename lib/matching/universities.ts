@@ -5,6 +5,7 @@ import type { FieldOfStudy, StudentProfile } from "@/lib/scoring/types";
 import { AU_UNIVERSITIES } from "@/lib/data/universities/au";
 import type { UniversityData } from "@/lib/data/types";
 import type { PreferenceChip } from "@/lib/matches/types";
+import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
 
 export type MatchLevel = "strong" | "possible" | "reach";
 
@@ -18,7 +19,9 @@ export interface UniversityMatch {
 
 export function effectiveEnglish(profile: Partial<StudentProfile>): number {
   if (profile.englishStatus === "taken" && typeof profile.englishScore === "number") {
-    return profile.englishScore;
+    // Convert to the IELTS-equivalent band so PTE/TOEFL are compared against each
+    // university's IELTS minimum (undefined test ⇒ IELTS, unchanged).
+    return toIeltsEquivalent(profile.englishScore, profile.englishTest);
   }
   if (profile.englishStatus === "booked") return 6.5;
   return 6.0;

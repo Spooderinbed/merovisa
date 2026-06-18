@@ -18,13 +18,13 @@ const matches: UniversityMatch[] = Array.from({ length: 5 }, (_, i) => ({
 
 describe("unlocked results", () => {
   it("UniversityMatches: unlocked shows every match and no unlock button", () => {
-    render(<UniversityMatches matches={matches} total={5} unlocked onUnlock={vi.fn()} />);
+    render(<UniversityMatches matches={matches} total={5} unlocked assessmentId="11815637-f603-4821-8dd0-d9e52560c4f6" />);
     expect(screen.getByText("University 4")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Unlock all/ })).toBeNull();
   });
 
   it("UniversityMatches: locked (default) hides the unlock button behind blur", () => {
-    render(<UniversityMatches matches={matches} total={12} onUnlock={vi.fn()} />);
+    render(<UniversityMatches matches={matches} total={12} assessmentId="11815637-f603-4821-8dd0-d9e52560c4f6" />);
     expect(screen.getByRole("button", { name: /Unlock all/ })).toBeInTheDocument();
   });
 

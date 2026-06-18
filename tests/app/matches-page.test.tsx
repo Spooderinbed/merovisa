@@ -42,7 +42,7 @@ describe("/matches page", () => {
     expect(screen.getByText(/No programs found yet/i)).toBeInTheDocument();
   });
 
-  it("scholarships and cost tabs lead with honest coming-soon copy", async () => {
+  it("scholarships tab shows real sourced scholarships; cost tab still honest coming-soon", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     getProfile.mockResolvedValue(null);
     listAllPrograms.mockResolvedValue([]);
@@ -51,7 +51,12 @@ describe("/matches page", () => {
     const ui = await MatchesPage();
     render(ui);
     await userEvent.click(screen.getByRole("button", { name: /Scholarships/i }));
-    expect(screen.getByText(/Coming soon — we'll surface scholarships/i)).toBeInTheDocument();
+    // Scholarships now surfaces real sourced data (Australia Awards first), framed
+    // as a reference list — never a personalized eligibility claim.
+    expect(screen.getAllByText(/Australia Awards/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/not a personalized eligibility check/i)).toBeInTheDocument();
+    expect(screen.queryByText(/you qualify/i)).not.toBeInTheDocument();
+    // Cost estimate stays an honest coming-soon until OSHC data is sourced.
     await userEvent.click(screen.getByRole("button", { name: /Cost estimate/i }));
     expect(screen.getByText(/Coming soon — a live cost estimate/i)).toBeInTheDocument();
   });

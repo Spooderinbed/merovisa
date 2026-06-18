@@ -1,5 +1,7 @@
 # MyVisa — project status & phase log
 
+> **Current work state now lives on the kanban board** (`docs/kanban/` — open `board.html`, read `board.md`, or ask Claude to "show me the board"). This file remains the **phase log / history**: what works, known issues, decisions. For "what's being worked on right now," see the board.
+
 **Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist now shipped too, 2026-06-08) · **signed-in flows manually smoked green + prod build verified 2026-06-08**
 **Tests:** 749 passing across 162 test files
 **Typecheck:** clean
@@ -20,7 +22,7 @@
 | OAuth sign-in (`/auth`) | Google sign-in, callback exchanges code, claims any pending assessment, bootstraps profile from snapshot + Google name, redirects to `/dashboard` |
 | Signed-in chrome | AppBar app variant with full nav (Home/Matches/My plan/Profile/Guide/Destinations) + UserPill avatar with dropdown menu (Dashboard/Profile/Sign out) |
 | `/assess` for signed-in users | Server-side interstitial: "you have an active assessment from X" → Refresh or Open dashboard. `?new=1` bypass for new destination |
-| `/dashboard` | Greeting, snapshot card (verdict + factor bars), prompt card (IELTS/profile-incomplete/all-caught-up), journey timeline (5 steps), stats row (Universities from shortlist count, Profile %, Checklist/Scholarships dashes), recent updates empty state |
+| `/dashboard` | Greeting, snapshot card (verdict + factor bars), prompt card (IELTS/profile-incomplete/all-caught-up), stats row (Universities from shortlist count, Profile %, Checklist/Scholarships dashes). ("Your journey" tracker + "Recent updates" panel removed 2026-06-18 — no per-user data backed them; see audit Q10) |
 | `/profile` | Header with name + email, completeness ring, 13 section accordions each with inline editor: name/age/intake, destination, academic, intended-study, english, gap, work, finance, immigration, family, career, scholarships, deal-breakers |
 | `/matches` | Tabs (Universities/Scholarships/Cost estimate), policy banner (Nepal AL3 + AUD 29,710), Strong/Possible/Reach groups, ProgramCard with verdict pill + tuition + IELTS/grade min + intakes + reasons + Source link + Document-checklist link + Shortlist toggle |
 | `/plan` | Impact-ranked (High/Medium/Low) action items with Done/Dismiss/Undo, closed items collapse, regenerates on profile change |
@@ -46,7 +48,7 @@
 | FX rates hard-coded for budget→AUD conversion | `app/(app)/matches/page.tsx` `budgetToAud()` | Replace with FX API later |
 | Tuition rendered as "AUD 50,000–55,000 / yr" without explanation that 12-month figure varies by subject load | `components/matches/program-card.tsx` | Note, not bug |
 | `lib/matching/universities.ts` still in code (deprecation header only) | Used by anonymous wizard's results payload; will retire when anonymous flow reads from DB | Designed |
-| Dashboard `RecentUpdates` always empty | No "what's new" feed exists yet | Empty state covered |
+| Dashboard "Your journey" + "Recent updates" removed | 5-stage tracker had no per-user stage data (only stage 1 was ever truthful); updates panel had no source. Removed rather than fake. Audit Q10 (`docs/audits/2026-06-18-full-app-evaluation.md`) | Resolved 2026-06-18 |
 | Nursing programs need AHPRA registration warning | `notes` field in seed says so, but UI doesn't elevate it | Minor; could surface in ProgramCard |
 
 ### 🔬 Verified via Supabase MCP (not just code)

@@ -7,9 +7,37 @@ export function computeMatches(
   universities: University[],
 ): MatchResult[] {
   const uniById = new Map(universities.map((u) => [u.id, u]));
-  return programs
+  const eligible = filterByLevel(programs, inputs.userTargetLevel);
+  return rankByField(eligible, inputs.userField)
     .map((p) => computeOne(inputs, p, uniById.get(p.universityId)))
     .filter((m): m is MatchResult => m !== null);
+}
+
+/**
+ * Eligibility pre-filter: keep only programs at the user's target level. The
+ * filter is HARD because surfacing a wrong-level program (e.g. bachelors to a
+ * bachelors-holder) is actively misleading. Skipped when the target level is
+ * unknown. Defensive fallback: if the filter would empty the list, the
+ * unfiltered set is returned so the user never sees an empty page due to filtering.
+ */
+function filterByLevel(programs: Program[], target: MatchInputs["userTargetLevel"]): Program[] {
+  if (!target) return programs;
+  const matched = programs.filter((p) => p.level === target);
+  return matched.length > 0 ? matched : programs;
+}
+
+/**
+ * Field is a SOFT rule: same-field programs sort first, everything else keeps its
+ * original relative order. We do not hard-filter by field — only 6 fields exist in
+ * the catalogue and several field×level cells are empty, so a hard filter would
+ * empty the list for many users. This guarantees a non-empty, field-relevant list.
+ */
+function rankByField(programs: Program[], field: MatchInputs["userField"]): Program[] {
+  if (!field) return programs;
+  // Stable partition: same-field first, preserving input order within each group.
+  const sameField = programs.filter((p) => p.field === field);
+  const rest = programs.filter((p) => p.field !== field);
+  return [...sameField, ...rest];
 }
 
 function computeOne(

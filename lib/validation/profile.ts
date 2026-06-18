@@ -9,6 +9,7 @@ import {
   GOALS,
   CURRENCIES,
   GAP_REASONS,
+  ENGLISH_TESTS,
 } from "@/lib/scoring/types";
 import type { StudentProfile } from "@/lib/scoring/types";
 import { computeGapYears, GAP_REQUIRES_REASON_THRESHOLD } from "@/lib/scoring/gap";
@@ -23,7 +24,10 @@ export const ProfileSchema = z
     graduationYear: z.number().int().min(2010).max(new Date().getFullYear() + 5),
     gapReasons: z.array(z.enum(GAP_REASONS)),
     englishStatus: z.enum(ENGLISH_STATUSES),
-    englishScore: z.number().min(4).max(9).optional(),
+    englishTest: z.enum(ENGLISH_TESTS).optional(),
+    // Score is in the chosen test's own scale; the per-test range is enforced by the
+    // refine below. Upper bound here is the widest scale (TOEFL iBT 0–120).
+    englishScore: z.number().min(0).max(120).optional(),
     destination: z.enum(DESTINATIONS),
     budget: z.number().positive(),
     budgetCurrency: z.enum(CURRENCIES),
@@ -53,6 +57,24 @@ export const ProfileSchema = z
     },
     {
       message: "englishScore required when englishStatus is 'taken'",
+      path: ["englishScore"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.englishScore === undefined) return true;
+      // Per-test valid score range. Default (no test) is IELTS.
+      const test = data.englishTest ?? "ielts";
+      const RANGE: Record<typeof test, [number, number]> = {
+        ielts: [4, 9],
+        pte: [10, 90],
+        toefl: [0, 120],
+      };
+      const [min, max] = RANGE[test];
+      return data.englishScore >= min && data.englishScore <= max;
+    },
+    {
+      message: "englishScore is outside the valid range for the chosen test",
       path: ["englishScore"],
     },
   );

@@ -12,9 +12,7 @@ import type { PlanItemRow } from "@/lib/plan/types";
 import { Greeting } from "@/components/dashboard/greeting";
 import { SnapshotCard } from "@/components/dashboard/snapshot-card";
 import { PromptCard, type PromptState } from "@/components/dashboard/prompt-card";
-import { JourneyTimeline } from "@/components/dashboard/journey-timeline";
 import { StatsRow } from "@/components/dashboard/stats-row";
-import { RecentUpdates } from "@/components/dashboard/recent-updates";
 import type { AssessmentPayload } from "@/lib/results/types";
 import type { ProfileSections } from "@/lib/profiles/sections";
 import { humanize } from "@/lib/text/humanize";
@@ -62,13 +60,15 @@ export default async function DashboardPage() {
         <SnapshotCard primary={primary} destinationLabel={primaryRow?.destination_id ? humanize(primaryRow.destination_id) : null} />
         <PromptCard prompt={prompt} />
       </div>
-      <JourneyTimeline currentStep="shortlist" />
+      {/* "Your journey" (5-stage tracker) and "Recent updates" were removed: the only
+          per-user stage signal is the first stage, and there's no source feeding updates.
+          A frozen tracker / empty shell reads as fake on a trust-first product. The real
+          progress signals live in StatsRow. Audit: docs/audits/2026-06-18-full-app-evaluation.md (Q10). */}
       <StatsRow
         universities={shortlist.length}
         documents={documents.length}
         profilePct={completenessPct}
       />
-      <RecentUpdates updates={[]} />
     </div>
   );
 }

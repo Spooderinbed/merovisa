@@ -39,6 +39,15 @@ import type { AssessmentResult, Currency, StudentProfile } from "@/lib/scoring/t
  * `refusal-multiple-penalised` cases below (siblings of strong-clear) isolate the
  * penalty — only the visa dimension drops by 15 / 35.
  *
+ * RULE_VERSION v0.5.0 (config-v3 unchanged) added grade-system normalization to
+ * the academic dimension (lib/scoring/grade-normalize.ts): the grade is mapped to
+ * a 0-100 percentage by `gradeSystem` before scoring, so CGPA systems (cgpa-4/10/5)
+ * are no longer read as raw percentages (which floored any CGPA grade to 0). Every
+ * fixture in this matrix uses `percentage-nepal`, which passes through unchanged,
+ * so every dimension value is byte-identical — only the `ruleVersion` field moved
+ * to v0.5.0. The CGPA conversion is covered by tests/scoring/grade-normalize.test.ts
+ * and the grade-system cases in tests/scoring/academic.test.ts.
+ *
  * Determinism: the only time-dependent input is the graduation gap
  * (`computeGapYears` reads `new Date()`). Each profile's `graduationYear` is
  * expressed relative to the current year, so the *gap* — and therefore the whole
