@@ -1,4 +1,5 @@
 import type { Verdict } from "@/lib/scoring/types";
+import { VerdictDisclaimer } from "@/components/ui/verdict-disclaimer";
 
 const VERDICT_META: Record<Verdict, { label: string; line: string; cls: string }> = {
   strong: {
@@ -31,6 +32,7 @@ export function VerdictCard({ verdict, rulesVerified }: { verdict: Verdict; rule
           Assessment rules verified {rulesVerified}
         </p>
       ) : null}
+      <VerdictDisclaimer className="mt-4" />
     </section>
   );
 }

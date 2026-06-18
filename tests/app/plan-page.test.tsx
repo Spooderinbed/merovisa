@@ -30,5 +30,7 @@ describe("/plan page", () => {
     render(ui);
     expect(screen.getByText(/shortest path/i)).toBeInTheDocument();
     expect(screen.getByTestId("list")).toHaveTextContent("1 items");
+    // MV-05: the not-immigration-advice boundary rides above the plan.
+    expect(screen.getByText(/not immigration advice/i)).toBeInTheDocument();
   });
 });

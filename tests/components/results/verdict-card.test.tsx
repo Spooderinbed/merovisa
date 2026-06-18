@@ -20,6 +20,11 @@ describe("VerdictCard provenance line (F16)", () => {
     expect(screen.queryByText(/rules verified/i)).not.toBeInTheDocument();
   });
 
+  it("always carries the not-immigration-advice boundary (MV-05)", () => {
+    render(<VerdictCard verdict="strong" />);
+    expect(screen.getByText(/not immigration advice/i)).toBeInTheDocument();
+  });
+
   it("takes its date from the scoring config, not the destination config (structural)", () => {
     // Both dates are currently the same string, so a rendered-text comparison
     // can't distinguish the source — assert the wiring itself: the card no

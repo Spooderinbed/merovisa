@@ -40,6 +40,8 @@ describe("/matches page", () => {
     expect(screen.getByText(/29,710/)).toBeInTheDocument();
     expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
     expect(screen.getByText(/No programs found yet/i)).toBeInTheDocument();
+    // MV-05: the not-immigration-advice boundary rides above the matches.
+    expect(screen.getByText(/not immigration advice/i)).toBeInTheDocument();
   });
 
   it("scholarships tab shows real sourced scholarships; cost tab still honest coming-soon", async () => {

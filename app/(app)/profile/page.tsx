@@ -19,6 +19,7 @@ import { EnglishEditor } from "@/components/profile/editors/english-editor";
 import { WorkGapEditor } from "@/components/profile/editors/work-gap-editor";
 import { MoneyScholarshipsEditor } from "@/components/profile/editors/money-scholarships-editor";
 import { ImmigrationEditor } from "@/components/profile/editors/immigration-editor";
+import { DeleteAccountSection } from "@/components/account/delete-account-section";
 
 /**
  * One editor per presentation group; multi-section groups receive the
@@ -103,6 +104,7 @@ export default async function ProfilePage() {
           </SectionAccordion>
         ))}
       </div>
+      <DeleteAccountSection />
     </div>
   );
 }
