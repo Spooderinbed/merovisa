@@ -16,17 +16,16 @@
 - **MV-09** · P3 · Replace hardcoded FX rates — _Static currency rates in budgetToAud → a real lookup._
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
 
-## Ready (WIP 5) — 5
+## Ready (WIP 5) — 4
 
-- **MV-01** · P1 · [Consolidate the two match engines](cards/MV-01-match-engine-consolidation.md) `next up` — _The GPA fix + field/level filter currently DON'T reach anonymous first-time users. Highest-value correctness gap._
 - **MV-05** · P1 · [Legal / disclaimer / data boundary](cards/MV-05-legal-disclaimer-boundary.md) — _Not-immigration-advice + consent + retention/deletion. Gate before public traffic; we store passports + advise minors._
 - **MV-02** · P2 · [Surface swallowed errors](cards/MV-02-surface-swallowed-errors.md) — _ok:true returned on failed re-score/plan/profile mutations — a silent write failure is itself a trust bug._
 - **MV-04** · P2 · [Data-freshness UX + stale-fact CI](cards/MV-04-data-freshness-ux.md) — _Stale scoring-critical facts must degrade visibly instead of showing a stale 'strong' verdict as current._
 - **MV-03** · P3 · [Wire or relabel the dead work input](cards/MV-03-work-input-field.md) — _Collected but no scorer reads it. Default: honestly relabel optional._
 
-## In progress (WIP 1) — 0
+## In progress (WIP 1) — 1
 
-_empty_
+- **MV-01** · P1 · [Consolidate the two match engines](cards/MV-01-match-engine-consolidation.md) — _WIP: understand+design done (engines mapped, shared-core decision made). Plan on the card; implementation pending. The GPA fix + field/level filter don't reach anonymous users yet._
 
 ## In review (WIP 3) — 0
 
