@@ -38,8 +38,9 @@ export const AU_STUDENT_VISA_REQUIREMENTS: AuStudentVisaRequirement[] = [
     source: DHA_EVIDENTIARY,
     lastVerified: "2026-06-05",
     provenance: {
-      findingRefs: ["A.006", "A.007", "A.008", "A.009", "A.010"],
+      findingRefs: ["A.006", "A.007", "A.008", "A.009", "A.010", "I.026"],
       source: DHA_EVIDENTIARY,
+      note: "DHA's Document Checklist Tool: OSHC must cover the applicant from at least one week before the course starts and for the duration of stay (I.026) — corroborates the A.006–A.010 OSHC rules.",
     },
   },
   {
