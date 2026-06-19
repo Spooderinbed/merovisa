@@ -93,16 +93,24 @@ gate green. TDD failing-test-first per finding.
 - **I.026 ✅** (OSHC ≥1 week before course, full stay) — pure-citation onto the existing `oshc`
   row in `au-student-visa-requirements.ts` (copy already exact; cross-category corroboration of
   A.006–A.010). Commit `e0cf362`.
-- **I.025 ⏳ NOT a pure citation** — the checklist's English item is generated **inline** in
-  `lib/checklist/generator.ts` (not a registered module, so a ref there won't flip to `used`), and
-  **no existing copy states the "approved test OR exemption" fact**. Surfacing it needs a new
-  registered English-evidence record (+ generator wiring to render it without duplicating the
-  inline IELTS line) and **new founder-reviewable copy**. Held for a founder copy steer rather than
-  inventing checklist copy unilaterally — see the report. Proposed copy: "Required for the visa.
-  Provide evidence of an approved English test score, or evidence that you qualify for an exemption."
+- **I.025 ✅** (English: approved test **OR** exemption) — was NOT a pure citation: the checklist's
+  English item is generated **inline** in `lib/checklist/generator.ts` (unregistered, so a ref there
+  won't flip to `used`) and no existing copy stated the "approved test OR exemption" fact. Solution:
+  a **new registered `english` record** in `au-student-visa-requirements.ts` carries the fact +
+  `findingRefs ["I.025"]` (this is what flips it to `used`); the inline English item now appends that
+  record's summary via `VISA_REQ["english"].summary` (single-source-of-truth, **no duplicate IELTS
+  row**), and the fallback admission line dropped its redundant "…and the visa" clause to avoid a
+  stutter. Added `"english"` to the `AuStudentVisaRequirement` id union (types + Zod schema). Copy
+  **triangulated via Codex** and **founder-approved** as the general phrasing — "Required for the
+  visa. Provide evidence of an approved English test score, or evidence that you qualify for an
+  exemption." — deliberately **no exempt-country example** (the UK/US/CA/NZ/IE-citizen route is
+  irrelevant to ~all Nepal→Australia applicants; the DHA source link carries exemption detail).
+  Commit `6219bac`.
 
-Gate after each: typecheck/lint clean, full suite green (1142 → 1143 tests, +3 TDD), goldens
-byte-identical, reconcile + findings-integrity + flip-status guard green.
+Gate after each: typecheck/lint clean, full suite green (1140 → 1145 tests, +5 TDD across the slice),
+goldens byte-identical, reconcile + findings-integrity + flip-status guard green.
+
+**Card status: all 4 I findings surfaced → moved to In Review (human gate) 2026-06-19.**
 
 **Deferred Category E** spun into its own card **MV-13** (bridge the TS fact layer into the DB
 catalogue; founder DB approval gated).
