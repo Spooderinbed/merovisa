@@ -78,6 +78,9 @@ export function WorkGapEditor({ initial }: { initial: WorkGapInitial }) {
 
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
+      <p className="text-[13px] text-ink-soft">
+        Optional. Your role helps tailor your document checklist — it doesn&apos;t change your verdict.
+      </p>
       <div className="flex flex-col gap-2">
         <label htmlFor="we-title" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Title</label>
         <input id="we-title" value={title} onChange={(e) => setTitle(e.target.value)}
