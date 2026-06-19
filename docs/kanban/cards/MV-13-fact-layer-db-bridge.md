@@ -1,6 +1,7 @@
 # MV-13 — Bridge the TS fact layer into the DB program catalogue
 
-**Status:** In progress — **DB bridge APPLIED TO PROD 2026-06-19** (founder GO given). **Owner:** founder+agent · **Priority:** P2.
+**Status:** **In Review (human gate) 2026-06-20** — DB bridge LIVE in prod; findings-flip found
+already complete; gate green. Founder closes to Done. **Owner:** founder+agent · **Priority:** P2.
 
 **Done so far:** local slice committed `da28e36` (gate green: typecheck/lint, 1150 tests, goldens
 byte-identical). Migration `20260619000000_bridge_fact_layer_programs.sql` **applied to prod**
@@ -10,12 +11,27 @@ leaked-password WARN, unused-index INFOs) — **zero new issues**. The new colum
 existing `programs_read` RLS policy (no policy change). Live catalogue now 83 programs (64 base, 3
 enriched, +19 bridged with provenance).
 
-**REMAINING (the only open step):** flip the bridged Category-E findings → `used` (the E.0xx refs
-cited by the 22 bridged rows) via the FLIP_STATUS ritual + reconcile + promote `value_status`
-unset→prose-only, gate green. Then move MV-13 → In Review. NOTE: the findings are cited by the
-already-registered fact modules (au-rmit-programs / au-university-programs), so the flip is driven by
-those modules + flip-status.js, not the DB — confirm the exact mechanic against
-`docs/research-briefs/_tools/flip-status.js` + `reconcile.js` at resume.
+**FINDINGS-FLIP — RESOLVED 2026-06-20: already complete, no action needed.** On resume the bridged
+Category-E findings (all E.0xx cited by the 22 rows) were found **already `status:"used"` with
+`value_status:"structured"`**, not pending. Reason: the flip derives purely from the **registered TS
+fact modules** (`au-rmit-programs.ts` / `au-university-programs.ts` in `DATA_MODULES`) via
+`flip-status.js` — **not** the DB — and those modules already declared every `findingRef` and were
+already registered, so the flip landed in the **earlier Category-E sourcing slice**, long before
+MV-13's DB bridge. MV-13's DB work never touched the ledger. The kickoff-map premise that these were
+`status: pending, triage: ready` was a **stale snapshot**; it is corrected here. The "promote
+`value_status` unset→prose-only" step was also moot — they are `structured` (reconcile validates the
+values against the modules). NOTE the *deferred* refs (Torrens E.031–E.035, RMIT diplomas
+E.081/E.082, E.089/E.090) are **also already `used`** for the same reason — the DB deferral doesn't
+park the ledger, because the Torrens/diploma entries live in the registered TS module regardless of
+whether they reach the DB. This is consistent, not a leak (their value is reviewed + provenance-linked
+in TS; they're only withheld from the DB catalogue for ranking-safety).
+
+**Verification (2026-06-20):** ledger guards green — `reconcile-modules` (no
+DANGLING_REF/REF_NOT_USED/VALUE_DRIFT/ORPHAN_USED/USED_UNSET/MISSING_PROVENANCE), `flip-status`
+non-write guard (committed used-set already matches code → nothing to promote/demote/refuse/rewire),
+`findings-integrity`, `registry-integrity`, `conflict-gate` (16 tests). Programs anti-drift green —
+`bridge-fact-parity` + `seed-migration-parity` + seed (24 tests). No code changed on resume (read-only
+confirmation); the da28e36 gate stands.
 
 **Gate history:** founder approved the card 2026-06-19; delegated D1/D2 ("do what's best / consult
 codex") → MERGE + DEFER BOTH (Codex-agreed); D5 prod-write GO given 2026-06-19.
@@ -189,15 +205,20 @@ enum per D4); (3) regenerate seed from TS; (4) repo/card render for new columns;
 **dev branch** + `get_advisors`; (6) show SQL → founder GO → apply to prod; (7) gate green + goldens
 confirmed byte-identical + match fixtures regenerated deliberately + Category-E findings flipped `used`.
 
-## Acceptance criteria (to be firmed at design)
+## Acceptance criteria
 
-- [ ] Founder approves the seed-migration approach + prod DB write.
-- [ ] Design doc: replacement-vs-augment, verified/derived surfacing, new-uni seeding, pipeline.
-- [ ] TS fact-layer programs loaded into the DB catalogue via migration; parity guard green/evolved.
-- [ ] Ready Category-E findings integrated onto the now-live programs (`source`/`lastVerified`),
-      flipped used; reconcile + flip-status green.
-- [ ] Matches/goldens impact reviewed; `golden-assessments.json` regenerated deliberately if the
-      engine path moves; gate green (typecheck/lint/test).
+- [x] Founder approves the seed-migration approach + prod DB write. (Card approved 2026-06-19;
+      D1/D2 delegated → MERGE + DEFER; D5 prod-write GO given.)
+- [x] Design decision recorded: AUGMENT (not replace), MERGE 3 twins + INSERT 19, DEFER diplomas +
+      Torrens; verified/derived surfaced via `data_quality`; provenance via `finding_refs`. (See DECISION above.)
+- [x] TS fact-layer programs loaded into the DB catalogue via migration `20260619000000`; parity
+      guard evolved (`seed-migration-parity` merges base+bridge) + new `bridge-fact-parity` guard — green.
+- [x] Category-E findings live on the bridged programs (`finding_refs` + provenance), `used` +
+      reconcile + flip-status green. (Found already-complete on resume — see FINDINGS-FLIP above.)
+- [x] Matches/goldens impact reviewed; `golden-assessments.json` **byte-identical** (catalogue change
+      doesn't move the scoring engine — confirmed); gate green (typecheck/lint/test).
+
+**Terminal state for the agent:** In Review. Only the founder can close to Done (human gate).
 
 ## Resume notes
 
