@@ -8,18 +8,17 @@
 > _Last updated: 2026-06-19 · stale threshold: 7d_
 
 
-## Backlog — 2
+## Backlog — 1
 
-- **MV-06** · P2 · Integrate ledger slice E/I — _~195 ready research findings that feed scoring/cost copy. Do after the engines are unified._
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
 
 ## Ready (WIP 5) — 0
 
 _empty_
 
-## In progress (WIP 1) — 0
+## In progress (WIP 1) — 1
 
-_empty_
+- **MV-06** · P2 · [Integrate ledger slice E/I](cards/MV-06-integrate-ledger-slice.md) — _KICKOFF/SCOPING (in progress 2026-06-19). Integrate the high-value Category E (program/policy: IELTS/duration, fee/threshold) + I (Genuine Student) 'ready' findings (~195 ready total) into live verdict/cost/program-card copy. PREMISE CORRECTED by MV-09 recon: the headline E figures (visa fee AUD 2,000, capacity AUD 29,710) are ALREADY current in-app (lastVerified 2026-06-07), so the correctness/urgency part is done — this is now the copy-heavy, non-urgent remainder. Engines already unified (MV-01). First step (post-compact): run docs/research-briefs/_tools/reconcile.js, enumerate E/I ready findings, bring founder a surface-vs-defer packet (trust-first != integrate every note). OPEN STEER: which findings carry enough value to surface. Dossier: cards/MV-06-integrate-ledger-slice.md._
 
 ## In review (WIP 3) — 2
 
