@@ -16,18 +16,17 @@
 
 _empty_
 
-## In progress (WIP 1) — 0
+## In progress (WIP 1) — 1
 
-_empty_
+- **MV-10** · P2 · [Cost-estimate tab](cards/MV-10-cost-estimate-tab.md) — _In progress 2026-06-20 (de-gated by founder). Sourcing OSHC premiums from 5 gov-approved providers (Bupa/Medibank/ahm/Allianz/nib) + DHA living-cost via a research fan-out (Workflow), then building a cost-estimate selector + panel over a new sourced fact module (per-record source+lastVerified+Zod, cost-to-apply display pattern — not the findings ledger), unstubbing the 'coming soon' tab via TDD._
 
 ## In review (WIP 3) — 1
 
 - **MV-08** · P2 · [Outcome-validation loop (the moat)](cards/MV-08-outcome-validation-loop.md) — _DESIGN DELIVERED + CODEX REVIEW FOLDED (no code shipped): build spec for the verdict-validation loop — funnel applied/offer/refused/visa linked to the frozen prediction (verdict + RULE_VERSION + scoreSnapshot). Codex (GPT-5) refute-each-decision pass found 3 blockers + 8 should-fixes, all folded into the doc. Schema is now 3 tables: program_predictions (immutable, prediction-run model, UPDATE-guard trigger) -> application_attempts (B1: institution/program/intake attribution layer) -> outcome_events (append-only; explicit gate + reason_code + verification metadata; self_reported excluded from training). Two-gate model (admission vs visa calibrate separately); verdict recomputed server-side (F16); calibration = CIs + Bayesian pooling on verified outcomes (not n>=30), compatibility-group windowing; cold-start ladder. Doc: docs/superpowers/specs/2026-06-19-outcome-validation-loop-design.md. Gate to build: founder approves 3-table migration + answers 4 open Qs._
 
-## Blocked — 2
+## Blocked — 1
 
 - **MV-05** · P1 · [Legal / disclaimer / data boundary](cards/MV-05-legal-disclaimer-boundary.md) — _Engineering slice DONE + merged to master (46752f3; gate green): not-immigration-advice disclaimer on verdict/results/dashboard/matches/plan (VerdictDisclaimer), + working right-to-delete path (POST /api/account/delete removes storage+all owned rows+auth user, partial-failure→500 not ok:true) with a type-to-confirm UI on profile. BLOCKED on founder/lawyer for the rest: final legal wording, retention/ToS/privacy policy text, under-18 stance; consent-at-upload deferred until the privacy policy exists. Card can't reach Done until those land._
-- **MV-10** · P2 · [Cost-estimate tab](cards/MV-10-cost-estimate-tab.md) `blocked: OSHC` — _Blocked on sourcing OSHC (overseas student health cover) data. Stays an honest 'coming soon' until then._
 
 ## Done — 12
 
