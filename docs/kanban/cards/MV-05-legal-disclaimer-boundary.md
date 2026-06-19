@@ -93,6 +93,32 @@ guardian-gated under-16** (vs 18+-only, simpler but loses real 17-yr-old applica
 inactivity); (c) **business identity + contact** for the policy (legal entity name, contact email,
 jurisdiction/governing law). I'll draft the full copy with the recommended defaults and present it.
 
+## Copy packet DRAFTED + Codex-reviewed (2026-06-20) — awaiting founder sign-off
+
+**Packet:** `docs/legal/2026-06-20-mv-05-legal-copy-packet.md` — full text for review:
+(1) tightened **not-advice disclaimer** (short + tailored + footer forms); (2) **at-collection
+notice + consent** copy (APP 5 + APP 3.3, shown at upload); (3) **Privacy & data-retention
+policy** (`/privacy`, seven APP 1 contents + retention + APP 8 cross-border + NDB + access/
+complaint); (4) **Terms of Service** (`/terms`, not-advice + not-an-agent + provider-neutral/
+no-commissions + no-guarantee + accuracy/no-reliance + governing law); (5) **under-18 stance**.
+
+**Codex (GPT-5) adversarial review folded** (5 blockers + 6 should-fixes): added the missing APP 5
+notice copy; fixed advice-drift in Privacy §3 (general info, not personalised advice); fixed the
+disclaimer's DHA/admission conflation (DHA decides visas, institutions decide admission); softened
+two overclaims ("full APP compliance" → "drafted to the APPs, operative compliance depends on the
+wired flows"; "lawyer edits wording not architecture" → a goal, not a legal conclusion); added
+complaint-handling (30 days), named the likely overseas country (Vercel/US), clarified minor
+consent is plain-language + guardian-account ownership, removed the automated-decision claim, and
+made provider-neutrality user-facing. Codex confirmed the D1/D2/D3 **recommended defaults are sound**.
+
+**3 founder decisions still required before wiring (D1/D2/D3 in the packet):** D1 under-18 stance
+(rec 16+ self-serve / under-16 guardian-gated, DOB at sign-up); D2 retention period (rec: delete
+docs 90 days after assessment expiry, or 12 mo inactivity); D3 legal entity name + contact email +
+governing-law jurisdiction (+ confirm Vercel region). **Card stays Blocked until the founder signs
+off the copy + answers D1/D2/D3.** Wiring (`/privacy`, `/terms`, footer, swap disclaimer string,
+APP 5 notice, consent/DOB/guardian sub-slice) is sequenced in the packet's Section 5 — only after
+sign-off; the consent/DOB sub-slice also needs founder DB approval (prod migration).
+
 ## Done evidence
 
 **Engineering slice — DONE locally (NOT pushed; awaiting founder GO + review). Gate green: typecheck clean, lint 0 errors, 1098/1098 tests (was 1086, +12).**
