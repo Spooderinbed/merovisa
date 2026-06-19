@@ -7,7 +7,7 @@ import { ProvenanceSchema, HttpUrl, IsoDate } from "./common";
  * source, ISO dates, unique ids, and provenance (>=1 findingRef).
  */
 const AuStudentVisaRequirementSchema = z.object({
-  id: z.enum(["coe", "oshc", "financial-coverage", "genuine-student"]),
+  id: z.enum(["coe", "oshc", "english", "financial-coverage", "genuine-student"]),
   label: z.string().min(1),
   summary: z.string().min(1),
   questions: z.array(z.string().min(1)).optional(),

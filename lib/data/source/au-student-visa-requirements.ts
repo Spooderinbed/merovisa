@@ -2,17 +2,18 @@ import type { AuStudentVisaRequirement } from "@/lib/data/types";
 
 /**
  * DHA Subclass 500 student-visa documentary requirements (visa-documents
- * category A): the four application pillars — Confirmation of Enrolment, Overseas
- * Student Health Cover, the financial-evidence coverage rules, and the Genuine
- * Student requirement. Prose rules consumed by the checklist + plan generators for
- * sourced, accurate guidance. Fact-only — no scorer reads it; machine-checked
- * against findings A.002–A.022 (see provenance.findingRefs).
+ * category A): the application pillars — Confirmation of Enrolment, Overseas
+ * Student Health Cover, the financial-evidence coverage rules, the English-language
+ * evidence requirement, and the Genuine Student requirement. Prose rules consumed by
+ * the checklist + plan generators for sourced, accurate guidance. Fact-only — no
+ * scorer reads it; machine-checked against findings A.002–A.022 (see provenance.findingRefs).
  *
  * The CoE record's headline source is the DHA web-evidentiary-tool (A.002); the
  * UoW/ACU/UTS findings (A.118–A.122) corroborate a CoE's contents and issuance.
  * `financial-coverage` sources the coverage *requirement* (travel/living/tuition),
  * not the AUD 29,710 figure itself — that stays sourced via AU_DHA_LIVING_CAPACITY_AUD
- * (A.015/B.002).
+ * (A.015/B.002). The `english` record carries the DHA approved-test-or-exemption rule
+ * via cross-category finding I.025; the inline checklist English item surfaces its copy.
  */
 const DHA_EVIDENTIARY = "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool";
 
@@ -41,6 +42,19 @@ export const AU_STUDENT_VISA_REQUIREMENTS: AuStudentVisaRequirement[] = [
       findingRefs: ["A.006", "A.007", "A.008", "A.009", "A.010", "I.026"],
       source: DHA_EVIDENTIARY,
       note: "DHA's Document Checklist Tool: OSHC must cover the applicant from at least one week before the course starts and for the duration of stay (I.026) — corroborates the A.006–A.010 OSHC rules.",
+    },
+  },
+  {
+    id: "english",
+    label: "English language evidence",
+    summary:
+      "Required for the visa. Provide evidence of an approved English test score, or evidence that you qualify for an exemption.",
+    source: DHA_EVIDENTIARY,
+    lastVerified: "2026-06-05",
+    provenance: {
+      findingRefs: ["I.025"],
+      source: DHA_EVIDENTIARY,
+      note: "DHA web-evidentiary tool: a student-visa applicant must provide evidence of an approved English-language test score, or evidence that they qualify for an exemption (I.025).",
     },
   },
   {

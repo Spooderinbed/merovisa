@@ -621,7 +621,7 @@ export interface AuTuitionPaymentFact extends Provenanced {
  * machine-checked against the findings.
  */
 export interface AuStudentVisaRequirement extends Provenanced {
-  id: "coe" | "oshc" | "financial-coverage" | "genuine-student";
+  id: "coe" | "oshc" | "english" | "financial-coverage" | "genuine-student";
   label: string; // short human label
   summary: string; // student-facing note text
   questions?: string[]; // genuine-student only — the four GS questions

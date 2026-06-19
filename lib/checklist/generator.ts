@@ -163,9 +163,13 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     const band = program.minEnglishBand != null ? `, each band ≥ ${program.minEnglishBand}` : "";
     englishNote = `This program lists ${testKind.toUpperCase()} ${program.minEnglish}${band}.`;
   } else {
-    englishNote = "Most Australian programs require an English test for both admission and the visa.";
+    englishNote = "Most Australian programs require an English test for admission.";
   }
   if (isNursing) englishNote += " Nursing programs typically require each band ≥ 7.";
+  // Visa-evidence rule (I.025), sourced from the registered requirements module so the
+  // copy stays single-source-of-truth; the SourceLine keeps the program URL for the
+  // admission threshold (the I.025 fact rides via that module's findingRefs).
+  englishNote += ` ${VISA_REQ["english"]!.summary}`;
   add({
     key: "english",
     kind: testKind,

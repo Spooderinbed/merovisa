@@ -48,6 +48,15 @@ describe("generateChecklist", () => {
     expect(eng?.source?.url).toBe("https://example.edu/it");
   });
 
+  it("surfaces the visa English-evidence requirement (approved test or exemption) on the English item (I.025)", () => {
+    const eng = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "english");
+    expect(eng?.note).toContain(
+      "Required for the visa. Provide evidence of an approved English test score, or evidence that you qualify for an exemption.",
+    );
+    // the admission threshold line is still present (not replaced)
+    expect(eng?.note).toContain("IELTS 6.5");
+  });
+
   it("defaults the English kind to the student's test when known", () => {
     const items = generateChecklist({ program: baseProgram, sections: { english: { test: "pte" } }, uploadedKinds: noKinds });
     expect(byKey(items, "english")?.kind).toBe("pte");

@@ -8,4 +8,15 @@ describe("AU_STUDENT_VISA_REQUIREMENTS citations", () => {
     const oshc = AU_STUDENT_VISA_REQUIREMENTS.find((r) => r.id === "oshc");
     expect(oshc?.provenance.findingRefs).toContain("I.026");
   });
+
+  it("registers the English-evidence requirement citing the approved-test-or-exemption finding (I.025)", () => {
+    // New visa pillar surfacing I.025: an applicant must provide an approved English
+    // test score OR evidence of an exemption. The registered findingRefs ["I.025"] is
+    // what flips the finding to used; the inline checklist English item surfaces the copy.
+    const english = AU_STUDENT_VISA_REQUIREMENTS.find((r) => r.id === "english");
+    expect(english?.provenance.findingRefs).toContain("I.025");
+    expect(english?.summary).toBe(
+      "Required for the visa. Provide evidence of an approved English test score, or evidence that you qualify for an exemption.",
+    );
+  });
 });
