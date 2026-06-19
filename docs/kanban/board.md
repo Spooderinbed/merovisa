@@ -8,9 +8,10 @@
 > _Last updated: 2026-06-19 · stale threshold: 7d_
 
 
-## Backlog — 1
+## Backlog — 2
 
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
+- **MV-13** · P2 · [Bridge TS fact layer into DB catalogue](cards/MV-13-fact-layer-db-bridge.md) — _The Category-E half of MV-06, spun out 2026-06-19. The 45 ready Category-E findings have no live home: they target the DORMANT TS fact layer (au-rmit-programs.ts etc., imported only by the validation registry, no render path) and name specific programs/unis (RMIT/UTS/Deakin programs, ECU+Torrens) the live 64-row DB catalogue doesn't carry. This card replaces/augments the generic derived DB catalogue (every live card today shows estimated data, verified=0) with the primary-sourced TS fact layer via a programs seed-migration — the home that makes Category-E user-visible. Bigger than copy: prod DB write (founder-gated), matches-engine + goldens impact (NOT copy-only), parity-guard + new-uni seeding. Generated-data pipeline per forward-plan §4. Dossier: cards/MV-13-fact-layer-db-bridge.md._
 
 ## Ready (WIP 5) — 0
 
@@ -18,7 +19,7 @@ _empty_
 
 ## In progress (WIP 1) — 1
 
-- **MV-06** · P2 · [Integrate ledger slice E/I](cards/MV-06-integrate-ledger-slice.md) — _SCOPED 2026-06-19, awaiting founder steer. Ready set: Category E = 45 ready, Category I = 4 ready. PIVOTAL FINDING: all 45 E findings target the TS fact layer (au-rmit-programs.ts), which is DORMANT (imported only by the validation registry — no render path; the MV-07 dormant-data trap with no latent consumer), AND they name specific programs/unis (RMIT Pharmacy/Nursing/SocialWork, UTS Pharmacy, Deakin Data Sci, ECU+Torrens) the live 64-row DB catalogue does not carry. So integrating E = zero user-visible change. The 4 I findings (I.010 PIC 4020, I.025 English-evidence, I.026 OSHC timing, I.058 MI-not-permission) target the SHIPPED refusal-recovery surface and back copy that exists today. RECOMMENDATION: surface the 4 I findings (copy-only citations, goldens untouched); DEFER all 45 E behind a prerequisite 'bridge the TS fact layer into the DB catalogue' slice (founder DB approval + goldens + matches impact) as its own card — the real Category-E unlock. Premise already corrected (MV-09): headline visa-fee/capacity figures current. Dossier: cards/MV-06-integrate-ledger-slice.md._
+- **MV-06** · P2 · [Integrate ledger slice E/I](cards/MV-06-integrate-ledger-slice.md) — _BUILD 2026-06-19 (founder steered 'do what's recommended'). 3 of 4 ready Category-I findings SURFACED as copy-only gov citations (golden-assessments.json byte-identical, TDD per finding): I.010 PIC 4020 (clause 500.217) rides in findingRefs on the document-integrity row + I.058 MI-request-is-not-permission-to-stay as a new refusal-recovery row (84d518c); I.026 OSHC ≥1-week-before timing cited on the checklist OSHC requirement (e0cf362). I.025 (English approved-test-OR-exemption) is NOT a pure citation — the checklist English item is generated inline (unregistered, won't flip to used) and no existing copy states the exemption; surfacing needs a new registered English-evidence record + generator wiring + founder-reviewable copy → HELD for a copy steer (proposed copy in dossier). Gate green throughout: typecheck/lint clean, 1143 tests (+3 TDD), reconcile + findings-integrity + flip-status guard green. Deferred 45 Category-E findings spun into MV-13 (fact-layer→DB bridge, founder DB-gated). Dossier: cards/MV-06-integrate-ledger-slice.md._
 
 ## In review (WIP 3) — 2
 

@@ -73,7 +73,39 @@ Ran the ledger (sandbox parse of `findings/E.jsonl` + `findings/I.jsonl`). Ready
   not folded into MV-06.
 
 Net: MV-06 shrinks to "surface the 4 I findings"; the E value is real but gated behind a DB-bridge
-slice that needs founder approval. **Awaiting founder steer before any integration.**
+slice that needs founder approval.
+
+## Build progress (2026-06-19) — founder steered "do what's recommended"
+
+Surfaced as copy-only gov citations via the `provenance.findingRefs[]` → FLIP_STATUS path
+(status is machine-derived, not hand-edited). All four are `process|prose-only` → **no engine
+path; `golden-assessments.json` byte-identical**. Each integration: add the finding to the right
+registered module's `findingRefs`, run `FLIP_STATUS=1` (sets `status:used` + `used_by`, clears
+triage), promote `value_status` unset→prose-only (the reconcile `USED_UNSET` rule requires it),
+gate green. TDD failing-test-first per finding.
+
+- **I.010 ✅** (clause 500.217 → PIC 4020) — rides in `findingRefs` + note on the existing
+  `ground-document-integrity` row (plain copy unchanged; mirrors the GS row's I.008 pattern).
+  Commit `84d518c`.
+- **I.058 ✅** (MI request ≠ permission to stay; must still arrange to leave) — new `recovery-path`
+  row in `nepal-refusal-recovery.ts` linked to the after-you-request DHA page. **New founder-
+  reviewable copy** (faithful gov myth-buster restatement). Commit `84d518c`.
+- **I.026 ✅** (OSHC ≥1 week before course, full stay) — pure-citation onto the existing `oshc`
+  row in `au-student-visa-requirements.ts` (copy already exact; cross-category corroboration of
+  A.006–A.010). Commit `e0cf362`.
+- **I.025 ⏳ NOT a pure citation** — the checklist's English item is generated **inline** in
+  `lib/checklist/generator.ts` (not a registered module, so a ref there won't flip to `used`), and
+  **no existing copy states the "approved test OR exemption" fact**. Surfacing it needs a new
+  registered English-evidence record (+ generator wiring to render it without duplicating the
+  inline IELTS line) and **new founder-reviewable copy**. Held for a founder copy steer rather than
+  inventing checklist copy unilaterally — see the report. Proposed copy: "Required for the visa.
+  Provide evidence of an approved English test score, or evidence that you qualify for an exemption."
+
+Gate after each: typecheck/lint clean, full suite green (1142 → 1143 tests, +3 TDD), goldens
+byte-identical, reconcile + findings-integrity + flip-status guard green.
+
+**Deferred Category E** spun into its own card **MV-13** (bridge the TS fact layer into the DB
+catalogue; founder DB approval gated).
 
 ## Acceptance criteria (to be firmed during scoping)
 
