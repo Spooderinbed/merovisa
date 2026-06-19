@@ -32,6 +32,8 @@ const ART_OUTCOMES = "https://www.art.gov.au/after-applying/possible-outcomes";
 const ART_FEES = "https://www.art.gov.au/help-and-resources/fees";
 const IMMI_MINISTERIAL =
   "https://immi.homeaffairs.gov.au/what-we-do/status-resolution-service/ministerial-intervention";
+const IMMI_MINISTERIAL_AFTER =
+  "https://immi.homeaffairs.gov.au/what-we-do/status-resolution-service/ministerial-intervention/after-you-request-ministerial-intervention";
 const IMMI_SCAMS = "https://immi.homeaffairs.gov.au/help-support/visa-scams/what-you-need-to-know";
 const VERIFIED = "2026-06-05";
 
@@ -72,9 +74,9 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
     source: IMMI_ACCURATE,
     lastVerified: VERIFIED,
     provenance: {
-      findingRefs: ["I.027"],
+      findingRefs: ["I.027", "I.010"],
       source: IMMI_ACCURATE,
-      note: "DHA: providing altered, edited, or digitally manipulated documents for visa purposes is unlawful (I.027).",
+      note: "DHA: providing altered, edited, or digitally manipulated documents for visa purposes is unlawful (I.027). The legal authority is PIC 4020 (the integrity criterion), which clause 500.217 requires a primary Subclass 500 applicant to satisfy (I.010); the student-facing DHA page is the displayed source, the legislation rides in findingRefs (slice G/I source-display pattern).",
     },
   },
   // ── Honest odds — by sector (structured) ────────────────────────────────────
@@ -256,6 +258,20 @@ export const NEPAL_REFUSAL_RECOVERY: NepalRefusalRecovery[] = [
       findingRefs: ["I.062"],
       source: IMMI_MINISTERIAL,
       note: "DHA FOI file fa-250500998: tribunal-initiated ministerial-intervention requests include those referred by the ART and former AAT (I.062). Displayed source is the student-facing ministerial-intervention page; the FOI finding rides in findingRefs (the slice G/I source-display pattern).",
+    },
+  },
+  {
+    id: "recovery-ministerial-not-permission",
+    kind: "recovery-path",
+    label: "After you request",
+    summary:
+      "Requesting ministerial intervention is not permission to stay — you must still arrange to leave Australia.",
+    source: IMMI_MINISTERIAL_AFTER,
+    lastVerified: VERIFIED,
+    provenance: {
+      findingRefs: ["I.058"],
+      source: IMMI_MINISTERIAL_AFTER,
+      note: "DHA: a person must make arrangements to leave Australia even if they have requested ministerial intervention (I.058).",
     },
   },
   // ── What a review can result in (ART possible outcomes) ──────────────────────

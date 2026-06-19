@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RefusalRecovery } from "@/components/results/refusal-recovery";
+import { NEPAL_REFUSAL_RECOVERY } from "@/lib/data/source/nepal-refusal-recovery";
 
 describe("RefusalRecovery", () => {
   it("renders the five gov-sourced sections", () => {
@@ -144,6 +145,26 @@ describe("RefusalRecovery", () => {
     expect(screen.getByRole("link", { name: "Ministerial referrals" })).toHaveAttribute(
       "href",
       expect.stringContaining("immi.homeaffairs.gov.au"),
+    );
+  });
+
+  it("cites the PIC 4020 legal authority (finding I.010) on the document-integrity ground", () => {
+    // I.010 is the legislative hook (clause 500.217 → PIC 4020) behind the shipped
+    // fake-doc copy; it rides in findingRefs, like clause I.008 on the GS row.
+    const row = NEPAL_REFUSAL_RECOVERY.find((r) => r.id === "ground-document-integrity");
+    expect(row?.provenance.findingRefs).toContain("I.010");
+  });
+
+  it("warns that requesting ministerial intervention is not permission to stay (I.058), linked to the gov source", () => {
+    render(<RefusalRecovery />);
+    expect(
+      screen.getByText(
+        "Requesting ministerial intervention is not permission to stay — you must still arrange to leave Australia.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "After you request" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("after-you-request-ministerial-intervention"),
     );
   });
 });
