@@ -1,6 +1,6 @@
 # MV-08 — Outcome-validation loop ("the moat")
 
-**Status:** Design delivered, awaiting founder review/steer (design only — no code shipped).
+**Status:** Design delivered + Codex review folded in (2026-06-19), awaiting founder review/steer (design only — no code shipped).
 **Owner:** agent · **Priority:** P2 · **Gate to build:** founder approves migration + real traffic exists.
 
 ## What this card is
@@ -24,13 +24,17 @@ Key decisions captured there:
   *different halves* of the verdict, so outcomes are recorded separately, never conflated.
 - **Reuse, don't duplicate** — `user_program_state` already tracks `applied`; that
   transition becomes the trigger that **freezes a prediction**. No parallel "I applied" UI.
-- **Two new tables**, mirroring existing migration conventions (`owner uuid`, `program_id
-  text`, `(select auth.uid())` RLS, `force` RLS, indexed FKs, advisor-clean):
+- **Three new tables** (post-Codex; B1 added the attribution layer), mirroring existing
+  migration conventions (`owner uuid`, `program_id text`, `(select auth.uid())` RLS,
+  `force` RLS, indexed FKs, advisor-clean):
   - `program_predictions` — **immutable** verdict snapshot (verdict, rule_version,
-    score_snapshot jsonb), unique `(owner, assessment_id, program_id)`; INSERT+SELECT only.
-  - `outcome_events` — **append-only** funnel log (`event_type` spanning both gates,
-    `occurred_on` date, `source` self_reported→document_verified→official_verified,
-    `superseded` for corrections); never overwrites a claimed outcome.
+    score_snapshot jsonb); prediction-*run* model (unique incl. rule_version), UPDATE-guard
+    trigger for true immutability.
+  - `application_attempts` — **the attribution layer** (B1): institution, program, intake,
+    destination, which prediction it resolves; composite FK guarantees owner consistency.
+  - `outcome_events` — **append-only** funnel log (`event_type` spanning both gates, explicit
+    `gate` + `reason_code` + decision_authority, `occurred_at` timestamptz, verification
+    metadata, `supersedes_event_id` lineage); never overwrites a claimed outcome.
 - **API** — 3 Zod-validated routes; verdict **recomputed server-side** on snapshot (F16,
   never trust client); calibration is offline/admin only (no rules in client JS).
 - **Calibration** — ordinal **separation + monotonicity** (Strong ≥ Possible ≥ Reach) per
@@ -44,10 +48,47 @@ Key decisions captured there:
 
 ## Open questions for the founder (in the doc §13)
 
-1. Apply the migration now (inert, advisor-clean) or wait for launch?
-2. Is 30/band/gate/rule_version the right minimum-sample bar?
-3. Is document-verified outcome capture near-term or later?
+1. Apply the migration now (inert, advisor-clean) or wait for launch? Now a **three-table** migration.
+2. Calibration evidence bar — confirm **CIs + Bayesian pooling on verified outcomes**, "insufficient evidence" gate (NOT a fixed n≥30; updated by Codex review).
+3. Is admin-verified outcome capture near-term or later? (Gates when any calibration claim can go live — self-reports don't train.)
 4. How aggressively do we nudge for outcomes vs. stay passive?
+
+## Codex adversarial review (2026-06-19) — FOLDED INTO THE DOC ✅
+
+Ran the committed Codex (GPT-5) refute-each-decision pass. It confirmed the
+direction (immutable predictions, separate admission/visa calibration, bands-not-%)
+but found defects — near-free to fix in design, expensive to retrofit once data
+exists. **All folded into the design doc on 2026-06-19** (schema is now 3 tables;
+see §4 / §7 / §13 there).
+
+**Blockers (folded):**
+- [x] **B1 — Outcome→program attribution.** New `application_attempts` entity
+      (institution, program, intake, destination, which prediction it resolves)
+      between prediction and event. Doc §4.2.
+- [x] **B2 — Self-reported labels poison calibration.** Calibration now **excludes
+      `self_reported`**; `outcome_events` carries `verified_by`/`verified_at`; promotion
+      to document/official-verified is admin-only (insert policy forbids self-promote).
+      Doc §4.3, §7, §8.
+- [x] **B3 — Two-gate underspecified.** `outcome_events` now has an explicit `gate`
+      column + normalized `reason_code` taxonomy + `decision_authority`; calibration
+      reports a per-reason_code visa breakdown. Doc §4.3, §7.2.
+
+**Should-fix (folded):**
+- [x] S4 — UPDATE-guard trigger on `program_predictions` (true immutability even vs
+      service-role); writes use the user's RLS-scoped session, never service-role in
+      request paths. Doc §4.1, §4.4.
+- [x] S5 — Prediction-*run* model: unique incl. `rule_version` +
+      `supersedes_prediction_id`; "current" derived as latest non-superseded. Doc §4.1.
+- [x] S6 — `supersedes_event_id` lineage pointer replaces the `superseded` boolean. §4.3.
+- [x] S7 — App-side state machine + deferred terminal-conflict trigger. §4.3, AC.
+- [x] S8 — `occurred_at timestamptz` + optional `occurred_on` local date. §4.3.
+- [x] S9 — CIs + Bayesian/hierarchical pooling + "insufficient evidence" replaces n≥30. §7.4.
+- [x] S10 — Compatibility groups + rolling windows over comparable rule versions. §7.3.
+- [x] S11 — Composite index `outcome_events(attempt_id, owner)`; verify RLS `exists` plan. §4.4.
+- [x] S12 — Owner consistency via composite FKs `(parent_id, owner)`, no trigger needed. §4.2/§4.3.
+
+Founder question 2 updated in the doc: the min-sample bar is no longer a yes/no on 30
+— it's "CIs + Bayesian pooling on verified outcomes; insufficient-evidence gate."
 
 ## Acceptance criteria (this slice — design)
 
