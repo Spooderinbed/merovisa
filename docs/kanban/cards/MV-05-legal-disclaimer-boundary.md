@@ -111,13 +111,17 @@ complaint-handling (30 days), named the likely overseas country (Vercel/US), cla
 consent is plain-language + guardian-account ownership, removed the automated-decision claim, and
 made provider-neutrality user-facing. Codex confirmed the D1/D2/D3 **recommended defaults are sound**.
 
-**3 founder decisions still required before wiring (D1/D2/D3 in the packet):** D1 under-18 stance
-(rec 16+ self-serve / under-16 guardian-gated, DOB at sign-up); D2 retention period (rec: delete
-docs 90 days after assessment expiry, or 12 mo inactivity); D3 legal entity name + contact email +
-governing-law jurisdiction (+ confirm Vercel region). **Card stays Blocked until the founder signs
-off the copy + answers D1/D2/D3.** Wiring (`/privacy`, `/terms`, footer, swap disclaimer string,
-APP 5 notice, consent/DOB/guardian sub-slice) is sequenced in the packet's Section 5 — only after
-sign-off; the consent/DOB sub-slice also needs founder DB approval (prod migration).
+**Founder decisions (2026-06-20):** **D1 ✅ DECIDED — 16+ self-serve, under-16 guardian-gated,
+DOB at sign-up** (chosen recommended). **D2 ✅ DECIDED — retain until account deletion (no
+automatic time-based deletion)**; packet Privacy §7 reworded to this posture + an eyes-open APP 11.2
+reviewer note (weakest data-minimisation posture for sensitive docs; an inactivity sweep is the
+low-cost future hardening). **D3 ⛔ STILL NEEDED — legal entity name + privacy contact email +
+governing-law jurisdiction (+ confirm Vercel region).**
+
+**Card stays Blocked until: (a) founder supplies D3, and (b) founder signs off the copy.** Then
+wiring per packet Section 5: low-risk first (`/privacy`, `/terms` static pages, footer links, swap
+the tightened disclaimer string + tests), then the consent/DOB/guardian sub-slice (its own card —
+needs founder DB approval for the `consented_at`/`consent_version`/DOB migration).
 
 ## Done evidence
 

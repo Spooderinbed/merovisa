@@ -15,16 +15,16 @@
 
 ---
 
-## 0. What you must decide before wiring (3 blockers)
+## 0. What you must decide before wiring
 
-The copy below uses **recommended defaults** and clearly-marked `[PLACEHOLDERS]` for
-facts only you can supply. I cannot invent these.
+D1 + D2 **decided by founder 2026-06-20** (baked into the copy below). **D3 still required**
+before `/privacy` + `/terms` can publish — these are facts only you can supply.
 
-| # | Decision | Recommended default | Why it's yours to set |
-|---|----------|---------------------|------------------------|
-| **D1** | **Under-18 stance** | **16+ self-serve; under-16 requires verified guardian consent. Capture date of birth at sign-up (not an "I am 18+" checkbox).** | Loses no real 17-year-old applicants while keeping a defensible minors boundary. The alternative (18+-only) is simpler but turns away a genuine slice of the Nepal→Australia market. |
-| **D2** | **Retention period** for uploaded sensitive docs (passport, bank statements, academic records) | **Delete uploaded documents 90 days after assessment expiry (assessments already expire in 3 days) or 12 months of account inactivity, whichever comes first; users can delete anytime via the existing delete path.** | A real number is required for APP 11.2. The deletion *mechanism* already exists (`POST /api/account/delete`); this sets *when automatic* deletion happens. |
-| **D3** | **Business identity + contact + governing law** | `[LEGAL ENTITY NAME]`, privacy contact `[CONTACT EMAIL]`, governing law `[JURISDICTION]` | The policy must name a real data controller, a working contact for access/correction/complaints, and a governing-law jurisdiction. APP/NDB obligations attach to AU-facing handling regardless of where the entity sits. |
+| # | Decision | Status | Resolution |
+|---|----------|--------|------------|
+| **D1** | **Under-18 stance** | ✅ **DECIDED** | **16+ self-serve; under-16 requires verified guardian consent; capture date of birth at sign-up.** (Founder chose the recommended option.) |
+| **D2** | **Retention period** for uploaded sensitive docs | ✅ **DECIDED** | **Retain while the account exists; delete only when the user deletes their documents/account** (no automatic time-based deletion). See the APP 11.2 reviewer note in Privacy §7. |
+| **D3** | **Business identity + contact + governing law** | ⛔ **STILL NEEDED** | Supply: `[LEGAL ENTITY NAME]` (data controller), privacy contact `[CONTACT EMAIL]`, governing law `[JURISDICTION]`. The policy can't publish with these blank. |
 
 **Hosting facts to confirm (D3-adjacent):** the policy states where data lives. Current
 stack: **Supabase Postgres + Storage in `ap-southeast-1` (Sydney, Australia)** and
@@ -128,12 +128,20 @@ control so each user can reach only their own data; access is restricted and tra
 encrypted in transit. No system is perfectly secure, but we take reasonable steps to
 protect your information.
 
-**7. Retention & deletion (APP 11.2).** We keep your information only as long as needed
-for the purposes above. **Uploaded documents are deleted `[D2: e.g. 90 days after your
-assessment expires, or after 12 months of inactivity, whichever is first]`.** You can
-delete your account and all associated data at any time from your profile ("Delete your
-account"); this removes your uploaded documents, your profile and assessments, and your
-sign-in identity.
+**7. Retention & deletion (APP 11.2).** We keep your information for as long as your
+account is active, so your assessment, checklist, and uploaded documents are there when
+you return. **You can delete your uploaded documents, or your whole account and all
+associated data, at any time** from your profile ("Delete your account") — this removes
+your uploaded documents, your profile and assessments, and your sign-in identity. When you
+delete, we delete.
+
+> **⚠ Reviewer note (not policy text) — D2 = "retain until account deletion".** You chose
+> no automatic time-based deletion. This is defensible for an *active* account (the data is
+> still needed for the user's assessment), but it is the **weakest data-minimisation
+> posture** for sensitive docs and the most likely point a lawyer pushes back on. Low-cost
+> hardening you can add later without changing the policy's promise: an inactivity sweep
+> (e.g. delete docs after 12 months dormant) — it only *strengthens* "when you delete, we
+> delete." Flagging so the choice is eyes-open.
 
 **8. Your rights (APP 12 / 13).** You can access and correct your personal information,
 and ask questions or make a privacy complaint, by contacting **`[CONTACT EMAIL]`**. We
