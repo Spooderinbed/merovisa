@@ -1,6 +1,7 @@
 import type { MatchResult } from "@/lib/matches/types";
 import { ShortlistButton } from "./shortlist-button";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
+import { cricosCodeForUniversity } from "@/lib/data/cricos-lookup";
 
 const VERDICT_CLS = {
   strong: "bg-strong-tint text-strong",
@@ -49,6 +50,7 @@ export function ProgramCard({
   const provenance = checked ? `${qualityWord} · checked ${checked}` : qualityWord;
   const linkLabel = isDeepLink(p.source) ? "Source" : "Provider site";
   const provenanceTone = isEstimated ? "text-ink-soft" : "text-ink-faint";
+  const cricos = cricosCodeForUniversity(u.id);
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -118,6 +120,16 @@ export function ProgramCard({
           <a href={`/checklist/${p.id}`} className="text-[12.5px] text-primary hover:underline">
             Document checklist →
           </a>
+          {cricos ? (
+            <SourceAnchor
+              surface="matches"
+              href={cricos.source}
+              title={`Verify ${cricos.provider} on the official CRICOS register`}
+              className="font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
+            >
+              CRICOS {cricos.cricosCode} ↗
+            </SourceAnchor>
+          ) : null}
         </div>
         <ShortlistButton programId={p.id} initialStatus={isShortlisted ? "shortlisted" : null} />
       </footer>

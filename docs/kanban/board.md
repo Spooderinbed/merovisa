@@ -8,10 +8,9 @@
 > _Last updated: 2026-06-19 · stale threshold: 7d_
 
 
-## Backlog — 4
+## Backlog — 3
 
 - **MV-06** · P2 · Integrate ledger slice E/I — _~195 ready research findings that feed scoring/cost copy. Do after the engines are unified._
-- **MV-07** · P2 · CRICOS scrape pipeline — _Generated-data pipeline → providers + evidence tables → a real per-provider Genuine-Student answer._
 - **MV-08** · P2 · Outcome-validation loop (the moat) — _Capture applied / offer / refused / visa to validate verdicts. Design the model soon; build after traffic._
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
 
@@ -23,9 +22,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-07** · P2 · [Surface CRICOS provider codes (trust signal)](cards/MV-07-cricos-trust-signal.md) — _DONE pending review (committed local; push gated on the Vercel auto-deploy question). Scope pivoted at kickoff: the CRICOS 'scrape' was already done (70+ providers sourced in TS, gate-checked) and the GS panel already rich, but the sourced CRICOS data was dormant (no consumer). This slice surfaces it — program cards now show the provider's `CRICOS <code> ↗` linking to the official register, via a pure EXPLICIT id→code lookup (not name-derived: Adelaide=merged 04249J; Melbourne/ANU unsourced→null, render nothing). No scorer/DB; goldens untouched. Gate green: typecheck/lint/1128 tests (+7). DB tables + per-provider evidence levels deferred (speculative / sourcing-blocked)._
 
 ## Blocked — 3
 

@@ -111,4 +111,20 @@ describe("ProgramCard", () => {
     render(<ProgramCard match={m} isShortlisted={false} />);
     expect(screen.queryByText(/Good to know/i)).not.toBeInTheDocument();
   });
+
+  it("surfaces the provider's CRICOS code as a verifiable link when one is sourced", () => {
+    const sydney: MatchResult = {
+      ...m,
+      university: { ...m.university, id: "sydney", name: "University of Sydney", city: "Sydney" },
+    };
+    render(<ProgramCard match={sydney} isShortlisted={false} />);
+    const link = screen.getByRole("link", { name: /CRICOS 00026A/i });
+    expect(link).toHaveAttribute("href", "https://cricos.education.gov.au/");
+  });
+
+  it("renders no CRICOS line when the university has no sourced code", () => {
+    // Default fixture uses university id "u1" (unmapped) → nothing to verify.
+    render(<ProgramCard match={m} isShortlisted={false} />);
+    expect(screen.queryByText(/CRICOS/i)).not.toBeInTheDocument();
+  });
 });
