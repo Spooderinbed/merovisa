@@ -6,32 +6,27 @@ const { startClaimOAuth } = vi.hoisted(() => ({ startClaimOAuth: vi.fn() }));
 vi.mock("@/lib/auth/start-claim-oauth", () => ({ startClaimOAuth }));
 
 import { UniversityMatches } from "@/components/results/university-matches";
-import type { UniversityMatch } from "@/lib/matching/universities";
-import type { UniversityData } from "@/lib/data/types";
+import { makeMatchResult, TEST_PROGRAMS } from "../fixtures/catalog";
+import type { MatchResult } from "@/lib/matches/types";
 
 const ASSESSMENT_UUID = "11815637-f603-4821-8dd0-d9e52560c4f6";
 
-function uni(id: string, name: string): UniversityData {
-  return {
-    id,
-    country: "australia",
-    name,
-    city: "Melbourne",
-    rankingTier: 2,
-    fieldsOffered: ["computer-science"],
-    tuitionUsdPerYear: { min: 25000, max: 38000 },
-    minGradePercent: 65,
-    minEnglishScore: 6.5,
-    source: "https://example.edu",
-    lastVerified: "2026-06-02",
-  };
+function match(i: number, overrides: Partial<MatchResult> = {}): MatchResult {
+  return makeMatchResult({
+    program: {
+      ...TEST_PROGRAMS[0]!,
+      id: `p${i}`,
+      name: `Program ${i}`,
+      source: "https://example.edu/p",
+      lastVerified: "2026-06-02",
+    },
+    verdict: "possible",
+    reasons: [{ kind: "academic", text: "A realistic target.", positive: true }],
+    ...overrides,
+  });
 }
 
-const matches: UniversityMatch[] = Array.from({ length: 5 }, (_, i) => ({
-  university: uni(`u${i}`, `University ${i}`),
-  matchLevel: "possible",
-  reason: "A realistic target.",
-}));
+const matches: MatchResult[] = Array.from({ length: 5 }, (_, i) => match(i));
 
 describe("UniversityMatches", () => {
   beforeEach(() => {
@@ -40,8 +35,8 @@ describe("UniversityMatches", () => {
 
   it("shows the first three in full and the total count", () => {
     render(<UniversityMatches matches={matches} total={12} assessmentId={ASSESSMENT_UUID} />);
-    expect(screen.getByText("University 0")).toBeInTheDocument();
-    expect(screen.getByText("University 2")).toBeInTheDocument();
+    expect(screen.getByText("Program 0")).toBeInTheDocument();
+    expect(screen.getByText("Program 2")).toBeInTheDocument();
     expect(screen.getByText(/12 matched your profile/)).toBeInTheDocument();
   });
 
@@ -59,16 +54,13 @@ describe("UniversityMatches", () => {
   });
 
   it("renders a preference chip when one is set on a surfaced match", () => {
-    const chipped: UniversityMatch[] = [
-      { ...matches[0]!, preferenceChip: { text: "Lower tuition" } },
-      ...matches.slice(1),
-    ];
+    const chipped: MatchResult[] = [match(0, { preferenceChip: { text: "Lower tuition" } }), ...matches.slice(1)];
     render(<UniversityMatches matches={chipped} total={12} assessmentId={ASSESSMENT_UUID} />);
     expect(screen.getByText("Lower tuition")).toBeInTheDocument();
   });
 
   describe("unlock gate for ≤3 matches", () => {
-    const few: UniversityMatch[] = matches.slice(0, 2);
+    const few: MatchResult[] = matches.slice(0, 2);
 
     it("still renders an unlock CTA even when there is nothing to blur", () => {
       render(<UniversityMatches matches={few} total={2} assessmentId={ASSESSMENT_UUID} />);

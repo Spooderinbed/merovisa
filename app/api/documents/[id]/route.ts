@@ -33,8 +33,20 @@ export async function DELETE(
 
   const admin = createSupabaseAdminClient();
 
-  await admin.storage.from("documents").remove([doc.file_path]);
-  await admin.from("documents").delete().eq("id", id).eq("owner", userId);
+  const { error: storageErr } = await admin.storage.from("documents").remove([doc.file_path]);
+  if (storageErr) {
+    console.error("[documents/delete] storage remove failed", { id, userId, err: storageErr });
+    return NextResponse.json({ error: "Couldn't delete the file" }, { status: 500 });
+  }
+  const { error: deleteErr } = await admin
+    .from("documents")
+    .delete()
+    .eq("id", id)
+    .eq("owner", userId);
+  if (deleteErr) {
+    console.error("[documents/delete] documents row delete failed", { id, userId, err: deleteErr });
+    return NextResponse.json({ error: "Couldn't delete the document" }, { status: 500 });
+  }
 
   const docKind = doc.kind as DocumentKind;
   const flag = getFlagForKind(docKind);

@@ -24,7 +24,13 @@ export async function PATCH(request: Request): Promise<Response> {
   }
 
   const admin = createSupabaseAdminClient();
-  const result = await patchProfileSection(admin, data.user.id, parsed.data.section, parsed.data.patch);
+  let result;
+  try {
+    result = await patchProfileSection(admin, data.user.id, parsed.data.section, parsed.data.patch);
+  } catch (err) {
+    console.error("[profile/section] patchProfileSection failed", { userId: data.user.id, section: parsed.data.section, err });
+    return NextResponse.json({ error: "Couldn't save your profile" }, { status: 500 });
+  }
   try {
     await invalidatePlan(admin, data.user.id);
   } catch (err) {

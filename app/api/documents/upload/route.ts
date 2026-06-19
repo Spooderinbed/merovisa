@@ -99,6 +99,14 @@ export async function POST(request: Request): Promise<Response> {
     originalName: safeOriginalName,
   });
 
+  // A failed row insert leaves the uploaded bytes orphaned in Storage — roll the
+  // object back and surface the failure rather than reporting a stored document.
+  if (!docId) {
+    console.error("[documents/upload] insertDocument failed", { userId, docKind, filePath });
+    await admin.storage.from("documents").remove([filePath]);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
+
   // Auto-flip profile boolean flag if this kind drives one
   const flag = getFlagForKind(docKind);
   if (flag) {

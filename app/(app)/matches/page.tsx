@@ -12,6 +12,7 @@ import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { MatchesTabs } from "@/components/matches/matches-tabs";
 import { VerdictGroup } from "@/components/matches/verdict-group";
 import { PolicyBanner } from "@/components/matches/policy-banner";
+import { VerdictDisclaimer } from "@/components/ui/verdict-disclaimer";
 import { CostToApply } from "@/components/results/cost-to-apply";
 import { ScholarshipsPanel } from "@/components/matches/scholarships-panel";
 import { PreferenceNote } from "@/components/matches/preference-note";
@@ -82,6 +83,7 @@ export default async function MatchesPage() {
           your Nepal TU percentage directly against each program&apos;s minimum.
         </p>
       </header>
+      <VerdictDisclaimer message="Program matches are rules-based estimates against published thresholds, not immigration advice." />
       <PolicyBanner />
       <CostToApply />
       <MatchesTabs

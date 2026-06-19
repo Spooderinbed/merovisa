@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
 import { listAllPlanForUser } from "@/lib/plan/repo";
 import { PlanListLive } from "@/components/plan/plan-list-live";
+import { VerdictDisclaimer } from "@/components/ui/verdict-disclaimer";
 
 export default async function PlanPage() {
   const supabase = await createSupabaseServerClient();
@@ -30,6 +31,7 @@ export default async function PlanPage() {
           changes.
         </p>
       </header>
+      <VerdictDisclaimer message="Your plan is ranked by rules-based impact estimates, not immigration advice." />
       <PlanListLive items={items} />
     </div>
   );

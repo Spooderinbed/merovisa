@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Results } from "@/components/results/results";
 import { assembleAssessment } from "@/lib/results/assemble";
+import { TEST_PROGRAMS, TEST_UNIVERSITIES } from "../../fixtures/catalog";
 import type { StudentProfile } from "@/lib/scoring/types";
 
 const baseProfile: StudentProfile = {
@@ -21,7 +22,7 @@ const baseProfile: StudentProfile = {
   goal: "permanent-residency",
 };
 
-const payload = assembleAssessment(baseProfile, new Date("2026-06-10"));
+const payload = assembleAssessment(baseProfile, TEST_PROGRAMS, TEST_UNIVERSITIES, new Date("2026-06-10"));
 
 describe("Results destination gate", () => {
   it("unsupported destination: shows the honest notice, no Australia assessment", () => {

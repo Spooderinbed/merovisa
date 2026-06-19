@@ -11,9 +11,9 @@ matters when no scorer reads it.
 - Profile sections: `lib/profiles/sections.ts`; scorers: `lib/scoring/*`
 
 ## Acceptance criteria
-- [ ] Decision recorded: does work experience feed scoring (e.g. profile-strength / GS course-relevance), or is it context-only?
-- [ ] If it feeds scoring: a scorer reads it and a test proves it moves the relevant dimension.
-- [ ] If context-only: the UI labels it optional/context and no copy implies it changes the verdict.
+- [x] Decision recorded: does work experience feed scoring (e.g. profile-strength / GS course-relevance), or is it context-only? — **DECIDED: context-only.** No scorer reads `work.title/years/relevance`. `work.title` tailors the document checklist (employment-letter/salary-slip); the verdict's "Work experience" credit comes from the *separate* `gapReasons: "worked"` signal, not this section. Relevance/years are stored but read by nothing. Relabel chosen over wiring (founder steer + the risk note: wiring ⇒ RULE_VERSION/goldens churn).
+- [~] If it feeds scoring: a scorer reads it and a test proves it moves the relevant dimension. — **N/A** (context-only path taken; no scoring change, goldens untouched).
+- [x] If context-only: the UI labels it optional/context and no copy implies it changes the verdict. — **DONE** (`WorkGapEditor` now opens with "Optional. Your role helps tailor your document checklist — it doesn't change your verdict.").
 
 ## Test plan
 - If wired: characterization test showing the work field changes the intended dimension.
@@ -34,6 +34,11 @@ matters when no scorer reads it.
 
 ## Decision log
 - 2026-06-18 — Created from round-1 audit (dead-input class).
+- 2026-06-19 — Recon (Explore agent) corrected the card's "dead input" premise: the section isn't fully dead — `work.title` drives the checklist generator (`lib/checklist/generator.ts`, employment-letter + salary-slip). The real trust bug is narrower: the `Relevance` dropdown (Directly related/Related/Unrelated) and `Years` *imply* a verdict effect (classic GS course-relevance / experience signals) but no scorer reads them; profile-strength's "Work experience" factor keys off `gapReasons.includes("worked")`, a different input. Chose the **context-only relabel** (card default + founder steer "honestly relabel optional"). Wiring relevance/years into profile-strength remains a deferred option (would need a RULE_VERSION bump + golden re-review) — not done here.
 
 ## Done evidence
-_pending_
+
+**DONE locally 2026-06-19 (NOT pushed; awaiting founder GO). Gate green: typecheck clean, lint 0 errors, 1115/1115 tests (+1).** No scorer/data value changed → `golden-assessments.json` byte-identical, no version bump.
+
+- **`components/profile/editors/work-gap-editor.tsx`** — the work block now opens with one honest framing line: "Optional. Your role helps tailor your document checklist — it doesn't change your verdict." Labels it optional + states its real effect (checklist) + explicitly denies a verdict effect, resolving the implication left by the un-disclaimed Relevance/Years inputs. TDD'd: `tests/components/profile/work-gap-editor.test.tsx` asserts both the checklist-context framing and the "doesn't change your verdict" disclaimer render (failing test first).
+- No change to the field shape, persistence, validation, or the checklist consumer — surgical copy-only fix.

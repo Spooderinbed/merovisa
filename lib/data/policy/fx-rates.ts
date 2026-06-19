@@ -25,3 +25,16 @@ export const FX_RATES: Partial<Record<Currency, Sourced<number>>> = {
   PKR: fx(280, "Pakistani rupee per USD (approx)"),
   NGN: fx(1500, "Nigerian naira per USD (approx)"),
 };
+
+/**
+ * Budget in `currency` → AUD, derived entirely from FX_RATES (units per USD), so
+ * every budget→AUD conversion in the app reads ONE source of truth instead of a
+ * divergent inline table. An unmapped/null currency passes through unchanged
+ * (treated as already AUD), matching the prior converter's `default` branch.
+ */
+export function toAud(amount: number, currency: string | null): number {
+  const rate = currency ? FX_RATES[currency as Currency]?.value : undefined;
+  if (rate === undefined) return amount;
+  const audPerUsd = FX_RATES.AUD?.value ?? 1;
+  return (amount / rate) * audPerUsd;
+}

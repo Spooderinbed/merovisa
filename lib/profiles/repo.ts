@@ -69,9 +69,14 @@ export async function patchProfileSection<K extends SectionKey>(
     throw new Error(`patchProfileSection update failed: ${error.message}`);
   }
 
-  // 0-row update means no profile exists yet — upsert one.
+  // 0-row update means no profile exists yet — upsert one. A failed upsert
+  // returns null; surface it (mirrors the update-error throw above) so the route
+  // reports failure instead of a false success on a first-ever save.
   if (!data || data.length === 0) {
-    await upsertProfile(db, { owner: userId, sections: next, completeness: pct });
+    const id = await upsertProfile(db, { owner: userId, sections: next, completeness: pct });
+    if (id === null) {
+      throw new Error("patchProfileSection upsert fallback failed");
+    }
   }
 
   return { completeness: pct, sections: next };

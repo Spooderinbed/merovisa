@@ -2,24 +2,20 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { UniversityMatches } from "@/components/results/university-matches";
 import { GatedTeasers } from "@/components/results/gated-teasers";
-import type { UniversityMatch } from "@/lib/matching/universities";
-import type { UniversityData } from "@/lib/data/types";
+import { makeMatchResult, TEST_PROGRAMS } from "../fixtures/catalog";
+import type { MatchResult } from "@/lib/matches/types";
 
-function uni(id: string, name: string): UniversityData {
-  return {
-    id, country: "australia", name, city: "Melbourne", rankingTier: 2,
-    fieldsOffered: ["computer-science"], tuitionUsdPerYear: { min: 25000, max: 38000 },
-    minGradePercent: 65, minEnglishScore: 6.5, source: "https://e.edu", lastVerified: "2026-06-02",
-  };
-}
-const matches: UniversityMatch[] = Array.from({ length: 5 }, (_, i) => ({
-  university: uni(`u${i}`, `University ${i}`), matchLevel: "possible", reason: "A realistic target.",
-}));
+const matches: MatchResult[] = Array.from({ length: 5 }, (_, i) =>
+  makeMatchResult({
+    program: { ...TEST_PROGRAMS[0]!, id: `p${i}`, name: `Program ${i}` },
+    verdict: "possible",
+  }),
+);
 
 describe("unlocked results", () => {
   it("UniversityMatches: unlocked shows every match and no unlock button", () => {
     render(<UniversityMatches matches={matches} total={5} unlocked assessmentId="11815637-f603-4821-8dd0-d9e52560c4f6" />);
-    expect(screen.getByText("University 4")).toBeInTheDocument();
+    expect(screen.getByText("Program 4")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Unlock all/ })).toBeNull();
   });
 

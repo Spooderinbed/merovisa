@@ -55,6 +55,17 @@ describe("PATCH /api/profile/section", () => {
     expect(invalidatePlan).toHaveBeenCalled();
   });
 
+  it("returns 500 (never ok:true) when the profile write fails", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    patchProfileSection.mockRejectedValue(new Error("write failed"));
+    const res = await PATCH(req({ section: "personal", patch: { name: "X" } }));
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).not.toBe(true);
+    // Derived side-effects must not run when the primary write failed.
+    expect(invalidatePlan).not.toHaveBeenCalled();
+  });
+
   it("400s on malformed JSON", async () => {
     const res = await PATCH(new Request("http://localhost/api/profile/section", {
       method: "PATCH", body: "{bad",

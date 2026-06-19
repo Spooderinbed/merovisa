@@ -26,7 +26,8 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     await createLead(createSupabaseAdminClient(), parsed.data);
-  } catch {
+  } catch (err) {
+    console.error("[leads] createLead failed", { assessmentId: parsed.data.assessmentId, err });
     return NextResponse.json({ error: "Could not save lead" }, { status: 500 });
   }
   return NextResponse.json({ ok: true }, { status: 200 });

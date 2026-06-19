@@ -35,6 +35,15 @@ describe("WorkGapEditor", () => {
     expect(screen.getByRole("button", { name: /Remove letter/i })).toBeInTheDocument();
   });
 
+  it("frames the work section as optional context that doesn't change the verdict (MV-03)", () => {
+    // No scorer reads work title/years/relevance — title only tailors the document
+    // checklist; the verdict's work credit comes from the separate gap reason
+    // "worked". So the section must not imply it moves the verdict.
+    render(<WorkGapEditor initial={{}} />);
+    expect(screen.getByText(/tailor your document checklist/i)).toBeInTheDocument();
+    expect(screen.getByText(/doesn't change your verdict/i)).toBeInTheDocument();
+  });
+
   it("shows Documents page hint", () => {
     render(<WorkGapEditor initial={{}} />);
     const link = screen.getByRole("link", { name: /Documents page/i });

@@ -7,7 +7,9 @@ import type {
   Currency,
   FundingSource,
   Goal,
+  GradeSystem,
 } from "@/lib/scoring/types";
+import { normalizeGradeToPercentage } from "@/lib/scoring/grade-normalize";
 
 interface Fallback {
   name?: string;
@@ -32,12 +34,20 @@ export function profileSectionsFromAssessment(
   const dest = get<Destination>("destination");
   if (dest) out.destination = { primary: dest };
 
-  // academic
+  // academic — gradePercent is canonical: a true 0–100 percentage. The wizard
+  // collects a raw grade in its own system (e.g. CGPA 3.5), so normalize it here at
+  // the boundary; storing it raw would mis-read a 3.5 CGPA as "3.5%" downstream
+  // (collapsing the signed-in verdict + matches). gradeSystem is deliberately not
+  // persisted — gradePercent is already system-agnostic, and re-attaching the source
+  // system would re-trigger normalization (double-counting) on the next read.
   const grade = get<number>("grade");
+  const gradeSystem = get<GradeSystem>("gradeSystem");
   const educationLevel = get<EducationLevel>("educationLevel");
   if (grade !== undefined || educationLevel) {
     out.academic = {};
-    if (grade !== undefined) out.academic.gradePercent = grade;
+    if (grade !== undefined) {
+      out.academic.gradePercent = normalizeGradeToPercentage(grade, gradeSystem ?? "percentage");
+    }
     if (educationLevel) out.academic.degree = educationLevel;
   }
 

@@ -33,6 +33,13 @@ vi.mock("@/lib/assessments/repo", () => ({
 }));
 vi.mock("@/lib/profiles/repo", () => ({ getProfile, upsertProfile }));
 vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
+vi.mock("@/lib/programs/repo", async () => {
+  const { TEST_PROGRAMS, TEST_UNIVERSITIES } = await import("../fixtures/catalog");
+  return {
+    listAllPrograms: vi.fn().mockResolvedValue(TEST_PROGRAMS),
+    listAllUniversities: vi.fn().mockResolvedValue(TEST_UNIVERSITIES),
+  };
+});
 
 import { POST } from "@/app/api/assess/route";
 
@@ -144,6 +151,24 @@ describe("POST /api/assess", () => {
       expect(json.error).toBe("Failed to save assessment");
       // Payload is still included so the client can display results even on failure
       expect(json.payload.result.verdict).toBeDefined();
+    });
+
+    it("returns 500 when the insert returns an error value (not a throw) for an authed user", async () => {
+      // PostgREST reports a failed write as `error`, not a throw — the route must
+      // still surface it instead of returning 200 with id:null (MV-02).
+      getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
+      getPrimaryAssessmentForUser.mockResolvedValue(null);
+      getProfile.mockResolvedValue(null);
+      adminInsertSingle.mockResolvedValue({ data: null, error: { message: "insert failed" } });
+
+      const res = await POST(req(validProfile));
+      expect(res.status).toBe(500);
+      const json = await res.json();
+      expect(json.error).toBe("Failed to save assessment");
+      expect(json.payload.result.verdict).toBeDefined();
+      // Dependent writes are skipped once the primary insert failed.
+      expect(upsertProfile).not.toHaveBeenCalled();
+      expect(invalidatePlan).not.toHaveBeenCalled();
     });
   });
 });

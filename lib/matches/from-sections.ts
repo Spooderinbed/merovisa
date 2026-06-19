@@ -3,6 +3,7 @@ import type { ProfileSections } from "@/lib/profiles/sections";
 import type { EducationLevel } from "@/lib/scoring/types";
 import type { ProgramLevel } from "@/lib/programs/types";
 import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
+import { toAud } from "@/lib/data/policy/fx-rates";
 
 /**
  * Maps a student's *current* education level to the program level they
@@ -10,7 +11,7 @@ import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
  * (0 doctorate), so a masters-holder is mapped to masters rather than a level we
  * cannot serve.
  */
-const TARGET_LEVEL_BY_CURRENT_EDUCATION: Record<EducationLevel, ProgramLevel> = {
+export const TARGET_LEVEL_BY_CURRENT_EDUCATION: Record<EducationLevel, ProgramLevel> = {
   "higher-secondary": "bachelors",
   bachelors: "masters",
   masters: "masters",
@@ -67,17 +68,7 @@ export function sectionsToMatchInputs(
   };
 }
 
-/** Budget conversion — rough static rates. Replace with FX lookup later. */
-function budgetToAud(total: number | null, currency: string | null): number | null {
-  if (total == null) return null;
-  switch (currency) {
-    case "AUD": return total;
-    case "USD": return total * 1.5;
-    case "NPR": return total / 100; // ~AUD 1 = NPR 90-100
-    case "INR": return total / 55;  // ~AUD 1 = INR 55
-    case "BDT": return total / 75;
-    case "PKR": return total / 200;
-    case "NGN": return total / 1000;
-    default: return total;
-  }
+/** Budget conversion via the canonical FX_RATES table (single source of truth). */
+export function budgetToAud(total: number | null, currency: string | null): number | null {
+  return total == null ? null : toAud(total, currency);
 }
