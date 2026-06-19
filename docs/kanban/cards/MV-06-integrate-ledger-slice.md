@@ -1,8 +1,8 @@
 # MV-06 — Integrate ledger slice E/I
 
-**Status:** In progress (kickoff/scoping). **Owner:** agent · **Priority:** P2.
-**Gate:** none to start scoping; a founder steer is needed on *which* findings to surface
-before integration (see Open steer below).
+**Status:** **Done (founder-gated 2026-06-20)** — all 4 ready Category-I findings surfaced as
+copy-only gov citations; golden-assessments.json byte-identical; gate green (1145 tests).
+**Owner:** agent · **Priority:** P2.
 
 ## What this card is
 

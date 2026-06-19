@@ -1,7 +1,7 @@
 # MV-13 — Bridge the TS fact layer into the DB program catalogue
 
-**Status:** **In Review (human gate) 2026-06-20** — DB bridge LIVE in prod; findings-flip found
-already complete; gate green. Founder closes to Done. **Owner:** founder+agent · **Priority:** P2.
+**Status:** **Done (founder-gated 2026-06-20)** — DB bridge LIVE in prod; findings-flip found
+already complete; gate green. **Owner:** founder+agent · **Priority:** P2.
 
 **Done so far:** local slice committed `da28e36` (gate green: typecheck/lint, 1150 tests, goldens
 byte-identical). Migration `20260619000000_bridge_fact_layer_programs.sql` **applied to prod**

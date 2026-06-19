@@ -1,6 +1,6 @@
 # MV-12 — Fix CGPA entry in the profile academic editor
 
-**Status:** Done pending review (gate green; committed to master).
+**Status:** **Done (founder-gated 2026-06-20)** — gate green; committed to master.
 **Owner:** agent · **Priority:** P2 (live correctness/trust bug)
 
 ## The bug (promoted from a background-task chip)
