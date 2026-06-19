@@ -1,6 +1,6 @@
 # MV-05 — Legal copy packet (DRAFT for founder sign-off)
 
-**Date:** 2026-06-20 · **Card:** MV-05 · **Status:** DRAFT — not wired to any page yet.
+**Date:** 2026-06-20 · **Card:** MV-05 · **Status:** Copy **Codex APPROVED-WITH-NITS** (2026-06-20; nits applied). Disclaimer swap wired; `/privacy` + `/terms` pending founder D3.
 
 > **Read this first.** I am not a lawyer and this is not legal advice or legal review.
 > This packet is a **credible interim shield**: plain-language policy text, grounded in
@@ -47,7 +47,7 @@ your case."
 > outcome. The relevant decision-makers decide your case under the rules that apply at
 > the time — the Department of Home Affairs for your visa, and each institution for its
 > own admission. For advice on your own application, see a registered migration agent
-> (OMARA) or a lawyer.
+> ([OMARA](https://www.mara.gov.au/)) or a lawyer.
 
 **Surface-tailored variants (keep the structure, swap the lead clause):**
 - *Matches:* "Program matches are rules-based estimates against published thresholds, not
@@ -132,8 +132,8 @@ protect your information.
 account is active, so your assessment, checklist, and uploaded documents are there when
 you return. **You can delete your uploaded documents, or your whole account and all
 associated data, at any time** from your profile ("Delete your account") — this removes
-your uploaded documents, your profile and assessments, and your sign-in identity. When you
-delete, we delete.
+your uploaded documents, your profile and assessments, and your sign-in identity — when you
+delete something, we remove it from our systems.
 
 > **⚠ Reviewer note (not policy text) — D2 = "retain until account deletion".** You chose
 > no automatic time-based deletion. This is defensible for an *active* account (the data is
@@ -189,7 +189,7 @@ important against the official source or a qualified adviser before acting on it
 extent permitted by law, we are not liable for decisions you make in reliance on the
 service. *(Nothing in these terms excludes rights you have under applicable consumer law.)*
 
-**4. Eligibility & age.** `[D1]` You must be at least **16** to use MyVisa yourself. If
+**4. Eligibility & age.** You must be at least **16** to use MyVisa yourself. If
 you are **16 or 17**, you confirm you understand what MyVisa is and is not, and you must
 give the separate, plain-language consent we ask for before uploading any documents. If
 you are **under 16**, a parent or guardian must set up and supervise the account and give

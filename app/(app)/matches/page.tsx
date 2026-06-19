@@ -79,7 +79,7 @@ export default async function MatchesPage() {
           your Nepal TU percentage directly against each program&apos;s minimum.
         </p>
       </header>
-      <VerdictDisclaimer message="Program matches are rules-based estimates against published thresholds, not immigration advice." />
+      <VerdictDisclaimer message="Program matches are rules-based estimates against published thresholds, not immigration advice. They come from published rules and can change — they are not a guarantee of any visa or admission outcome. The relevant decision-makers decide your case under the rules that apply at the time — the Department of Home Affairs for your visa, and each institution for its own admission. For advice on your own application, see a registered migration agent (OMARA) or a lawyer." />
       <PolicyBanner />
       <CostToApply />
       <MatchesTabs

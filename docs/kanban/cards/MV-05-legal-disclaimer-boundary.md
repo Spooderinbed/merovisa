@@ -118,10 +118,22 @@ reviewer note (weakest data-minimisation posture for sensitive docs; an inactivi
 low-cost future hardening). **D3 ⛔ STILL NEEDED — legal entity name + privacy contact email +
 governing-law jurisdiction (+ confirm Vercel region).**
 
-**Card stays Blocked until: (a) founder supplies D3, and (b) founder signs off the copy.** Then
-wiring per packet Section 5: low-risk first (`/privacy`, `/terms` static pages, footer links, swap
-the tightened disclaimer string + tests), then the consent/DOB/guardian sub-slice (its own card —
-needs founder DB approval for the `consented_at`/`consent_version`/DOB migration).
+**Copy sign-off:** founder delegated approval to Codex 2026-06-20 → **Codex verdict APPROVED-WITH-NITS**
+(OMARA + ESOS + APP + under-18 boundaries all hold; D2 defensible as written). Nits applied: removed
+the internal `[D1]` marker, linked the OMARA register, softened "when you delete, we delete", named
+the likely overseas country, etc.
+
+**WIRED 2026-06-20 (shipped to master):** the tightened, Codex-approved **not-advice disclaimer**
+(`NOT_ADVICE_DISCLAIMER` + the matches/plan tailored variants) now names the real decision-makers
+(DHA for the visa, each institution for admission) and routes case-specific questions to an OMARA
+agent/lawyer — live on results/dashboard (VerdictCard), matches, and plan. TDD (+1 test); gate green
+(typecheck/lint/1171 tests).
+
+**Card stays Blocked** on the remainder: **(a) founder supplies D3** (legal entity name + contact
+email + governing-law jurisdiction + confirm Vercel region) — required before the `/privacy` +
+`/terms` pages can publish (won't fabricate a legal entity/governing law for a live legal doc); then
+those static pages + footer links; **(b)** the consent/DOB/guardian sub-slice (its own card — needs
+founder DB approval for the `consented_at`/`consent_version`/DOB migration).
 
 ## Done evidence
 

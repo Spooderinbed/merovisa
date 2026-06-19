@@ -16,6 +16,14 @@ describe("VerdictDisclaimer", () => {
     expect(NOT_ADVICE_DISCLAIMER).not.toMatch(/guaranteed/i);
   });
 
+  it("names who actually decides and points users to a registered agent/lawyer (OMARA boundary)", () => {
+    // The tightened MV-05 copy must not read as advice: it says the real
+    // decision-makers decide, and routes case-specific questions to an OMARA agent.
+    expect(NOT_ADVICE_DISCLAIMER).toMatch(/Department of Home Affairs/i);
+    expect(NOT_ADVICE_DISCLAIMER).toMatch(/registered migration agent/i);
+    expect(NOT_ADVICE_DISCLAIMER).toMatch(/OMARA/);
+  });
+
   it("accepts a tailored message override for surface-specific framing", () => {
     render(
       <VerdictDisclaimer message="Program matches are rules-based estimates, not immigration advice." />,
