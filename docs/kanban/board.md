@@ -8,10 +8,9 @@
 > _Last updated: 2026-06-19 · stale threshold: 7d_
 
 
-## Backlog — 3
+## Backlog — 2
 
 - **MV-06** · P2 · Integrate ledger slice E/I — _~195 ready research findings that feed scoring/cost copy. Do after the engines are unified._
-- **MV-08** · P2 · Outcome-validation loop (the moat) — _Capture applied / offer / refused / visa to validate verdicts. Design the model soon; build after traffic._
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
 
 ## Ready (WIP 5) — 0
@@ -22,8 +21,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 1
+## In review (WIP 3) — 2
 
+- **MV-08** · P2 · [Outcome-validation loop (the moat)](cards/MV-08-outcome-validation-loop.md) — _DESIGN DELIVERED (no code shipped): build spec for the verdict-validation loop — funnel applied/offer/refused/visa linked to the frozen prediction (verdict + RULE_VERSION + scoreSnapshot). Two-gate model (admission vs visa calibrate separately); reuse user_program_state's 'applied' transition to freeze a prediction; 2 new tables (program_predictions immutable + outcome_events append-only) mirroring conventions, advisor-clean RLS from day one; verdict recomputed server-side (F16); ordinal separation+monotonicity calibration windowed by rule_version w/ min-sample gate; cold-start ladder (storage now, calibrate after traffic). Doc: docs/superpowers/specs/2026-06-19-outcome-validation-loop-design.md. Gate to build: founder approves migration + answers 4 open Qs._
 - **MV-12** · P2 · [Fix CGPA entry in profile academic editor](cards/MV-12-cgpa-editor-normalize.md) — _DONE pending review (committed to master). The signed-in academic editor stored a raw CGPA (e.g. 3.5 / cgpa-4) as gradePercent, so the matches adapter read it as 3.5% and collapsed every program to 'reach' while the verdict path normalized to 87.5% — an internal contradiction. Fix (option a): normalize at the server-side save boundary via a Zod transform on AcademicPatch (new lib/profiles/normalize-academic.ts), so gradePercent is always a true percentage and gradeSystem is never persisted (mirrors profileSectionsFromAssessment; explicit gradeSystem=undefined clears stale values through the merge — self-heals pre-fix rows). F16-safe (no client imports the validation/grade-normalize). No scorer/golden change. Gate green: typecheck/lint/1140 tests (+12). Editor relabel 'Grade percent'→'Grade' deferred as founder-reviewed copy._
 
 ## Blocked — 3
