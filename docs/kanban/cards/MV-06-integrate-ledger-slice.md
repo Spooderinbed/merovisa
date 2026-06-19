@@ -33,6 +33,48 @@ every note). First scoping step (post-compact): run reconcile.js, list the E/I "
 and bring the founder a tight "surface these N, defer the rest (with reason)" packet — not a
 blind integration of all 195.
 
+## Scoping result (2026-06-19) — surface-vs-defer packet, awaiting founder steer
+
+Ran the ledger (sandbox parse of `findings/E.jsonl` + `findings/I.jsonl`). Ready set:
+**Category E = 45 ready** (of 176; 80 used, 25 use-later, 23 needs-human-call).
+**Category I = 4 ready** (of 80; 32 used, 27 use-later, 10 needs-human-call, 6 stale).
+
+**Pivotal structural finding — most E "ready" has no live home:**
+- Every E ready finding's `target` is `lib/data/programs seed (+ course-career)` = the **TS fact
+  layer** (`lib/data/source/au-rmit-programs.ts`, `au-university-programs.ts`). That layer is
+  **dormant**: imported only by `lib/data/schema/registry.ts` (provenance/validation registry) —
+  **no `components/`, `app/`, or `lib/matches` path renders it** (grep-confirmed). Same dormancy
+  trap MV-07 fixed for CRICOS — but here there isn't even a latent consumer to switch on.
+- The **live program cards** (`components/matches/program-card.tsx`) render the **DB catalogue**
+  (64 rows, seed migration `20260604120000`): 15 unis × ~4 **generic** programs ("Bachelor of IT",
+  "Master of Data Science", "Master of Nursing"…), **all `derived`/estimated quality (verified=0)**,
+  `notes` mostly null. The card *does* render `minEnglish`/`minEnglishBand` + a "Good to know"
+  `notes` block — but those are already (estimated) populated and keyed to generic rows.
+- The 45 E findings name **specific** programs/unis the DB catalogue doesn't carry — RMIT
+  Pharmacy/Dip-Nursing/B-Nursing/BSW/MSW/B-Ed, UTS Master of Pharmacy, Deakin Master of Data
+  Science, and **ECU + Torrens (not among the 15 seeded unis)**. So they can't even attach to a
+  live card's notes without first adding those programs.
+
+**Recommendation (the steer):**
+- **SURFACE NOW — the 4 Category I findings** (target `app/(app)/journey/refusal-recovery (+ plan
+  rules)`, a **shipped** surface; why-ready notes say each maps to copy/checklist that already
+  exists): **I.010** PIC 4020 / clause 500.217 (legal hook behind shipped fake-doc copy I.027/028),
+  **I.025** English-evidence requirement (maps to shipped checklist + profile English step),
+  **I.026** OSHC timing — cover ≥1 week before course (maps to shipped checklist), **I.058** MI ≠
+  permission to stay (fits the MI block). All `process|unset` (prose-only) → integration = attach
+  as `used` provenance/citations on existing copy (verify there's a SourceLine-style hook to attach
+  to; copy-only, goldens untouched).
+- **DEFER — all 45 Category E findings** — no live home (dormant fact layer + programs/unis not in
+  the live catalogue). Their real unlock is a **prerequisite "bridge" slice**: replace/augment the
+  generic `derived` DB catalogue with the primary-sourced TS fact layer (real RMIT/UTS/Deakin
+  programs + verified IELTS/duration/notes + CRICOS). That is the genuinely high-value move (today
+  *every* live card shows estimated data, zero verified) — but it's a bigger slice: seed-migration
+  change → **founder DB approval**, matches-engine + goldens impact. Recommend it as its own card,
+  not folded into MV-06.
+
+Net: MV-06 shrinks to "surface the 4 I findings"; the E value is real but gated behind a DB-bridge
+slice that needs founder approval. **Awaiting founder steer before any integration.**
+
 ## Acceptance criteria (to be firmed during scoping)
 
 - [ ] Reconcile.js run; E/I "ready" findings enumerated with value tier + which live surface
