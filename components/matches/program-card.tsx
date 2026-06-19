@@ -80,12 +80,19 @@ export function ProgramCard({
             {p.tuitionMax?.toLocaleString() ?? p.tuitionMin.toLocaleString()} / yr
           </span>
         )}
+        {p.durationYears != null && (
+          <span>
+            {p.durationYears} {p.durationYears === 1 ? "year" : "years"}
+          </span>
+        )}
         {p.minGrade != null && <span>Min grade {p.minGrade}%</span>}
-        {p.minEnglish != null && (
+        {p.minEnglish != null ? (
           <span>
             IELTS {p.minEnglish}
             {p.minEnglishBand != null ? ` (band ≥ ${p.minEnglishBand})` : ""}
           </span>
+        ) : (
+          <span className="text-ink-faint">English: confirm with provider</span>
         )}
         {p.intakes.length > 0 && <span>Intakes: {p.intakes.join(", ")}</span>}
       </div>

@@ -31,6 +31,13 @@ export interface Program {
   lastVerified: string;
   dataQuality: DataQuality;
   notes: string | null;
+  // MV-13: present on rows bridged from the TS fact layer (null/absent on the
+  // hand-authored generic rows). durationYears in years; findingRefs links the
+  // row to the research findings that back it; generated marks bridged rows for
+  // clean rollback.
+  durationYears?: number | null;
+  findingRefs?: string[];
+  generated?: boolean;
 }
 
 export type UniversityRow = Database["public"]["Tables"]["universities"]["Row"];

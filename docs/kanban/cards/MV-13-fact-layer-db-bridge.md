@@ -1,9 +1,67 @@
 # MV-13 — Bridge the TS fact layer into the DB program catalogue
 
-**Status:** In progress (kickoff — migration shape triangulated 2026-06-19). **Owner:** founder+agent · **Priority:** P2.
-**Gate to start:** founder approved the card 2026-06-19 ("approve the MV-13 DB seed-migration"). Two
-forks (D3/D4 below) still need a founder pick; the actual migration SQL gets one explicit GO before
-`apply_migration` touches prod.
+**Status:** In progress (scope decided 2026-06-19 — building). **Owner:** founder+agent · **Priority:** P2.
+**Gate to start:** founder approved the card 2026-06-19. Founder then delegated the D1/D2 forks
+("do what's best / consult with codex"); decided below. The migration SQL still gets one explicit
+founder GO before `apply_migration` touches prod (D5).
+
+## DECISION (2026-06-19) — founder delegated → Codex (GPT-5) triangulated → MERGE + DEFER BOTH
+
+Reading both fact-layer files end-to-end changed the picture vs kickoff; founder delegated the call,
+Codex agreed with my leaning. **Final scope:**
+
+**Data ground truth:** RMIT module = 21 programs (19 bachelor/master + 1 Diploma of Nursing + 1
+Graduate Diploma); the RMIT type has **NO English/IELTS field at all** (only tuition/duration/grade
+on some). University module = **only 8** (UTS Master of Pharmacy [rich: tuition + IELTS 7.0/7.0 +
+accrediting body], Melbourne Master of Education [tuition only], Deakin Master of Data Science
+[tuition only], + **5 Torrens** [CRICOS + name + field ONLY — no tuition/grade/English]). Fact ids
+don't collide with seed ids but several **semantically duplicate** existing generic RMIT rows
+(name-identical "Master of Data Science"; also Master of IT, Bachelor of IT). Fact tuition is
+per-year → tuition_min=tuition_max. `programs.field` is `text` with **no CHECK** → free strings OK.
+
+**D1 = MERGE.** Enrich the 3 true-twin generic RMIT rows in place (keep their English minimums,
+`generated` stays false): `rmit-bit` ← bachelor-information-technology (findingRefs E.057/058/059,
+duration 3y, grade 65); `rmit-mit` ← master-information-technology (E.051/054, 2y); `rmit-mds` ←
+master-data-science (E.046/047, 2y). **INSERT** the 16 genuinely-distinct new RMIT bachelor/master
+rows (6 specific engineering be/me civil·electrical·mechanical; bachelor-computer-science; cyber
+security; business; professional accounting; MBA; project management; bachelor-nursing; pharmacy
+hons; bachelor-education; social work) + the 3 university rows (UTS Pharmacy E.101–108; Melbourne
+Education E.100; Deakin Data Science E.049). `generated=true` on the 16+3=19 inserts. Catalogue
+64→83. No row deletes (preserves user_program_state). `rmit-meng`/`rmit-mnurs` stay generic (no
+clean fact twin). Twin-matching kept conservative per Codex ("if uncertain, don't merge").
+
+**D2 = DEFER BOTH.** The 2 RMIT diplomas never surface (engine targets bachelors/masters only). The
+5 Torrens rows have no tuition/grade/English → would render near-empty AND rank as easiest/cheapest
+(null→0 in compute.ts) = trust regression; also Torrens isn't a universities row. → **No level-enum
+CHECK change, no Torrens seeding this slice.** Their E findings stay pending (documented, not dropped).
+
+**D3 (trimmed) = add `duration_years numeric` + `finding_refs text[]` + `generated boolean default
+false`.** **DEFER `cricos_code`** — zero bridged rows would populate it this slice (Torrens deferred,
+RMIT has none, UTS's CRICOS is provider-level via MV-07), so adding it now is speculative (YAGNI);
+ships with the Torrens follow-up that needs it.
+
+**Field normalization:** map fieldOfStudy → catalogue enum where it maps (engineering / computer-science
+[incl cyber] / business / accounting / nursing); accurate kebab otherwise (pharmacy, social-work,
+education, project-management, public-health) — soft-rank only, harmless when unmatched.
+
+**Card (Codex condition):** bridged rows with null `min_english` must read "English requirement not
+listed — confirm with provider" (honest absence), NOT silently omit the IELTS line (which could read
+as "no English needed"). Copy founder-reviewable at the gate.
+
+**Approach (simplicity-first, idiomatic):** hand-author the 19 new + 3 enriched rows in `seed.ts` +
+migration #3, guarded by a NEW **fact-layer-parity test** that asserts each bridged seed row matches
+its `au-rmit-programs.ts` / `au-university-programs.ts` source (the anti-drift guarantee — same role a
+generator would play, but mirrors the existing `seed-migration-parity` pattern; no new generator
+module). Keep the existing seed↔migration parity green (extend it for the new columns/rows + migration #3).
+
+**Build order (TDD):** (1) RED fact-layer-parity test; (2) `seed.ts` rows + Program type gains
+durationYears/findingRefs/generated; (3) migration #3 (ALTER add 3 cols; UPDATE-enrich 3; INSERT 19
+generated=true); (4) extend seed-migration-parity to parse #3 + new cols; (5) repo `mapProgram` +
+Program type + program-card render (duration + null-english treatment); (6) gate green — goldens
+expected **byte-identical** (scoring-derived, not catalogue), seed.test count holds (83 ≥ 50);
+(7) dev-branch apply + `get_advisors`; (8) **D5: show SQL → founder GO → prod**; (9) flip the bridged
+E findings `used` (FLIP_STATUS + reconcile + promote value_status). **Rollback:** `DELETE FROM
+programs WHERE generated=true` (the 3 enrichments are additive/harmless).
 
 ## Why this exists (spun out of MV-06)
 

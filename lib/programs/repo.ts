@@ -57,6 +57,9 @@ function mapProgram(r: Database["public"]["Tables"]["programs"]["Row"]): Program
     lastVerified: r.last_verified ?? "",
     dataQuality: r.data_quality as Program["dataQuality"],
     notes: r.notes,
+    durationYears: r.duration_years == null ? null : Number(r.duration_years),
+    findingRefs: r.finding_refs ?? [],
+    generated: r.generated ?? false,
   };
 }
 

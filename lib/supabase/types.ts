@@ -191,7 +191,10 @@ export type Database = {
         Row: {
           created_at: string
           data_quality: string
+          duration_years: number | null
           field: string
+          finding_refs: string[]
+          generated: boolean
           id: string
           intakes: string[]
           last_verified: string | null
@@ -211,7 +214,10 @@ export type Database = {
         Insert: {
           created_at?: string
           data_quality?: string
+          duration_years?: number | null
           field: string
+          finding_refs?: string[]
+          generated?: boolean
           id: string
           intakes?: string[]
           last_verified?: string | null
@@ -231,7 +237,10 @@ export type Database = {
         Update: {
           created_at?: string
           data_quality?: string
+          duration_years?: number | null
           field?: string
+          finding_refs?: string[]
+          generated?: boolean
           id?: string
           intakes?: string[]
           last_verified?: string | null

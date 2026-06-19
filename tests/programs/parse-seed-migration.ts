@@ -106,6 +106,9 @@ function splitTopLevel(tuple: string): string[] {
 
 function parseValue(tok: string): SqlValue {
   if (tok === "NULL") return null;
+  if (tok === "true") return true;
+  if (tok === "false") return false;
+  if (tok === "'{}'") return []; // empty text[] literal
   if (tok.startsWith("'") && tok.endsWith("'")) return tok.slice(1, -1).replace(/''/g, "'");
   if (tok.startsWith("ARRAY[")) {
     const inner = tok.slice(tok.indexOf("[") + 1, tok.lastIndexOf("]"));
