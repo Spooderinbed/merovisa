@@ -1,9 +1,24 @@
 # MV-13 — Bridge the TS fact layer into the DB program catalogue
 
-**Status:** In progress (scope decided 2026-06-19 — building). **Owner:** founder+agent · **Priority:** P2.
-**Gate to start:** founder approved the card 2026-06-19. Founder then delegated the D1/D2 forks
-("do what's best / consult with codex"); decided below. The migration SQL still gets one explicit
-founder GO before `apply_migration` touches prod (D5).
+**Status:** In progress — **DB bridge APPLIED TO PROD 2026-06-19** (founder GO given). **Owner:** founder+agent · **Priority:** P2.
+
+**Done so far:** local slice committed `da28e36` (gate green: typecheck/lint, 1150 tests, goldens
+byte-identical). Migration `20260619000000_bridge_fact_layer_programs.sql` **applied to prod**
+(project `obfvrxixtautamflzxzq`) via `apply_migration` → `{success:true}`; `get_advisors`
+(security+performance) returned **only pre-existing, unrelated** items (leads RLS-no-policy INFO,
+leaked-password WARN, unused-index INFOs) — **zero new issues**. The new columns are covered by the
+existing `programs_read` RLS policy (no policy change). Live catalogue now 83 programs (64 base, 3
+enriched, +19 bridged with provenance).
+
+**REMAINING (the only open step):** flip the bridged Category-E findings → `used` (the E.0xx refs
+cited by the 22 bridged rows) via the FLIP_STATUS ritual + reconcile + promote `value_status`
+unset→prose-only, gate green. Then move MV-13 → In Review. NOTE: the findings are cited by the
+already-registered fact modules (au-rmit-programs / au-university-programs), so the flip is driven by
+those modules + flip-status.js, not the DB — confirm the exact mechanic against
+`docs/research-briefs/_tools/flip-status.js` + `reconcile.js` at resume.
+
+**Gate history:** founder approved the card 2026-06-19; delegated D1/D2 ("do what's best / consult
+codex") → MERGE + DEFER BOTH (Codex-agreed); D5 prod-write GO given 2026-06-19.
 
 ## DECISION (2026-06-19) — founder delegated → Codex (GPT-5) triangulated → MERGE + DEFER BOTH
 
