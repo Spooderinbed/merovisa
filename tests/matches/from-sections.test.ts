@@ -16,7 +16,7 @@ describe("sectionsToMatchInputs", () => {
     expect(result.userGradePercent).toBe(75);
     expect(result.userEnglishOverall).toBe(7.0);
     expect(result.userEnglishBand).toBe(6.5);
-    expect(result.userBudgetAud).toBeCloseTo(30000, -2);
+    expect(result.userBudgetAud).toBeCloseTo(33_333, -2); // 3,000,000 NPR ÷ 90 (canonical FX_RATES: NPR 135/USD, AUD 1.5/USD)
     expect(result.userField).toBe("computer-science");
     expect(result.policy.nepalAssessmentLevel).toBe("L3");
   });
