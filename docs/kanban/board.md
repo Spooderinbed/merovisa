@@ -22,9 +22,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-12** · P2 · [Fix CGPA entry in profile academic editor](cards/MV-12-cgpa-editor-normalize.md) — _DONE pending review (committed to master). The signed-in academic editor stored a raw CGPA (e.g. 3.5 / cgpa-4) as gradePercent, so the matches adapter read it as 3.5% and collapsed every program to 'reach' while the verdict path normalized to 87.5% — an internal contradiction. Fix (option a): normalize at the server-side save boundary via a Zod transform on AcademicPatch (new lib/profiles/normalize-academic.ts), so gradePercent is always a true percentage and gradeSystem is never persisted (mirrors profileSectionsFromAssessment; explicit gradeSystem=undefined clears stale values through the merge — self-heals pre-fix rows). F16-safe (no client imports the validation/grade-normalize). No scorer/golden change. Gate green: typecheck/lint/1140 tests (+12). Editor relabel 'Grade percent'→'Grade' deferred as founder-reviewed copy._
 
 ## Blocked — 3
 

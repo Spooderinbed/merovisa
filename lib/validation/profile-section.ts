@@ -9,6 +9,7 @@ import {
   CURRENCIES,
   DESTINATIONS,
 } from "@/lib/scoring/types";
+import { normalizeAcademicPatch } from "@/lib/profiles/normalize-academic";
 
 const PersonalPatch = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -22,12 +23,18 @@ const DestinationPatch = z.object({
   primary: z.enum(DESTINATIONS).optional(),
   alternates: z.array(z.enum(DESTINATIONS)).max(5).optional(),
 });
-const AcademicPatch = z.object({
-  institution: z.string().min(1).max(200).optional(),
-  degree: z.enum(EDUCATION_LEVELS).optional(),
-  gradePercent: z.number().min(0).max(100).optional(),
-  gradeSystem: z.enum(GRADE_SYSTEMS).optional(),
-});
+// gradePercent is validated as a 0–100 number (every CGPA value is in range too),
+// then normalized at this boundary: a raw grade in its system becomes a true
+// percentage and gradeSystem is dropped (never persisted) — the same contract as
+// profileSectionsFromAssessment, so the editor path can't store a raw CGPA.
+const AcademicPatch = z
+  .object({
+    institution: z.string().min(1).max(200).optional(),
+    degree: z.enum(EDUCATION_LEVELS).optional(),
+    gradePercent: z.number().min(0).max(100).optional(),
+    gradeSystem: z.enum(GRADE_SYSTEMS).optional(),
+  })
+  .transform(normalizeAcademicPatch);
 const IntendedStudyPatch = z.object({
   level: z.enum(EDUCATION_LEVELS).optional(),
   field: z.enum(FIELDS_OF_STUDY).optional(),
