@@ -44,7 +44,7 @@ describe("/matches page", () => {
     expect(screen.getByText(/not immigration advice/i)).toBeInTheDocument();
   });
 
-  it("scholarships tab shows real sourced scholarships; cost tab still honest coming-soon", async () => {
+  it("scholarships tab shows real sourced scholarships; cost tab shows the sourced first-year estimate", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     getProfile.mockResolvedValue(null);
     listAllPrograms.mockResolvedValue([]);
@@ -58,9 +58,11 @@ describe("/matches page", () => {
     expect(screen.getAllByText(/Australia Awards/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/not a personalized eligibility check/i)).toBeInTheDocument();
     expect(screen.queryByText(/you qualify/i)).not.toBeInTheDocument();
-    // Cost estimate stays an honest coming-soon until OSHC data is sourced.
+    // Cost estimate now shows the real sourced first-year estimate (OSHC range live).
     await userEvent.click(screen.getByRole("button", { name: /Cost estimate/i }));
-    expect(screen.getByText(/Coming soon — a live cost estimate/i)).toBeInTheDocument();
+    expect(screen.getByText(/First-year cost estimate/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "AUD 680–949" })).toBeInTheDocument();
+    expect(screen.queryByText(/Coming soon/i)).not.toBeInTheDocument();
   });
 
   it("renders match groups when programs + profile present", async () => {

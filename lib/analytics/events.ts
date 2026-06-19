@@ -14,6 +14,7 @@ export type SourceSurface =
   | "factor-bars"
   | "refusal-recovery"
   | "cost-to-apply"
+  | "cost-estimate"
   | "checklist"
   | "matches"
   | "genuine-student"

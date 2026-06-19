@@ -14,6 +14,7 @@ import { VerdictGroup } from "@/components/matches/verdict-group";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { VerdictDisclaimer } from "@/components/ui/verdict-disclaimer";
 import { CostToApply } from "@/components/results/cost-to-apply";
+import { CostEstimatePanel } from "@/components/matches/cost-estimate-panel";
 import { ScholarshipsPanel } from "@/components/matches/scholarships-panel";
 import { PreferenceNote } from "@/components/matches/preference-note";
 import type { ProfileSections } from "@/lib/profiles/sections";
@@ -64,12 +65,7 @@ export default async function MatchesPage() {
   );
 
   const scholarshipsPanel = <ScholarshipsPanel />;
-  const costPanel = (
-    <p className="text-[15px] text-ink-soft">
-      Coming soon — a live cost estimate covering tuition, DHA living costs, OSHC, and
-      intake-aligned forecasts rolled into one number you can plan against.
-    </p>
-  );
+  const costPanel = <CostEstimatePanel />;
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">

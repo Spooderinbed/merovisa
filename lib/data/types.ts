@@ -347,6 +347,28 @@ export interface AuProviderApplicationFee extends Provenanced {
 }
 
 /**
+ * An Australian government-approved OSHC (Overseas Student Health Cover) provider's
+ * single-cover premium for a Subclass 500 student, in AUD. `singleCoverAudPerYear`
+ * is the 12-month figure the cost estimate composes; `singleCoverAudPerMonth` rides
+ * as the published monthly atom where the provider lists one. Providers that publish
+ * no static rate card (quote tool only) are recorded with `quoteOnly: true` and null
+ * amounts — never a fabricated number. DISPLAY cost data on the AuProviderApplicationFee
+ * model: per-record `source` + `lastVerified`, validated by its own Zod schema, and
+ * deliberately OUTSIDE the findings ledger (no scorer reads it; it is not a scoring rule).
+ */
+export interface AuOshcPremium {
+  id: string; // slug, e.g. "nib"
+  provider: string; // provider name as published
+  singleCoverAudPerYear: number | null; // 12-month single-cover premium, AUD; null when quote-only
+  singleCoverAudPerMonth?: number | null; // published monthly single-cover premium, AUD, where listed
+  coverType: "single"; // single (one-person) cover — the Nepal→Australia default
+  quoteOnly: boolean; // true when the provider publishes no static rate (quote tool only)
+  basis: string; // what the figure represents + an as-of note
+  source: string; // provider rate-card / OSHC page URL
+  lastVerified: string; // ISO date
+}
+
+/**
  * An Australian provider's minimum English requirement for international entry,
  * as an IELTS band. `overallMin` is the headline overall band (the gate-checked
  * value); `perBandMin` is the per-subtest floor where the provider states one,

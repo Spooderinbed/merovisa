@@ -16,12 +16,13 @@
 
 _empty_
 
-## In progress (WIP 1) — 1
+## In progress (WIP 1) — 0
 
-- **MV-10** · P2 · [Cost-estimate tab](cards/MV-10-cost-estimate-tab.md) — _In progress 2026-06-20 (de-gated by founder). Sourcing OSHC premiums from 5 gov-approved providers (Bupa/Medibank/ahm/Allianz/nib) + DHA living-cost via a research fan-out (Workflow), then building a cost-estimate selector + panel over a new sourced fact module (per-record source+lastVerified+Zod, cost-to-apply display pattern — not the findings ledger), unstubbing the 'coming soon' tab via TDD._
+_empty_
 
-## In review (WIP 3) — 1
+## In review (WIP 3) — 2
 
+- **MV-10** · P2 · [Cost-estimate tab](cards/MV-10-cost-estimate-tab.md) — _DONE pending review (committed to master). Cost-estimate tab is LIVE: new sourced OSHC fact module (lib/data/source/au-oshc-premiums.ts — 5 gov-approved providers: nib 679.56/yr, Bupa 760, Medibank 949.2; ahm+Allianz quoteOnly, null amounts never fabricated) with AuOshcPremium type + dedicated Zod schema (cost-to-apply DISPLAY pattern: per-record source+lastVerified, NOT the findings ledger). selectCostEstimate() composes the AUD first-year band tuition 44,500 + DHA living 29,710 + OSHC 680–949 + visa 2,000 = 76,890–77,159; CostEstimatePanel renders it (each figure one click from its source; tuition = labeled heuristic, no fake cite) + an OSHC-by-provider sub-list (3 priced + 2 'Quote only'). Wired into /matches replacing 'coming soon'. nib + Medibank re-verified live; Bupa rides on the fan-out's price-list reading (flagged). Gate green: typecheck/lint/1170 tests (+25). TDD failing-test-first per unit. Founder review notes in dossier (Bupa partner-hosted source; tuition heuristic). Dossier: cards/MV-10-cost-estimate-tab.md._
 - **MV-08** · P2 · [Outcome-validation loop (the moat)](cards/MV-08-outcome-validation-loop.md) — _DESIGN DELIVERED + CODEX REVIEW FOLDED (no code shipped): build spec for the verdict-validation loop — funnel applied/offer/refused/visa linked to the frozen prediction (verdict + RULE_VERSION + scoreSnapshot). Codex (GPT-5) refute-each-decision pass found 3 blockers + 8 should-fixes, all folded into the doc. Schema is now 3 tables: program_predictions (immutable, prediction-run model, UPDATE-guard trigger) -> application_attempts (B1: institution/program/intake attribution layer) -> outcome_events (append-only; explicit gate + reason_code + verification metadata; self_reported excluded from training). Two-gate model (admission vs visa calibrate separately); verdict recomputed server-side (F16); calibration = CIs + Bayesian pooling on verified outcomes (not n>=30), compatibility-group windowing; cold-start ladder. Doc: docs/superpowers/specs/2026-06-19-outcome-validation-loop-design.md. Gate to build: founder approves 3-table migration + answers 4 open Qs._
 
 ## Blocked — 1
