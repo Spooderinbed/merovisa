@@ -1,6 +1,6 @@
 # MV-08 — Outcome-validation loop ("the moat")
 
-**Status:** Design delivered + Codex review folded in (2026-06-19), awaiting founder review/steer (design only — no code shipped).
+**Status:** BUILD IN PROGRESS (2026-06-20). Migration committed (`ebd71ae`, Codex-vetted); DKIM capture mechanism decided + Codex-vetted GO-WITH-CHANGES (folded into design doc §6/§7/§8/§9/§13); first build slice — DB-independent capture contracts — landed green. Founder gates remain (apply migration; Q3 verification-path legal gates).
 **Owner:** agent · **Priority:** P2 · **Gate to build:** founder approves migration + real traffic exists.
 
 ## What this card is
@@ -101,8 +101,49 @@ Founder question 2 updated in the doc: the min-sample bar is no longer a yes/no 
 - [x] Honest-copy + cold-start implications stated; scope explicitly excludes shipping code.
 - [ ] **(build phase, not this slice)** Migration applied by founder; capture wired; TDD.
 
-## Why no TDD / gate here
+## Build progress (2026-06-20)
 
-This slice produces a design document, not production code — there is no failing test to
-write yet. The TDD iron law applies to the **build phase** (AC in the doc §12). No
-`typecheck`/`lint`/`test` change; goldens untouched.
+Card moved Design → **In Progress**. Build is now TDD per slice (the §12 build-phase AC).
+
+**Slice 0 — migration (committed `ebd71ae`).** The 3-table migration
+`supabase/migrations/20260620000000_add_outcome_validation.sql`, adversarially Codex-vetted
+(added the `outcome_events.verified_by` FK index; tightened `pp_insert_own` to re-assert parent
+ownership). Inert on apply — **founder applies to prod.**
+
+**Capture mechanism DECIDED + Codex-vetted GO-WITH-CHANGES (2026-06-20).** Gmail-OAuth inbox-scan
+rejected (restricted scope → annual CASA; Limited Use forbids cross-user calibration). Primary
+`document_verified` path = **student forwards the offer/CoE/visa email as a raw `.eml` attachment**
+to a per-user `<token>@verify.myvisa.app`; a Cloudflare Email Worker verifies the issuer's **DKIM
+at receipt** + binds to the student via ≥2 strong identifiers; human-reviewed upload is the
+fallback. Folded into design doc §6/§7/§8/§9/§13. Founder/legal gates before the verification path
+can ship: privacy PIA + APP-5 + minor consent; VEVO org-access ToS; accept that a live calibration
+*claim* waits on `official_verified` (VEVO/CoE), not DKIM volume.
+
+**Slice 1 — DB-independent capture contracts (TDD, green).** New `lib/outcomes/` +
+`lib/validation/outcomes.ts`, 41 tests in `tests/outcomes/`:
+- `types.ts` — event / gate / authority / source / evidence-subtype / capture-method enums + the
+  gate-split reason-code taxonomy (`reasonCodeGate`).
+- `events.ts` — `eventGate` / `eventDecisionAuthority` / `isNegativeOutcome` (derived server-side, B3).
+- `state-machine.ts` — `canRecordEvent` (S7): prerequisite ordering + conflicting-terminal guards.
+- `verification.ts` — `classifyEvidence`: the Codex rules (inline → self_reported; DKIM pass + ≥2
+  identifiers → `dkim_identity_bound` draft; weak identity → human review; `.eml` DKIM-fail →
+  rejected; reviewed upload → `human_reviewed`; never `official_verified`).
+- `lib/validation/outcomes.ts` — Zod for the 3 POST routes; F16 (prediction input names the program
+  only — verdict/snapshot/rule_version stripped); reason-code refine (negative-outcome + gate match).
+- Gate: typecheck clean, lint 0 errors, **full suite 1212/1212** green.
+
+**OPEN (next slices, not yet built):**
+- **Verdict-recompute wrapper (F16) + snapshot shape.** The doc/card describe `score_snapshot` as
+  `{gradeGap,englishGap,bandGap,tuitionGap}`, but the real engine (`runAssessment`) returns
+  `dimensions{academic,financial,visa,profileStrength}` + `weighted`. Resolve what to freeze before
+  wiring `/api/outcomes/prediction`. `RULE_VERSION` (`v0.5.0`) is a private const in
+  `lib/scoring/engine.ts` — export it for the snapshot.
+- API routes (3 POSTs + GET) + wiring the `applied` transition (`app/api/shortlist/route.ts`) to
+  freeze a prediction + open an attempt.
+- Inbound email handler (Cloudflare Email Worker) + the verification-ladder admin path — gated on
+  the founder/legal items above.
+
+## Why no TDD / gate (design slice)
+
+The original *design* slice produced a document, not production code — no failing test to write.
+The TDD iron law applies to the **build phase** (now underway — see Build progress above; §12 AC).

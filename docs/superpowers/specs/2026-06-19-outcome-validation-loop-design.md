@@ -379,6 +379,24 @@ or verifier identity is exposed in client JS.
   "Visa decision? (Granted / Refused)", and on a refusal an optional reason picker mapping to
   the `reason_code` taxonomy. Each tap appends an `outcome_events` row. Never blocks, never
   gates content.
+- **Verified capture — forward-to-address + DKIM (the primary `document_verified` path).** Each
+  user gets a unique, high-entropy (128-bit) forward address `<token>@verify.myvisa.app`. The
+  student forwards the genuine offer / CoE / visa-decision email **as an attachment**
+  (`.eml` / `message/rfc822`); a Cloudflare Email Worker reads the **raw MIME** and verifies the
+  issuer's **original DKIM signature at receipt** — cryptographic proof the message genuinely came
+  from the university / Home Affairs and was not altered (DKIM survives forwarding; SPF does not).
+  **An inline "Forward" is NOT DKIM-eligible** (Gmail/Outlook re-wrap the body and break the `bh=`
+  body hash) and auto-downgrades to `self_reported`. On a DKIM pass the handler **must also bind
+  the email to the student** — a match on ≥2 strong identifiers (legal name + one of
+  DOB / passport fragment / application ref / CoE / TRN) — before the event leaves draft; no strong
+  match → human review, never auto-confirm (DKIM proves the email is genuine, *not* that it is
+  *this* student's). Extraction tops ~85%, so the extracted fields are always a **draft the
+  student confirms**; we never auto-mark an outcome validated (a wrong auto-read of "visa refused"
+  is a catastrophic trust failure). Per-token rate-limit + dedup on `Message-ID`+body-hash guard
+  the inbound surface. *(Gmail OAuth inbox-scanning was researched and rejected — restricted scope
+  → annual CASA audit; Google "Limited Use" forbids feeding inbox data to a cross-user model, i.e.
+  our calibration. Forward-to-address needs no Google API and the evidence is stronger.)* Mechanism
+  **Codex-vetted GO-WITH-CHANGES, 2026-06-20.**
 - **Nudges (later phase):** the 3-day assessment-expiry email and post-intake reminders are the
   natural harvest points. Out of scope for this slice; noted so the build phase wires capture,
   not just storage.
@@ -388,9 +406,13 @@ or verifier identity is exposed in client JS.
 ## 7. Calibration method
 
 We never show users percentages (standing decision), so calibration validates **ordinal
-behavior**, not calibrated probabilities. **Training set excludes `source='self_reported'`
-(B2)** — only `document_verified` / `official_verified` events calibrate the bands; self-reports
-are tracked for funnel/UX but cannot move a published calibration claim.
+behavior**, not calibrated probabilities. **Training set excludes `source='self_reported'` (B2).
+The *primary* training set is `official_verified` only** — VEVO for the visa gate, CoE/CRICOS for
+enrolment — the only sources that independently bind the outcome to the student. **`document_verified`
+events feed a separate, lower-weighted secondary analysis**, never the primary calibration claim
+(Codex 2026-06-20: a DKIM-genuine email proves *issuer authenticity*, not that it is *this*
+student's outcome — see §6 identity-binding and §9). Self-reports are tracked for funnel/UX only
+and cannot move a published calibration claim.
 
 1. **Separation + monotonicity.** Within comparable rule versions, the observed offer-rate
    (and, separately, visa-grant-rate) must be **monotone in band**: Strong ≥ Possible ≥ Reach.
@@ -434,11 +456,20 @@ students complete real funnels (months after launch). Therefore:
 - **Phase 2 (evidence accrues):** turn on the internal calibration report; review monotonicity
   per gate and per visa `reason_code`; feed misses back into the rules (a proper recalibration
   epoch).
-- **Phase 3 (trust layer):** the **verification ladder** — an **admin-only** path promotes an
-  event from `self_reported` to `document_verified` (offer letter / CoE / visa-grant notice
-  uploaded via the existing Storage path, reviewed by a human) and eventually
-  `official_verified`, stamping `verified_by`/`verified_at`. Only verified events train
-  calibration (§7). Users can never self-promote (§4.4 insert policy forbids it).
+- **Phase 3 (trust layer):** the **verification ladder**. `self_reported` → `document_verified`
+  via two paths: **(primary) forward-to-address + DKIM** (§6) — verified automatically **at
+  receipt**, with the verification record persisted **immutably** (canonical body hash, full
+  `DKIM-Signature`, `d/s/i/a/t/x`, the DNS TXT verbatim, verifier version, timestamp) so a later
+  DNS selector-rotation can't invalidate a once-good signature; **(fallback) human-reviewed
+  upload** (offer letter / CoE / visa notice via the existing Storage path) for students who can't
+  forward. The evidence subtype (`dkim_identity_bound` / `dkim_identity_weak` / `human_reviewed`)
+  is stamped in `detail` jsonb — **no schema change**. ARC is **not** accepted as
+  `document_verified` (chain-of-custody, not an issuer proof). `document_verified` →
+  `official_verified` only by independent re-check (VEVO visa / CoE/CRICOS enrolment).
+  `verified_by`/`verified_at` are stamped on any admin promotion; users can never self-promote
+  (§4.4 insert policy forbids it). **Raw forwarded MIME is deleted promptly (~24h); only extracted
+  fields + the verification record persist** (AU APP data-minimization). A privacy PIA + APP-5
+  collection notice + minor-consent flow are **required before this phase ships** (§13).
 
 ---
 
@@ -459,6 +490,12 @@ students complete real funnels (months after launch). Therefore:
 - **Two-sided attribution within a gate.** A visa refusal can be the student's (missing funds) or
   our model's (wrong band). The per-gate split (§2) plus `reason_code` (§4.3) localizes it, but
   can't fully disentangle it from n alone.
+- **Identity binding on forwarded evidence (Codex 2026-06-20).** DKIM proves a forwarded email is a
+  genuine, untampered message from the uni/DHA — *not* that it is *this* student's. A student could
+  forward someone else's real grant/offer. Mitigation: the ≥2-strong-identifier match before a
+  `document_verified` event leaves draft (§6); residual risk is exactly why **only
+  `official_verified` (VEVO/CoE) feeds the primary calibration set** (§7), with DKIM evidence
+  weighted separately.
 
 ---
 
@@ -528,8 +565,14 @@ calibration method, and the cold-start ladder.
    Bayesian/hierarchical pooling on verified outcomes**, reporting "insufficient evidence" until
    the bands separate. Sign-off needed on using a statistical evidence test rather than a fixed
    count.
-3. **Verification priority** (§8 Phase 3) — is admin-verified outcome capture (offer letter / visa
-   notice upload + human review) a near-term trust feature or a much-later one? It gates *when*
-   any calibration claim can go live, since self-reports don't train.
+3. **Verification path** (§6 + §8 Phase 3) — *(mechanism now decided: forward-to-address + DKIM,
+   Codex-vetted GO-WITH-CHANGES 2026-06-20; fallback = human-reviewed upload).* Remaining
+   founder/legal gates before Phase 3 can ship: **(a)** a privacy PIA + APP-5 notice +
+   minor-consent flow for ingesting university/government email content; **(b)** confirm VEVO
+   programmatic/org-access ToS (gates `official_verified` for the visa gate); **(c)** accept that
+   the **primary calibration set is `official_verified` only** — DKIM `document_verified` is
+   secondary/lower-weighted — which means a live calibration *claim* waits on VEVO-class
+   verification, not just DKIM volume. Near-term or later? (Nothing here blocks applying the
+   migration; storage already supports all of it.)
 4. **Capture aggressiveness** (§6) — how hard do we nudge for outcomes (email harvest) vs. keep it
    purely passive? Trades data volume against perceived pressure on students.
