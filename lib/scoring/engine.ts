@@ -16,7 +16,10 @@ import { DIMENSION_WEIGHTS, CONFIG_VERSION } from "@/lib/data/scoring-config";
 // gradeSystem (lib/scoring/grade-normalize.ts) — CGPA systems (cgpa-4/10/5) are
 // now scored correctly instead of being read as a raw percentage (which floored
 // any CGPA grade to 0 and forced 'reach'). Percentage systems are unchanged.
-const RULE_VERSION = "v0.5.0";
+// Exported so the outcome-validation loop (MV-08) can stamp the rule version onto
+// a frozen prediction. This is a version string, not a scoring rule — it is
+// already surfaced to clients via AssessmentResult.ruleVersion (no F16 concern).
+export const RULE_VERSION = "v0.5.0";
 
 export function runAssessment(profile: StudentProfile): AssessmentResult {
   const academic = scoreAcademic(profile);

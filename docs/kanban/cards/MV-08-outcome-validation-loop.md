@@ -132,12 +132,17 @@ can ship: privacy PIA + APP-5 + minor consent; VEVO org-access ToS; accept that 
   only — verdict/snapshot/rule_version stripped); reason-code refine (negative-outcome + gate match).
 - Gate: typecheck clean, lint 0 errors, **full suite 1212/1212** green.
 
+**Slice 2 — verdict-recompute / prediction-freeze (TDD, green).** `lib/outcomes/predict.ts`
+`buildPrediction(profile, program, university)` → `{ verdict, scoreSnapshot, ruleVersion }` (F16:
+recomputed server-side, the client never supplies a verdict). **Snapshot-shape question RESOLVED** —
+the freeze uses the *per-program* match result (`computeMatch` → verdict + `{gradeGap, englishGap,
+bandGap, tuitionGap}`), NOT corridor `runAssessment`; the doc/migration shape was correct all along
+(the earlier "mismatch" note looked at the wrong function). Surgical deps: exported `RULE_VERSION`
+from `lib/scoring/engine.ts`; added `computeMatch` (single-program, no list filter) to
+`lib/matches/compute.ts` so a *reach* / off-level program a student commits to still freezes a
+verdict. +5 tests (predict ×3, computeMatch ×2); full suite **1217/1217**.
+
 **OPEN (next slices, not yet built):**
-- **Verdict-recompute wrapper (F16) + snapshot shape.** The doc/card describe `score_snapshot` as
-  `{gradeGap,englishGap,bandGap,tuitionGap}`, but the real engine (`runAssessment`) returns
-  `dimensions{academic,financial,visa,profileStrength}` + `weighted`. Resolve what to freeze before
-  wiring `/api/outcomes/prediction`. `RULE_VERSION` (`v0.5.0`) is a private const in
-  `lib/scoring/engine.ts` — export it for the snapshot.
 - API routes (3 POSTs + GET) + wiring the `applied` transition (`app/api/shortlist/route.ts`) to
   freeze a prediction + open an attempt.
 - Inbound email handler (Cloudflare Email Worker) + the verification-ladder admin path — gated on

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeMatches } from "@/lib/matches/compute";
+import { computeMatches, computeMatch } from "@/lib/matches/compute";
 import type { Program, University } from "@/lib/programs/types";
 
 const uni: University = {
@@ -33,6 +33,28 @@ const p = (over: Partial<Program> = {}): Program => ({
 });
 
 const policy = { nepalAssessmentLevel: "L3" as const };
+
+describe("computeMatch (single program, no list filter — used to freeze a prediction)", () => {
+  const inputs = {
+    userGradePercent: 72,
+    userEnglishOverall: 7,
+    userEnglishBand: 7,
+    userBudgetAud: 45000,
+    userField: "computer-science",
+    userTargetLevel: "masters" as const,
+    policy,
+  };
+
+  it("returns a verdict for one program directly, even at a level the list filter would drop", () => {
+    const m = computeMatch(inputs, p({ level: "bachelors" }), uni);
+    expect(m).not.toBeNull();
+    expect(["strong", "possible", "reach"]).toContain(m!.verdict);
+  });
+
+  it("returns null when the university is missing", () => {
+    expect(computeMatch(inputs, p(), undefined)).toBeNull();
+  });
+});
 
 describe("computeMatches verdict", () => {
   it("strong when grade, english and budget all meet minimums", () => {

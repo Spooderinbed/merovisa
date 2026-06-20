@@ -40,6 +40,21 @@ function rankByField(programs: Program[], field: MatchInputs["userField"]): Prog
   return [...sameField, ...rest];
 }
 
+/**
+ * Compute the match result for ONE program, bypassing the level/field list passes.
+ * Used to freeze a prediction for a program the student is committing to (MV-08)
+ * even when it is a reach or off-level — the eligibility filter that
+ * `computeMatches` applies to a browse list must NOT hide it here. Returns null
+ * only when the university is missing (mirrors `computeOne`).
+ */
+export function computeMatch(
+  inputs: MatchInputs,
+  program: Program,
+  university: University | undefined,
+): MatchResult | null {
+  return computeOne(inputs, program, university);
+}
+
 function computeOne(
   inputs: MatchInputs,
   p: Program,
