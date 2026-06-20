@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "board": "node docs/kanban/build.mjs"
@@ -40,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "jsdom": "^29.1.1",
+    "supabase": "^2.107.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.8"

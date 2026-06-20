@@ -21,7 +21,11 @@ max_rows = 1000
 # without explicit GRANTs. Leave unset today to preserve local behaviour. The implicit default
 # flips to `false` on 2026-05-30 to match the new cloud default, and the field is removed in
 # 2026-10-30 once the always-revoked behaviour is permanent. Set to `false` to opt in early.
-# auto_expose_new_tables = false
+# Set `true` locally: prod's tables were created before the 2026-05-30 flip and keep their
+# implicit service_role grants, so the admin client writes fine there; without this, a fresh
+# local `db reset` recreates tables under the new default and revokes those grants, breaking the
+# real-DB integration tests (tests/integration/*.itest.ts) that prod's grant state supports.
+auto_expose_new_tables = true
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.

@@ -10,7 +10,10 @@ export default defineConfig({
     globals: true,
     css: false,
     // Agent worktrees under .claude/ are full repo copies — never collect their tests.
-    exclude: [...configDefaults.exclude, "**/.claude/**"],
+    // *.itest.ts files run against a real local Supabase stack via
+    // vitest.integration.config.ts (npm run test:integration), never in `npm test`.
+    // (Plain tests/integration/*.test.ts are module-level, need no DB, and stay here.)
+    exclude: [...configDefaults.exclude, "**/.claude/**", "**/*.itest.ts"],
   },
   resolve: {
     alias: {

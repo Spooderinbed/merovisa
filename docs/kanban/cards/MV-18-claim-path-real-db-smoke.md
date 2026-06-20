@@ -1,7 +1,7 @@
 # MV-18 — Real-DB claim-path integration smoke (catch the swallowed-index class)
 
-**Column:** Backlog · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder — approve the one-time local toolchain; no prod write)
-**Created:** 2026-06-20
+**Column:** In review · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder)
+**Created:** 2026-06-20 · **Entered review:** 2026-06-20
 **Related:** [[MV-16]] — the bug this test would have caught (swallowed `assessments_primary_idx` violation). [[MV-14]] — the lead-insert this test also asserts. [[MV-17]] — the routing change that removes the duplicate-row path entirely.
 
 ## Why
@@ -96,41 +96,93 @@ red→green against the live local index.
 branch (`create_branch` incurs cost → founder decision) ≫ **prod test-writes
 (prohibited without explicit founder approval — pollutes prod + is a prod write).**
 
+## What shipped
+
+- **`tests/integration/claim-path.itest.ts`** — env-gated Vitest integration smoke,
+  node environment, hits a **real local Postgres** via the service-role client. Mints
+  a throwaway non-Google user (`auth.admin.createUser({ email, email_confirm: true })`),
+  seeds anonymous assessments with `createAnonymousAssessment` (the real repo writer,
+  so the insert shape matches prod exactly), drives `claimAndBootstrapProfile`, and
+  reads back through the real repo helpers. Teardown deletes seeded assessments +
+  the auth user (cascade cleans profile/leads). Unique-per-run email so a failed
+  teardown never collides.
+- **`vitest.integration.config.ts`** — separate config: `environment: "node"`,
+  `include: ["**/*.itest.ts"]`, 30s timeouts. New `npm run test:integration` script.
+- **`vitest.config.ts`** — default `npm test` now excludes `**/*.itest.ts` (the
+  module-level `tests/integration/*.test.ts` stay in `npm test`; only real-DB
+  `.itest.ts` split out).
+- **`supabase/config.toml`** — set `auto_expose_new_tables = true` (local-dev only).
+  See "Finding" below: without it a fresh local `db reset` revokes the implicit
+  service_role grants that prod's pre-flip tables still have, and every write 500s.
+- **Toolchain (one-time, done):** `supabase` added as a devDependency; local stack
+  brought up (`npx supabase start` + `db reset`, all 15 migrations applied).
+
+`claim.ts` is **byte-identical to its committed state** (`git diff` empty) — the RED
+proof reverted-then-restored it; this card adds tests only, no business-logic change.
+
 ## Acceptance criteria
 
-- [ ] Integration test mints a non-Google user via `auth.admin.createUser` and
+- [x] Integration test mints a non-Google user via `auth.admin.createUser` and
       drives `claimAndBootstrapProfile` against a **real** Postgres with the real
       migrations applied (real `assessments_primary_idx`).
-- [ ] After a 2nd claim: exactly one `is_primary=true` row for the owner, and it is
+- [x] After a 2nd claim: exactly one `is_primary=true` row for the owner, and it is
       the newest assessment (newest-wins). **Confirmed RED on the pre-MV-16 code.**
-- [ ] A `leads` row lands on claim; a re-claim does not duplicate it.
-- [ ] A `profiles` row is bootstrapped for the user.
-- [ ] The suite **skips cleanly** (never fails) when the local stack isn't running;
-      it is not part of the default `npm test`.
-- [ ] Teardown removes all test rows + the auth user. **No prod writes.** Business
-      logic untouched (test-only; `claim.ts` not modified).
+- [x] A `leads` row lands on claim; a re-claim does not duplicate it (plus a direct
+      double-`createLead` proving `leads_assessment_email_uniq` + ignoreDuplicates).
+- [x] A `profiles` row is bootstrapped for the user.
+- [x] The suite **skips cleanly** (3 skipped, exit 0) when env vars are absent; it is
+      not part of the default `npm test`.
+- [x] Teardown removes all test rows + the auth user. **No prod writes** (local
+      stack only). Business logic untouched (test-only; `claim.ts` not modified).
 
-## Test plan (TDD)
+## Test evidence (TDD, RED→GREEN against the real index)
 
-To prove the test actually catches the bug, the building agent should **temporarily
-revert `claim.ts` to the single unconditional promote**, watch the newest-wins
-assertion go **RED** against the real index, then restore the demote-then-promote
-fix and watch it go **GREEN**. (This is the integration analogue of the RED step the
-mocked unit test could only fake.) Then `npm run test:integration` green +
-`npm run typecheck` clean.
+Per the plan, the fix already shipped (MV-16), so the bug was **temporarily
+reintroduced** to prove the test has teeth:
+
+- **RED:** with `claim.ts` reverted to the pre-MV-16 single unconditional promote,
+  `npm run test:integration` → newest-wins FAILED — the primary stayed pinned to the
+  first claimed assessment (`expected [a2] / received [a1]`) because the 2nd promote
+  tripped `assessments_primary_idx` and the swallowed error left a1 primary. The
+  other 2 tests stayed green (they don't depend on the primary logic) → the test
+  isolates exactly the MV-16 class. *This is the failure a supabase-js mock cannot
+  produce.*
+- **GREEN:** demote-then-promote restored → `test:integration` **3/3 passed**.
+- **Skip-clean:** with env vars unset → **3 skipped**, exit 0.
+- **Gate:** `npm test` **1270 passed** (`.itest.ts` correctly not collected) ·
+  `npm run typecheck` clean · `npm run lint` 0 errors (1 pre-existing unrelated
+  `build.mjs` warning).
+
+To re-run: `npx supabase start`, then from `npx supabase status -o env` set
+`SUPABASE_TEST_URL` + `SUPABASE_TEST_SERVICE_ROLE_KEY`, then `npm run test:integration`.
+
+## Finding for the founder — service_role grant drift (read-only, worth a look)
+
+The local stack exposed a real discrepancy. The current Supabase CLI default
+(`auto_expose_new_tables`, flipped to `false` after 2026-05-30) means **freshly
+created** public tables no longer get implicit `service_role` grants. Prod's tables
+were created **before** the flip, so they keep those grants — which is why the admin
+client writes fine in prod today. But it means prod relies on a now-deprecated
+implicit grant rather than explicit `grant … to service_role` statements in the
+migrations. Not an active outage, but a latent risk on a future platform upgrade /
+table recreation. **Suggested follow-up (not done here, would be a prod schema
+change → founder-gated):** add explicit `service_role` grants to the migrations so
+the posture is intentional and reproducible. Flagged, not actioned.
 
 ## Open questions for the founder
 
-1. **Toolchain:** OK to add `supabase` as a devDependency and rely on Docker Desktop
-   for this test locally? (No prod/cost impact.)
+1. **Toolchain:** `supabase` added as a devDependency + local Docker — **done**, no
+   prod/cost impact. (Confirm you're OK keeping it in `devDependencies`.)
 2. **CI:** wire `test:integration` into CI later (needs a Postgres/Supabase service
    in the pipeline), or keep it a **local pre-merge gate** for claim/auth changes?
-3. **Scope:** this smoke covers the post-session claim logic. The Google
-   `exchangeCodeForSession` leg stays a founder live-smoke (un-automatable here) —
-   confirm that split is acceptable.
+3. **Scope:** this smoke covers the post-session claim logic; the Google
+   `exchangeCodeForSession` leg stays a founder live-smoke (un-automatable here).
+   Confirm that split is acceptable.
+4. **Grant drift:** see the Finding above — want a follow-up card for explicit
+   `service_role` grants in the migrations?
 
 ## Status
 
-Backlog — **blocked on the one-time local toolchain** (start Docker + `npm i -D
-supabase`). Design is fully formed above; a cold agent can build it after setup.
-Filed per the founder's "smoke-test with a dev account" question; not started.
+**In review** — built, RED→GREEN proven against a real local Postgres, full gate
+green. Test-only (no business-logic or prod change). Awaiting founder gate on the
+open questions above (esp. the devDependency + the grant-drift follow-up).
