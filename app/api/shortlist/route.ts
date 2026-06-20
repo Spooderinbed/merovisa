@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { upsertProgramState, deleteProgramState } from "@/lib/matches/repo";
+import { captureApplication } from "@/lib/outcomes/on-apply";
 
 const BodySchema = z.object({
   programId: z.string().min(1),
@@ -37,5 +38,11 @@ export async function POST(request: Request): Promise<Response> {
     programId: parsed.data.programId,
     status: parsed.data.status,
   });
+  // MV-08: marking a program 'applied' freezes the prediction-of-record + opens an
+  // attempt (the moat capture). Best-effort and idempotent — it must not fail the
+  // shortlist write, and it runs through the RLS-scoped client (S4), not admin.
+  if (ok && parsed.data.status === "applied") {
+    await captureApplication(supabase, data.user.id, parsed.data.programId);
+  }
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }

@@ -7,9 +7,12 @@ import { z } from "zod";
 import { EVENT_TYPES, REASON_CODES, reasonCodeGate } from "@/lib/outcomes/types";
 import { eventGate, isNegativeOutcome } from "@/lib/outcomes/events";
 
-/** POST /api/outcomes/prediction — freeze a prediction run for (assessment, program). */
+/** POST /api/outcomes/prediction — freeze a prediction run for the named program.
+ *  assessment_id is NOT taken from the body: the server derives it from the user's
+ *  primary assessment (Decision C) so a user can't freeze against someone else's
+ *  assessment, and the client can't choose the anchor. F16: the body names only
+ *  the program; verdict/snapshot/rule_version are recomputed and stamped server-side. */
 export const PredictionInputSchema = z.object({
-  assessmentId: z.uuid(),
   programId: z.string().min(1),
 });
 export type PredictionInput = z.infer<typeof PredictionInputSchema>;

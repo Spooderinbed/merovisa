@@ -8,16 +8,16 @@ import {
 const UUID = "11111111-1111-4111-8111-111111111111";
 const UUID2 = "22222222-2222-4222-8222-222222222222";
 
-describe("PredictionInputSchema (F16: client names the program, never the verdict)", () => {
-  it("accepts an assessment + program reference", () => {
-    const r = PredictionInputSchema.safeParse({ assessmentId: UUID, programId: "usyd-mit" });
+describe("PredictionInputSchema (F16: client names the program, never the verdict; assessment derived server-side)", () => {
+  it("accepts a program reference (assessment_id is derived server-side, not the body)", () => {
+    const r = PredictionInputSchema.safeParse({ programId: "usyd-mit" });
     expect(r.success).toBe(true);
   });
 
-  it("strips any client-supplied verdict / snapshot / rule_version (server recomputes)", () => {
+  it("strips client verdict / snapshot / rule_version AND any assessmentId (server recomputes + derives)", () => {
     const r = PredictionInputSchema.safeParse({
-      assessmentId: UUID,
       programId: "usyd-mit",
+      assessmentId: UUID,
       verdict: "strong",
       scoreSnapshot: { gradeGap: 0 },
       ruleVersion: "v9.9.9",
@@ -27,12 +27,12 @@ describe("PredictionInputSchema (F16: client names the program, never the verdic
       expect("verdict" in r.data).toBe(false);
       expect("scoreSnapshot" in r.data).toBe(false);
       expect("ruleVersion" in r.data).toBe(false);
+      expect("assessmentId" in r.data).toBe(false);
     }
   });
 
-  it("rejects a non-uuid assessment id and a blank program id", () => {
-    expect(PredictionInputSchema.safeParse({ assessmentId: "nope", programId: "p" }).success).toBe(false);
-    expect(PredictionInputSchema.safeParse({ assessmentId: UUID, programId: "" }).success).toBe(false);
+  it("rejects a blank program id", () => {
+    expect(PredictionInputSchema.safeParse({ programId: "" }).success).toBe(false);
   });
 });
 

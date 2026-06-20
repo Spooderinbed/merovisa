@@ -2,16 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, upsertProgramState, deleteProgramState } = vi.hoisted(() => ({
+const { getUser, upsertProgramState, deleteProgramState, captureApplication } = vi.hoisted(() => ({
   getUser: vi.fn(),
   upsertProgramState: vi.fn(),
   deleteProgramState: vi.fn(),
+  captureApplication: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/matches/repo", () => ({ upsertProgramState, deleteProgramState }));
+vi.mock("@/lib/outcomes/on-apply", () => ({ captureApplication }));
 
 import { POST } from "@/app/api/shortlist/route";
 
@@ -27,6 +29,8 @@ describe("POST /api/shortlist", () => {
     getUser.mockReset();
     upsertProgramState.mockReset();
     deleteProgramState.mockReset();
+    captureApplication.mockReset();
+    captureApplication.mockResolvedValue({ captured: true });
   });
 
   it("401s when not signed in", async () => {
@@ -55,5 +59,20 @@ describe("POST /api/shortlist", () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     const res = await POST(req({ programId: "", status: "shortlisted" }));
     expect(res.status).toBe(422);
+  });
+
+  it("freezes a prediction + opens an attempt when status flips to applied", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    upsertProgramState.mockResolvedValue(true);
+    const res = await POST(req({ programId: "p1", status: "applied" }));
+    expect(res.status).toBe(200);
+    expect(captureApplication).toHaveBeenCalledWith(expect.anything(), "u1", "p1");
+  });
+
+  it("does not capture an application for non-applied statuses", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    upsertProgramState.mockResolvedValue(true);
+    await POST(req({ programId: "p1", status: "shortlisted" }));
+    expect(captureApplication).not.toHaveBeenCalled();
   });
 });
