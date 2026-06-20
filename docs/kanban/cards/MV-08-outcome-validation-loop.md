@@ -182,11 +182,24 @@ corrected now. Locked decisions:
   `rule_version` + the program's published thresholds reconstruct the effective inputs, so NO extra input-snapshot
   column for v1 (freeze fires in the same signed-in session as the render ⇒ negligible drift). Revisit if audit needs grow.
 
-**OPEN (next slice — build now):**
-- Refactor `buildPrediction` (Decision A, TDD) → shared freeze helper → 4 routes under `app/api/outcomes/`
-  (POST prediction/attempt/event + GET) + wire the `applied` transition in `app/api/shortlist/route.ts`.
-  All Zod-validated (`lib/validation/outcomes.ts`), owner from session, writes via RLS-scoped
-  `createSupabaseServerClient()` (S4). Reuse `lib/outcomes/*` + `sectionsToMatchInputs` + `getPrimaryAssessmentForUser`.
+**Slice 4 — capture routes + applied hook SHIPPED (TDD, 2026-06-20, commit 6e5296c).**
+- `buildPrediction` refactored to `MatchInputs` (Decision A, commit b32895d) + F16 regression test.
+- `PredictionInputSchema` dropped `assessmentId` (Decision C) — body is `{ programId }` only.
+- `lib/outcomes/repo.ts` — RLS-scoped DB access (insert/get prediction, attempt, event; idempotent
+  `insertPrediction` on the unique collision; `listEventTypesForAttempt` feeds the S7 guard;
+  `getOutcomesForUser`). `lib/outcomes/freeze.ts` — `freezePredictionForProgram` (B+C, 409/404 branches).
+  `lib/outcomes/on-apply.ts` — `captureApplication` (freeze + open attempt, idempotent, best-effort).
+- Routes `app/api/outcomes/`: POST `prediction` (201 fresh / 200 idempotent / 409 no-assessment / 404),
+  POST `attempt` (program_id from the prediction, 404 unknown), POST `event` (derives gate +
+  decision_authority, S7 guard → 409, stamps source=self_reported), GET `/` (owner-scoped history).
+  Wired `app/api/shortlist/route.ts` 'applied' → `captureApplication` via the RLS-scoped client (S4).
+- `lib/supabase/types.ts`: hand-added the 3 new tables (no gen script in repo).
+- Gate: **typecheck clean, lint 0 errors, full suite 1242/1242** (+25: predict F16, freeze ×4, routes ×17, shortlist ×2).
+- Not done as live browser e2e: the routes need a signed-in session + primary assessment; covered by
+  integration tests (auth/validation/freeze/state-machine/idempotency/delegation). A true UI e2e
+  (sign in → mark a program 'applied' → confirm a prediction + attempt row land) is the founder smoke-test.
+
+**OPEN (remaining slices):**
 - Inbound email handler (Cloudflare Email Worker) + the verification-ladder admin path — gated on
   the founder/legal items above.
 
