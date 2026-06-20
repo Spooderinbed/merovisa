@@ -3,13 +3,14 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getPrimaryAssessmentForUser, getProfile, listShortlistForUser, listDocumentsForUser, listOpenPlanForUser } = vi.hoisted(() => ({
+const { getUser, getPrimaryAssessmentForUser, getProfile, listShortlistForUser, listDocumentsForUser, listOpenPlanForUser, getOutcomesForUser } = vi.hoisted(() => ({
   getUser: vi.fn(),
   getPrimaryAssessmentForUser: vi.fn(),
   getProfile: vi.fn(),
   listShortlistForUser: vi.fn(),
   listDocumentsForUser: vi.fn(),
   listOpenPlanForUser: vi.fn(),
+  getOutcomesForUser: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -20,6 +21,7 @@ vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
 vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
 vi.mock("@/lib/plan/repo", () => ({ listOpenPlanForUser }));
+vi.mock("@/lib/outcomes/repo", () => ({ getOutcomesForUser }));
 vi.mock("@/components/dashboard/snapshot-card", () => ({
   SnapshotCard: ({ primary }: { primary: unknown }) => <div data-testid="snap">{primary ? "has-snap" : "empty-snap"}</div>,
 }));
@@ -44,6 +46,8 @@ describe("/dashboard page", () => {
     listDocumentsForUser.mockReset();
     listOpenPlanForUser.mockReset();
     listOpenPlanForUser.mockResolvedValue([]);
+    getOutcomesForUser.mockReset();
+    getOutcomesForUser.mockResolvedValue({ predictions: [], attempts: [], events: [] });
   });
 
   const openItem = {
