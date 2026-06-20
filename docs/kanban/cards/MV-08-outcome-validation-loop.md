@@ -1,6 +1,6 @@
 # MV-08 — Outcome-validation loop ("the moat")
 
-**Status:** BUILD IN PROGRESS (2026-06-20). Migration committed (`ebd71ae`, Codex-vetted); DKIM capture mechanism decided + Codex-vetted GO-WITH-CHANGES (folded into design doc §6/§7/§8/§9/§13); first build slice — DB-independent capture contracts — landed green. Founder gates remain (apply migration; Q3 verification-path legal gates).
+**Status:** BUILD IN PROGRESS (2026-06-20). Migration applied to prod (Slice 3); capture routes + applied hook shipped (Slice 4); **UI capture trigger + funnel-root fix shipped (Slice 5, `4072730`)** — a user can now mark a program Applied and the funnel is actually progressable (the 409 dead-end is closed; event-less attempts self-heal). Founder gates remain: Q3 verification-path legal gates (PIA/minor-consent, VEVO ToS) before the inbound-email/verification slices; a live UI smoke + cleanup of the smoke-test prod rows.
 **Owner:** agent · **Priority:** P2 · **Gate to build:** founder approves migration + real traffic exists.
 
 ## What this card is
@@ -198,6 +198,31 @@ corrected now. Locked decisions:
 - Not done as live browser e2e: the routes need a signed-in session + primary assessment; covered by
   integration tests (auth/validation/freeze/state-machine/idempotency/delegation). A true UI e2e
   (sign in → mark a program 'applied' → confirm a prediction + attempt row land) is the founder smoke-test.
+
+**Slice 5 — UI capture trigger + funnel-root fix SHIPPED (TDD, 2026-06-20, commit `4072730`).**
+Closes the two halves that made the funnel un-progressable from the product surface (founder chose
+the "3-state status control" via AskUserQuestion).
+- `components/matches/shortlist-button.tsx` — replaced the single shortlist toggle with a 3-state
+  status control **Not saved → Shortlisted → Applied**. Choosing *Applied* POSTs `status:"applied"`
+  to `/api/shortlist` (the existing capture trigger); choosing the active state is a no-op.
+- Threaded the **persisted** status through `app/(app)/matches/page.tsx` → `verdict-group.tsx` →
+  `program-card.tsx` (`Set<id>` → `Map<id, status>`; `ProgramCard` prop `isShortlisted: boolean` →
+  `initialStatus: Status`) so an Applied program reflects as *Applied* on reload, not Shortlisted/Not saved.
+- **The funnel-root fix:** `lib/outcomes/on-apply.ts` `captureApplication` now ALSO writes an
+  **idempotent root `applied` outcome_event** when it opens the attempt (`ensureAppliedEvent`),
+  deriving gate/decisionAuthority/source server-side via `lib/outcomes/events.ts` (mirrors
+  `/api/outcomes/event`), anchored to the attempt's `createdAt`. Previously the attempt was opened
+  with **no** root event, so the S7 state machine rejected the first self-report
+  (`offer_received`/`visa_granted`) with **409** — the confirmed dead-end. The idempotency check
+  (`listEventTypesForAttempt` → skip if `applied` present) also **self-heals** attempts opened by the
+  earlier event-less path (e.g. the live smoke-test attempt `073d60dc`): the next `applied` flip
+  on that prediction writes the missing root event, no manual DB surgery.
+- Gate: **typecheck clean, lint 0 errors, full suite 1249/1249** (+7: on-apply ×4 incl. the heal path,
+  shortlist-button rewritten to 6 for the 3-state control, program-card status-reflection ×1).
+- Not done as live browser e2e: `/matches` is OAuth-gated and can't be authenticated headlessly;
+  control verified by unit tests + a faithful token-accurate visual mockup surfaced to the founder.
+  A true UI smoke (sign in → mark Applied → confirm a root `applied` event lands → confirm a follow-on
+  `offer_received` returns 201 not 409) is the founder smoke-test.
 
 **OPEN (remaining slices):**
 - Inbound email handler (Cloudflare Email Worker) + the verification-ladder admin path — gated on
