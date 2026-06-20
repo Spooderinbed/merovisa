@@ -46,12 +46,28 @@ export async function claimAndBootstrapProfile(
     await upsertProfile(adminDb, { owner: input.userId, sections, completeness: pct });
   }
 
-  // Mark is_primary unless the user already has one
-  await adminDb
+  // Make the just-claimed assessment the primary one (newest-wins): demote any
+  // existing primary for this owner, then promote this row. Two sequential
+  // app-layer updates (business logic stays in Next.js, not a DB function); after
+  // the demote the owner has no primary, so the promote cannot trip the
+  // `assessments_primary_idx` partial-unique constraint. Errors are logged, never
+  // swallowed — a discarded error here is why re-assessing used to leave the
+  // dashboard pinned to the first assessment ever claimed.
+  const { error: demoteError } = await adminDb
+    .from("assessments")
+    .update({ is_primary: false })
+    .eq("owner", input.userId)
+    .eq("is_primary", true);
+  if (demoteError) {
+    console.error("[claim] demote existing primary failed", { userId: input.userId, error: demoteError });
+  }
+  const { error: promoteError } = await adminDb
     .from("assessments")
     .update({ is_primary: true })
-    .eq("id", input.assessmentId)
-    .is("is_primary", false);
+    .eq("id", input.assessmentId);
+  if (promoteError) {
+    console.error("[claim] promote new primary failed", { assessmentId: input.assessmentId, error: promoteError });
+  }
 
   // Record the conversion as a lead — the funnel-bottom signal that an anonymous
   // assessment became an account. Best-effort: the user is already converted, so a

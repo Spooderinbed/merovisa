@@ -1,15 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
-const { claimAssessment, createLead, upsertProfile, getProfile, from } = vi.hoisted(() => {
+const { claimAssessment, createLead, upsertProfile, getProfile, from, update, updateCalls, updateResults } = vi.hoisted(() => {
   const claimAssessment = vi.fn();
   const createLead = vi.fn();
   const upsertProfile = vi.fn();
   const getProfile = vi.fn();
-  const update = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockResolvedValue({ data: null, error: null }) }) });
+
+  // Records every .update(...) chain so tests can assert demote-then-promote order + filters.
+  const updateCalls: Array<{ payload: Record<string, unknown>; filters: Array<[string, unknown]> }> = [];
+  // Per-call result selected by payload: { is_primary: true } → promote, else demote.
+  const updateResults: { demote: { error: unknown }; promote: { error: unknown } } = {
+    demote: { error: null },
+    promote: { error: null },
+  };
+
+  const update = vi.fn((payload: Record<string, unknown>) => {
+    const entry: { payload: Record<string, unknown>; filters: Array<[string, unknown]> } = { payload, filters: [] };
+    updateCalls.push(entry);
+    const result = payload?.is_primary === true ? updateResults.promote : updateResults.demote;
+    // Chainable thenable: .eq()/.is() return the builder; awaiting it resolves to { error }.
+    const builder: Record<string, unknown> = {
+      eq: vi.fn((col: string, val: unknown) => { entry.filters.push([col, val]); return builder; }),
+      is: vi.fn((col: string, val: unknown) => { entry.filters.push([col, val]); return builder; }),
+      then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
+        Promise.resolve(result).then(resolve, reject),
+    };
+    return builder;
+  });
+
   const select = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: { profile_snapshot: { destination: "australia" } }, error: null }) }) });
   const from = vi.fn(() => ({ update, select }));
-  return { claimAssessment, createLead, upsertProfile, getProfile, update, select, from };
+  return { claimAssessment, createLead, upsertProfile, getProfile, from, update, updateCalls, updateResults };
 });
 const fakeAdmin = { from } as never;
 
@@ -25,6 +47,10 @@ describe("claimAndBootstrapProfile", () => {
     upsertProfile.mockReset();
     getProfile.mockReset();
     from.mockClear();
+    update.mockClear();
+    updateCalls.length = 0;
+    updateResults.demote = { error: null };
+    updateResults.promote = { error: null };
   });
 
   it("returns claimed:false when claimAssessment fails", async () => {
@@ -96,6 +122,43 @@ describe("claimAndBootstrapProfile", () => {
       assessmentId: "a1", userId: "u1", email: "aarav@example.com",
     });
     expect(out.claimed).toBe(true);
+    errSpy.mockRestore();
+  });
+
+  it("on a re-claim, demotes the existing primary then promotes the new assessment (newest-wins)", async () => {
+    claimAssessment.mockResolvedValue(true);
+    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+
+    await claimAndBootstrapProfile(fakeAdmin, {
+      assessmentId: "a-new", userId: "u1", email: "aarav@example.com",
+    });
+
+    const demote = updateCalls.find((c) => c.payload.is_primary === false);
+    const promote = updateCalls.find((c) => c.payload.is_primary === true);
+
+    // Demote any existing primary for this owner first…
+    expect(demote).toBeDefined();
+    expect(demote!.filters).toEqual([["owner", "u1"], ["is_primary", true]]);
+    // …then promote the just-claimed row (owner has no primary now → no index conflict).
+    expect(promote).toBeDefined();
+    expect(promote!.filters).toEqual([["id", "a-new"]]);
+  });
+
+  it("surfaces a failed promote instead of swallowing it (claim still succeeds)", async () => {
+    claimAssessment.mockResolvedValue(true);
+    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    updateResults.promote = { error: { message: "primary index conflict" } };
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const out = await claimAndBootstrapProfile(fakeAdmin, {
+      assessmentId: "a-new", userId: "u1", email: "aarav@example.com",
+    });
+
+    expect(out.claimed).toBe(true);
+    expect(errSpy).toHaveBeenCalledWith(
+      "[claim] promote new primary failed",
+      expect.objectContaining({ assessmentId: "a-new", error: { message: "primary index conflict" } }),
+    );
     errSpy.mockRestore();
   });
 });
