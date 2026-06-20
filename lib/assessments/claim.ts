@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { claimAssessment } from "./repo";
+import { claimAssessment, createLead } from "./repo";
 import { getProfile, upsertProfile } from "@/lib/profiles/repo";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
@@ -12,6 +12,7 @@ export interface ClaimAndBootstrapInput {
   assessmentId: string;
   userId: string;
   googleName?: string;
+  email?: string;
 }
 
 export interface ClaimAndBootstrapResult {
@@ -51,6 +52,18 @@ export async function claimAndBootstrapProfile(
     .update({ is_primary: true })
     .eq("id", input.assessmentId)
     .is("is_primary", false);
+
+  // Record the conversion as a lead — the funnel-bottom signal that an anonymous
+  // assessment became an account. Best-effort: the user is already converted, so a
+  // lead-write failure must never block their login/redirect. createLead upserts
+  // idempotently on (assessment_id, email), so a re-claim never duplicates.
+  if (input.email) {
+    try {
+      await createLead(adminDb, { email: input.email, assessmentId: input.assessmentId });
+    } catch (err) {
+      console.error("[claim] lead insert failed", { assessmentId: input.assessmentId, err });
+    }
+  }
 
   return { claimed: true };
 }

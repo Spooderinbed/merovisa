@@ -21,6 +21,7 @@ export async function GET(request: Request): Promise<Response> {
   const { data } = await supabase.auth.getUser();
   const userId = data.user?.id;
   const googleName = data.user?.user_metadata?.full_name as string | undefined;
+  const email = data.user?.email ?? undefined;
 
   let claimedAssessmentId: string | null = null;
   if (claimToken) {
@@ -33,7 +34,7 @@ export async function GET(request: Request): Promise<Response> {
 
   if (claimedAssessmentId && userId) {
     const { claimed } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
-      assessmentId: claimedAssessmentId, userId, googleName,
+      assessmentId: claimedAssessmentId, userId, googleName, email,
     });
     if (!claimed) return NextResponse.redirect(`${origin}/assess?error=expired`);
     return NextResponse.redirect(`${origin}/assessment/${claimedAssessmentId}`);

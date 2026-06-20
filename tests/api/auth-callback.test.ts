@@ -34,7 +34,7 @@ describe("GET /auth/callback", () => {
 
   it("exchanges the code, claims+bootstraps, and redirects to the assessment", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", user_metadata: { full_name: "Aarav" } } } });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", email: "aarav@example.com", user_metadata: { full_name: "Aarav" } } } });
     claimAndBootstrapProfile.mockResolvedValue({ claimed: true });
 
     const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
@@ -42,7 +42,12 @@ describe("GET /auth/callback", () => {
     expect(exchangeCodeForSession).toHaveBeenCalledWith("abc");
     expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ assessmentId: ASSESSMENT_UUID, userId: "user-1", googleName: "Aarav" }),
+      expect.objectContaining({
+        assessmentId: ASSESSMENT_UUID,
+        userId: "user-1",
+        googleName: "Aarav",
+        email: "aarav@example.com",
+      }),
     );
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain(`/assessment/${ASSESSMENT_UUID}`);

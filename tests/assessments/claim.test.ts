@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
-const { claimAssessment, upsertProfile, getProfile, from } = vi.hoisted(() => {
+const { claimAssessment, createLead, upsertProfile, getProfile, from } = vi.hoisted(() => {
   const claimAssessment = vi.fn();
+  const createLead = vi.fn();
   const upsertProfile = vi.fn();
   const getProfile = vi.fn();
   const update = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ is: vi.fn().mockResolvedValue({ data: null, error: null }) }) });
   const select = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: { profile_snapshot: { destination: "australia" } }, error: null }) }) });
   const from = vi.fn(() => ({ update, select }));
-  return { claimAssessment, upsertProfile, getProfile, update, select, from };
+  return { claimAssessment, createLead, upsertProfile, getProfile, update, select, from };
 });
 const fakeAdmin = { from } as never;
 
-vi.mock("@/lib/assessments/repo", () => ({ claimAssessment }));
+vi.mock("@/lib/assessments/repo", () => ({ claimAssessment, createLead }));
 vi.mock("@/lib/profiles/repo", () => ({ upsertProfile, getProfile }));
 
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
@@ -20,6 +21,7 @@ import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
 describe("claimAndBootstrapProfile", () => {
   beforeEach(() => {
     claimAssessment.mockReset();
+    createLead.mockReset();
     upsertProfile.mockReset();
     getProfile.mockReset();
     from.mockClear();
@@ -56,5 +58,44 @@ describe("claimAndBootstrapProfile", () => {
     });
     expect(out.claimed).toBe(true);
     expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  it("records a lead (email + assessmentId) when the claim succeeds", async () => {
+    claimAssessment.mockResolvedValue(true);
+    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    await claimAndBootstrapProfile(fakeAdmin, {
+      assessmentId: "a1", userId: "u1", googleName: "Aarav", email: "aarav@example.com",
+    });
+    expect(createLead).toHaveBeenCalledWith(fakeAdmin, {
+      email: "aarav@example.com",
+      assessmentId: "a1",
+    });
+  });
+
+  it("does not record a lead when the claim fails", async () => {
+    claimAssessment.mockResolvedValue(false);
+    await claimAndBootstrapProfile(fakeAdmin, {
+      assessmentId: "a1", userId: "u1", email: "aarav@example.com",
+    });
+    expect(createLead).not.toHaveBeenCalled();
+  });
+
+  it("does not record a lead when no email is present", async () => {
+    claimAssessment.mockResolvedValue(true);
+    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
+    expect(createLead).not.toHaveBeenCalled();
+  });
+
+  it("still returns claimed:true when the lead insert fails (best-effort)", async () => {
+    claimAssessment.mockResolvedValue(true);
+    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    createLead.mockRejectedValue(new Error("fk violation"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const out = await claimAndBootstrapProfile(fakeAdmin, {
+      assessmentId: "a1", userId: "u1", email: "aarav@example.com",
+    });
+    expect(out.claimed).toBe(true);
+    errSpy.mockRestore();
   });
 });
