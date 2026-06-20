@@ -149,19 +149,44 @@ intentional+documented, leaked-password-protection is a standing Auth WARN). **O
 `application_attempts` composite FK `(prediction_id, owner)` lacked a covering index (the base migration indexed
 the two columns separately). Fix staged in **`20260620010000_index_application_attempts_composite_fk.sql`** (adds
 the composite index, drops the now-redundant single-column one; mirrors the `outcome_events (attempt_id, owner)`
-index, S11). **NOT yet applied — second prod DB change, awaiting explicit founder approval.** The "unused index"
-INFO notices on the new tables are expected (no traffic yet); they clear once the routes issue queries.
+index, S11). **APPLIED to prod 2026-06-20 (founder-approved "apply 20260620010000"; Codex GO).** Verified:
+`application_attempts_prediction_id_owner_idx` exists, `application_attempts_prediction_id_idx` dropped;
+`get_advisors` performance **no longer reports any unindexed-FK finding** — only INFO `unused_index` noise on the
+new zero-traffic tables (expected; clears once the routes issue queries). **Both MV-08 migrations now live.**
 
-**OPEN (next slices, not yet built):**
-- API routes (3 POSTs + GET) + wiring the `applied` transition (`app/api/shortlist/route.ts`) to
-  freeze a prediction + open an attempt. **Resume note — one design question to resolve first:**
-  `buildPrediction` needs a `StudentProfile`, but `getProfile(db, userId)` (`lib/profiles/repo.ts`) returns a
-  `ProfileRow` with a `sections` jsonb — find the existing `ProfileRow.sections → StudentProfile` mapper (the
-  signed-in matches surface must already do this conversion) so the frozen prediction equals what the user saw;
-  and decide where `assessment_id` (required by `program_predictions`) is sourced (likely the user's latest
-  assessment). Writes go through the RLS-scoped `createSupabaseServerClient()` (NOT the admin client), per S4.
-- Apply `20260620010000` once the founder approves (re-run `get_advisors` performance after — the unindexed-FK
-  finding should clear).
+**FREEZE DESIGN — RESOLVED & LOCKED (2026-06-20, Codex GO-with-changes + founder "approve them with codex").**
+The slice-2 `buildPrediction(profile: StudentProfile)` used the WRONG adapter: it ran
+`profileToMatchInputs(sectionsToStudentProfile(sections))`, whose `effectiveEnglish` injects the *anonymous*
+provisional baseline (booked→6.5, not-taken→6.0). The signed-in matches page (what the user actually SEES)
+computes via `sectionsToMatchInputs(sections, {nepalAssessmentLevel})`, which treats a missing English score as
+`null`. So freezing via the StudentProfile path would store a DIFFERENT (more optimistic) verdict than the page
+showed — an F16 violation. `buildPrediction(profile)` had no production caller (only its test), so it is being
+corrected now. Locked decisions:
+- **A.** Refactor `buildPrediction(inputs: MatchInputs, program, university)` — adapter-agnostic; caller chooses.
+- **B.** The freeze route + the `applied` transition build inputs via
+  `sectionsToMatchInputs(sections, {nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL})` — the *same* adapter the
+  matches page uses ⇒ frozen verdict == what the user saw. (`computeMatch` single-program path retained so a
+  reach / off-level program still freezes — see off-list override below.)
+- **C.** `assessment_id` is **server-derived** from `getPrimaryAssessmentForUser(db, userId).id`
+  (`lib/assessments/repo.ts`), NOT from the request body → drop `assessmentId` from `PredictionInputSchema`
+  (body = `{ programId }`). No primary assessment ⇒ **409**. (Don't trust client; owner from session, never body.)
+- **Idempotent re-freeze (Codex #1):** on the `unique(owner, assessment_id, program_id, rule_version)` collision,
+  return the EXISTING prediction-of-record — never overwrite (the UPDATE-guard trigger blocks it anyway; "what we
+  predicted at first commit" is the honest semantic). A new `rule_version` gets a new row.
+- **Off-list freeze — Codex #3 OVERRIDDEN (deliberate):** Codex wanted to block freezing a program absent from the
+  rendered match set. Rejected — MV-08's whole point is capturing the funnel for reach/off-level programs a student
+  applied to anyway; `computeMatch` was built to bypass the browse filter for exactly this. F16 here = "same adapter,
+  honest per-program verdict," not "only browse-filtered programs."
+- **Provenance note (Codex #e):** the page renders from LIVE `profiles.sections`, not the primary assessment's
+  snapshot, so `assessment_id` is an ownership anchor, not the literal input source. `score_snapshot` (the gaps) +
+  `rule_version` + the program's published thresholds reconstruct the effective inputs, so NO extra input-snapshot
+  column for v1 (freeze fires in the same signed-in session as the render ⇒ negligible drift). Revisit if audit needs grow.
+
+**OPEN (next slice — build now):**
+- Refactor `buildPrediction` (Decision A, TDD) → shared freeze helper → 4 routes under `app/api/outcomes/`
+  (POST prediction/attempt/event + GET) + wire the `applied` transition in `app/api/shortlist/route.ts`.
+  All Zod-validated (`lib/validation/outcomes.ts`), owner from session, writes via RLS-scoped
+  `createSupabaseServerClient()` (S4). Reuse `lib/outcomes/*` + `sectionsToMatchInputs` + `getPrimaryAssessmentForUser`.
 - Inbound email handler (Cloudflare Email Worker) + the verification-ladder admin path — gated on
   the founder/legal items above.
 
