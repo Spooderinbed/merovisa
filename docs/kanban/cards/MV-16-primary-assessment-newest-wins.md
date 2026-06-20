@@ -1,7 +1,7 @@
 # MV-16 — Re-assessing never updates the dashboard (primary-assessment newest-wins)
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke)
-**Created:** 2026-06-20 · **Entered review:** 2026-06-20
+**Column:** Done · **Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
+**Created:** 2026-06-20 · **Entered review:** 2026-06-20 · **Done:** 2026-06-20
 **Related:** [[MV-14]] — found while live-smoking the OAuth claim; same `claim.ts` function. [[MV-17]] — the product-level follow-up (route logged-in re-assessment to profile-edit instead of new wizard rows).
 
 ## Why (root cause)
@@ -88,17 +88,34 @@ wizard rows for logged-in users.
 - Gate green: **typecheck clean · lint 0 errors** (1 pre-existing unrelated
   `build.mjs` warning) · **full suite 1270/1270** (+2).
 
-## Founder-owed (gate to Done)
+## Live smoke — PASSED (founder-confirmed + read-only verified, 2026-06-20)
 
-- **Live smoke** (cannot be proven headlessly — needs a real Google OAuth
-  round-trip + Supabase): complete a *second* anonymous assessment on an account
-  that already has a primary → Continue with Google → confirm the dashboard now
-  shows the **new** result, and in the DB the new row is `is_primary=true` while
-  the old one flipped to `false`.
-- **Existing pinned data is self-healing on next claim** but not retroactively:
-  owner `ece83f09`'s 16 rows won't re-point until that user claims again. A
-  one-off prod write to set the latest row primary would fix it immediately —
-  prod write, founder-gated (not done).
-- Decide whether to also pursue [[MV-17]] (route logged-in re-assessment to
-  profile-edit/reScore — Codex's preferred primary path) to stop minting
-  duplicate wizard rows in the first place.
+Founder ran the OAuth round-trip and confirmed it works. Verified read-only
+against prod (`obfvrxixtautamflzxzq`):
+
+- **owner `ece83f09`** (the pinned test account, now 17 assessments): exactly
+  **1 primary**, and **`primary_is_newest = true`** — the primary is today's
+  newest row (`2026-06-20 12:54:31`). Before the fix this owner was pinned to the
+  June-3 oldest; after a fresh assess+claim the newest is now primary. **Newest-
+  wins confirmed live.**
+- **Leads** went **1 → 2** (latest `2026-06-20 12:55:56`) in the same round-trip
+  — MV-14 lead-insert re-confirmed.
+
+### Residual (the documented non-retroactive caveat — for the founder)
+Two historical accounts predate the fix and haven't re-claimed since, so their
+primary is still stale (self-heals only on their *next* claim, not
+retroactively):
+
+- `5bda97e3…` — 5 assessments, primary `2026-06-04`, newest `2026-06-10`.
+- `99b0a8f0…` — 3 assessments, primary `2026-06-04 04:19`, newest `04:49`.
+
+A one-off **prod write** (`update assessments set is_primary` per owner to point
+at the newest) would repair them immediately — **founder-gated; not done.** Weigh
+it against the risk that an account's "newest" row is an abandoned half-redo
+rather than their intended assessment.
+
+## Follow-up
+Decide whether to pursue [[MV-17]] (route logged-in re-assessment to
+profile-edit/reScore — Codex's preferred primary path) to stop minting duplicate
+wizard rows in the first place (it also removes MV-16's rare demote-ok/promote-fail
+window for the common case).

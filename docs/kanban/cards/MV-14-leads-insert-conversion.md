@@ -1,7 +1,7 @@
 # MV-14 — Wire lead-insert into the OAuth claim (`leads = 0` fix)
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke)
-**Created:** 2026-06-20 · **Entered review:** 2026-06-20
+**Column:** Done · **Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
+**Created:** 2026-06-20 · **Entered review:** 2026-06-20 · **Done:** 2026-06-20
 
 ## Why
 
@@ -93,12 +93,12 @@ the one way it could silently break is a missing unique target for the upsert:
   real OAuth claim has run since the fix. Schema-readiness (all that's headless-
   checkable) ✅; the first non-zero row is the founder live-smoke below.
 
-## Founder-owed (gate to Done)
+## Live smoke — PASSED (2026-06-20)
 
-- **Live smoke** (cannot be proven headlessly — needs a real Google OAuth round-trip
-  + Supabase): complete an anonymous assessment → unlock/Continue with Google →
-  confirm a `leads` row lands with your email + the assessment id, and the redirect
-  still goes to `/assessment/<id>`.
-- Confirm the design call: recording the authed email into `leads` at conversion is
-  the intended funnel-bottom record (vs. treating `profiles` as the sole conversion
-  record and retiring `leads`). Easy to revert if not.
+Founder completed real Google OAuth round-trips. Confirmed read-only against prod
+(`obfvrxixtautamflzxzq`): **leads `0 → 2`** (latest `2026-06-20 12:55:56`) — the
+lead-insert fires on successful claim. The funnel-bottom signal is live.
+
+Remaining (non-blocking, founder call): confirm the design intent — keep `leads`
+as the funnel-bottom conversion record vs. treating `profiles` as the sole record
+and retiring `leads`. Easy to revert if not.
