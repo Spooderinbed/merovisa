@@ -48,6 +48,12 @@ coverage/
 # Misc
 *.pem
 
+# Stray Windows reserved-name artifact (a literal file named `nul`, created by a
+# `> nul` redirect). Windows treats the name as the null device, so the Tailwind v4
+# source scanner fatally errors trying to read it during globals.css processing.
+# Ignoring it keeps the scanner (which respects .gitignore) from touching it.
+/nul
+
 # Claude agent worktrees (full repo copies)
 .claude/worktrees/
 
