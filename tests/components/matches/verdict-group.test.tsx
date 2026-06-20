@@ -5,7 +5,7 @@ import { VerdictGroup } from "@/components/matches/verdict-group";
 describe("VerdictGroup", () => {
   it("renders nothing when matches is empty", () => {
     const { container } = render(
-      <VerdictGroup verdict="strong" matches={[]} shortlistedIds={new Set()} />,
+      <VerdictGroup verdict="strong" matches={[]} statusById={new Map()} />,
     );
     expect(container.firstChild).toBeNull();
   });

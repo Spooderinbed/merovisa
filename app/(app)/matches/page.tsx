@@ -11,6 +11,7 @@ import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { MatchesTabs } from "@/components/matches/matches-tabs";
 import { VerdictGroup } from "@/components/matches/verdict-group";
+import type { Status } from "@/components/matches/shortlist-button";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { VerdictDisclaimer } from "@/components/ui/verdict-disclaimer";
 import { CostToApply } from "@/components/results/cost-to-apply";
@@ -45,7 +46,7 @@ export default async function MatchesPage() {
     signedInPreferenceAdapter,
     new Date(),
   );
-  const shortlistedIds = new Set(shortlist.map((s) => s.programId));
+  const statusById = new Map<string, Status>(shortlist.map((s) => [s.programId, s.status]));
   const strong = matches.filter((m) => m.verdict === "strong");
   const possible = matches.filter((m) => m.verdict === "possible");
   const reach = matches.filter((m) => m.verdict === "reach");
@@ -53,9 +54,9 @@ export default async function MatchesPage() {
   const universitiesPanel = (
     <div className="flex flex-col gap-6">
       <PreferenceNote note={preferenceNote} />
-      <VerdictGroup verdict="strong" matches={strong} shortlistedIds={shortlistedIds} />
-      <VerdictGroup verdict="possible" matches={possible} shortlistedIds={shortlistedIds} />
-      <VerdictGroup verdict="reach" matches={reach} shortlistedIds={shortlistedIds} />
+      <VerdictGroup verdict="strong" matches={strong} statusById={statusById} />
+      <VerdictGroup verdict="possible" matches={possible} statusById={statusById} />
+      <VerdictGroup verdict="reach" matches={reach} statusById={statusById} />
       {matches.length === 0 ? (
         <p className="text-[15px] text-ink-soft">
           No programs found yet. Complete your profile to surface matches.

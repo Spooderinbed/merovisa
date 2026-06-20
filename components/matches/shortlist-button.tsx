@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 
-type Status = "shortlisted" | "applied" | "withdrawn" | null;
+export type Status = "shortlisted" | "applied" | "withdrawn" | null;
+
+// The funnel progression a student moves through on a program card. Choosing
+// "Applied" is the MV-08 capture trigger: /api/shortlist freezes the
+// prediction-of-record and opens an attempt (the outcome-validation moat).
+const STEPS: { value: Status; label: string }[] = [
+  { value: null, label: "Not saved" },
+  { value: "shortlisted", label: "Shortlisted" },
+  { value: "applied", label: "Applied" },
+];
 
 export function ShortlistButton({
   programId,
@@ -13,11 +22,10 @@ export function ShortlistButton({
 }) {
   const [status, setStatus] = useState<Status>(initialStatus);
   const [busy, setBusy] = useState(false);
-  const isShortlisted = status === "shortlisted";
 
-  const toggle = async () => {
+  const choose = async (next: Status) => {
+    if (busy || next === status) return;
     setBusy(true);
-    const next: Status = isShortlisted ? null : "shortlisted";
     const res = await fetch("/api/shortlist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -28,18 +36,28 @@ export function ShortlistButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      disabled={busy}
-      className={`rounded-pill border px-4 py-2 text-[14px] font-medium transition ${
-        isShortlisted
-          ? "border-strong bg-strong-tint text-strong"
-          : "border-line-2 text-ink-soft hover:bg-bg-tint"
-      }`}
-      aria-pressed={isShortlisted}
+    <div
+      role="group"
+      aria-label="Application status"
+      className="inline-flex items-center gap-0.5 rounded-pill border border-line-2 p-0.5"
     >
-      {isShortlisted ? "✓ Shortlisted" : "Shortlist"}
-    </button>
+      {STEPS.map((step) => {
+        const active = step.value === status;
+        return (
+          <button
+            key={step.label}
+            type="button"
+            onClick={() => choose(step.value)}
+            disabled={busy}
+            aria-pressed={active}
+            className={`rounded-pill px-3 py-1 text-[13px] font-medium transition ${
+              active ? "bg-strong-tint text-strong" : "text-ink-soft hover:bg-bg-tint"
+            }`}
+          >
+            {step.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

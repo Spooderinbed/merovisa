@@ -1,5 +1,5 @@
 import type { MatchResult } from "@/lib/matches/types";
-import { ShortlistButton } from "./shortlist-button";
+import { ShortlistButton, type Status } from "./shortlist-button";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 import { cricosCodeForUniversity } from "@/lib/data/cricos-lookup";
 
@@ -38,10 +38,10 @@ function isDeepLink(url: string): boolean {
 
 export function ProgramCard({
   match,
-  isShortlisted,
+  initialStatus,
 }: {
   match: MatchResult;
-  isShortlisted: boolean;
+  initialStatus: Status;
 }) {
   const { program: p, university: u, verdict, reasons, preferenceChip } = match;
   const isEstimated = p.dataQuality === "derived";
@@ -138,7 +138,7 @@ export function ProgramCard({
             </SourceAnchor>
           ) : null}
         </div>
-        <ShortlistButton programId={p.id} initialStatus={isShortlisted ? "shortlisted" : null} />
+        <ShortlistButton programId={p.id} initialStatus={initialStatus} />
       </footer>
     </article>
   );

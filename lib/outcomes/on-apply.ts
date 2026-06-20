@@ -2,7 +2,14 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { freezePredictionForProgram } from "./freeze";
-import { insertAttempt, listAttemptsForPrediction, type AttemptRow } from "./repo";
+import { eventDecisionAuthority, eventGate } from "./events";
+import {
+  insertAttempt,
+  insertEvent,
+  listAttemptsForPrediction,
+  listEventTypesForAttempt,
+  type AttemptRow,
+} from "./repo";
 
 type DB = SupabaseClient<Database>;
 
@@ -27,7 +34,10 @@ export async function captureApplication(
   if (!frozen.ok) return { captured: false, reason: frozen.error };
 
   const [existing] = await listAttemptsForPrediction(db, frozen.prediction.id);
-  if (existing) return { captured: true, attempt: existing, created: false };
+  if (existing) {
+    await ensureAppliedEvent(db, owner, existing);
+    return { captured: true, attempt: existing, created: false };
+  }
 
   const attempt = await insertAttempt(db, {
     owner,
@@ -35,5 +45,30 @@ export async function captureApplication(
     programId: frozen.prediction.programId,
   });
   if (!attempt) return { captured: false, reason: "could not open the attempt" };
+  await ensureAppliedEvent(db, owner, attempt);
   return { captured: true, attempt, created: true };
+}
+
+/**
+ * Write the funnel's root 'applied' event for an attempt, idempotently. Without
+ * it the state machine (S7) rejects the first self-report (offer/refusal) as
+ * "not valid before the application is recorded" (409) — so opening an attempt
+ * without this event dead-ends the funnel. Mirrors /api/outcomes/event: gate,
+ * decision authority, and source are derived server-side (B3), never asserted by
+ * the client. Anchored to the attempt's open time so the root is deterministic.
+ * Skips the write if an 'applied' event is already present, which also repairs
+ * attempts opened by the earlier event-less path.
+ */
+async function ensureAppliedEvent(db: DB, owner: string, attempt: AttemptRow): Promise<void> {
+  const prior = await listEventTypesForAttempt(db, attempt.id);
+  if (prior.includes("applied")) return;
+  await insertEvent(db, {
+    owner,
+    attemptId: attempt.id,
+    eventType: "applied",
+    gate: eventGate("applied"),
+    decisionAuthority: eventDecisionAuthority("applied"),
+    source: "self_reported",
+    occurredAt: attempt.createdAt,
+  });
 }

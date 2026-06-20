@@ -1,5 +1,6 @@
 import type { MatchResult, MatchVerdict } from "@/lib/matches/types";
 import { ProgramCard } from "./program-card";
+import type { Status } from "./shortlist-button";
 
 const HEADLINE = {
   strong: "Strong matches",
@@ -10,11 +11,11 @@ const HEADLINE = {
 export function VerdictGroup({
   verdict,
   matches,
-  shortlistedIds,
+  statusById,
 }: {
   verdict: MatchVerdict;
   matches: MatchResult[];
-  shortlistedIds: Set<string>;
+  statusById: Map<string, Status>;
 }) {
   if (matches.length === 0) return null;
   return (
@@ -27,7 +28,7 @@ export function VerdictGroup({
           <ProgramCard
             key={m.program.id}
             match={m}
-            isShortlisted={shortlistedIds.has(m.program.id)}
+            initialStatus={statusById.get(m.program.id) ?? null}
           />
         ))}
       </div>
