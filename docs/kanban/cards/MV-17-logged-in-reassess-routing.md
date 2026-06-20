@@ -110,7 +110,7 @@ Codex's plan was **partly hallucinated**; verified against the real code:
 - Tests: `tests/api/assess/refresh.test.ts` (in-place reScore + no-insert / 401 / 409-no-500),
   `tests/components/assess/assess-interstitial.test.tsx` (refresh is a button not a wizard link;
   "Start a new assessment" still → `/assess?new=1`).
-- Commit: `<filled on commit>`.
+- Commit: `d4fee1f`.
 
 ## Deferred / founder-owed
 
