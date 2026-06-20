@@ -23,3 +23,56 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+
+  # Real-DB claim-path integration smoke (MV-18). Runs the `*.itest.ts` suite
+  # against a full local Supabase stack (Postgres + GoTrue auth + PostgREST), so it
+  # exercises constraints the mocked unit tests structurally cannot (e.g. the
+  # partial-unique index assessments_primary_idx behind the MV-16 regression).
+  # Separate job: the Docker stack startup is slow and must not gate the fast
+  # validate lane. Advisory for now (continue-on-error) until the flake rate is
+  # measured; promote to a required check via branch protection once stable.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      # ubuntu-latest ships Docker preinstalled; `supabase start` brings up the
+      # full stack and applies every migration in supabase/migrations.
+      - name: Start Supabase
+        run: npx supabase start
+      # Export the local stack's URL + service-role key as the env vars the smoke
+      # reads. Source the emitted env file and handle both the new and legacy key
+      # names so a CLI rename can't silently leave the vars unset.
+      - name: Export Supabase test env
+        shell: bash
+        run: |
+          npx supabase status -o env > supabase.env
+          set -a
+          . ./supabase.env
+          set +a
+          {
+            echo "SUPABASE_TEST_URL=${SUPABASE_URL:-${SUPABASE_API_URL:-}}"
+            echo "SUPABASE_TEST_SERVICE_ROLE_KEY=${SUPABASE_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-}}"
+          } >> "$GITHUB_ENV"
+      # The smoke `skipIf`s when its env vars are absent, so a silent export
+      # failure would green CI having tested nothing. Assert the vars are set, the
+      # stack answers, and that the run actually executed (>0 passed, 0 skipped).
+      - name: Run integration smoke
+        shell: bash
+        run: |
+          test -n "$SUPABASE_TEST_URL"
+          test -n "$SUPABASE_TEST_SERVICE_ROLE_KEY"
+          curl -fsS "$SUPABASE_TEST_URL/rest/v1/" \
+            -H "apikey: $SUPABASE_TEST_SERVICE_ROLE_KEY" >/dev/null
+          npm run test:integration -- --reporter=verbose | tee vitest-integration.log
+          grep -Eq 'Tests[[:space:]]+[1-9][0-9]* passed' vitest-integration.log
+          ! grep -Eq 'Tests[[:space:]]+[1-9][0-9]* skipped' vitest-integration.log
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup
