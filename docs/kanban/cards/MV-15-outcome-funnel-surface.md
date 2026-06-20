@@ -59,6 +59,26 @@ there's a real attempt to show, rather than rendering an empty shell.
 - Gate green: **typecheck clean · lint 0 errors** (1 pre-existing unrelated
   `build.mjs` warning) · **full suite 1268/1268** (+15).
 
+## Prod schema verification (read-only, 2026-06-20)
+
+Confirmed the live prod DB (`obfvrxixtautamflzxzq`) backs the read side:
+
+- **All three tables exist with every column the read path consumes**
+  (`lib/outcomes/repo.ts` + `funnel.ts`): `program_predictions` (id, owner,
+  assessment_id, program_id, verdict, rule_version, score_snapshot,
+  predicted_at), `application_attempts` (id, owner, prediction_id, program_id,
+  institution_id, intake, external_ref, created_at), `outcome_events` (id, owner,
+  attempt_id, event_type, gate, reason_code, decision_authority, occurred_at,
+  occurred_on, source, detail, recorded_at). Extra columns the read side ignores
+  are present too — non-breaking.
+- **RLS owner-scoped & enabled+forced** on all three, with
+  `(select auth.uid()) = owner` SELECT/DELETE policies for `authenticated` → the
+  dashboard's `createSupabaseServerClient()` reads are correctly user-isolated.
+- **Row counts:** application_attempts 4 · program_predictions 4 · outcome_events
+  3 — pre-existing MV-08 smoke rows. So "Your applications" **will render
+  non-empty** for whichever account owns them (test data; cleanup is a prod write,
+  founder-gated). A no-attempt account still sees the section omitted entirely.
+
 ## Founder-owed / notes
 
 - **Live smoke** (not headless-provable — dashboard is OAuth-gated + needs seeded

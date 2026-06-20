@@ -75,6 +75,24 @@ touches a URL, query param, or client log.
 - Gate green: **typecheck clean · lint 0 errors** (1 pre-existing unrelated
   `build.mjs` warning) · **full suite 1253/1253** (+4).
 
+## Prod schema verification (read-only, 2026-06-20)
+
+Verified the live prod DB (`obfvrxixtautamflzxzq`) actually supports this fix —
+the one way it could silently break is a missing unique target for the upsert:
+
+- **UNIQUE constraint present:** `leads_assessment_email_uniq` = `UNIQUE
+  (assessment_id, email)`, backed by a unique btree index. `createLead`'s
+  `upsert(..., { onConflict: "assessment_id,email" })` resolves against it →
+  **the insert will not 500 in prod.** (Had it been absent, the fix would have
+  silently failed at runtime; it is not.)
+- **RLS posture confirmed:** `leads` has RLS **enabled + forced** with **zero
+  policies** → only `service_role` (bypasses RLS) can write, matching the
+  admin-client call site. Service-role-only by design, not by accident.
+- **Row counts:** assessments 47 · **leads 0** · profiles 5. `leads = 0` is the
+  expected pre-smoke state — the path is wired and the schema is ready, but no
+  real OAuth claim has run since the fix. Schema-readiness (all that's headless-
+  checkable) ✅; the first non-zero row is the founder live-smoke below.
+
 ## Founder-owed (gate to Done)
 
 - **Live smoke** (cannot be proven headlessly — needs a real Google OAuth round-trip
