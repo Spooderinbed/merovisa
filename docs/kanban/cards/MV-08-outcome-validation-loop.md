@@ -142,9 +142,26 @@ from `lib/scoring/engine.ts`; added `computeMatch` (single-program, no list filt
 `lib/matches/compute.ts` so a *reach* / off-level program a student commits to still freezes a
 verdict. +5 tests (predict ×3, computeMatch ×2); full suite **1217/1217**.
 
+**Slice 3 — migration APPLIED to prod (2026-06-20, founder-approved).** `20260620000000_add_outcome_validation.sql`
+applied via Supabase MCP. Verified live: all 3 tables `rls_enabled=true, rls_forced=true, policies=3`.
+`get_advisors`: **zero new security findings** (residual two are pre-existing/known — `leads` no-policy is
+intentional+documented, leaked-password-protection is a standing Auth WARN). **One new performance finding** —
+`application_attempts` composite FK `(prediction_id, owner)` lacked a covering index (the base migration indexed
+the two columns separately). Fix staged in **`20260620010000_index_application_attempts_composite_fk.sql`** (adds
+the composite index, drops the now-redundant single-column one; mirrors the `outcome_events (attempt_id, owner)`
+index, S11). **NOT yet applied — second prod DB change, awaiting explicit founder approval.** The "unused index"
+INFO notices on the new tables are expected (no traffic yet); they clear once the routes issue queries.
+
 **OPEN (next slices, not yet built):**
 - API routes (3 POSTs + GET) + wiring the `applied` transition (`app/api/shortlist/route.ts`) to
-  freeze a prediction + open an attempt.
+  freeze a prediction + open an attempt. **Resume note — one design question to resolve first:**
+  `buildPrediction` needs a `StudentProfile`, but `getProfile(db, userId)` (`lib/profiles/repo.ts`) returns a
+  `ProfileRow` with a `sections` jsonb — find the existing `ProfileRow.sections → StudentProfile` mapper (the
+  signed-in matches surface must already do this conversion) so the frozen prediction equals what the user saw;
+  and decide where `assessment_id` (required by `program_predictions`) is sourced (likely the user's latest
+  assessment). Writes go through the RLS-scoped `createSupabaseServerClient()` (NOT the admin client), per S4.
+- Apply `20260620010000` once the founder approves (re-run `get_advisors` performance after — the unindexed-FK
+  finding should clear).
 - Inbound email handler (Cloudflare Email Worker) + the verification-ladder admin path — gated on
   the founder/legal items above.
 
