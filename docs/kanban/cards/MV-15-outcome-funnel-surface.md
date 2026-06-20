@@ -1,7 +1,7 @@
 # MV-15 — Read-side outcome surface (make the moat loop visible)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder live-smoke)
-**Created:** 2026-06-20 · **Entered review:** 2026-06-20
+**Column:** Done · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
+**Created:** 2026-06-20 · **Entered review:** 2026-06-20 · **Done:** 2026-06-20
 **Related:** [[MV-08]] — this is the user-facing read half of the outcome-validation loop.
 
 ## Why
@@ -79,12 +79,18 @@ Confirmed the live prod DB (`obfvrxixtautamflzxzq`) backs the read side:
   non-empty** for whichever account owns them (test data; cleanup is a prod write,
   founder-gated). A no-attempt account still sees the section omitted entirely.
 
-## Founder-owed / notes
+## Live smoke — PASSED (founder-confirmed, 2026-06-20)
 
-- **Live smoke** (not headless-provable — dashboard is OAuth-gated + needs seeded
-  attempts): sign in as a user with an application attempt + events, open
-  `/dashboard`, confirm "Your applications" shows the program, verdict chip, and the
-  right stage pill; confirm it's absent for a user with no attempts.
+Founder opened `/dashboard` signed in as the account with seeded attempts and
+confirmed "Your applications" renders correctly: 5 attempt cards, each with the
+university (mono-up label), program name, verdict chip (4× Strong match, Bachelor
+of Business = Possible), an "Applied" status pill, and the "Updated Jun 20, 2026"
+recency line — under the honest subtitle "What you told us happened, against the
+verdict we gave you. Self-reported until verified." The no-attempt empty path
+(section omitted entirely) stays covered by the unit suite.
+
+## Notes
+
 - **Possible follow-ups** (not in scope): a dedicated `/applications` page if the
   list grows; a compact 3-phase ladder (Applied → Admission → Visa) instead of a
   single status pill; surfacing the refusal `reason_code` once verification exists.
