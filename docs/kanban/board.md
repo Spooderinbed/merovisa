@@ -8,10 +8,11 @@
 > _Last updated: 2026-06-20 · stale threshold: 7d_
 
 
-## Backlog — 2
+## Backlog — 3
 
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
 - **MV-17** · P2 · [Route logged-in re-assessment to profile-edit/reScore](cards/MV-17-logged-in-reassess-routing.md) — _Codex's preferred PRIMARY path (MV-16 newest-wins is the fallback). A logged-in user who re-checks their chances currently re-runs the anonymous wizard, minting a NEW assessments row (owner ece83f09 has accreted 16 rows). reScoreAssessment already recomputes+overwrites the primary in place when the profile changes — this slice puts that on the re-assessment entry point for signed-in users instead of creating a parallel row, stopping duplicate-row accretion and removing MV-16's demote-ok/promote-fail window for the common case. Stays in Next.js (no RPC). Founder-gated: entry-point UX (straight to profile-edit vs choose 'update' vs 'start fresh'), whether to clean up historical duplicate rows (prod write), kept signed-out funnel unchanged. Not started. Dossier: cards/MV-17-logged-in-reassess-routing.md._
+- **MV-18** · P2 · [Real-DB claim-path integration smoke](cards/MV-18-claim-path-real-db-smoke.md) — _Closes the test gap that let MV-16 ship: tests/assessments/claim.test.ts mocks supabase-js, so it CANNOT enforce the partial-unique index assessments_primary_idx — the exact constraint whose swallowed {error} pinned the dashboard. Build a Vitest INTEGRATION smoke against a real local Postgres (all 15 migrations incl. 20260603170655 which defines the index): mint a non-Google user via auth.admin.createUser (answers the founder's 'smoke-test with a dev account' — claimAndBootstrapProfile is auth-agnostic, takes a userId; only exchangeCodeForSession is Google-specific + un-automatable here), seed two anonymous assessments, run claimAndBootstrapProfile twice, assert newest-wins single primary + a leads row (idempotent re-claim) + profile bootstrap. RED on the pre-MV-16 single-promote code, GREEN with demote-then-promote. Skips cleanly (env-gated) when the local stack is down; out of default npm test. Infra: local Supabase preferred (migrations all present; Docker 29.4.0 installed but daemon DOWN + supabase CLI not installed = two one-time founder setup steps) >> paid dev branch >> prod writes (prohibited w/o founder approval). Test-only, no prod write, business logic untouched. Not started. Dossier: cards/MV-18-claim-path-real-db-smoke.md._
 
 ## Ready (WIP 5) — 0
 
