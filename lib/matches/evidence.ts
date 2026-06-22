@@ -1,3 +1,4 @@
+import "server-only";
 import type { MatchResult } from "./types";
 import { cricosCodeForUniversity } from "@/lib/data/cricos-lookup";
 import { nepalEvidenceLevel } from "@/lib/data/nepal-evidence-lookup";
@@ -8,9 +9,11 @@ import { AU_NEPAL_EVIDENCE_SOURCE } from "@/lib/data/source/au-nepal-evidence-le
  * university resolves to a CRICOS provider in the harvested directory. The level
  * travels to the client as a precomputed string on the match (lib/matches/types.ts),
  * so this function — which pulls in the ~3,300-row directory + evidence datasets —
- * must run server-side only (it does: the two assembleAssessment callers are the
- * /api/assess route and the owned [id] page). Importing it into a "use client"
- * module would bundle those datasets to every anonymous visitor.
+ * must run server-side only. The `server-only` import above makes that a build-time
+ * guarantee: every assembleAssessment caller is a server context (the /api/assess
+ * route, the owned [id] page, re-score, the dev sign-in route), and importing this
+ * into a "use client" module now fails the build instead of silently bundling those
+ * datasets to every anonymous visitor.
  *
  * Present-when-known: a provider absent from the resolver/map returns the match
  * unchanged (no `evidence` field). Nepal → Australia is the MVP corridor, so the

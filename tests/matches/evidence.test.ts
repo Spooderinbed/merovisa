@@ -1,4 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// evidence.ts carries `import "server-only"` (the build-time boundary guard); the
+// established shim neutralises that throw in the node test env, as re-score.test.ts does.
+vi.mock("server-only", () => ({}));
+
 import { attachNepalEvidence } from "@/lib/matches/evidence";
 import { AU_NEPAL_EVIDENCE_SOURCE } from "@/lib/data/source/au-nepal-evidence-levels";
 import { makeMatchResult, TEST_UNIVERSITIES } from "../fixtures/catalog";

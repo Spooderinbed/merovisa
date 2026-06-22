@@ -1,4 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// assemble.ts now reaches lib/matches/evidence.ts, which carries `import "server-only"`
+// (the build-time boundary guard). Neutralise that throw in the node test env, as the
+// other server-module tests (e.g. re-score.test.ts) do.
+vi.mock("server-only", () => ({}));
+
 import { assembleAssessment } from "@/lib/results/assemble";
 import { CONFIG_VERSION, CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
 import { TEST_PROGRAMS, TEST_UNIVERSITIES } from "../fixtures/catalog";

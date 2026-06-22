@@ -1,4 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
+
+// assembleAssessment now reaches lib/matches/evidence.ts (`import "server-only"`);
+// neutralise that build-time guard in the node test env (house pattern).
+vi.mock("server-only", () => ({}));
+
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Wizard } from "@/components/wizard/wizard";

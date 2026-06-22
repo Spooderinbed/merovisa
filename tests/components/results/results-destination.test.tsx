@@ -1,4 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// Results builds props via assembleAssessment, which now reaches lib/matches/evidence.ts
+// (`import "server-only"`). Neutralise that build-time guard in the node test env (house pattern).
+vi.mock("server-only", () => ({}));
+
 import { render, screen } from "@testing-library/react";
 import { Results } from "@/components/results/results";
 import { assembleAssessment } from "@/lib/results/assemble";
