@@ -18,8 +18,26 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
+// Mirror the dashboard-page test: surface the shared empty-profile gate's `kind`
+// so we can assert /matches reuses the SAME PromptCard("profile-incomplete") gate.
+vi.mock("@/components/dashboard/prompt-card", () => ({
+  PromptCard: ({ prompt }: { prompt: { kind: string } }) => (
+    <div data-testid="prompt">{prompt.kind}</div>
+  ),
+}));
 
 import MatchesPage from "@/app/(app)/matches/page";
+
+// A minimally-filled profile so the matches path runs (the empty/never-filled
+// profile is gated; see the dedicated gate test below).
+const FILLED_PROFILE = {
+  sections: {
+    academic: { institution: "TU", gradePercent: 72 },
+    english: { test: "ielts", overall: 7 },
+    finance: { total: 45000, currency: "AUD", source: "self" },
+    "intended-study": { level: "masters", field: "computer-science" },
+  },
+};
 
 describe("/matches page", () => {
   beforeEach(() => {
@@ -28,9 +46,59 @@ describe("/matches page", () => {
     );
   });
 
-  it("renders headline + policy banner + empty-state when no programs", async () => {
+  it("gates an empty profile with the dashboard's profile-incomplete gate, never fabricated verdicts", async () => {
+    // A signed-in user who never filled their profile must NOT see verdicts
+    // computed off fields they never entered (audit fix #3 — /matches empty-profile gate).
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     getProfile.mockResolvedValue(null);
+    // Programs exist — so without the gate the matcher would fabricate verdicts.
+    listAllPrograms.mockResolvedValue([
+      {
+        id: "p1",
+        universityId: "u1",
+        name: "Master of IT",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 40000,
+        tuitionMax: 40000,
+        tuitionCurrency: "AUD",
+        minGrade: 65,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+    ]);
+    listAllUniversities.mockResolvedValue([
+      {
+        id: "u1",
+        country: "AU",
+        name: "Monash",
+        city: "Melbourne",
+        rankingTier: 1,
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+      },
+    ]);
+    listShortlistForUser.mockResolvedValue([]);
+    const ui = await MatchesPage();
+    render(ui);
+    // Same gate the dashboard renders.
+    expect(screen.getByTestId("prompt")).toHaveTextContent("profile-incomplete");
+    // No fabricated verdict groups or short-by reasons off never-entered fields.
+    expect(screen.queryByText(/Strong matches/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reach matches/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/short by/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Master of IT")).not.toBeInTheDocument();
+  });
+
+  it("renders headline + policy banner + empty-state when no programs", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue(FILLED_PROFILE);
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockResolvedValue([]);
     listShortlistForUser.mockResolvedValue([]);
@@ -46,7 +114,7 @@ describe("/matches page", () => {
 
   it("scholarships tab shows real sourced scholarships; cost tab shows the sourced first-year estimate", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue(null);
+    getProfile.mockResolvedValue(FILLED_PROFILE);
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockResolvedValue([]);
     listShortlistForUser.mockResolvedValue([]);

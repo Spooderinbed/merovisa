@@ -18,6 +18,7 @@ import { CostToApply } from "@/components/results/cost-to-apply";
 import { CostEstimatePanel } from "@/components/matches/cost-estimate-panel";
 import { ScholarshipsPanel } from "@/components/matches/scholarships-panel";
 import { PreferenceNote } from "@/components/matches/preference-note";
+import { PromptCard } from "@/components/dashboard/prompt-card";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
 export default async function MatchesPage() {
@@ -38,31 +39,44 @@ export default async function MatchesPage() {
   ]);
 
   const sections: ProfileSections = (profile?.sections as ProfileSections | undefined) ?? {};
-  const inputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
 
-  const { items: matches, note: preferenceNote } = applyPreference(
-    computeMatches(inputs, programs, universities),
-    sections.career?.goal ?? null,
-    signedInPreferenceAdapter,
-    new Date(),
-  );
-  const statusById = new Map<string, Status>(shortlist.map((s) => [s.programId, s.status]));
-  const strong = matches.filter((m) => m.verdict === "strong");
-  const possible = matches.filter((m) => m.verdict === "possible");
-  const reach = matches.filter((m) => m.verdict === "reach");
+  // Gate the empty/never-filled profile: computing verdicts off fields the user
+  // never entered fabricates "Reach · Grade short by 60%" off zeroed inputs. Mirror
+  // the dashboard's gate (PromptCard "profile-incomplete") instead. The dashboard's
+  // pickPrompt uses the same signal — no profile data — to render this card.
+  const profileEmpty = Object.keys(sections).length === 0;
 
-  const universitiesPanel = (
-    <div className="flex flex-col gap-6">
-      <PreferenceNote note={preferenceNote} />
-      <VerdictGroup verdict="strong" matches={strong} statusById={statusById} />
-      <VerdictGroup verdict="possible" matches={possible} statusById={statusById} />
-      <VerdictGroup verdict="reach" matches={reach} statusById={statusById} />
-      {matches.length === 0 ? (
-        <p className="text-[15px] text-ink-soft">
-          No programs found yet. Complete your profile to surface matches.
-        </p>
-      ) : null}
-    </div>
+  const universitiesPanel = profileEmpty ? (
+    <PromptCard prompt={{ kind: "profile-incomplete" }} />
+  ) : (
+    (() => {
+      const inputs = sectionsToMatchInputs(sections, {
+        nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL,
+      });
+      const { items: matches, note: preferenceNote } = applyPreference(
+        computeMatches(inputs, programs, universities),
+        sections.career?.goal ?? null,
+        signedInPreferenceAdapter,
+        new Date(),
+      );
+      const statusById = new Map<string, Status>(shortlist.map((s) => [s.programId, s.status]));
+      const strong = matches.filter((m) => m.verdict === "strong");
+      const possible = matches.filter((m) => m.verdict === "possible");
+      const reach = matches.filter((m) => m.verdict === "reach");
+      return (
+        <div className="flex flex-col gap-6">
+          <PreferenceNote note={preferenceNote} />
+          <VerdictGroup verdict="strong" matches={strong} statusById={statusById} />
+          <VerdictGroup verdict="possible" matches={possible} statusById={statusById} />
+          <VerdictGroup verdict="reach" matches={reach} statusById={statusById} />
+          {matches.length === 0 ? (
+            <p className="text-[15px] text-ink-soft">
+              No programs found yet. Complete your profile to surface matches.
+            </p>
+          ) : null}
+        </div>
+      );
+    })()
   );
 
   const scholarshipsPanel = <ScholarshipsPanel />;
