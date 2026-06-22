@@ -44,12 +44,37 @@ MV-17 lesson: Codex recon was partly hallucinated — trust the code, not the ci
 
 ## Acceptance criteria
 
-- [ ] Anonymous `/results` MatchCard renders program `notes` (AHPRA etc.) with the same treatment as
+- [x] Anonymous `/results` MatchCard renders program `notes` (AHPRA etc.) with the same treatment as
       the signed-in dashboard ProgramCard; renders nothing when `notes` is empty.
-- [ ] TDD: failing test first, then green; both states (present / absent) asserted.
-- [ ] Gate green: `typecheck` + `lint` + full `test` suite (was 1274). No scorer/golden change
+- [x] TDD: failing test first, then green; both states (present / absent) asserted.
+- [x] Gate green: `typecheck` + `lint` + full `test` suite (was 1274 → 1276). No scorer/golden change
       (this is presentational) → `golden-assessments.json` byte-identical.
-- [ ] No founder gate touched (no DB write, no legal copy, no live smoke).
+- [x] No founder gate touched (no DB write, no legal copy, no live smoke).
+
+## What shipped
+
+- **`components/results/university-matches.tsx`** — the inline `MatchCard` now renders a "Good to know"
+  caveat block (`{p.notes ? … : null}`) **after the reasons `<ul>`, before `SourceLine`** — a faithful
+  clone of the dashboard `ProgramCard` block (`components/matches/program-card.tsx:106`), same
+  thin-border / `bg-bg-tint` / mono-uppercase-label treatment, with `mt-2` to fit the MatchCard's
+  explicit-margin layout (the article isn't a flex-gap container like ProgramCard). No threading needed:
+  both cards take `MatchResult["program"]` = the same `Program`, which already carries `notes`.
+- **`tests/components/university-matches.test.tsx`** — 2 new tests under a "program notes" describe:
+  caveat **renders when set** (AHPRA fixture, surfaced free card) and **absent when `notes` is null**.
+
+## Test evidence (TDD, RED→GREEN)
+
+- **RED:** with no note block, `getByText("Good to know")` threw "Unable to find an element" — feature
+  missing, not a typo (the absent-case test already passed). 1 failed / 8 passed.
+- **GREEN:** note block added → **9/9 passed** on the file.
+- **Gate:** `npm run typecheck` clean · `npm run lint` 0 errors (1 pre-existing unrelated `build.mjs`
+  warning) · full suite **1276 passed (220 files)** · `git diff` on `golden-assessments.json` **empty**.
+
+## Status
+
+**In review** — built TDD, gate green, goldens byte-identical, presentational only (no scorer / DB /
+legal / live-smoke). Card has **no founder gate**; sits in In Review only for the founder's final
+Done flip per the operating model (Only the founder closes cards to Done).
 
 ## Resume notes (cold agent)
 

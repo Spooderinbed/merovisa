@@ -59,6 +59,33 @@ describe("UniversityMatches", () => {
     expect(screen.getByText("Lower tuition")).toBeInTheDocument();
   });
 
+  describe("program notes (Good to know) — parity with the dashboard ProgramCard", () => {
+    it("surfaces a program's caveat note (e.g. AHPRA) on a free match card", () => {
+      const noted: MatchResult[] = [
+        match(0, {
+          program: {
+            ...TEST_PROGRAMS[0]!,
+            id: "p0",
+            name: "Program 0",
+            source: "https://example.edu/p",
+            lastVerified: "2026-06-02",
+            notes: "AHPRA registration required",
+          },
+        }),
+        ...matches.slice(1),
+      ];
+      render(<UniversityMatches matches={noted} total={12} assessmentId={ASSESSMENT_UUID} />);
+      expect(screen.getByText("Good to know")).toBeInTheDocument();
+      expect(screen.getByText("AHPRA registration required")).toBeInTheDocument();
+    });
+
+    it("omits the note block when the program has no notes", () => {
+      // The default matches array carries notes: null on every surfaced program.
+      render(<UniversityMatches matches={matches} total={12} assessmentId={ASSESSMENT_UUID} />);
+      expect(screen.queryByText("Good to know")).not.toBeInTheDocument();
+    });
+  });
+
   describe("unlock gate for ≤3 matches", () => {
     const few: MatchResult[] = matches.slice(0, 2);
 

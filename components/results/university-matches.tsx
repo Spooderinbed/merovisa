@@ -56,6 +56,15 @@ function MatchCard({ m }: { m: MatchResult }) {
           </li>
         ))}
       </ul>
+      {p.notes ? (
+        <p className="mt-2 rounded-md border border-line bg-bg-tint px-3 py-2 text-[13px] text-ink-soft">
+          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+            Good to know
+          </span>
+          <br />
+          {p.notes}
+        </p>
+      ) : null}
       <SourceLine url={p.source} lastVerified={p.lastVerified} surface="matches" />
     </article>
   );
