@@ -17,9 +17,9 @@
 
 _empty_
 
-## In progress (WIP 1) — 0
+## In progress (WIP 1) — 1
 
-_empty_
+- **MV-26** · P3 · [Freshness guard for the harvested DHA DISPLAY datasets](cards/MV-26-harvest-freshness-guard.md) — _IN PROGRESS — gate-green, ready for review, held by the In-Review WIP-3 cap (MV-23/24/25 full). The MV-24 harvest (au-cricos-directory.ts 1,669 providers + au-nepal-evidence-levels.ts 1,626 codes) is DISPLAY-pattern data: one module-level lastVerified stamp, deliberately outside the findings ledger / DATA_MODULES registry, so the existing freshness guard (which walks DATA_MODULES for per-record provenance.reverifyBy) never saw it — shipped with lastVerified 2026-06-22 and NO reverifyBy, so nothing tripped when it aged (silent-rot gap). Fix mirrors the MV-04 stale-fact pattern: add a module-level reverifyBy to each dataset (AU_CRICOS_DIRECTORY_REVERIFY_BY, AU_NEPAL_EVIDENCE_REVERIFY_BY = 2026-12-22), documented as a periodic re-harvest cadence (deliberate TTL, not a fact-expiry date — bulk authority data drifts continuously; tunable founder call), and extend tests/data/freshness.test.ts with a 'harvested DISPLAY datasets' block reusing the existing dueForReverify logic (red on the cadence date = the re-harvest reminder) plus asserting each stamp is a present ISO date later than its own lastVerified (a deleted stamp fails loudly instead of undefined slipping past the <= filter). TDD RED->GREEN +2; gate green (typecheck/lint, full suite 1299 was 1297), goldens untouched (no scorer path), au-cricos-codes.ts untouched. Commit 19ef5f1. Founder-owned: cadence length (6mo default); optional scheduled auto-re-harvest (separate slice). Dossier: cards/MV-26-harvest-freshness-guard.md._
 
 ## In review (WIP 3) — 3
 
