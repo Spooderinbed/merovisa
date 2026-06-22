@@ -3,6 +3,7 @@ import { assembleAssessment } from "@/lib/results/assemble";
 import { CONFIG_VERSION, CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
 import { TEST_PROGRAMS, TEST_UNIVERSITIES } from "../fixtures/catalog";
 import type { StudentProfile } from "@/lib/scoring/types";
+import type { Program, University } from "@/lib/programs/types";
 
 const assemble = (profile: StudentProfile, now: Date) =>
   assembleAssessment(profile, TEST_PROGRAMS, TEST_UNIVERSITIES, now);
@@ -76,6 +77,34 @@ describe("assembleAssessment", () => {
     const strong = payload.matches.filter((m) => m.verdict === "strong");
     const tuitions = strong.map((m) => m.program.tuitionMin ?? 0);
     expect([...tuitions].sort((a, b) => a - b)).toEqual(tuitions);
+  });
+
+  it("attaches each match's DHA Nepal evidence level for resolvable catalogue universities (MV-25)", () => {
+    // Inject a catalogue whose university id resolves through cricos-lookup
+    // (sydney → CRICOS 00026A → Streamlined), proving the assemble seam carries the
+    // level onto the payload's matches — the data the anonymous results MatchCard reads.
+    const sydney: University = {
+      id: "sydney",
+      country: "AU",
+      name: "University of Sydney",
+      city: "Sydney",
+      rankingTier: 1,
+      source: "https://www.sydney.edu.au",
+      lastVerified: "2026-06-04",
+      dataQuality: "primary",
+    };
+    const program: Program = { ...TEST_PROGRAMS[0]!, id: "syd-mit", universityId: "sydney" };
+    const payload = assembleAssessment(aarav, [program], [sydney], new Date("2026-06-03"));
+    expect(payload.matches.length).toBeGreaterThan(0);
+    expect(payload.matches.every((m) => m.evidence?.level === "Streamlined")).toBe(true);
+  });
+
+  it("leaves matches without evidence when the university does not resolve to a CRICOS provider", () => {
+    // The default fixtures use ids (u-melb/u-uts) that aren't catalogue ids, so no
+    // match carries an evidence level — present-when-known holds end-to-end.
+    const payload = assemble(aarav, new Date("2026-06-03"));
+    expect(payload.matches.length).toBeGreaterThan(0);
+    expect(payload.matches.some((m) => m.evidence)).toBe(false);
   });
 
   it("resolves not-sure to Australia before scoring so the DHA financial-capacity gate applies (#7)", () => {

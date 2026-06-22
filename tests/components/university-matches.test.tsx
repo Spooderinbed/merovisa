@@ -86,6 +86,26 @@ describe("UniversityMatches", () => {
     });
   });
 
+  describe("Nepal evidence level — parity with the dashboard ProgramCard", () => {
+    const EVIDENCE_SOURCE = "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool";
+
+    it("surfaces a resolvable match's evidence level on a free card, linking to the DHA tool", () => {
+      const withEvidence: MatchResult[] = [
+        match(0, { evidence: { level: "Streamlined", source: EVIDENCE_SOURCE } }),
+        ...matches.slice(1),
+      ];
+      render(<UniversityMatches matches={withEvidence} total={12} assessmentId={ASSESSMENT_UUID} />);
+      const link = screen.getByRole("link", { name: /Streamlined evidence · Nepal/i });
+      expect(link).toHaveAttribute("href", EVIDENCE_SOURCE);
+    });
+
+    it("omits the evidence line when a match has no evidence", () => {
+      // The default matches array carries no evidence on any surfaced program.
+      render(<UniversityMatches matches={matches} total={12} assessmentId={ASSESSMENT_UUID} />);
+      expect(screen.queryByText(/evidence · Nepal/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe("unlock gate for ≤3 matches", () => {
     const few: MatchResult[] = matches.slice(0, 2);
 

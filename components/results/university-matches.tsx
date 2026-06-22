@@ -3,6 +3,7 @@
 import type { MatchResult } from "@/lib/matches/types";
 import { Button } from "@/components/ui/button";
 import { SourceLine } from "@/components/results/source-line";
+import { SourceAnchor } from "@/components/analytics/source-anchor";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics/events";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
@@ -26,7 +27,7 @@ function tuition(p: MatchResult["program"]): string | null {
 }
 
 function MatchCard({ m }: { m: MatchResult }) {
-  const { program: p, university: u, verdict, reasons, preferenceChip } = m;
+  const { program: p, university: u, verdict, reasons, preferenceChip, evidence } = m;
   const fee = tuition(p);
   return (
     <article className="rounded-md border border-line bg-surface p-4">
@@ -64,6 +65,16 @@ function MatchCard({ m }: { m: MatchResult }) {
           <br />
           {p.notes}
         </p>
+      ) : null}
+      {evidence ? (
+        <SourceAnchor
+          surface="matches"
+          href={evidence.source}
+          title="DHA document evidence level for a Nepalese passport at this provider — Streamlined means lighter documentary expectations. Check the official tool."
+          className="mt-2 inline-flex font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
+        >
+          {evidence.level} evidence · Nepal ↗
+        </SourceAnchor>
       ) : null}
       <SourceLine url={p.source} lastVerified={p.lastVerified} surface="matches" />
     </article>

@@ -1,4 +1,5 @@
 import type { Program, University, ProgramLevel } from "@/lib/programs/types";
+import type { NepalEvidenceLevel } from "@/lib/data/source/au-nepal-evidence-levels";
 
 export type MatchVerdict = "strong" | "possible" | "reach";
 
@@ -17,6 +18,13 @@ export interface MatchResult {
   reasons: MatchReason[];
   /** Set by the preference pass (lib/matches/preference.ts); absent on the eligibility-only path. */
   preferenceChip?: PreferenceChip | null;
+  /**
+   * DHA Nepal-passport evidence level for this provider (study-type 01), attached
+   * server-side by lib/matches/evidence.ts so the client never bundles the harvested
+   * directory/evidence datasets. `source` is the WET tool URL, carried on the object
+   * so the client imports nothing heavy. Absent when the university doesn't resolve.
+   */
+  evidence?: { level: NepalEvidenceLevel; source: string } | null;
   scoreSnapshot: {
     gradeGap: number;
     englishGap: number;

@@ -4,6 +4,7 @@ import { runAssessment } from "@/lib/scoring/engine";
 import { computeMatches } from "@/lib/matches/compute";
 import { profileToMatchInputs } from "@/lib/matches/from-student-profile";
 import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/preference";
+import { attachNepalEvidence } from "@/lib/matches/evidence";
 import { computeIntakeTiming } from "@/lib/timing/intake";
 import { computeProfileAccuracy } from "./accuracy";
 import { AUSTRALIA } from "@/lib/data/destination/australia";
@@ -31,12 +32,15 @@ export function assembleAssessment(
 ): AssessmentPayload {
   const scored: StudentProfile =
     profile.destination === "not-sure" ? { ...profile, destination: "australia" } : profile;
-  const { items: matches, note: preferenceNote } = applyPreference(
+  const { items: ranked, note: preferenceNote } = applyPreference(
     computeMatches(profileToMatchInputs(scored), programs, universities),
     scored.goal,
     signedInPreferenceAdapter,
     now,
   );
+  // Surface each provider's DHA Nepal evidence level on the match (server-side, so
+  // the harvested directory/evidence datasets never reach the client bundle).
+  const matches = attachNepalEvidence(ranked);
   return {
     result: runAssessment(scored),
     matches,
