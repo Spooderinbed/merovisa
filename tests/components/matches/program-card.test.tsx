@@ -130,4 +130,20 @@ describe("ProgramCard", () => {
     render(<ProgramCard match={m} initialStatus={null} />);
     expect(screen.queryByText(/CRICOS/i)).not.toBeInTheDocument();
   });
+
+  it("surfaces the provider's DHA Nepal evidence level beside the CRICOS code", () => {
+    // Sydney (00026A) is Streamlined for Nepal in the harvested map.
+    const sydney: MatchResult = {
+      ...m,
+      university: { ...m.university, id: "sydney", name: "University of Sydney", city: "Sydney" },
+    };
+    render(<ProgramCard match={sydney} initialStatus={null} />);
+    const link = screen.getByRole("link", { name: /Streamlined evidence/i });
+    expect(link).toBeInTheDocument();
+  });
+
+  it("renders no evidence line when the university has no sourced CRICOS code", () => {
+    render(<ProgramCard match={m} initialStatus={null} />);
+    expect(screen.queryByText(/evidence/i)).not.toBeInTheDocument();
+  });
 });

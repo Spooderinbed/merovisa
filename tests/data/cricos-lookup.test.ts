@@ -16,9 +16,15 @@ describe("cricosCodeForUniversity — catalogue university → sourced CRICOS co
     expect(adelaide?.provider).toBe("Adelaide University");
   });
 
-  it("returns null for catalogue universities with no sourced code (Melbourne, ANU excluded)", () => {
-    expect(cricosCodeForUniversity("melbourne")).toBeNull();
-    expect(cricosCodeForUniversity("anu")).toBeNull();
+  it("resolves Melbourne and ANU from the harvested DHA directory (were previously null)", () => {
+    const mel = cricosCodeForUniversity("melbourne");
+    expect(mel?.cricosCode).toBe("00116K");
+    expect(mel?.provider).toMatch(/Melbourne/i);
+    expect(mel?.source).toMatch(/^https?:\/\//);
+
+    const anu = cricosCodeForUniversity("anu");
+    expect(anu?.cricosCode).toBe("00120C");
+    expect(anu?.provider).toMatch(/Australian National University/i);
   });
 
   it("returns null for an unknown university id", () => {

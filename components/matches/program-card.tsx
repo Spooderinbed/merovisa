@@ -2,6 +2,8 @@ import type { MatchResult } from "@/lib/matches/types";
 import { ShortlistButton, type Status } from "./shortlist-button";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 import { cricosCodeForUniversity } from "@/lib/data/cricos-lookup";
+import { nepalEvidenceLevel } from "@/lib/data/nepal-evidence-lookup";
+import { AU_NEPAL_EVIDENCE_SOURCE } from "@/lib/data/source/au-nepal-evidence-levels";
 
 const VERDICT_CLS = {
   strong: "bg-strong-tint text-strong",
@@ -51,6 +53,7 @@ export function ProgramCard({
   const linkLabel = isDeepLink(p.source) ? "Source" : "Provider site";
   const provenanceTone = isEstimated ? "text-ink-soft" : "text-ink-faint";
   const cricos = cricosCodeForUniversity(u.id);
+  const evidence = cricos ? nepalEvidenceLevel(cricos.cricosCode) : null;
   return (
     <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -135,6 +138,16 @@ export function ProgramCard({
               className="font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
             >
               CRICOS {cricos.cricosCode} ↗
+            </SourceAnchor>
+          ) : null}
+          {evidence ? (
+            <SourceAnchor
+              surface="matches"
+              href={AU_NEPAL_EVIDENCE_SOURCE}
+              title="DHA document evidence level for a Nepalese passport at this provider — Streamlined means lighter documentary expectations. Check the official tool."
+              className="font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
+            >
+              {evidence} evidence &middot; Nepal ↗
             </SourceAnchor>
           ) : null}
         </div>

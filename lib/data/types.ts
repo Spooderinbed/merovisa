@@ -420,6 +420,19 @@ export interface AuCricosCode extends Provenanced {
 }
 
 /**
+ * One entry in the complete CRICOS provider directory harvested from DHA's
+ * Document Checklist Tool (lib/data/source/au-cricos-directory.ts). A faithful
+ * mirror of the tool's term store: a provider display name + its CRICOS provider
+ * code. DISPLAY data — the module carries the source + harvest date (no per-record
+ * provenance / findingRefs); it is the authority-sourced superset of the curated
+ * finding-traced AuCricosCode list, not part of the findings ledger.
+ */
+export interface AuCricosDirectoryEntry {
+  provider: string; // provider display name as DHA's term store lists it
+  cricosCode: string; // CRICOS provider code: five digits + a letter, e.g. "00026A"
+}
+
+/**
  * A non-RMIT Australian university program offered to international students
  * (programs category E). A deliberately generic shape — every detail field is
  * optional — so heterogeneous providers (each finding-set states a different
