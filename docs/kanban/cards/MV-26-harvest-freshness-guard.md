@@ -1,6 +1,6 @@
 # MV-26 — Freshness guard for the harvested DHA DISPLAY datasets
 
-**Column:** In progress · **Priority:** P3 · **Owner:** agent · **Size:** S
+**Column:** Done (founder-accepted 2026-06-23) · **Priority:** P3 · **Owner:** agent · **Size:** S
 **Gate:** none (agent-ownable; data-provenance + CI test, no scorer, no DB, no UI).
 **Created:** 2026-06-22
 **Related:** [[MV-24]] (the harvest these stamps guard); [[MV-04]] (the stale-fact / freshness pattern this mirrors); `tests/data/freshness.test.ts`.
@@ -79,8 +79,8 @@ length (the founder's tunable knob).
 
 ## Status
 
-**In progress — gate-green, ready for review, held by the In-Review WIP-3 cap.** In Review
-is full (MV-23, MV-24, MV-25). Accepting any one of those admits MV-26 to In review.
+**Done — founder-accepted 2026-06-23**, shipped with the MV-23/24/25 batch (was held by
+the In-Review WIP-3 cap until the founder cleared the stack).
 Founder-owned (not blockers): (1) the cadence length (6 months is a conservative default —
 shorten for a tighter re-harvest rhythm, or align to a chosen DHA review date); (2) whether
 to add a scheduled auto-re-harvest later (separate slice).
