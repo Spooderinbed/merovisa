@@ -24,9 +24,11 @@ describe("unlocked results", () => {
     expect(screen.getByRole("button", { name: /Unlock all/ })).toBeInTheDocument();
   });
 
-  it("GatedTeasers: unlocked shows a 'coming soon' note and no blur trigger", () => {
+  it("GatedTeasers: unlocked shows the real deliverables and no blur trigger", () => {
     render(<GatedTeasers unlocked onUnlock={vi.fn()} />);
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/personalised document checklist/i)).toBeInTheDocument();
+    expect(screen.getByText(/action plan/i)).toBeInTheDocument();
+    expect(screen.queryByText(/email you/i)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
 });
