@@ -6,7 +6,7 @@ export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
       <div className="flex items-baseline justify-between">
         <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Profile accuracy</span>
         <span className="font-mono text-[12.5px] text-ink-soft">
-          {accuracy.completeness}% · {accuracy.level}
+          {accuracy.level} confidence
         </span>
       </div>
       <span className="mt-3 block h-2 w-full overflow-hidden rounded-pill bg-bg-tint">

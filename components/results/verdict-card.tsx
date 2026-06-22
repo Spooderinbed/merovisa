@@ -19,23 +19,45 @@ const VERDICT_META: Record<Verdict, { label: string; line: string; cls: string }
   },
 };
 
+/**
+ * The reach band spans everything from a borderline profile to a near-zero one,
+ * so one line can't be honest for all of it. When a severity signal is present
+ * (the weighted 0–100 score, used here only to pick copy — never shown), a deeply
+ * short profile gets a blunt line instead of the gentle "a few key areas". The
+ * number itself is never rendered, keeping the no-raw-scores rule intact.
+ */
+const REACH_SEVERE_BELOW = 30;
+const REACH_SEVERE_LINE =
+  "This is well out of reach right now — the gaps are substantial, not a few tweaks.";
+
 export function VerdictCard({
   verdict,
+  weighted,
   rulesVerified,
   rulesStale = false,
 }: {
   verdict: Verdict;
+  /**
+   * The weighted 0–100 score behind the verdict. Used only to scale the lowest
+   * band's copy by severity — never displayed. Absent on legacy payloads, in which
+   * case the standard reach line is shown.
+   */
+  weighted?: number;
   rulesVerified?: string;
   /** A scoring-critical input is past its reverifyBy — degrade the verdict (MV-04). */
   rulesStale?: boolean;
 }) {
   const meta = VERDICT_META[verdict];
+  const line =
+    verdict === "reach" && weighted !== undefined && weighted < REACH_SEVERE_BELOW
+      ? REACH_SEVERE_LINE
+      : meta.line;
   return (
     <section className="animate-rise rounded-lg border border-line bg-surface p-6">
       <span className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12.5px] ${meta.cls}`}>
         {meta.label}
       </span>
-      <h2 className="mt-4 text-[clamp(24px,3vw,32px)]">{meta.line}</h2>
+      <h2 className="mt-4 text-[clamp(24px,3vw,32px)]">{line}</h2>
       {/* When a scoring rule is overdue for re-verification, warn + lower confidence
           rather than show the calm "verified {date}" line — a stale verdict must
           never read as current. */}

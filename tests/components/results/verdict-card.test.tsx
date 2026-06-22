@@ -51,3 +51,40 @@ describe("VerdictCard provenance line (F16)", () => {
     expect(src).toMatch(/rulesVerified/);
   });
 });
+
+describe("VerdictCard lowest-band severity honesty (audit fix #5)", () => {
+  it("does not soften a near-zero reach with 'a few key areas'", () => {
+    // A 3-out-of-100 student must not read the same gentle line as a borderline one.
+    render(<VerdictCard verdict="reach" weighted={3} />);
+    expect(screen.queryByText(/a few key areas/i)).toBeNull();
+  });
+
+  it("scales the reach copy to the severity carried in the weighted prop", () => {
+    const { container: severe } = render(<VerdictCard verdict="reach" weighted={3} />);
+    const severeLine = severe.querySelector("h2")?.textContent ?? "";
+
+    const { container: mild } = render(<VerdictCard verdict="reach" weighted={48} />);
+    const mildLine = mild.querySelector("h2")?.textContent ?? "";
+
+    // The two reach copies must differ — one band can't speak with one voice across
+    // a 3/100 and a 48/100 profile.
+    expect(severeLine).not.toBe("");
+    expect(mildLine).not.toBe("");
+    expect(severeLine).not.toBe(mildLine);
+
+    // Neither variant leaks a raw number to the user.
+    expect(severeLine).not.toMatch(/\d/);
+    expect(mildLine).not.toMatch(/\d/);
+  });
+
+  it("falls back to the standard reach line when no weighted prop is given (legacy payloads)", () => {
+    render(<VerdictCard verdict="reach" />);
+    // Without a severity signal the card stays on the existing, non-alarming copy.
+    expect(screen.getByText(/ambitious/i)).toBeInTheDocument();
+  });
+
+  it("leaves the strong/possible bands untouched", () => {
+    render(<VerdictCard verdict="possible" weighted={3} />);
+    expect(screen.getByText(/realistic shot/i)).toBeInTheDocument();
+  });
+});

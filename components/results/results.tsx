@@ -61,6 +61,7 @@ export function Results({
       {destination === "not-sure" ? <NotSureFramingNotice /> : null}
       <VerdictCard
         verdict={payload.result.verdict}
+        weighted={payload.result.weighted}
         rulesVerified={payload.rulesVerified}
         rulesStale={payload.rulesStale}
       />
