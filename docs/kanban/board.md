@@ -18,13 +18,13 @@
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-23** · P3 · [Plan vs Checklist mental-model copy](cards/MV-23-plan-checklist-mental-model-copy.md) — _BACKLOG (agent-ownable copy; one founder decision). 2026-06-18 audit Q14: the per-program checklist and the plan generator both carry the same AU visa-prep steps (NOC, biometrics, police cert, GS, translations, agent MARN) with no stated mental model, so users see identical actions on two screens. The completion ACTION is already deduped by the existing plan-links design (worst failure mode mitigated). Remaining = two halves: (1) AGENT-OWNABLE copy — add a user-facing mental-model statement (Checklist = read-only per-program requirement reference; Plan = your action queue) on the checklist + plan surfaces; (2) FOUNDER CALL — strip the mirrored visa-prep rows from lib/checklist/generator.ts so they live only in the plan, OR keep the plan-links completion-mirror. Part (1) alone is a defensible partial close; do NOT silently make the strip-vs-keep product judgment. Evidence: reconciliation wf_4b1a3438-b21._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-23** · P3 · [Plan vs Checklist mental-model copy](cards/MV-23-plan-checklist-mental-model-copy.md) — _IN REVIEW — part (1) SHIPPED 2026-06-22 (committed to master). 2026-06-18 audit Q14: the per-program checklist and the plan generator both carry the same AU visa-prep steps (NOC, biometrics, police cert, GS, translations, agent MARN) with no stated mental model, so users see identical actions on two screens (the completion ACTION is already deduped by the existing plan-links design — worst failure mode mitigated). Part (1) AGENT-OWNABLE copy DONE: a mental-model framing line added to the per-program checklist view (ChecklistView header — 'this checklist is your reference for everything this program requires … work through and tick off these steps in your plan, your single action queue') and to the plan (PlanList, shared intro rendering in BOTH empty and populated states — 'this is your action queue … each program’s checklist is the full requirement reference behind it'); the two cross-reference each other. Placement: the per-program ChecklistView + PlanList (the two tested presentational surfaces where the duplicated steps render); the checklist landing + plan page header left untouched (surgical). TDD +3 (RED→GREEN, incl. an empty-plan framing case), gate green (typecheck/lint, full suite 1279, was 1276), goldens byte-identical, lib/checklist/generator.ts NOT modified. Part (2) FOUNDER CALL remains (card stays open): strip the mirrored visa-prep rows from lib/checklist/generator.ts so they live only in the plan, OR keep the plan-links completion-mirror — not silently decided. Evidence: reconciliation wf_4b1a3438-b21. Dossier: cards/MV-23-plan-checklist-mental-model-copy.md._
 
 ## Blocked — 2
 

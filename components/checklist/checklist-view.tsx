@@ -24,6 +24,10 @@ export function ChecklistView({ program, university, items, planStates }: { prog
           Document checklist{university ? ` · ${university.name}` : ""}
         </span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">{program.name}</h1>
+        <p className="max-w-[64ch] text-[16px] text-ink-soft">
+          This checklist is your reference for everything this program requires. You work through
+          and tick off these steps in your plan — your single action queue.
+        </p>
       </header>
       <ChecklistStageSection title="What you need now" subtitle="Gather these to apply and to build your visa case." blocks={nowBlocks} planStates={planStates} />
       <ChecklistStageSection title="After your offer" subtitle="You'll add these once a university offers you a place." blocks={laterBlocks} planStates={planStates} />

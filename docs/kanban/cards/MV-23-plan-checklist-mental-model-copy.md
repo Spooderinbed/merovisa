@@ -1,6 +1,6 @@
 # MV-23 — Plan vs Checklist mental-model copy
 
-**Column:** In Progress · **Priority:** P3 · **Owner:** founder+agent · **Gate:** none for part (1)
+**Column:** In review · **Priority:** P3 · **Owner:** founder+agent · **Gate:** none for part (1)
 **Created:** 2026-06-22
 **Related:** 2026-06-18 audit Q14; reconciliation `wf_4b1a3438-b21`; [[MV-22]] (sibling residual).
 
@@ -57,13 +57,41 @@ Part (1) alone is a defensible partial close. Card stays open (founder-owned) fo
 
 ## Acceptance criteria
 
-- [ ] The per-program checklist view states it's the requirement reference and points to the plan
+- [x] The per-program checklist view states it's the requirement reference and points to the plan
       as the action queue.
-- [ ] The plan view states it's the action queue and points to the checklist as the requirement
+- [x] The plan view states it's the action queue and points to the checklist as the requirement
       reference; framing shows even when the plan is empty.
-- [ ] TDD: failing test first, then green, on both surfaces.
-- [ ] Gate green: `typecheck` + `lint` + full `test`. Goldens byte-identical. `lib/checklist/generator.ts`
+- [x] TDD: failing test first, then green, on both surfaces.
+- [x] Gate green: `typecheck` + `lint` + full `test`. Goldens byte-identical. `lib/checklist/generator.ts`
       NOT modified (part 2 is the founder's call).
+
+## What shipped (part 1 only)
+
+- **`components/checklist/checklist-view.tsx`** — a framing `<p>` in the per-program header (after
+  the program-name `<h1>`): "This checklist is your reference for everything this program requires.
+  You work through and tick off these steps in your plan — your single action queue."
+- **`components/plan/plan-list.tsx`** — a framing `<p>` (shared `intro` const so it renders in both
+  the empty and populated states): "This is your action queue — the one place to work through every
+  step. Each program's checklist is the full requirement reference behind it." The empty branch is
+  wrapped (`gap-4`) so the framing sits above the "All caught up" card.
+- **`tests/checklist/checklist-view.test.tsx`** (+1) and **`tests/components/plan/plan-list.test.tsx`**
+  (+2, incl. the empty-plan case).
+
+## Test evidence (TDD, RED→GREEN)
+
+- **RED:** all 3 new tests failed with "Unable to find an element with the text" — framing copy
+  missing, not a typo (the 7 existing tests still passed). 3 failed / 7 passed across the 2 files.
+- **GREEN:** copy added → **10/10** on the 2 files.
+- **Gate:** `npm run typecheck` clean · `npm run lint` 0 errors (1 pre-existing unrelated `build.mjs`
+  warning) · full suite **1279 passed (220 files)** (was 1276) · `git diff` on `golden-assessments.json`
+  **empty** · `lib/checklist/generator.ts` **not modified**.
+
+## Status
+
+**In review** — part (1) shipped TDD, gate green, goldens byte-identical, presentational only. The
+card stays open (founder-owned) for **part (2)**: the strip-vs-keep product decision on the mirrored
+visa-prep rows in `lib/checklist/generator.ts`. On the founder's call, either strip (then re-derive
+the checklist + re-verify the plan-links mirror) or keep — and close to Done.
 
 ## Resume notes (cold agent)
 

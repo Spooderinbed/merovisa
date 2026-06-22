@@ -38,4 +38,11 @@ describe("ChecklistView", () => {
     expect(screen.getByText("Done")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Track in your plan/i })).toHaveAttribute("href", "/plan");
   });
+
+  it("frames the checklist as the per-program requirement reference and points to the plan as the action queue", () => {
+    const items = generateChecklist({ program, sections: {}, uploadedKinds: new Set<DocumentKind>() });
+    render(<ChecklistView program={program} university={null} items={items} />);
+    expect(screen.getByText(/reference for everything this program requires/i)).toBeInTheDocument();
+    expect(screen.getByText(/your single action queue/i)).toBeInTheDocument();
+  });
 });

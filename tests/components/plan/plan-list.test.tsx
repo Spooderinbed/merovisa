@@ -77,4 +77,15 @@ describe("PlanList", () => {
     expect(onChanged).toHaveBeenCalledTimes(1);
     vi.restoreAllMocks();
   });
+
+  it("frames the plan as the action queue and points to the checklist as the requirement reference", () => {
+    render(<PlanList items={[mk(1, "high", "todo")]} />);
+    expect(screen.getByText(/this is your action queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/requirement reference/i)).toBeInTheDocument();
+  });
+
+  it("shows the plan/checklist framing even when the plan is empty", () => {
+    render(<PlanList items={[]} />);
+    expect(screen.getByText(/this is your action queue/i)).toBeInTheDocument();
+  });
 });
