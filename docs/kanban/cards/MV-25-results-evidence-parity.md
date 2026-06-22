@@ -99,6 +99,32 @@ handling for an impossible MVP case; matches the dashboard's existing ungated be
   which is imported only by server routes / the owned page / `re-score.ts` — no `"use client"` importer, so
   the ~3,300-row directory + evidence datasets never reach the client bundle.
 
+## Codex review + hardening (2026-06-22, commit 593e398)
+
+Independent Codex (GPT-5) review of `6987265`: **SHIP-AS-IS** — boundary confirmed clean
+(no `"use client"` module value-imports the resolvers/datasets; the type-only path is fully
+erased at compile time), the `sydney → 00026A → Streamlined` chain verified at every hop, no
+P0/P1, no fabricated data. Applied its top hardening nit and corrected one stale comment:
+
+- **`import "server-only"` on `lib/matches/evidence.ts`** — converts the boundary from a
+  comment into a build-time guarantee: importing the resolver into a `"use client"` module now
+  fails the build instead of silently bundling the ~3,300-row datasets to every anonymous
+  visitor. Matches the house pattern (17 other lib modules carry the guard). It threw in the
+  node test env for the 5 tests that reach the server module — which *validates* the boundary
+  (the client-path component test sails through, type-import only) — so applied the established
+  `vi.mock("server-only", () => ({}))` shim to each (evidence, assemble, results,
+  results-destination, wizard-to-results), exactly as `re-score.test.ts` does.
+- Gate re-green: typecheck clean · lint 0 errors · full suite **1297 passed** · goldens
+  byte-identical (not in diff) · `au-cricos-codes.ts` untouched. Pushed `6987265..593e398`.
+
+**Data note (Codex's "add a Regular case" nit — declined honestly):** every catalogue-mapped
+university resolves to **Streamlined** for a Nepal passport (Sydney, UNSW, Monash, UQ, UWA,
+Adelaide, UTS, RMIT, Macquarie, Deakin, Curtin, La Trobe, WSU, Melbourne, ANU — all of them).
+The `Regular` display branch is therefore unreachable through the live catalogue today;
+`attachNepalEvidence` is level-agnostic (`.map` attaches whatever the lookup returns), so a
+`Regular` test would require fabricating a catalogue→Regular mapping, which the never-fabricate
+rule forbids. Recorded rather than faked.
+
 ## Status
 
 **In review** — agent-ownable, SHIPPED TDD, gate green. Founder-owned residuals (not blockers): (1) accept → Done;
