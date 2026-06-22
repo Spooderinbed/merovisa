@@ -25,6 +25,14 @@ export type NepalEvidenceLevel = "Regular" | "Streamlined" | "Undetermined";
 export const AU_NEPAL_EVIDENCE_SOURCE =
   "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool";
 export const AU_NEPAL_EVIDENCE_VERIFIED = "2026-06-22";
+/**
+ * Periodic re-harvest cadence (6 months) — a deliberate TTL, NOT a fact-expiry date.
+ * DHA revises evidence levels without a fixed boundary, so this is a cadence after
+ * which the map must be re-harvested. The freshness guard (tests/data/freshness.test.ts)
+ * goes red on this date: re-run scripts/harvest-dha-evidentiary.mjs, then move this and
+ * AU_NEPAL_EVIDENCE_VERIFIED forward together. Cadence is a tunable founder call.
+ */
+export const AU_NEPAL_EVIDENCE_REVERIFY_BY = "2026-12-22";
 /** DHA study-type code harvested: "01" = "all other students" (mainstream degree-seekers). */
 export const AU_NEPAL_EVIDENCE_STUDY_TYPE = "01";
 

@@ -27,6 +27,15 @@ import type { AuCricosDirectoryEntry } from "@/lib/data/types";
 export const AU_CRICOS_DIRECTORY_SOURCE =
   "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool";
 export const AU_CRICOS_DIRECTORY_VERIFIED = "2026-06-22";
+/**
+ * Periodic re-harvest cadence (6 months) — a deliberate TTL, NOT a fact-expiry date.
+ * The directory drifts continuously as providers enter/leave CRICOS, so there is no
+ * single change boundary (unlike the 1 July fee year). The freshness guard
+ * (tests/data/freshness.test.ts) goes red on this date: re-run
+ * scripts/harvest-dha-evidentiary.mjs, then move this and AU_CRICOS_DIRECTORY_VERIFIED
+ * forward together. Cadence is a tunable founder call, not a hard policy.
+ */
+export const AU_CRICOS_DIRECTORY_REVERIFY_BY = "2026-12-22";
 
 // [provider, cricosCode] — compact source tuples, mapped to typed records below.
 const RAW: [string, string][] = [

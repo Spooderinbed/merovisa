@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { DATA_MODULES } from "@/lib/data/schema/registry";
+import {
+  AU_CRICOS_DIRECTORY_VERIFIED,
+  AU_CRICOS_DIRECTORY_REVERIFY_BY,
+} from "@/lib/data/source/au-cricos-directory";
+import {
+  AU_NEPAL_EVIDENCE_VERIFIED,
+  AU_NEPAL_EVIDENCE_REVERIFY_BY,
+} from "@/lib/data/source/au-nepal-evidence-levels";
 
 /**
  * Freshness guard (memo: docs/audits/2026-06-10-data-governance-and-triage.md).
@@ -73,5 +81,48 @@ describe("freshness guard (every registered data module)", () => {
     for (const m of DATA_MODULES) collectReverify(m.data, m.exportName, hits);
     const due = dueForReverify(hits, today).map((d) => `${d.path} (reverifyBy ${d.reverifyBy})`);
     expect(due).toEqual([]);
+  });
+});
+
+describe("freshness guard (harvested DISPLAY datasets)", () => {
+  // The MV-24 DHA harvest (CRICOS provider directory + Nepal evidence map) is
+  // DISPLAY-pattern data: one module-level stamp, deliberately OUTSIDE the findings
+  // ledger / registry, so the DATA_MODULES walk above never sees it. These bulk
+  // authority datasets drift continuously (providers enter/leave CRICOS, DHA revises
+  // evidence levels) with no single known change date — so each carries a periodic
+  // re-harvest cadence as a module-level reverifyBy, NOT a per-record one. This guard
+  // goes red on that date: the failure IS the re-harvest reminder. Fix it by re-running
+  // scripts/harvest-dha-evidentiary.mjs and moving both stamps forward, never by
+  // deleting the deadline.
+  const harvested = [
+    {
+      name: "au-cricos-directory",
+      verified: AU_CRICOS_DIRECTORY_VERIFIED,
+      reverifyBy: AU_CRICOS_DIRECTORY_REVERIFY_BY,
+    },
+    {
+      name: "au-nepal-evidence-levels",
+      verified: AU_NEPAL_EVIDENCE_VERIFIED,
+      reverifyBy: AU_NEPAL_EVIDENCE_REVERIFY_BY,
+    },
+  ];
+
+  it("no harvested dataset is past its re-harvest cadence — re-harvest, then move the stamp forward", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    // Each stamp must be present and an ISO date — a deleted export would be undefined,
+    // which silently slips past the lexicographic `<= today` filter below.
+    for (const h of harvested) expect(h.reverifyBy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const due = dueForReverify(
+      harvested.map((h) => ({ path: h.name, reverifyBy: h.reverifyBy })),
+      today,
+    ).map((d) => `${d.path} (reverifyBy ${d.reverifyBy})`);
+    expect(due).toEqual([]);
+  });
+
+  it("each re-harvest cadence is later than the harvest date it follows", () => {
+    // A reverifyBy on or before its own lastVerified would fire immediately — a stamp bug.
+    for (const h of harvested) {
+      expect(h.reverifyBy > h.verified).toBe(true);
+    }
   });
 });
