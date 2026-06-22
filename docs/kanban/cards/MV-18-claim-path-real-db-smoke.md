@@ -78,7 +78,7 @@ abstraction layer; this is a smoke, not a harness.
 
 Checked 2026-06-20:
 
-- **Migrations:** ✅ all 15 present in `supabase/migrations/`, incl.
+- **Migrations:** ✅ all 14 present in `supabase/migrations/`, incl.
   `20260603170655_add_profiles_evolve_assessments.sql:59` which defines
   `assessments_primary_idx`. `supabase db reset` reproduces the real schema +
   index locally — the whole point.
@@ -115,7 +115,7 @@ branch (`create_branch` incurs cost → founder decision) ≫ **prod test-writes
   See "Finding" below: without it a fresh local `db reset` revokes the implicit
   service_role grants that prod's pre-flip tables still have, and every write 500s.
 - **Toolchain (one-time, done):** `supabase` added as a devDependency; local stack
-  brought up (`npx supabase start` + `db reset`, all 15 migrations applied).
+  brought up (`npx supabase start` + `db reset`, all 14 migrations applied).
 
 `claim.ts` is **byte-identical to its committed state** (`git diff` empty) — the RED
 proof reverted-then-restored it; this card adds tests only, no business-logic change.
