@@ -63,6 +63,41 @@ export async function getOwnedAssessment(db: DB, id: string): Promise<Assessment
   return data as AssessmentRow;
 }
 
+/**
+ * MV-28(b): read a single assessment by its unguessable id for an ANONYMOUS visitor,
+ * but only if it is still recoverable — unclaimed (owner is null) and unexpired. This
+ * powers refresh/back/tab-restore on /assessment/[id] before sign-in.
+ *
+ * Call this with the SERVICE-ROLE admin client: anon has no table grant, and a
+ * permissive anon RLS policy would let the public anon key enumerate every unclaimed
+ * assessment via PostgREST (the predicate is row-content-based, not id-bound). The
+ * admin client bypasses RLS, so the predicate below IS the gate — it lives in the
+ * query, and the post-fetch guard re-verifies it as defense in depth so a future
+ * query-filter regression can never leak a claimed or expired assessment's PII.
+ */
+export async function getRecoverableAssessment(
+  db: DB,
+  id: string,
+  nowIso: string,
+): Promise<AssessmentRow | null> {
+  const { data, error } = await db
+    .from("assessments")
+    .select("*")
+    .eq("id", id)
+    .is("owner", null)
+    .gt("expires_at", nowIso)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as AssessmentRow;
+  if (row.owner !== null || new Date(row.expires_at).getTime() <= new Date(nowIso).getTime()) {
+    // A row that exists but fails the predicate reaching here means the query filter
+    // regressed — log it as a probe/regression canary, and fail closed.
+    console.warn("[assessments] recoverable read rejected by guard", { id, claimed: row.owner !== null });
+    return null;
+  }
+  return row;
+}
+
 export async function getPrimaryAssessmentForUser(db: DB, userId: string): Promise<AssessmentRow | null> {
   const { data, error } = await db
     .from("assessments")

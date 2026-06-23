@@ -1,10 +1,13 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOwnedAssessment } from "@/lib/assessments/repo";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getOwnedAssessment, getRecoverableAssessment } from "@/lib/assessments/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { assembleAssessment } from "@/lib/results/assemble";
 import { hasLegacyMatchShape } from "@/lib/results/legacy";
 import { Results } from "@/components/results/results";
+import type { Database } from "@/lib/supabase/types";
 import type { AssessmentPayload } from "@/lib/results/types";
 import type { Destination, StudentProfile } from "@/lib/scoring/types";
 
@@ -12,9 +15,17 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/assess");
+  const signedIn = Boolean(data.user);
 
-  const row = await getOwnedAssessment(supabase, id);
+  // Signed-in users read their own assessment under RLS. An anonymous visitor recovers
+  // THIS assessment by its unguessable id — but only while it is unclaimed and unexpired
+  // — via the server-only admin client (anon has no table grant; see getRecoverableAssessment).
+  // The same client serves any legacy-shape catalogue recompute below, since the
+  // catalogue is also closed to anon.
+  const db: SupabaseClient<Database> = signedIn ? supabase : createSupabaseAdminClient();
+  const row = signedIn
+    ? await getOwnedAssessment(supabase, id)
+    : await getRecoverableAssessment(db, id, new Date().toISOString());
   if (!row) notFound();
 
   // result holds the full AssessmentPayload snapshot (see /api/assess).
@@ -27,8 +38,8 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
     const snapshot = row.profile_snapshot as unknown as StudentProfile | null;
     if (snapshot) {
       const [programs, universities] = await Promise.all([
-        listAllPrograms(supabase),
-        listAllUniversities(supabase),
+        listAllPrograms(db),
+        listAllUniversities(db),
       ]);
       const fresh = assembleAssessment(snapshot, programs, universities);
       payload = { ...payload, matches: fresh.matches, matchedCount: fresh.matchedCount, preferenceNote: fresh.preferenceNote };
@@ -40,7 +51,8 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
     <Results
       payload={payload}
       destination={row.destination_id as Destination}
-      mode="owned"
+      mode={signedIn ? "owned" : "anonymous"}
+      assessmentId={signedIn ? null : id}
     />
   );
 }
