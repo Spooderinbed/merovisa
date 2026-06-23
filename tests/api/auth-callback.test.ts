@@ -137,4 +137,24 @@ describe("GET /auth/callback", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("https://merovisa.vercel.app/dashboard");
   });
+
+  it("prefers NEXT_PUBLIC_SITE_URL over the request origin and forwarded host", async () => {
+    // The deterministic escape hatch: an explicit configured site URL wins over everything,
+    // so a misbehaving proxy header can't send users anywhere but the configured site.
+    const prev = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = "https://merovisa.vercel.app/";
+    try {
+      exchangeCodeForSession.mockResolvedValue({ error: null });
+      getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+      const req = new Request("http://localhost/auth/callback?code=abc", {
+        headers: { "x-forwarded-host": "wrong-host.example" },
+      });
+      const res = await GET(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe("https://merovisa.vercel.app/dashboard");
+    } finally {
+      if (prev === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = prev;
+    }
+  });
 });
