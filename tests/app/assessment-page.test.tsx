@@ -3,30 +3,38 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getOwnedAssessment, redirect, notFound, listAllPrograms, listAllUniversities, assembleAssessment } =
-  vi.hoisted(() => ({
-    getUser: vi.fn(),
-    getOwnedAssessment: vi.fn(),
-    redirect: vi.fn(() => {
-      throw new Error("REDIRECT");
-    }),
-    notFound: vi.fn(() => {
-      throw new Error("NOT_FOUND");
-    }),
-    listAllPrograms: vi.fn().mockResolvedValue([]),
-    listAllUniversities: vi.fn().mockResolvedValue([]),
-    assembleAssessment: vi.fn(),
-  }));
+const {
+  getUser,
+  getOwnedAssessment,
+  getRecoverableAssessment,
+  notFound,
+  listAllPrograms,
+  listAllUniversities,
+  assembleAssessment,
+} = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  getOwnedAssessment: vi.fn(),
+  getRecoverableAssessment: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  }),
+  listAllPrograms: vi.fn().mockResolvedValue([]),
+  listAllUniversities: vi.fn().mockResolvedValue([]),
+  assembleAssessment: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
-vi.mock("@/lib/assessments/repo", () => ({ getOwnedAssessment }));
+vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({}) }));
+vi.mock("@/lib/assessments/repo", () => ({ getOwnedAssessment, getRecoverableAssessment }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/lib/results/assemble", () => ({ assembleAssessment }));
-vi.mock("next/navigation", () => ({ redirect, notFound }));
+vi.mock("next/navigation", () => ({ notFound }));
 vi.mock("@/components/results/results", () => ({
-  Results: ({ mode }: { mode: string }) => <div>owned-results:{mode}</div>,
+  Results: ({ mode, assessmentId }: { mode: string; assessmentId: string | null }) => (
+    <div>results:{mode}:{assessmentId ?? "none"}</div>
+  ),
 }));
 
 import AssessmentPage from "@/app/(focused)/assessment/[id]/page";
@@ -35,23 +43,36 @@ describe("/assessment/[id]", () => {
   beforeEach(() => {
     getUser.mockReset();
     getOwnedAssessment.mockReset();
-    redirect.mockClear();
+    getRecoverableAssessment.mockReset();
     notFound.mockClear();
     listAllPrograms.mockClear();
+    listAllUniversities.mockClear();
     assembleAssessment.mockClear();
   });
 
-  it("redirects to /assess when signed out", async () => {
+  it("renders recoverable anonymous results (with the assessment id) when signed out", async () => {
     getUser.mockResolvedValue({ data: { user: null } });
-    await expect(AssessmentPage({ params: Promise.resolve({ id: "aid" }) })).rejects.toThrow("REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/assess");
+    getRecoverableAssessment.mockResolvedValue({ id: "aid", owner: null, result: { result: { verdict: "possible" } } });
+    const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
+    render(ui);
+    // Anonymous recovery shows the conversion/claim path keyed by the assessment id.
+    expect(screen.getByText("results:anonymous:aid")).toBeInTheDocument();
+    expect(getOwnedAssessment).not.toHaveBeenCalled();
   });
 
-  it("404s when the assessment is not owned / missing", async () => {
+  it("404s when signed out and the assessment is not recoverable (claimed / expired / missing)", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    getRecoverableAssessment.mockResolvedValue(null);
+    await expect(AssessmentPage({ params: Promise.resolve({ id: "aid" }) })).rejects.toThrow("NOT_FOUND");
+    expect(notFound).toHaveBeenCalled();
+  });
+
+  it("404s when signed in and the assessment is not owned / missing", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     getOwnedAssessment.mockResolvedValue(null);
     await expect(AssessmentPage({ params: Promise.resolve({ id: "aid" }) })).rejects.toThrow("NOT_FOUND");
     expect(notFound).toHaveBeenCalled();
+    expect(getRecoverableAssessment).not.toHaveBeenCalled();
   });
 
   it("renders owned results from the stored payload", async () => {
@@ -59,7 +80,7 @@ describe("/assessment/[id]", () => {
     getOwnedAssessment.mockResolvedValue({ id: "aid", owner: "u1", result: { result: { verdict: "possible" } } });
     const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
     render(ui);
-    expect(screen.getByText("owned-results:owned")).toBeInTheDocument();
+    expect(screen.getByText("results:owned:none")).toBeInTheDocument();
     // A current-shape payload renders as-is, with no legacy recompute.
     expect(assembleAssessment).not.toHaveBeenCalled();
   });
@@ -76,7 +97,7 @@ describe("/assessment/[id]", () => {
     assembleAssessment.mockReturnValue({ matches: [], matchedCount: 0, preferenceNote: null });
     const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
     render(ui);
-    expect(screen.getByText("owned-results:owned")).toBeInTheDocument();
+    expect(screen.getByText("results:owned:none")).toBeInTheDocument();
     expect(listAllPrograms).toHaveBeenCalled();
     expect(assembleAssessment).toHaveBeenCalled();
   });
