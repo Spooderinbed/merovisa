@@ -123,4 +123,18 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toContain("/dashboard");
     expect(res.headers.get("location")).not.toContain("attacker");
   });
+
+  it("redirects to the public x-forwarded-host, not the internal request origin (Vercel proxy)", async () => {
+    // On Vercel the function sees request.url with the internal host (localhost), while the
+    // real public host arrives via x-forwarded-host. Using url.origin bounces prod sign-ins
+    // to localhost — this asserts the forwarded host wins so production lands on the site.
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    const req = new Request("http://localhost/auth/callback?code=abc", {
+      headers: { "x-forwarded-host": "merovisa.vercel.app", "x-forwarded-proto": "https" },
+    });
+    const res = await GET(req);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://merovisa.vercel.app/dashboard");
+  });
 });

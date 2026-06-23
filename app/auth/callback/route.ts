@@ -10,7 +10,16 @@ export async function GET(request: Request): Promise<Response> {
   const code = url.searchParams.get("code");
   const claimToken = url.searchParams.get("claim");
   const next = url.searchParams.get("next");
-  const origin = url.origin;
+
+  // Behind a load balancer (Vercel), request.url's host is the function's internal host
+  // (e.g. localhost), so url.origin would bounce production sign-ins to localhost. The
+  // real public host arrives via x-forwarded-host — prefer it outside local dev.
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  const origin =
+    process.env.NODE_ENV === "development" || !forwardedHost
+      ? url.origin
+      : `${forwardedProto}://${forwardedHost}`;
 
   if (!code) return NextResponse.redirect(`${origin}/assess`);
 
