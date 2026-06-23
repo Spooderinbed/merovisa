@@ -24,10 +24,10 @@ export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
     return () => clearTimeout(id);
   }, [phase, payload, recapElapsed]);
 
-  const handleComplete = async (completed: StudentProfile) => {
-    track("wizard_completed", { destination: completed.destination });
-    setProfile(completed);
-    setPhase("recap");
+  // Persists the profile to /api/assess. Kept separate from handleComplete so the
+  // error screen can re-attempt the save in place (MV-31) without re-running the
+  // wizard — the answers and computed state stay in memory.
+  const save = async (completed: StudentProfile) => {
     setRecapElapsed(false);
     setError(false);
     try {
@@ -45,6 +45,13 @@ export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
     }
   };
 
+  const handleComplete = async (completed: StudentProfile) => {
+    track("wizard_completed", { destination: completed.destination });
+    setProfile(completed);
+    setPhase("recap");
+    await save(completed);
+  };
+
   if (phase === "results" && payload && profile) {
     return (
       <Results
@@ -60,7 +67,18 @@ export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
     if (error) {
       return (
         <div className="mx-auto grid min-h-[60vh] max-w-narrow place-items-center px-5 text-center">
-          <p className="text-ink-soft">Something went wrong scoring your assessment. Please refresh and try again.</p>
+          <div className="flex flex-col items-center gap-5">
+            <p className="text-ink-soft">
+              We couldn&apos;t save your assessment just now. Your answers are still here — try again.
+            </p>
+            <button
+              type="button"
+              onClick={() => void save(profile)}
+              className="inline-flex rounded-pill bg-primary px-7 py-[15px] text-[17px] font-medium text-on-primary hover:bg-primary-ink"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       );
     }
