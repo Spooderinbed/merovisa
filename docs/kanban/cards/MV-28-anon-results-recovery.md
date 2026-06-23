@@ -1,10 +1,19 @@
 # MV-28 — Recoverable anonymous results (P0)
 
-**Column:** Ready (serial track, after MV-31) · **Priority:** P0 · **Owner:** founder+agent · **Size:** M–L
-**Gate:** half (a) agent-ownable; half (b) needs a **founder design nod** (anon-read policy) + a **prod Supabase migration** (founder-DB-gated, like [[MV-21]]).
+**Column:** In Review · **Priority:** P0 · **Owner:** founder+agent · **Size:** M–L
+**Gate:** half (a) agent-ownable (DONE, 51fd70e); half (b) authored on branch `mv-28b-anon-read` (DONE, 39c716c) — **NO migration** (Option C); remaining gate is a **founder anon-read *policy* nod + merge to master** (the security fork the audit reserved).
 **Created:** 2026-06-23
 **Source:** `docs/audits/2026-06-23-real-user-audit.md` (the audit's #1 / P0).
 **Related:** [[MV-31]] (coupled — same files), [[MV-14]]/[[MV-16]] (the OAuth claim path), [[MV-21]] (the founder-DB-gate precedent).
+
+## STATUS 2026-06-23 — BOTH HALVES BUILT
+
+- **Half (a)** — sessionStorage recovery: **DONE on master (51fd70e), In Review.** Wizard answers (`myvisa.wizard.v1`) + computed results (`myvisa.results.v1`) survive refresh/back/tab; anon-only; cleared on `/assess?new=1`.
+- **Half (b)** — anon-recoverable `/assessment/[id]`: **DONE on branch `mv-28b-anon-read` (39c716c), gate green (suite 1321, +6), Codex-reviewed.** Kept off master pending the founder policy nod (below).
+  - **DESIGN PIVOT — no migration (Option C).** The original plan here assumed a Supabase **RLS migration** granting `anon` SELECT under the predicate. That design is **insecure and was rejected**: the public anon key (shipped in client JS) + a row-content RLS policy (`owner is null and expires_at > now()`) lets anyone `GET /rest/v1/assessments?select=*` and **enumerate every unclaimed assessment's PII** — RLS filters by row content, not by whether the caller supplied the id. Codex confirmed the enumeration analysis.
+  - **What shipped instead:** the anon read goes through the **server-only admin (service-role) client** with the predicate **in the query** (`.eq(id).is(owner,null).gt(expires_at,now)`), plus an app-side guard + canary log as defense in depth. Anon keeps **zero table grant** → no PostgREST enumeration surface. Matches CLAUDE.md ("business logic in Next.js, Supabase is dumb storage"). **No migration, no founder-DB-gate.**
+  - **Files (on branch):** `lib/assessments/repo.ts` (`getRecoverableAssessment`), `app/(focused)/assessment/[id]/page.tsx` (drop signed-out redirect; anon branch → admin read → `Results mode="anonymous" assessmentId={id}` so recovery still offers the claim/sign-in path), `tests/assessments/repo-recoverable.test.ts` (+5), `tests/app/assessment-page.test.tsx` (anon-recovery/404).
+  - **The remaining founder decision (now ONLY a policy + merge call, not a migration):** is it acceptable that a bearer-of-the-UUID can read an *unclaimed, non-expired* assessment's profile (GPA/scores)? This fulfills the existing "expires in 3 days" promise (the id is only ever returned to the creator), so it's arguably the implied contract — but it is the security-sensitive exposure the audit reserved, so it is **not auto-merged**. Founder nod → `git checkout master && git merge mv-28b-anon-read` (or authorize the agent to).
 
 ## Why (the P0)
 
@@ -56,12 +65,13 @@ MV-30 → MV-29 → MV-32 → **MV-31 → MV-28**, full gate (typecheck+lint+tes
 
 ## Acceptance criteria
 
-- [ ] (a) Refresh / back / tab-restore on the anonymous wizard and results no longer loses state (sessionStorage
-      rehydrate). TDD.
-- [ ] (b, local) An anonymous GET of `/assessment/[id]` for an unclaimed, non-expired id renders the results;
-      a claimed or expired id still 404s/redirects. TDD + a local-stack RLS proof.
-- [ ] (b, gate) Anon-read policy confirmed by the founder; prod migration applied by the founder.
-- [ ] Gate green (typecheck/lint/full suite); goldens byte-identical (no scorer path); `au-cricos-codes.ts`
+- [x] (a) Refresh / back / tab-restore on the anonymous wizard and results no longer loses state (sessionStorage
+      rehydrate). TDD. **DONE 51fd70e.**
+- [x] (b, local) An anonymous GET of `/assessment/[id]` for an unclaimed, non-expired id renders the results;
+      a claimed or expired id still 404s. TDD (5 repo cases incl. the claimed/expired security boundary + page
+      anon-recovery/404). **DONE on branch 39c716c.** No RLS proof needed — Option C uses no anon RLS policy.
+- [ ] (b, gate) Anon-read **policy** confirmed by the founder; branch merged to master. **No prod migration** (Option C).
+- [x] Gate green (typecheck/lint/full suite, 1321 +6); goldens byte-identical (no scorer path); `au-cricos-codes.ts`
       untouched.
 
 ## Resume notes (cold agent)
