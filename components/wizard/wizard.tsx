@@ -32,8 +32,14 @@ const STEP_COMPONENTS: Record<WizardStepKey, ComponentType<StepProps>> = {
   goal: GoalStep,
 };
 
-export function Wizard({ onComplete }: { onComplete: (profile: StudentProfile) => void }) {
-  const w = useWizardState();
+export function Wizard({
+  onComplete,
+  persist = false,
+}: {
+  onComplete: (profile: StudentProfile) => void;
+  persist?: boolean;
+}) {
+  const w = useWizardState(undefined, { persist });
   useEffect(() => {
     track("wizard_step_viewed", { step: w.stepKey });
   }, [w.stepKey]);

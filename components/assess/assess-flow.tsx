@@ -4,17 +4,60 @@ import { useEffect, useState } from "react";
 import type { StudentProfile } from "@/lib/scoring/types";
 import type { AssessmentPayload } from "@/lib/results/types";
 import { Wizard } from "@/components/wizard/wizard";
+import { WIZARD_STORAGE_KEY } from "@/components/wizard/use-wizard-state";
 import { ProfileRecap } from "./profile-recap";
 import { Results } from "@/components/results/results";
 import { track } from "@/lib/analytics/events";
 
 type Phase = "wizard" | "recap" | "results";
 
-export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
-  const [phase, setPhase] = useState<Phase>("wizard");
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [payload, setPayload] = useState<AssessmentPayload | null>(null);
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+// Computed results payload (+ profile + id) so a refresh / tab-restore on the
+// results screen rehydrates the results view instead of dropping to the wizard
+// (MV-28 a). Anonymous-only — signed-in users already persist server-side.
+const RESULTS_STORAGE_KEY = "myvisa.results.v1";
+
+interface PersistedResults {
+  profile: StudentProfile;
+  payload: AssessmentPayload;
+  assessmentId: string | null;
+}
+
+function readPersistedResults(): PersistedResults | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(RESULTS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedResults;
+    if (!parsed || !parsed.profile || !parsed.payload) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearPersisted(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(RESULTS_STORAGE_KEY);
+    window.sessionStorage.removeItem(WIZARD_STORAGE_KEY);
+  } catch {
+    // Private mode / quota — nothing to clear.
+  }
+}
+
+export function AssessFlow({
+  signedIn = false,
+  fresh = false,
+}: { signedIn?: boolean; fresh?: boolean } = {}) {
+  // A fresh start (e.g. /assess?new=1) must not resurrect a stale assessment.
+  // Signed-in users persist server-side, so client recovery is anonymous-only.
+  const restored = !signedIn && !fresh ? readPersistedResults() : null;
+  if (fresh) clearPersisted();
+
+  const [phase, setPhase] = useState<Phase>(restored ? "results" : "wizard");
+  const [profile, setProfile] = useState<StudentProfile | null>(restored?.profile ?? null);
+  const [payload, setPayload] = useState<AssessmentPayload | null>(restored?.payload ?? null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(restored?.assessmentId ?? null);
   const [recapElapsed, setRecapElapsed] = useState(false);
   const [error, setError] = useState(false);
 
@@ -23,6 +66,21 @@ export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
     const id = setTimeout(() => setPhase("results"), 0);
     return () => clearTimeout(id);
   }, [phase, payload, recapElapsed]);
+
+  // Persist the computed results once the flow reaches them (anonymous only),
+  // so a refresh on the results screen restores the results view.
+  useEffect(() => {
+    if (signedIn || phase !== "results" || !payload || !profile) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(
+        RESULTS_STORAGE_KEY,
+        JSON.stringify({ profile, payload, assessmentId } satisfies PersistedResults),
+      );
+    } catch {
+      // Private mode / quota — degrade to in-memory only.
+    }
+  }, [signedIn, phase, payload, profile, assessmentId]);
 
   // Persists the profile to /api/assess. Kept separate from handleComplete so the
   // error screen can re-attempt the save in place (MV-31) without re-running the
@@ -85,5 +143,5 @@ export function AssessFlow({ signedIn = false }: { signedIn?: boolean } = {}) {
     return <ProfileRecap profile={profile} onDone={() => setRecapElapsed(true)} />;
   }
 
-  return <Wizard onComplete={handleComplete} />;
+  return <Wizard onComplete={handleComplete} persist={!signedIn} />;
 }

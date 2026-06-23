@@ -1,0 +1,84 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+
+vi.mock("@/components/wizard/wizard", () => ({
+  Wizard: ({ onComplete }: { onComplete: (p: unknown) => void }) => (
+    <button onClick={() => onComplete({ homeCountry: "Nepal", destination: "australia" })}>
+      finish
+    </button>
+  ),
+}));
+vi.mock("@/components/assess/profile-recap", () => ({
+  ProfileRecap: ({ onDone }: { onDone: () => void }) => {
+    onDone();
+    return <div>recap</div>;
+  },
+}));
+vi.mock("@/components/results/results", () => ({
+  Results: ({ assessmentId, mode }: { assessmentId: string | null; mode: string }) => (
+    <div>
+      results:{mode}:{assessmentId}
+    </div>
+  ),
+}));
+
+import { AssessFlow } from "@/components/assess/assess-flow";
+
+describe("AssessFlow sessionStorage recovery (MV-28 half a)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    sessionStorage.clear();
+  });
+
+  it("restores the results view after a remount instead of dropping back to the wizard", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "aid-7", payload: { ok: true } }), { status: 200 }),
+    );
+    const userEvent = (await import("@testing-library/user-event")).default;
+
+    // First mount: complete the flow and reach results.
+    const first = render(<AssessFlow />);
+    await userEvent.click(screen.getByText("finish"));
+    await waitFor(() => expect(screen.getByText(/results:anonymous:aid-7/)).toBeInTheDocument());
+    first.unmount();
+
+    // Second mount (sessionStorage intact): results restored, no wizard, no re-answering.
+    render(<AssessFlow />);
+    await waitFor(() => expect(screen.getByText(/results:anonymous:aid-7/)).toBeInTheDocument());
+    expect(screen.queryByText("finish")).not.toBeInTheDocument();
+  });
+
+  it("clears stale saved results when started fresh (new=1) and shows the wizard", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "aid-stale", payload: { ok: true } }), { status: 200 }),
+    );
+    const userEvent = (await import("@testing-library/user-event")).default;
+
+    // Reach results once so something is persisted.
+    const first = render(<AssessFlow />);
+    await userEvent.click(screen.getByText("finish"));
+    await waitFor(() => expect(screen.getByText(/results:anonymous:aid-stale/)).toBeInTheDocument());
+    first.unmount();
+
+    // Fresh start must not resurrect the stale assessment.
+    render(<AssessFlow fresh />);
+    expect(screen.getByText("finish")).toBeInTheDocument();
+    expect(screen.queryByText(/results:anonymous:aid-stale/)).not.toBeInTheDocument();
+  });
+
+  it("does NOT persist results for signed-in users", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "aid-owned", payload: { ok: true } }), { status: 200 }),
+    );
+    const userEvent = (await import("@testing-library/user-event")).default;
+
+    const first = render(<AssessFlow signedIn />);
+    await userEvent.click(screen.getByText("finish"));
+    await waitFor(() => expect(screen.getByText(/results:owned:aid-owned/)).toBeInTheDocument());
+    first.unmount();
+
+    // Signed-in users persist server-side; nothing client-side should be left behind.
+    render(<AssessFlow signedIn />);
+    expect(screen.getByText("finish")).toBeInTheDocument();
+  });
+});

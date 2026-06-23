@@ -8,10 +8,10 @@ export default async function AssessPage({ searchParams }: { searchParams: Promi
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
 
-  if (!data.user) return <AssessFlow />;
+  if (!data.user) return <AssessFlow fresh={sp.new === "1"} />;
 
   const primary = await getPrimaryAssessmentForUser(supabase, data.user.id);
-  if (!primary || sp.new === "1") return <AssessFlow signedIn />;
+  if (!primary || sp.new === "1") return <AssessFlow signedIn fresh={sp.new === "1"} />;
 
   return (
     <AssessInterstitial

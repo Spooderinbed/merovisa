@@ -23,7 +23,12 @@ vi.mock("@/components/results/results", () => ({
 import { AssessFlow } from "@/components/assess/assess-flow";
 
 describe("AssessFlow id wiring", () => {
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // AssessFlow now persists anonymous results to sessionStorage (MV-28 a);
+    // isolate each case so a prior run's saved results can't rehydrate here.
+    sessionStorage.clear();
+  });
 
   it("passes the persisted id from /api/assess into Results", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
