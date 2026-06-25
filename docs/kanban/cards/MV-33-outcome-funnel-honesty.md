@@ -1,9 +1,26 @@
 # MV-33 — Honest "Your applications" funnel (subtitle + self-report control)
 
-**Column:** Ready · **Priority:** P1 · **Owner:** agent · **Gate:** none (agent-ownable; part B is UI over an already-built+tested backend)
+**Column:** In review · **Priority:** P1 · **Owner:** agent · **Gate:** none (agent-ownable; part B is UI over an already-built+tested backend)
 **Created:** 2026-06-24
 **Related:** [[MV-08]] (the outcome-validation loop this completes the read/write UI for), [[MV-15]]
-(the read-side funnel surface this extends). Evidence: product-review audit `wf_5fb5dfa7-009` (2026-06-24).
+(the read-side funnel surface this extends), [[MV-39]] (Part B carved out). Evidence: product-review
+audit `wf_5fb5dfa7-009` (2026-06-24).
+
+## Status — Part A SHIPPED 2026-06-25 (Part B → MV-39)
+
+Founder steered "ship MV-33 part A + MV-34" (the trust-copy fixes that bite testers first). **Part A
+shipped** (subtitle reconciled). **Part B (the self-report control) is carved out to [[MV-39]]** so this
+card represents the honest-copy fix the founder asked for; MV-39 carries the larger UI-over-built-backend
+slice. Mirrors the [[MV-23]] → [[MV-27]] split pattern.
+
+- Subtitle `components/outcomes/outcome-funnel.tsx` was *"What you told us happened, against the verdict we
+  gave you. Self-reported until verified."* → now *"The programs you've applied to, shown against the verdict
+  we gave you. We'll add your offer and visa results as you report them."* — no longer claims a comparison
+  (rows are stuck at "Applied") or a verification ladder that doesn't exist. "until verified" removed.
+- Evidence: TDD RED→GREEN. New `tests/components/outcomes/outcome-funnel.test.tsx` (+2): asserts the subtitle
+  reads honestly AND that `/until verified/` is absent. Gate green: typecheck clean · lint clean (only the
+  pre-existing board-generator warning) · full suite **1326** (was 1323). Goldens N/A (no scorer path).
+  Banded verdicts only; no raw %.
 
 ## Why
 
@@ -43,9 +60,10 @@ only; no raw %.
 
 ## Acceptance criteria
 
-- [ ] Subtitle no longer claims a comparison/verification the app can't perform; reads honestly for a row
-      stuck at "Applied."
+- [x] Subtitle no longer claims a comparison/verification the app can't perform; reads honestly for a row
+      stuck at "Applied." **(Part A — shipped 2026-06-25)**
 - [ ] A student can report at least one post-"Applied" outcome from the UI; the funnel advances past "Applied."
+      **(Part B → [[MV-39]])**
 - [ ] Banded verdicts only on every row; no raw percentage anywhere.
 - [ ] TDD RED→GREEN per unit; full suite green; goldens N/A (no scorer path).
 

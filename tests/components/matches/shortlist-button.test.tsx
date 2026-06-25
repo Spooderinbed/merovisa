@@ -55,6 +55,11 @@ describe("ShortlistButton (3-state status control)", () => {
     expect(firstBody(fetchMock).status).toBeNull();
   });
 
+  it("discloses that marking Applied locks in the verdict (MV-34)", () => {
+    render(<ShortlistButton programId="p1" initialStatus={null} />);
+    expect(screen.getByText(/locks in this verdict/i)).toBeInTheDocument();
+  });
+
   it("does not POST when the already-active status is clicked", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(ok());
     render(<ShortlistButton programId="p1" initialStatus="shortlisted" />);

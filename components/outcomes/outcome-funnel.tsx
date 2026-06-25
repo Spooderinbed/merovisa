@@ -69,7 +69,8 @@ export function OutcomeFunnel({ rows }: { rows: OutcomeFunnelRow[] }) {
       <div className="flex flex-col gap-1">
         <h2 className="text-[20px] font-medium text-ink">Your applications</h2>
         <p className="text-[14px] text-ink-soft">
-          What you told us happened, against the verdict we gave you. Self-reported until verified.
+          The programs you&rsquo;ve applied to, shown against the verdict we gave you. We&rsquo;ll add
+          your offer and visa results as you report them.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
