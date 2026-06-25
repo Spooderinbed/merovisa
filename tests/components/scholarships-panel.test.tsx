@@ -48,4 +48,14 @@ describe("ScholarshipsPanel", () => {
     expect(screen.getByText(/may be able to apply for/i)).toBeInTheDocument();
     expect(screen.getByText(/eligibility and criteria live with the provider/i)).toBeInTheDocument();
   });
+
+  it("flags research-degree-only awards and qualifies the Sydney pool as institution-wide", () => {
+    render(<ScholarshipsPanel />);
+    // HDR-only awards (UniMelb GRS) say so plainly so coursework applicants aren't
+    // misled into chasing awards they can't use.
+    expect(screen.getAllByText(/research degrees only/i).length).toBeGreaterThanOrEqual(1);
+    // The Sydney $135M figure stays, but is qualified as the whole pool, never a
+    // single applyable award.
+    expect(screen.getByText(/across all its scholarships/i)).toBeInTheDocument();
+  });
 });

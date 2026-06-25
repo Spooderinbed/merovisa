@@ -498,6 +498,7 @@ export interface AuScholarship extends Provenanced {
   totalAnnualValueAud?: number; // funder's total annual scholarship spend, AUD (an "over N" floor)
   benefits?: string[]; // descriptive (non-scalar) benefits, e.g. tuition remission
   regionalCampusOnly?: boolean; // award limited to regional campuses
+  researchDegreeOnly?: boolean; // funds research degrees (PhD / research master's) only
   source: string; // funder page URL
   lastVerified?: string; // ISO date
 }

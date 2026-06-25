@@ -18,6 +18,7 @@ const AuScholarshipSchema = z
     totalAnnualValueAud: z.number().positive().optional(),
     benefits: z.array(z.string().min(1)).min(1).optional(),
     regionalCampusOnly: z.boolean().optional(),
+    researchDegreeOnly: z.boolean().optional(),
     source: HttpUrl,
     lastVerified: IsoDate.optional(),
     provenance: ProvenanceSchema,

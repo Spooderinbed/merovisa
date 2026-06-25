@@ -36,6 +36,13 @@ export interface ScholarshipRow {
    * held — never invented (trust-first honest absence).
    */
   applicationWindow?: string;
+  /**
+   * Who the award is actually for, when it materially narrows the applicant pool
+   * (e.g. research-degree-only). Present only where a real restriction is held —
+   * absent where the level is unrestricted (honest absence), so coursework
+   * applicants aren't misled into chasing research-only awards.
+   */
+  studyEligibility?: string;
 }
 
 const BENEFIT_LABEL: Record<AustraliaAwardsBenefit, string> = {
@@ -94,6 +101,10 @@ export function selectScholarships(): ScholarshipRow[] {
     amount: formatAmount(s),
     source: s.source,
     lastVerified: s.lastVerified,
+    // Surface a research-degree restriction where held; absent otherwise.
+    studyEligibility: s.researchDegreeOnly
+      ? "Research degrees only — PhD or research master's"
+      : undefined,
   }));
 
   return [...awardsRows, ...otherRows];
@@ -113,9 +124,10 @@ function formatAmount(s: (typeof AU_SCHOLARSHIPS)[number]): string {
     return `More than ${s.annualScholarshipCount.toLocaleString()} awarded per year`;
   }
   if (s.totalAnnualValueAud !== undefined) {
-    // Published as a floor ("over AUD N"); show in millions to stay readable.
+    // A funder-wide pool ("over AUD N across ALL its scholarships"), not a single
+    // applyable award — label it so a student never reads it as one they'd receive.
     const millions = s.totalAnnualValueAud / 1_000_000;
-    return `Over AUD ${millions.toLocaleString()} million awarded per year`;
+    return `Over AUD ${millions.toLocaleString()} million awarded across all its scholarships per year`;
   }
   return "See provider";
 }
