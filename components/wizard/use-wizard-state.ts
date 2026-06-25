@@ -73,6 +73,8 @@ export interface WizardState {
   stepKey: WizardStepKey;
   stepIndex: number;
   totalSteps: number;
+  /** Single source of truth for the on-screen counter, e.g. "Step 6 of 8". */
+  stepLabel: string;
   isFirst: boolean;
   isLast: boolean;
   setField: (patch: Partial<StudentProfile>) => void;
@@ -117,6 +119,7 @@ export function useWizardState(
     stepKey,
     stepIndex: clampedIndex,
     totalSteps: visible.length,
+    stepLabel: `Step ${clampedIndex + 1} of ${visible.length}`,
     isFirst: clampedIndex === 0,
     isLast: clampedIndex === visible.length - 1,
     setField,

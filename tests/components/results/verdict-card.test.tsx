@@ -88,3 +88,23 @@ describe("VerdictCard lowest-band severity honesty (audit fix #5)", () => {
     expect(screen.getByText(/realistic shot/i)).toBeInTheDocument();
   });
 });
+
+describe("VerdictCard amber text contrast (a11y #10)", () => {
+  it("paints the possible badge with the darker AA ink, not the bare amber fill token", () => {
+    const { container } = render(<VerdictCard verdict="possible" rulesVerified="x" />);
+    const badge = screen.getByText("Possible");
+    // The amber FILL stays (bg-possible-tint); the TEXT moves to the darker ink
+    // token that clears 4.5:1 on warm paper.
+    expect(badge.className).toContain("text-possible-ink");
+    expect(badge.className).toContain("bg-possible-tint");
+    expect(badge.className).not.toMatch(/text-possible(?![-\w])/);
+    // The stale-rules warning (also amber-on-tint) uses the ink token too.
+    const { container: stale } = render(
+      <VerdictCard verdict="strong" rulesVerified="x" rulesStale />,
+    );
+    const warn = stale.querySelector("p.bg-possible-tint");
+    expect(warn?.className).toContain("text-possible-ink");
+    expect(warn?.className).not.toMatch(/text-possible(?![-\w])/);
+    expect(container).toBeTruthy();
+  });
+});

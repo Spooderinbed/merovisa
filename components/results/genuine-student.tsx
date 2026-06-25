@@ -29,7 +29,7 @@ export function GenuineStudent() {
         {SECTIONS.map((section, i) => (
           <details
             key={section.id}
-            open={i === 0}
+            open={i === 0 || section.id === "the-questions"}
             className="group border-t border-line pt-2 first:border-t-0 first:pt-0"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between font-mono text-[11px] uppercase tracking-wide text-ink-faint marker:content-['']">
@@ -39,9 +39,16 @@ export function GenuineStudent() {
               </span>
             </summary>
             <ul className="mt-2 flex flex-col gap-1.5">
-              {AU_GENUINE_STUDENT.filter((r) => r.section === section.id).map((r) => (
+              {AU_GENUINE_STUDENT.filter((r) => r.section === section.id).map((r, ri) => (
                 <li key={r.id} className="flex items-baseline justify-between gap-3">
-                  <span>{r.summary}</span>
+                  <span className="flex items-baseline gap-2">
+                    {section.id === "the-questions" && (
+                      <span className="shrink-0 font-mono text-[11px] text-ink-faint" aria-hidden>
+                        {ri + 1}
+                      </span>
+                    )}
+                    <span>{r.summary}</span>
+                  </span>
                   <SourceAnchor
                     surface="genuine-student"
                     href={r.source}

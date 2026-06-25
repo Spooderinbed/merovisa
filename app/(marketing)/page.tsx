@@ -52,8 +52,11 @@ export default async function HomePage() {
             you pay anyone.
           </h1>
           <p className="mt-6 max-w-[58ch] text-[clamp(18px,1.5vw,21px)] text-ink-soft">
-            Can I get in? What will it really cost? What&apos;s my visa risk? See where you stand in about two minutes
-            — free, and no sign-up to start.
+            Can I get in? What will it really cost? What&apos;s my visa risk? Answer 9 quick questions to see where you
+            stand — free, and no sign-up to start.
+          </p>
+          <p className="mt-4 max-w-[58ch] text-[15px] text-ink-soft">
+            Built on official Home Affairs and university data — every figure shows its source and date.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -67,7 +70,7 @@ export default async function HomePage() {
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 7v5l3 2" />
               </svg>
-              About 2 minutes · no account needed
+              9 quick questions · no account needed
             </span>
           </div>
         </div>
@@ -91,6 +94,7 @@ export default async function HomePage() {
             title="An AI guide that remembers you"
             body="Not a popup bot. A calm companion that powers a feed of matches, visa updates for your country, and your next best step."
             iconSvg={<IconGuide />}
+            badge="Soon"
           />
           <Tile
             title="SOP coach"

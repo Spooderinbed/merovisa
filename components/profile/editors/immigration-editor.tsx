@@ -33,7 +33,7 @@ export function ImmigrationEditor({ initial }: { initial: ImmigrationInitial }) 
       <div className="flex flex-col gap-2">
         <label htmlFor="ie-refusals" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Prior visa refusals</label>
         <select id="ie-refusals" value={refusals} onChange={(e) => setRefusals(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
           <option value="">Select an option</option>
           {REFUSALS.map((r) => (
             <option key={r.value} value={r.value}>{r.label}</option>

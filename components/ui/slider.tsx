@@ -25,7 +25,7 @@ export function Slider({ min, max, step, value, onChange, ariaLabel, className }
       onChange={(e) => onChange(Number(e.target.value))}
       style={{ background: `linear-gradient(to right, var(--primary) ${pct}%, var(--bg-tint) ${pct}%)` }}
       className={cn(
-        "h-2 w-full cursor-pointer appearance-none rounded-pill outline-none",
+        "h-2 w-full cursor-pointer appearance-none rounded-pill",
         "[&::-webkit-slider-thumb]:size-[26px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-pill [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-surface",
         "[&::-moz-range-thumb]:size-[26px] [&::-moz-range-thumb]:rounded-pill [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:bg-surface",
         className,

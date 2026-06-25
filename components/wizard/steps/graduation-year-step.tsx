@@ -41,7 +41,7 @@ export function GraduationYearStep({ profile, setField, callouts }: StepProps) {
             max={CURRENT_YEAR}
             value={selected ?? CURRENT_YEAR}
             onChange={(e) => setField({ graduationYear: Number(e.target.value) })}
-            className="rounded-sm border border-line-2 bg-surface px-3 py-2 text-ink outline-none focus:border-primary"
+            className="rounded-sm border border-line-2 bg-surface px-3 py-2 text-ink focus:border-primary"
           />
         </label>
       ) : null}

@@ -10,7 +10,7 @@ const VERDICT_META: Record<Verdict, { label: string; line: string; cls: string }
   possible: {
     label: "Possible",
     line: "You have a realistic shot, with a few areas to strengthen.",
-    cls: "bg-possible-tint text-possible",
+    cls: "bg-possible-tint text-possible-ink",
   },
   reach: {
     label: "Reach",
@@ -62,7 +62,7 @@ export function VerdictCard({
           rather than show the calm "verified {date}" line — a stale verdict must
           never read as current. */}
       {rulesStale ? (
-        <p className="mt-3 rounded-lg bg-possible-tint px-3 py-2 font-mono text-[12.5px] text-possible">
+        <p className="mt-3 rounded-lg bg-possible-tint px-3 py-2 font-mono text-[12.5px] text-possible-ink">
           Some scoring rules are overdue for re-verification
           {rulesVerified ? ` (last verified ${rulesVerified})` : ""} — treat this verdict as
           indicative, not current.

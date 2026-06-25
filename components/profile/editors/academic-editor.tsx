@@ -41,12 +41,12 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
       <div className="flex flex-col gap-2">
         <label htmlFor="ae-inst" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Institution</label>
         <input id="ae-inst" value={institution} onChange={(e) => setInstitution(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="ae-degree" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Degree</label>
         <select id="ae-degree" value={degree} onChange={(e) => setDegree(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
           <option value="">Select a degree</option>
           {DEGREES.map((d) => (
             <option key={d.value} value={d.value}>{d.label}</option>
@@ -57,12 +57,12 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
         <div className="flex flex-col gap-2">
           <label htmlFor="ae-grade" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Grade percent</label>
           <input id="ae-grade" type="number" min={0} max={100} value={gradePercent} onChange={(e) => setGradePercent(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="ae-system" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Grade system</label>
           <select id="ae-system" value={gradeSystem} onChange={(e) => setGradeSystem(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
             <option value="">Select a system</option>
             {GRADE_SYSTEMS.map((g) => (
               <option key={g} value={g}>{humanize(g)}</option>

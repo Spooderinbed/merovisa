@@ -99,7 +99,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
           </span>
           <span className="text-[15px] text-ink-soft">
             {c.supported
-              ? "Two minutes, no sign-up to start."
+              ? "9 quick questions, no sign-up to start."
               : "Australia is the corridor we fully cover today."}
           </span>
         </div>

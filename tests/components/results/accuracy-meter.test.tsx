@@ -38,4 +38,25 @@ describe("AccuracyMeter confidence honesty (audit fix #5)", () => {
     expect(screen.getByText(/Profile accuracy/i)).toBeInTheDocument();
     expect(screen.getByText(/Upload your transcript/i)).toBeInTheDocument();
   });
+
+  it("colours the fill with the primary token, not the verdict-amber accent", () => {
+    const { container } = render(<AccuracyMeter accuracy={basic} />);
+    const fill = container.querySelector("[data-accuracy-fill]") as HTMLElement | null;
+    expect(fill).not.toBeNull();
+    expect(fill?.className).toContain("bg-primary");
+    expect(fill?.className).not.toContain("bg-accent");
+  });
+
+  it("bands the fill width to discrete quartile steps, never a raw completeness number", () => {
+    const { container } = render(<AccuracyMeter accuracy={{ ...basic, completeness: 28 }} />);
+    const fill = container.querySelector("[data-accuracy-fill]") as HTMLElement | null;
+    // 28% lands in the first quartile -> banded to 25%, not the raw 28%.
+    expect(fill?.style.width).toBe("25%");
+
+    const { container: c2 } = render(
+      <AccuracyMeter accuracy={{ ...basic, completeness: 80, level: "Complete" }} />,
+    );
+    const fill2 = c2.querySelector("[data-accuracy-fill]") as HTMLElement | null;
+    expect(fill2?.style.width).toBe("75%");
+  });
 });

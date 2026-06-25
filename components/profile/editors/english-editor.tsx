@@ -55,7 +55,7 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
       <div className="flex flex-col gap-2">
         <label htmlFor="ee-test" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Test</label>
         <select id="ee-test" value={test} onChange={(e) => setTest(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
           <option value="">Select a test</option>
           {TESTS.map((t) => (
             <option key={t.value} value={t.value}>{t.label}</option>
@@ -65,28 +65,28 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
       <div className="flex flex-col gap-2">
         <label htmlFor="ee-overall" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Overall score</label>
         <input id="ee-overall" type="number" min={0} max={overallScale.max} step={overallScale.step} value={overall} onChange={(e) => setOverall(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
           <label htmlFor="ee-listening" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Listening</label>
           <input id="ee-listening" type="number" min={0} max={9} step={0.5} value={listening} onChange={(e) => setListening(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="ee-reading" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Reading</label>
           <input id="ee-reading" type="number" min={0} max={9} step={0.5} value={reading} onChange={(e) => setReading(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="ee-writing" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Writing</label>
           <input id="ee-writing" type="number" min={0} max={9} step={0.5} value={writing} onChange={(e) => setWriting(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="ee-speaking" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Speaking</label>
           <input id="ee-speaking" type="number" min={0} max={9} step={0.5} value={speaking} onChange={(e) => setSpeaking(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
       </div>
       <p className="text-[13px] text-ink-soft">

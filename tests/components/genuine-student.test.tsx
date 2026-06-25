@@ -50,11 +50,22 @@ describe("GenuineStudent", () => {
     );
   });
 
-  it("renders the first section open and the rest collapsed", () => {
+  it("renders the first section open and 'the questions you'll answer' open by default", () => {
     const { container } = render(<GenuineStudent />);
     const details = container.querySelectorAll("details");
     expect(details).toHaveLength(5);
     expect(details[0]?.hasAttribute("open")).toBe(true);
-    expect(details[1]?.hasAttribute("open")).toBe(false);
+    // "The questions you'll answer" is section index 1 — opened by default so the
+    // four questions are visible without a click.
+    expect(details[1]?.hasAttribute("open")).toBe(true);
+    // The remaining sections stay collapsed.
+    expect(details[2]?.hasAttribute("open")).toBe(false);
+  });
+
+  it("numbers the four questions 1-4 with mono numerals", () => {
+    render(<GenuineStudent />);
+    ["1", "2", "3", "4"].forEach((n) => {
+      expect(screen.getByText(n, { selector: "span.font-mono" })).toBeInTheDocument();
+    });
   });
 });

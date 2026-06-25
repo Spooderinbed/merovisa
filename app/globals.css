@@ -23,6 +23,7 @@
   --color-strong: var(--strong);
   --color-strong-tint: var(--strong-tint);
   --color-possible: var(--possible);
+  --color-possible-ink: var(--possible-ink);
   --color-possible-tint: var(--possible-tint);
   --color-reach: var(--reach);
   --color-reach-tint: var(--reach-tint);
@@ -82,6 +83,10 @@
   --strong: #1f6d4a;
   --strong-tint: #1f6d4a16;
   --possible: #b07d22;
+  /* Amber FILL (above) clears ~3.6:1 as text on warm paper — fine for bands/borders,
+     fails WCAG AA for small text. This darker ink (~5.0:1 on #f6f5f1) is the text
+     companion; use it wherever amber is type, not fill. */
+  --possible-ink: #8a6212;
   --possible-tint: #b07d2216;
   --reach: #b1503a;
   --reach-tint: #b1503a16;
@@ -107,6 +112,9 @@
   --strong: #5bbd8c;
   --strong-tint: #5bbd8c20;
   --possible: #d6a24a;
+  /* In dark mode the amber already clears AA on the dark surfaces, so the ink
+     token mirrors the fill — keeps `text-possible-ink` valid in both themes. */
+  --possible-ink: #d6a24a;
   --possible-tint: #d6a24a20;
   --reach: #d8775f;
   --reach-tint: #d8775f20;
@@ -118,6 +126,36 @@
 @layer base {
 * {
   box-sizing: border-box;
+}
+
+/* Honor the OS "reduce motion" preference: collapse every animation/transition
+   to a near-instant step so the final state (opacity, visibility, position) is
+   still reached, just without movement. ~0.01ms rather than 0 so animationend /
+   transitionend listeners still fire. Lives in @layer base (not unlayered) per
+   the cascade-layering guard; !important wins across layers regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessibility: every interactive element gets a visible keyboard-focus ring.
+   `:focus` clears the default outline for pointer focus; `:focus-visible` paints
+   the teal ring only for keyboard/AT focus. Components that set `outline-none`
+   to suppress the native outline no longer kill this — the ring rides on
+   :focus-visible, and inputs keep their `focus:border-primary` affordance. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: inherit;
 }
 html,
 body {

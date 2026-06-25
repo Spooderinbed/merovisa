@@ -84,18 +84,18 @@ export function WorkGapEditor({ initial }: { initial: WorkGapInitial }) {
       <div className="flex flex-col gap-2">
         <label htmlFor="we-title" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Title</label>
         <input id="we-title" value={title} onChange={(e) => setTitle(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="we-years" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Years</label>
           <input id="we-years" type="number" min={0} max={40} value={workYears} onChange={(e) => setWorkYears(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="we-relevance" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Relevance</label>
           <select id="we-relevance" value={relevance} onChange={(e) => setRelevance(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
             <option value="">Select relevance</option>
             {RELEVANCE.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
@@ -114,7 +114,7 @@ export function WorkGapEditor({ initial }: { initial: WorkGapInitial }) {
         <div className="flex flex-col gap-2">
           <label htmlFor="ge-years" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Years of gap</label>
           <input id="ge-years" type="number" min={0} max={20} value={gapYears} onChange={(e) => setGapYears(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
         <div className="flex flex-col gap-2">
           <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Reasons</span>

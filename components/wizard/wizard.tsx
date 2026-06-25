@@ -66,9 +66,7 @@ export function Wizard({
     <div className="mx-auto flex min-h-[80vh] w-full max-w-narrow flex-col gap-8 px-5 py-10">
       <div className="flex items-center justify-between">
         <ProgressDots total={w.totalSteps} current={w.stepIndex} />
-        <span className="font-mono text-[12.5px] text-ink-faint">
-          {w.stepIndex + 1} / {w.totalSteps}
-        </span>
+        <span className="font-mono text-[12.5px] text-ink-faint">{w.stepLabel}</span>
       </div>
 
       <div key={w.stepKey} className="flex-1">

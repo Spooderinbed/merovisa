@@ -19,8 +19,19 @@ describe("Marketing homepage", () => {
     expect(screen.getByText(/An AI guide that remembers you/i)).toBeInTheDocument();
     expect(screen.getByText(/SOP coach/i)).toBeInTheDocument();
     expect(screen.getByText(/Tell us about you/i)).toBeInTheDocument();
-    expect(screen.getByText(/Your feed, once you're in/i)).toBeInTheDocument();
+    expect(screen.getByText(/A preview of your feed/i)).toBeInTheDocument();
     expect(screen.getByText(/We sit before the consultancy/i)).toBeInTheDocument();
+  });
+
+  it("frames the flow honestly (9 questions, not a ~2 minute claim) and shows the data-authority line", async () => {
+    const ui = await HomePage();
+    render(ui);
+    expect(screen.getByText(/9 quick questions · no account needed/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Built on official Home Affairs and university data/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/two minutes/i)).toBeNull();
+    expect(screen.queryByText(/About 2 minutes/i)).toBeNull();
   });
 
   it("renders the primary hero CTA pointing to /assess", async () => {

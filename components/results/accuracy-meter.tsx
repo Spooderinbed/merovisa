@@ -1,6 +1,9 @@
 import type { ProfileAccuracy } from "@/lib/results/accuracy";
 
 export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
+  // Band the fill to discrete quartile steps so the bar reads as coarse
+  // progress, never a raw completeness percentage leaking to the user.
+  const banded = Math.max(25, Math.floor(accuracy.completeness / 25) * 25);
   return (
     <section className="rounded-lg border border-line bg-surface p-6">
       <div className="flex items-baseline justify-between">
@@ -11,8 +14,9 @@ export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
       </div>
       <span className="mt-3 block h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
         <span
-          className="block h-full rounded-pill bg-accent transition-[width] duration-700 ease-calm"
-          style={{ width: `${accuracy.completeness}%` }}
+          data-accuracy-fill
+          className="block h-full rounded-pill bg-primary transition-[width] duration-700 ease-calm"
+          style={{ width: `${banded}%` }}
         />
       </span>
       <p className="mt-4 text-[15px] text-ink-soft">Make your assessment more complete:</p>

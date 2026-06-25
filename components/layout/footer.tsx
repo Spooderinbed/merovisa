@@ -9,25 +9,14 @@ const COLS: Col[] = [
     links: [
       { label: "Eligibility", href: "/assess" },
       { label: "Destinations", href: "/destinations" },
-      { label: "AI guide", href: "/how#guide" },
-      { label: "SOP coach", href: "/how#sop" },
+      { label: "How we score", href: "/how" },
     ],
   },
   {
     title: "Trust",
     links: [
-      { label: "How we score", href: "/how" },
-      { label: "Our data sources", href: "/trust#sources" },
+      { label: "Methodology", href: "/how" },
       { label: "Why no agents", href: "/trust" },
-      { label: "Privacy", href: "/trust#privacy" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { label: "About", href: "/trust#about" },
-      { label: "Contact", href: "/trust#contact" },
-      { label: "Careers", href: "/trust#careers" },
     ],
   },
 ];

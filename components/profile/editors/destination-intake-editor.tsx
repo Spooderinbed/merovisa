@@ -138,7 +138,7 @@ export function DestinationIntakeEditor({ initial }: { initial: DestinationIntak
       <div className="flex flex-col gap-2 border-t border-line pt-4">
         <label htmlFor="pe-intake" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Intake</label>
         <input id="pe-intake" type="date" value={intake} onChange={(e) => setIntake(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         <span className="text-[12px] text-ink-soft">When you plan to start studying.</span>
       </div>
       <div className="flex flex-col gap-2 border-t border-line pt-4">

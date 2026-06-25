@@ -49,6 +49,7 @@ All active work is tracked on an **in-repo kanban at `docs/kanban/` — check it
 - **Motion:** `cubic-bezier(.22, .61, .36, 1)` everywhere
 - **Dark mode:** Use `background-color` not `background` shorthand (CSS custom property re-resolution bug)
 - Sentence case everywhere. No ALL CAPS except mono-up labels.
+- **Imageless product body:** photography is permitted only on marketing pages + auth, never inside results/matches/plan/checklist/dashboard/profile/wizard (verdicts stay word+colour bands). See `docs/imagery-policy.md`.
 - Full token reference in the design spec, Section 7.
 
 ## Architecture Rules

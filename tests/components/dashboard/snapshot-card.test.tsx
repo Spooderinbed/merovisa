@@ -27,9 +27,11 @@ describe("SnapshotCard", () => {
     expect(screen.getByText(/Australia/i)).toBeInTheDocument();
   });
 
-  it("renders a 'Run your first assessment' empty state when payload is null", () => {
+  it("renders a 'Run your first assessment' empty state with honest 9-question framing", () => {
     render(<SnapshotCard primary={null} destinationLabel={null} />);
     expect(screen.getByText(/Run your first assessment/i)).toBeInTheDocument();
+    expect(screen.getByText(/9 quick questions/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Two minutes/i)).toBeNull();
     expect(screen.getByRole("link", { name: /Check eligibility/i })).toHaveAttribute("href", "/assess");
   });
 });

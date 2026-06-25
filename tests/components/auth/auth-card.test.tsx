@@ -34,12 +34,12 @@ describe("AuthCard", () => {
     expect(arg.options.redirectTo).not.toMatch(/claim=/);
   });
 
-  it("reveals an email field behind the disclosure and shows a coming-soon notice on submit", async () => {
+  it("discloses honestly that email sign-in isn't ready — no fake submit masquerading as login", async () => {
     render(<AuthCard />);
     await userEvent.click(screen.getByRole("button", { name: /Other ways to sign in/i }));
-    const email = screen.getByLabelText(/email/i);
-    await userEvent.type(email, "student@example.com");
-    await userEvent.click(screen.getByRole("button", { name: /Create account & save/i }));
-    expect(await screen.findByText(/Email sign-in is coming soon/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Email sign-in isn't ready yet/i)).toBeInTheDocument();
+    // no email input and no submit button pretending to create an account
+    expect(screen.queryByRole("textbox", { name: /email/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Create account/i })).toBeNull();
   });
 });

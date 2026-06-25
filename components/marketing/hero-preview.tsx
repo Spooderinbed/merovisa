@@ -8,7 +8,7 @@ export function HeroPreview() {
             <circle cx="12" cy="12" r="8" />
             <circle cx="12" cy="12" r="3" />
           </svg>
-          Your feed, once you&apos;re in
+          A preview of your feed
         </span>
         <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">preview</span>
       </div>

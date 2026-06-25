@@ -10,19 +10,12 @@ interface AuthCardProps {
 
 export function AuthCard({ nextPath }: AuthCardProps) {
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
 
   const continueWithGoogle = async () => {
     const supabase = createSupabaseBrowserClient();
     const destination = nextPath ?? "/dashboard";
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
     await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-  };
-
-  const submitEmail = (e: React.FormEvent) => {
-    e.preventDefault();
-    setNotice("Email sign-in is coming soon. For now please use Google.");
   };
 
   return (
@@ -63,28 +56,9 @@ export function AuthCard({ nextPath }: AuthCardProps) {
         </button>
 
         {open ? (
-          <form onSubmit={submitEmail} className="mt-2 flex flex-col gap-3 border-t border-line pt-4">
-            <label htmlFor="auth-email" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
-              Email
-            </label>
-            <input
-              id="auth-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary"
-            />
-            <Button type="submit" variant="ghost" className="w-full">
-              Create account & save
-            </Button>
-            {notice ? (
-              <p role="status" className="text-[14px] text-ink-soft">
-                {notice}
-              </p>
-            ) : null}
-          </form>
+          <p role="status" className="mt-2 border-t border-line pt-4 text-[14px] text-ink-soft">
+            Email sign-in isn&apos;t ready yet — Google is the only way to sign in for now.
+          </p>
         ) : null}
       </div>
     </div>

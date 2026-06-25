@@ -50,7 +50,7 @@ export function DeleteAccountSection() {
           onChange={(e) => setConfirm(e.target.value)}
           aria-label={`Type ${CONFIRM_WORD} to confirm`}
           autoComplete="off"
-          className="max-w-[220px] rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary"
+          className="max-w-[220px] rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary"
         />
       </label>
       {error ? <p className="text-[14px] text-reach">{error}</p> : null}

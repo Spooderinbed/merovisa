@@ -94,7 +94,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       <div className="flex flex-col gap-2">
         <label htmlFor="ise-level" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Level</label>
         <select id="ise-level" value={level} onChange={(e) => setLevel(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
           <option value="">Select a level</option>
           {LEVELS.map((l) => (
             <option key={l.value} value={l.value}>{l.label}</option>
@@ -104,7 +104,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       <div className="flex flex-col gap-2">
         <label htmlFor="ise-field" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Field</label>
         <select id="ise-field" value={field} onChange={(e) => setField(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
           <option value="">Select a field</option>
           {FIELDS.map((f) => (
             <option key={f.value} value={f.value}>{f.label}</option>
@@ -114,13 +114,13 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       <div className="flex flex-col gap-2">
         <label htmlFor="ise-spec" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Specialisation</label>
         <input id="ise-spec" value={specialisation} onChange={(e) => setSpecialisation(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
       </div>
       <div className="flex flex-col gap-4 border-t border-line pt-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="ce-goal" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Career goal</label>
           <select id="ce-goal" value={goal} onChange={(e) => setGoal(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary">
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
             <option value="">Select a goal</option>
             {GOALS.map((g) => (
               <option key={g.value} value={g.value}>{g.label}</option>
@@ -130,7 +130,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
         <div className="flex flex-col gap-2">
           <label htmlFor="ce-target-role" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Target role</label>
           <input id="ce-target-role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}
-            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink outline-none focus:border-primary" />
+            className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
         </div>
       </div>
       <div className="flex items-center gap-3">

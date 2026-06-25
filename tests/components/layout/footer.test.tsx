@@ -3,15 +3,25 @@ import { render, screen } from "@testing-library/react";
 import { Footer } from "@/components/layout/footer";
 
 describe("Footer", () => {
-  it("renders the three column titles and the trust + copyright lines", () => {
+  it("renders the column titles and the trust + copyright lines", () => {
     render(<Footer />);
     expect(screen.getByText(/Product/i)).toBeInTheDocument();
     expect(screen.getByText(/Trust/i)).toBeInTheDocument();
-    expect(screen.getByText(/Company/i)).toBeInTheDocument();
     expect(
       screen.getByText(/Every data point carries its source and a verification date\./i),
     ).toBeInTheDocument();
     expect(screen.getByText(/© 2026 MyVisa/i)).toBeInTheDocument();
+  });
+
+  it("does not link to pages or anchors that do not exist", () => {
+    render(<Footer />);
+    // About / Careers / Contact have no page; broken #anchors removed
+    expect(screen.queryByRole("link", { name: /About/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Careers/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Contact/i })).toBeNull();
+    for (const link of screen.getAllByRole("link")) {
+      expect(link.getAttribute("href")).not.toContain("#");
+    }
   });
 
   it("makes no freshness claim we cannot keep", () => {

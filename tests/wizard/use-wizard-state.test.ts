@@ -38,6 +38,22 @@ describe("useWizardState", () => {
     expect(visibleStepsFor(result.current.profile)).toContain("gap");
   });
 
+  it("exposes a single live step label derived from the current position", () => {
+    const { result } = renderHook(() => useWizardState());
+    // No gap: 8 steps. The label is the one source of truth for the counter.
+    expect(result.current.stepLabel).toBe("Step 1 of 8");
+    act(() => void result.current.next());
+    expect(result.current.stepLabel).toBe("Step 2 of 8");
+  });
+
+  it("keeps the step label consistent with the live total when the gap step appears", () => {
+    const { result } = renderHook(() => useWizardState());
+    act(() => result.current.setField({ graduationYear: currentYear - 4 }));
+    // Gap step now visible -> total is 9, and the label tracks it, never a stale count.
+    expect(result.current.totalSteps).toBe(9);
+    expect(result.current.stepLabel).toBe("Step 1 of 9");
+  });
+
   it("reports done on the final step", () => {
     const { result } = renderHook(() => useWizardState());
     for (let i = 0; i < 7; i++) act(() => void result.current.next());
