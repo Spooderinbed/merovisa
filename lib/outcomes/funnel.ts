@@ -4,6 +4,7 @@
 
 import type { EventType } from "./types";
 import type { PredictionRow, AttemptRow, EventRow } from "./repo";
+import { selfReportNextEvents } from "./state-machine";
 
 /** The single milestone an attempt currently sits at, for display. */
 export type FunnelStage =
@@ -48,6 +49,8 @@ export interface OutcomeFunnelRow {
   stage: FunnelStage;
   intake: string | null;
   lastUpdated: string;
+  /** The legal next milestones the student can self-report from this row (S7). */
+  nextEvents: EventType[];
 }
 
 export interface BuildOutcomeFunnelInput {
@@ -78,7 +81,9 @@ export function buildOutcomeFunnel(input: BuildOutcomeFunnelInput): OutcomeFunne
     if (!prediction) continue;
 
     const attemptEvents = eventsByAttempt.get(attempt.id) ?? [];
-    const stage = deriveFunnelStage(attemptEvents.map((e) => e.eventType));
+    const eventTypes = attemptEvents.map((e) => e.eventType);
+    const stage = deriveFunnelStage(eventTypes);
+    const nextEvents = selfReportNextEvents(eventTypes);
     const program = input.programLookup.get(attempt.programId);
     const lastUpdated = attemptEvents.reduce(
       (latest, e) => (e.occurredAt > latest ? e.occurredAt : latest),
@@ -93,6 +98,7 @@ export function buildOutcomeFunnel(input: BuildOutcomeFunnelInput): OutcomeFunne
       stage,
       intake: attempt.intake,
       lastUpdated,
+      nextEvents,
     });
   }
 

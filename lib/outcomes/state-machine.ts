@@ -12,6 +12,31 @@ export interface TransitionResult {
   reason?: string;
 }
 
+// The milestones a student can self-report from the funnel, in journey order. The
+// root 'applied' (written automatically on apply) and the quiet 'withdrawn' /
+// 'conditional_offer' branches are deliberately left out of the button set — this
+// is the forward path a student walks, one legal step at a time.
+const SELF_REPORTABLE: readonly EventType[] = [
+  "offer_received",
+  "application_rejected",
+  "offer_accepted",
+  "coe_issued",
+  "visa_lodged",
+  "visa_granted",
+  "visa_refused",
+  "enrolled",
+];
+
+/**
+ * Given the events already recorded for an attempt, the legal next milestones a
+ * student can self-report — derived from the same state machine the API enforces,
+ * so the funnel only ever shows buttons that won't be rejected (409). Empty at a
+ * terminal outcome, and before the application is even recorded.
+ */
+export function selfReportNextEvents(prior: EventType[]): EventType[] {
+  return SELF_REPORTABLE.filter((next) => canRecordEvent(prior, next).ok);
+}
+
 const POSITIVE_ADMISSION: readonly EventType[] = [
   "offer_received",
   "conditional_offer",

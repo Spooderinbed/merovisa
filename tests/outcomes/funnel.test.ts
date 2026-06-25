@@ -113,6 +113,23 @@ describe("buildOutcomeFunnel", () => {
     });
   });
 
+  it("attaches the legal next self-report milestones to each row", () => {
+    const predictions = [prediction("pred-1", "prog-1", "strong"), prediction("pred-2", "prog-2", "possible")];
+    const attempts = [attempt("att-1", "pred-1", "prog-1"), attempt("att-2", "pred-2", "prog-2")];
+    const events = [
+      ev("att-1", "applied", "2026-01-03T00:00:00Z"),
+      ev("att-2", "applied", "2026-01-05T00:00:00Z"),
+      ev("att-2", "offer_received", "2026-01-09T00:00:00Z"),
+    ];
+
+    const rows = buildOutcomeFunnel({ predictions, attempts, events, programLookup });
+    const byId = new Map(rows.map((r) => [r.attemptId, r]));
+
+    // applied-only → the offer/rejection fork; offer received → only accept it next.
+    expect(byId.get("att-1")!.nextEvents).toEqual(["offer_received", "application_rejected"]);
+    expect(byId.get("att-2")!.nextEvents).toEqual(["offer_accepted"]);
+  });
+
   it("falls back gracefully when the program is not in the lookup", () => {
     const predictions = [prediction("pred-9", "prog-unknown", "reach")];
     const attempts = [attempt("att-9", "pred-9", "prog-unknown")];

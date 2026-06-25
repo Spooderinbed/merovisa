@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canRecordEvent } from "@/lib/outcomes/state-machine";
+import { canRecordEvent, selfReportNextEvents } from "@/lib/outcomes/state-machine";
 import type { EventType } from "@/lib/outcomes/types";
 
 const APPLIED: EventType[] = ["applied"];
@@ -87,5 +87,48 @@ describe("canRecordEvent — rejection carries a reason", () => {
     expect(r.ok).toBe(false);
     expect(typeof r.reason).toBe("string");
     expect(r.reason!.length).toBeGreaterThan(0);
+  });
+});
+
+describe("selfReportNextEvents — what a student can report next", () => {
+  it("offers the offer/rejection fork after applying (not the visa chain yet)", () => {
+    expect(selfReportNextEvents(APPLIED)).toEqual(["offer_received", "application_rejected"]);
+  });
+
+  it("offers only accepting the offer once one is received (rejection is no longer legal)", () => {
+    expect(selfReportNextEvents(THROUGH_OFFER)).toEqual(["offer_accepted"]);
+  });
+
+  it("walks the admission chain one legal step at a time", () => {
+    expect(selfReportNextEvents(THROUGH_ACCEPT)).toEqual(["coe_issued"]);
+    expect(selfReportNextEvents(THROUGH_COE)).toEqual(["visa_lodged"]);
+  });
+
+  it("offers both visa decisions once the visa is lodged", () => {
+    expect(selfReportNextEvents(THROUGH_LODGE)).toEqual(["visa_granted", "visa_refused"]);
+  });
+
+  it("offers enrolment after a granted visa", () => {
+    expect(selfReportNextEvents([...THROUGH_LODGE, "visa_granted"])).toEqual(["enrolled"]);
+  });
+
+  it("offers nothing at a terminal outcome", () => {
+    expect(selfReportNextEvents(["applied", "application_rejected"])).toEqual([]);
+    expect(selfReportNextEvents([...THROUGH_LODGE, "visa_refused"])).toEqual([]);
+    expect(selfReportNextEvents([...THROUGH_LODGE, "visa_granted", "enrolled"])).toEqual([]);
+  });
+
+  it("never includes the root 'applied' or a quiet 'withdrawn' in the self-report buttons", () => {
+    const all = [
+      ...selfReportNextEvents(APPLIED),
+      ...selfReportNextEvents(THROUGH_OFFER),
+      ...selfReportNextEvents(THROUGH_LODGE),
+    ];
+    expect(all).not.toContain("applied");
+    expect(all).not.toContain("withdrawn");
+  });
+
+  it("offers nothing before the application is even recorded (defensive)", () => {
+    expect(selfReportNextEvents([])).toEqual([]);
   });
 });

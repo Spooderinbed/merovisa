@@ -1,5 +1,6 @@
 import type { FunnelStage, OutcomeFunnelRow } from "@/lib/outcomes/funnel";
 import { cn } from "@/lib/utils";
+import { OutcomeSelfReport } from "./outcome-self-report";
 
 const VERDICT_CHIP: Record<string, { label: string; cls: string }> = {
   strong: { label: "Strong match", cls: "bg-strong-tint text-strong" },
@@ -52,6 +53,7 @@ function OutcomeRow({ row }: { row: OutcomeFunnelRow }) {
         {row.intake ? <span>Intake {row.intake}</span> : null}
         {row.lastUpdated ? <span>· Updated {updatedLabel(row.lastUpdated)}</span> : null}
       </div>
+      <OutcomeSelfReport attemptId={row.attemptId} nextEvents={row.nextEvents} />
     </article>
   );
 }
