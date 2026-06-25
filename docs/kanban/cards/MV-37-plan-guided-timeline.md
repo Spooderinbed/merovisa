@@ -86,6 +86,45 @@ of students at the English step and loses them.
 to show the realistic long-lead callouts (attestation ~3–8 wks, police 6-mo validity, OSHC-from-course-start);
 and how literal to be about conditional offers (English as a CoE gate) without overwhelming a first-time student.
 
+## Codex (GPT-5) review — 2026-06-25: NO-GO as specified · conditional GO
+
+Verdict: the guided-timeline direction is right, but the spine above has **specification errors**. Build only
+after these conditions are met. Severity-tagged:
+
+- **BLOCKER · per-application state, not a global phase.** One student with 3 programs (one conditional offer,
+  one shortlisted, one accepted) cannot share a single global phase. Track phase **per application**; derive the
+  dashboard "primary track" from a user-nominated principal application. The "earliest-unmet-gate (global)" logic
+  breaks the moment a 2nd program exists. *(This is the biggest architectural correction.)*
+- **BLOCKER · next-step selector must exclude non-actionable tasks.** "Top task in the current phase" will
+  surface tasks blocked on a provider response / waiting on an embassy / not-yet-valid-to-start. Add a
+  `blocked / waiting / premature` exclusion so the recommended action is always something the student can do today.
+- **BLOCKER · entry states.** Students who arrive with an existing IELTS, offer, or CoE must not be marched
+  through prior phases — add "I already have…" completion states at onboarding/plan, or the timeline is hostile to
+  the most action-ready users.
+- **BLOCKER · proof-of-funds figure is mislabelled.** AUD 29,710 is the **living-cost benchmark**, not total
+  financial capacity (capacity = first-year tuition + living + travel + any dependants). Label it "calculate your
+  required financial capacity," don't show a single fixed number as "proof of funds." (Visa-stage placement is
+  correct; the figure/label is not.) Folds into [[MV-38]]. Note: the MV-10 cost tab already composes the fuller
+  band (tuition + 29,710 living + OSHC + visa = ~76.9k) — reuse that, don't surface 29,710 alone.
+- **CONFLICT to resolve before build · the attestation chain.** The first domain pass called MoEST→MoFA→Embassy
+  attestation a universal ~3–8wk Nepal gate; the Codex pass says it is **not** a universal DHA Sub-500 requirement
+  and should be sourced **per-provider**, not hard-coded as a global phase step. **Do not assert either as fact
+  (trust-first).** Resolution: the timeline must NOT hard-code requirement specifics — those already live in the
+  per-program checklist (`lib/checklist/generator.ts` already emits NOC / biometrics / police cert / translations /
+  GS / agent MARN). The timeline sequences/【references】the checklist; it does not re-source requirements. This is
+  also the clean reframing of [[MV-27]] (the timeline is the scaffold; the checklist is the requirement reference).
+- **VERIFY · Nepal MoEST study-permission / NOC** as a real hard gate around offer-accept → deposit/visa. It is
+  already a checklist line; confirm placement in the phase sequence (Codex put it in Phase C). Verify against an
+  authoritative source before presenting timing as fact.
+- **CONDITIONAL tasks, not fixed phase-D items · police certificate + health exam.** Not universally required;
+  validity windows matter (police ~6-mo, health ~12-mo). Render as conditional with explain-why copy
+  ("do this now" / "don't do this yet"), driven by the student's intake date + requirement set.
+
+**Smallest first increment Codex endorses** (avoid over-engineering): keep the existing plan items, but (1) group
+them under the A–E phases via `phases.ts`, (2) replace newest-created-first ordering with phase order, (3) make the
+"next step" selector actionable-only, (4) ship "I already have…" entry states. Defer per-application multi-track and
+dynamic capacity to a second slice. Re-frame copy from "action queue" → guided timeline.
+
 ## Acceptance criteria (post design sign-off)
 
 - [ ] The plan presents as an **ordered, guided journey** (sequenced/numbered or phase-stepped), not an
