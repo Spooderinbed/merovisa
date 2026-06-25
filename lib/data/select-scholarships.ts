@@ -30,6 +30,12 @@ export interface ScholarshipRow {
   amount: string;
   source: string;
   lastVerified?: string;
+  /**
+   * Readable application window ("Applications open …, close …"), present only
+   * when the funder publishes fixed open/close dates. Absent when no dates are
+   * held — never invented (trust-first honest absence).
+   */
+  applicationWindow?: string;
 }
 
 const BENEFIT_LABEL: Record<AustraliaAwardsBenefit, string> = {
@@ -45,6 +51,27 @@ function joinBenefits(labels: string[]): string {
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 }
 
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Render a fixed ISO date ("YYYY-MM-DD") as "D Mon YYYY" deterministically — by
+ * splitting the parts, not via Date(), so there is no timezone drift.
+ */
+function formatIsoDate(iso: string): string {
+  const year = iso.slice(0, 4);
+  const month = Number(iso.slice(5, 7));
+  const day = Number(iso.slice(8, 10));
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+/** Build the readable application-window line from the held open/close dates. */
+function formatWindow(opens: string, closes: string): string {
+  return `Applications open ${formatIsoDate(opens)}, close ${formatIsoDate(closes)}`;
+}
+
 export function selectScholarships(): ScholarshipRow[] {
   // Australia Awards first — the Nepal-scoped, fully-funded award leads the list.
   const awardsRows: ScholarshipRow[] = AUSTRALIA_AWARDS_SCHOLARSHIPS.map((s) => ({
@@ -55,6 +82,8 @@ export function selectScholarships(): ScholarshipRow[] {
     amount: "Fully funded",
     source: s.source,
     lastVerified: s.lastVerified,
+    // The Australia Awards record holds a fixed application window; surface it.
+    applicationWindow: formatWindow(s.applicationOpens, s.applicationCloses),
   }));
 
   const otherRows: ScholarshipRow[] = AU_SCHOLARSHIPS.map((s) => ({

@@ -45,4 +45,25 @@ describe("selectScholarships", () => {
       expect(row.who.length, row.name).toBeGreaterThan(0);
     }
   });
+
+  it("surfaces the held Australia Awards application window as a readable key-dates line", () => {
+    // applicationOpens 2026-02-01 / applicationCloses 2026-04-30 are held in the
+    // source record but were never surfaced. MV-54 renders them readably.
+    const awards = rows.find((r) => r.id === "australia-awards-nepal");
+    expect(awards?.applicationWindow).toMatch(/open/i);
+    expect(awards?.applicationWindow).toMatch(/close/i);
+    expect(awards?.applicationWindow).toMatch(/1 Feb 2026/);
+    expect(awards?.applicationWindow).toMatch(/30 Apr 2026/);
+  });
+
+  it("leaves the application window undefined for funders that publish no fixed dates (honest absence)", () => {
+    // au-scholarships records hold no open/close dates; we never invent one.
+    for (const id of [
+      "destination-australia-scholarship",
+      "unimelb-graduate-research-scholarship",
+      "university-of-sydney-scholarships",
+    ]) {
+      expect(rows.find((r) => r.id === id)?.applicationWindow, id).toBeUndefined();
+    }
+  });
 });

@@ -740,13 +740,13 @@
     },
     {
       "id": "MV-54",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
-      "file": null,
+      "file": "cards/MV-54-scholarship-key-dates.md",
       "title": "Scholarships: surface held application open/close dates",
-      "summary": "Founder ask (2026-06-26): scholarships is a flat 5-row reference list, intentionally guidance-free per the trust-first honesty guard (components/matches/scholarships-panel.tsx). UNBLOCKED quick win: surface the applicationOpens/applicationCloses dates already HELD but never rendered (lib/data/source/australia-awards-scholarship.ts:15-35; au-scholarships.ts) as a 'key dates' line per row. Expand ScholarshipRow + panel. Effort M (small), NO data dep. Pairs with the research-blocked eligibility/how-to half (MV-55).",
+      "summary": "SHIPPED 2026-06-26 (branch mv-51, awaits PR merge). Surfaced the held Australia Awards application window (applicationOpens 2026-02-01 / applicationCloses 2026-04-30, australia-awards-scholarship.ts) as a calm 'Applications open 1 Feb 2026, close 30 Apr 2026' key-dates line. New optional ScholarshipRow.applicationWindow + deterministic ISO-slice formatter in select-scholarships.ts; conditional <p> in scholarships-panel.tsx rendered ONLY when held. Trust-first: the 3 au-scholarships rows hold no dates so show no line (honest absence, never invented). TDD +3 (incl. absence guard); typecheck clean, lint 0 err, suite 1371 (was 1368). Founder: merge PR -> Done.",
       "created": "2026-06-26",
       "entered": "2026-06-26"
     },

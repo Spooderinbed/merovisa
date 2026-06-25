@@ -31,6 +31,13 @@ describe("ScholarshipsPanel", () => {
     }
   });
 
+  it("renders the held Australia Awards application window as a key-dates line", () => {
+    render(<ScholarshipsPanel />);
+    expect(
+      screen.getByText(/applications open 1 Feb 2026, close 30 Apr 2026/i),
+    ).toBeInTheDocument();
+  });
+
   it("frames the list as may-apply, not personalized eligibility, and points criteria to the provider", () => {
     render(<ScholarshipsPanel />);
     // The honesty guard: never "you qualify"/"you're eligible".
