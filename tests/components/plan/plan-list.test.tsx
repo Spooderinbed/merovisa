@@ -34,37 +34,45 @@ describe("PlanList", () => {
     expect(screen.getByText(/All caught up/i)).toBeInTheDocument();
   });
 
-  it("groups open items by impact and collapses closed", () => {
+  it("groups open items into journey phases, in A→E order, and collapses closed", () => {
     render(
       <PlanList
-        items={[mk(1, "high", "todo"), mk(2, "medium", "todo"), mk(3, "low", "done")]}
+        items={[
+          mkKind(1, "prepare-gs-answers", "high"), // Phase D
+          mkKind(2, "add-grade", "high"), // Phase A
+          mkKind(3, "apply-for-noc", "medium"), // Phase C
+          mk(4, "low", "done"),
+        ]}
       />,
     );
-    expect(screen.getByText(/High impact \(1\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Medium impact \(1\)/)).toBeInTheDocument();
+    const decide = screen.getByText("Decide where to apply");
+    const confirm = screen.getByText("Confirm your place");
+    const visa = screen.getByText("Prepare your visa");
+    expect(decide).toBeInTheDocument();
+    expect(confirm).toBeInTheDocument();
+    expect(visa).toBeInTheDocument();
     expect(screen.getByText(/Closed \(1\)/)).toBeInTheDocument();
+    // Sequence: Decide (A) before Confirm (C) before Prepare your visa (D).
+    expect(decide.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(confirm.compareDocumentPosition(visa) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("puts visa-prep items under 'Visa preparation' (GS first), leaving non-visa items in 'Your next steps'", () => {
-    render(
-      <PlanList items={[
-        mkKind(1, "prepare-police-certificate", "medium"),
-        mkKind(2, "prepare-gs-answers", "high"),
-        mkKind(3, "add-grade", "high"),
-      ]} />,
-    );
-    expect(screen.getByText("Visa preparation")).toBeInTheDocument();
-    expect(screen.getByText("Your next steps")).toBeInTheDocument();
-    expect(screen.getByText(/High impact \(1\)/)).toBeInTheDocument(); // only add-grade; GS moved to visa prep
-    const gsTitle = screen.getByText("T2"); // prepare-gs-answers
-    const policeTitle = screen.getByText("T1"); // prepare-police-certificate
-    expect(gsTitle.compareDocumentPosition(policeTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it("omits 'Visa preparation' when there are no visa-prep items", () => {
+  it("omits a phase with no open items", () => {
     render(<PlanList items={[mkKind(1, "add-grade", "high")]} />);
-    expect(screen.queryByText("Visa preparation")).not.toBeInTheDocument();
-    expect(screen.getByText("Your next steps")).toBeInTheDocument();
+    expect(screen.getByText("Decide where to apply")).toBeInTheDocument();
+    expect(screen.queryByText("Prepare your visa")).not.toBeInTheDocument();
+  });
+
+  it("frames the plan as a guided, ordered journey and points to the checklist as the requirement reference", () => {
+    render(<PlanList items={[mkKind(1, "add-grade", "high")]} />);
+    expect(screen.getByText(/in the order to tackle them/i)).toBeInTheDocument();
+    expect(screen.getByText(/requirement reference/i)).toBeInTheDocument();
+    expect(screen.queryByText(/action queue/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the guided-plan framing even when the plan is empty", () => {
+    render(<PlanList items={[]} />);
+    expect(screen.getByText(/in the order to tackle them/i)).toBeInTheDocument();
   });
 
   it("threads onChanged to item cards so section counts can refresh", async () => {
@@ -76,16 +84,5 @@ describe("PlanList", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Done$/i }));
     expect(onChanged).toHaveBeenCalledTimes(1);
     vi.restoreAllMocks();
-  });
-
-  it("frames the plan as the action queue and points to the checklist as the requirement reference", () => {
-    render(<PlanList items={[mk(1, "high", "todo")]} />);
-    expect(screen.getByText(/this is your action queue/i)).toBeInTheDocument();
-    expect(screen.getByText(/requirement reference/i)).toBeInTheDocument();
-  });
-
-  it("shows the plan/checklist framing even when the plan is empty", () => {
-    render(<PlanList items={[]} />);
-    expect(screen.getByText(/this is your action queue/i)).toBeInTheDocument();
   });
 });

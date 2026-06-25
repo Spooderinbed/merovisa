@@ -20,7 +20,7 @@ const mk = (over: Partial<PlanItemRow>): PlanItemRow => ({
 });
 
 describe("orderOpenItems", () => {
-  it("mirrors the plan page: impact groups first, then visa prep in sequence", () => {
+  it("reads as a journey: Phase A profile work first, then Phase D visa prep in sequence", () => {
     const items = [
       mk({ id: 1, kind: "prepare-police-certificate", impact: "medium" }),
       mk({ id: 2, kind: "prepare-gs-answers", impact: "high" }),
@@ -29,28 +29,40 @@ describe("orderOpenItems", () => {
       mk({ id: 5, kind: "upload-ielts-report", impact: "medium" }),
       mk({ id: 6, kind: "done-one", status: "done" }),
     ];
-    // add-grade (high), upload-ielts (medium), set-name (low), then visa prep:
-    // gs-answers before police-certificate per VISA_PREP_KINDS order. Done excluded.
+    // Phase A (profile), sorted within phase by impact then id: add-grade (high),
+    // upload-ielts (medium), set-name (low). Then Phase D (visa prep) in the curated
+    // sequence: gs-answers before police-certificate. Done excluded.
     expect(orderOpenItems(items).map((i) => i.id)).toEqual([3, 5, 4, 2, 1]);
+  });
+
+  it("orders by phase before impact: a Phase A item precedes a higher-up Phase D item", () => {
+    const items = [
+      mk({ id: 1, kind: "upload-proof-of-funds", impact: "high" }), // Phase D
+      mk({ id: 2, kind: "set-name", impact: "low" }), // Phase A
+    ];
+    expect(orderOpenItems(items).map((i) => i.id)).toEqual([2, 1]);
   });
 });
 
 describe("orderOpenItems determinism", () => {
-  it("breaks created_at ties by id so every surface agrees regardless of query order", () => {
+  it("orders strictly by phase then impact then id — never by creation time", () => {
+    // id 6 is Phase A (gap evidence), id 4 is Phase D (proof of funds): A precedes D
+    // regardless of equal created_at or input order.
     const tied = [
       mk({ id: 6, kind: "document-gap-evidence", impact: "high", createdAt: "2026-06-04T15:44:14.996Z" }),
       mk({ id: 4, kind: "upload-proof-of-funds", impact: "high", createdAt: "2026-06-04T15:44:14.996Z" }),
     ];
-    expect(orderOpenItems(tied).map((i) => i.id)).toEqual([4, 6]);
-    expect(orderOpenItems([...tied].reverse()).map((i) => i.id)).toEqual([4, 6]);
+    expect(orderOpenItems(tied).map((i) => i.id)).toEqual([6, 4]);
+    expect(orderOpenItems([...tied].reverse()).map((i) => i.id)).toEqual([6, 4]);
   });
 
-  it("orders newer items first within an impact group", () => {
+  it("ignores creation time within a phase — ties break by id, oldest-numbered first", () => {
     const items = [
       mk({ id: 1, impact: "high", createdAt: "2026-06-04T00:00:00Z" }),
       mk({ id: 2, impact: "high", createdAt: "2026-06-10T00:00:00Z" }),
     ];
-    expect(orderOpenItems(items).map((i) => i.id)).toEqual([2, 1]);
+    // Same phase (A), same impact, same created order irrelevant → deterministic by id.
+    expect(orderOpenItems(items).map((i) => i.id)).toEqual([1, 2]);
   });
 });
 

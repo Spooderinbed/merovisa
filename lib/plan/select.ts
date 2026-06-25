@@ -1,38 +1,41 @@
 import type { Impact, PlanItemRow } from "./types";
-import { isVisaPrep, visaPrepOrder } from "./phases";
+import { PLAN_PHASES, phaseOf, phaseOrder, visaPrepOrder, type PlanPhase } from "./phases";
 
-export interface PlanGroups {
-  high: PlanItemRow[];
-  medium: PlanItemRow[];
-  low: PlanItemRow[];
-  visaPrep: PlanItemRow[];
+export interface PlanPhaseGroup {
+  phase: PlanPhase;
+  items: PlanItemRow[];
 }
 
-/** The plan page's grouping, extracted so every surface ranks items identically.
- *  Sorting lives here (newest first, id as tiebreak) because batch inserts share a
- *  created_at — Postgres returns ties in arbitrary per-query order, which made the
- *  dashboard and the plan page disagree on the top item. */
-export function groupOpenItems(items: PlanItemRow[]): PlanGroups {
-  const open = items
-    .filter((i) => i.status === "todo")
-    .sort((a, b) =>
-      a.createdAt === b.createdAt ? a.id - b.id : a.createdAt < b.createdAt ? 1 : -1,
-    );
-  const rest = open.filter((i) => !isVisaPrep(i.kind));
-  const byImpact = (impact: Impact) => rest.filter((i) => i.impact === impact);
-  return {
-    high: byImpact("high"),
-    medium: byImpact("medium"),
-    low: byImpact("low"),
-    visaPrep: open
-      .filter((i) => isVisaPrep(i.kind))
-      .sort((a, b) => visaPrepOrder(a.kind) - visaPrepOrder(b.kind)),
-  };
+const IMPACT_RANK: Record<Impact, number> = { high: 0, medium: 1, low: 2 };
+
+/** Student-meaningful, deterministic order within a phase: the curated visa-prep
+ *  sequence first (Genuine Student leads), then by impact, then by id. Never by
+ *  created_at — batch inserts share a timestamp, so creation order is an artifact, not
+ *  a meaning. The id tiebreak keeps every surface (plan page + dashboard) in agreement. */
+function withinPhase(a: PlanItemRow, b: PlanItemRow): number {
+  return (
+    visaPrepOrder(a.kind) - visaPrepOrder(b.kind) ||
+    IMPACT_RANK[a.impact] - IMPACT_RANK[b.impact] ||
+    a.id - b.id
+  );
 }
 
+/** Open items grouped under their journey phase, phases in A→E order, empty phases
+ *  dropped. The plan page renders this as a guided timeline. */
+export function groupByPhase(items: PlanItemRow[]): PlanPhaseGroup[] {
+  const open = items.filter((i) => i.status === "todo");
+  return PLAN_PHASES.map((phase) => ({
+    phase,
+    items: open.filter((i) => phaseOf(i.kind) === phase.id).sort(withinPhase),
+  })).filter((g) => g.items.length > 0);
+}
+
+/** The whole plan flattened in journey order — the shared ranking the dashboard
+ *  next-step selector and the plan page both read from. */
 export function orderOpenItems(items: PlanItemRow[]): PlanItemRow[] {
-  const g = groupOpenItems(items);
-  return [...g.high, ...g.medium, ...g.low, ...g.visaPrep];
+  return items
+    .filter((i) => i.status === "todo")
+    .sort((a, b) => phaseOrder(a.kind) - phaseOrder(b.kind) || withinPhase(a, b));
 }
 
 export type NextStepState = "next" | "waiting" | "caught-up";
@@ -44,7 +47,9 @@ export interface NextStepSelection {
   waitingCount: number;
 }
 
-/** Open = status todo. Actionable = open and not marked in progress. */
+/** Open = status todo. Actionable = open and not marked in progress. The next step is
+ *  the first actionable item in journey order, so the recommendation is always the
+ *  earliest-phase thing the student can act on now. */
 export function selectNextStep(items: PlanItemRow[]): NextStepSelection {
   const open = orderOpenItems(items);
   const actionable = open.filter((i) => i.startedAt === null);

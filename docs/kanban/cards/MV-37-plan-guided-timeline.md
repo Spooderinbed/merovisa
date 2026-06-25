@@ -6,6 +6,48 @@
 timeline" copy); couples with [[MV-27]] (mirrored rows) and [[MV-38]] (the dashboard "next step" inherits plan
 order). Evidence: product-review audit `wf_5fb5dfa7-009` (2026-06-24).
 
+## Status — Slice 1 SHIPPED 2026-06-25 (founder design sign-off: "do the recommended")
+
+The Codex-endorsed smallest increment is built and green. The plan is now a **phase-grouped guided
+journey** instead of an impact-ranked queue:
+
+- **Phase model (`lib/plan/phases.ts`):** a five-phase A–E spine (`PLAN_PHASES`) — A Decide where to apply /
+  B Apply to programs / C Confirm your place / D Prepare your visa / E Visa decision — plus `phaseOf(kind)`
+  (the founder-reviewable per-kind placement map) and `phaseOrder(kind)`. Render-time only; no DB column, no
+  migration. `VISA_PREP_KINDS` / `isVisaPrep` / `visaPrepOrder` kept intact (the checklist-link contract +
+  the curated within-phase visa order). Unmapped kinds default to D if visa-prep, else A (forward compatible).
+- **Ordering (`lib/plan/select.ts`):** `orderOpenItems` now sorts by **phase → impact → id**, never by
+  `created_at` (the newest-created-first artifact is gone — acceptance #2). New `groupByPhase()` returns
+  non-empty phases in A→E order. `selectNextStep` is unchanged in shape (the dashboard contract holds) but now
+  recommends the **earliest-phase actionable item**, so "next step" is sequentially sensible. The orphaned
+  `groupOpenItems`/`PlanGroups` were removed.
+- **Display + copy (`components/plan/plan-list.tsx`):** renders a `<section>` per non-empty phase with its
+  title + blurb, in order. Intro reframed: *"This is your guided plan — the steps to studying in Australia, in
+  the order to tackle them. Each program's checklist is the full requirement reference behind it."* The
+  "action queue" framing (MV-23) is replaced; the checklist cross-reference is preserved.
+- **Evidence:** TDD RED→GREEN. New `tests/plan/phases.test.ts` (phase model + mapping). `tests/plan/select.test.ts`
+  reworked to the phase order (incl. determinism: phase-before-impact, id-not-created-at). `tests/components/plan/
+  plan-list.test.tsx` + `plan-list-live.test.tsx` reworked to phase sections + guided copy. Gate: typecheck clean ·
+  lint clean (only the pre-existing board-generator warning) · full suite **1334** (was 1326). **Goldens
+  byte-identical** — the scorer is untouched.
+- **Founder-reviewable copy** (memory: founder closely reviews plan copy): the five phase titles/blurbs and the
+  intro line above. Edit `PLAN_PHASES` to retitle; edit `KIND_PHASE` to re-place any step.
+
+### Deferred to slice 2 (NOT built here — Codex BLOCKERs that need new state)
+
+- **Per-application multi-track + nominated primary.** Slice 1 keeps the single global journey the app already
+  has; the per-application phase state (one student, 3 programs at different stages) and the user-nominated
+  principal application are slice 2. The global model is consistent with today's one-plan-per-user generator.
+- **Richer "actionable-only" exclusion.** Slice 1's next-step excludes in-progress items and orders by phase;
+  full `blocked / waiting-on-provider / premature` exclusion needs per-application dependency state (slice 2).
+- **Offer/CoE "I already have…" entry states.** Profile-derived items already self-suppress via the profile
+  editor (no grade/English/proof/passport item once you have it). Offer/CoE entry states need per-application
+  state + offer/CoE-stage plan kinds that don't exist yet — slice 2, pairs with the multi-track work.
+- **Full journey scaffold (locked future phases).** Slice 1 renders only non-empty phases (no fabricated tasks).
+  A visible A–E stepper with current-phase emphasis + locked future phases is a slice-2 polish.
+- **Dynamic financial-capacity label.** The proof-of-funds figure relabel (reuse MV-10's ~76.9k band, not the
+  AUD 29,710 living-cost benchmark alone) folds into [[MV-38]] — untouched here.
+
 ## Founder decision (2026-06-24)
 
 > "We need this to be a timeline for students on what to do next — as we are guiding them."
@@ -125,15 +167,14 @@ them under the A–E phases via `phases.ts`, (2) replace newest-created-first or
 "next step" selector actionable-only, (4) ship "I already have…" entry states. Defer per-application multi-track and
 dynamic capacity to a second slice. Re-frame copy from "action queue" → guided timeline.
 
-## Acceptance criteria (post design sign-off)
+## Acceptance criteria (post design sign-off) — slice 1 ✅
 
-- [ ] The plan presents as an **ordered, guided journey** (sequenced/numbered or phase-stepped), not an
+- [x] The plan presents as an **ordered, guided journey** (phase-stepped), not an
       impact-ranked list; copy says so.
-- [ ] Ordering is student-meaningful (not newest-created-first); `lib/plan/select.ts` ordering reworked.
-- [ ] "action queue" framing (MV-23) replaced; checklist cross-reference preserved.
-- [ ] Goldens impact assessed: plan ordering likely does NOT touch the scorer — confirm byte-identical or
-      regenerate deliberately.
-- [ ] TDD RED→GREEN; full suite green.
+- [x] Ordering is student-meaningful (not newest-created-first); `lib/plan/select.ts` ordering reworked.
+- [x] "action queue" framing (MV-23) replaced; checklist cross-reference preserved.
+- [x] Goldens impact assessed: plan ordering does NOT touch the scorer — **byte-identical** (full suite green).
+- [x] TDD RED→GREEN; full suite green (1334).
 
 ## Resume notes (cold agent)
 

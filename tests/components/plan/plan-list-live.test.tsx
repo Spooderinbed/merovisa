@@ -32,7 +32,7 @@ describe("PlanListLive", () => {
   it("renders the plan list", () => {
     render(<PlanListLive items={[item]} />);
     expect(screen.getByText("T1")).toBeInTheDocument();
-    expect(screen.getByText(/High impact \(1\)/)).toBeInTheDocument();
+    expect(screen.getByText("Decide where to apply")).toBeInTheDocument();
   });
 
   it("refreshes server data after a successful item action (live section counts)", async () => {
