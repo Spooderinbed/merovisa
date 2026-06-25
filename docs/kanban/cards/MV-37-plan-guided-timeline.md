@@ -36,6 +36,56 @@ superseded, not reopened).
 4. **How does completion advance the timeline?** (current/next-step emphasis, progress affordance.)
 5. **Copy:** replace "action queue" with timeline framing; keep the checklist = per-program reference framing.
 
+## Design refinement — 2026-06-25 (founder steer: parallel tracks; Codex-triangulated realistic Nepal→AU POV)
+
+Founder pushback on the first spine: *"English test can be done while gathering documents — we need to think
+more about this whole sequence from a student and realistic POV."* Correct. A strict 1→N list misrepresents
+reality: several steps have **no dependency on each other** and run concurrently. Codex (GPT-5) domain pass
+surfaced one correction that reorders the whole critical path, plus a Nepal-specific long-lead step we'd missed.
+
+**The load-bearing correction: English is a CoE gate, not an APPLY gate.** Australian unis routinely issue a
+**conditional offer** and let the student clear English before the CoE is issued. So a student *without* an
+IELTS/PTE result can still apply, receive a conditional offer, accept, and pay a deposit — English clears in
+parallel before offer→CoE. Building the timeline as "sit English → then apply" falsely blocks a large share
+of students at the English step and loses them.
+
+**Revised model — phase-grouped, sequential between phases, PARALLEL within a phase (the hybrid, not 1→N):**
+
+- **A · Decide** — build profile (grades, English level, finances) → verdict [today's app] → shortlist programs.
+- **B · Apply** *(parallel; applying does NOT wait on English)* —
+  - **Gather + attest academic documents** — Nepal-specific long-lead: MoEST → MoFA → Australian Embassy
+    attestation, **~3–8 weeks**, often the real bottleneck (not English). Flag "start now."
+  - **Sit English test** (IELTS/PTE) — book early; needed to clear a conditional offer (→ CoE), **not** to apply.
+  - **Draft SoP** (the application statement of purpose — distinct from the visa GS form, see below).
+  - **Submit applications** → receive offer (conditional if English still pending).
+- **C · Confirm your place** — clear offer conditions (English) → accept offer → **pay deposit** → receive **CoE**.
+- **D · Visa prep** *(parallel; all consumed at Subclass 500 lodgement)* —
+  - **Financial evidence / proof of funds** (~AUD 29,710 living + tuition + travel) — **visa-stage only**;
+    universities do NOT require it to apply or offer. This is why it felt out of place surfaced early ([[MV-38]]).
+  - **OSHC** — must cover from course start date; evidence attached at lodgement.
+  - **Health exam** (Home Affairs panel physician; ~12-mo validity) — best done pre-lodge.
+  - **Police certificate** (Nepal Police, Interpol) — **~6-mo validity, don't start too early** or it expires.
+  - **GS statement** — the Department's own format (post-Nov-2023, replaced GTE); **≠ the SoP** sent to the uni.
+  - **Lodge Subclass 500**.
+- **E · Visa decision** — granted / further-info / refused.
+
+**Answers to the design questions:**
+1. *What defines "next":* the **phase model above** (5 phases A–E), extending `phases.ts`'s ordering principle
+   from visa-prep to the whole journey.
+2. *Strict vs hybrid:* **hybrid** — gates are hard *between* phases (offer → clear-conditions → CoE → lodge →
+   decision); *within* a phase, tasks are parallel and the student picks order. Long-lead tasks (attestation,
+   English) carry a "start early" nudge.
+3. *No-sequence items:* profile gaps / optional uplifts attach to **Phase A** as non-gating "strengtheners,"
+   never as blocking timeline steps.
+4. *How completion advances:* the **current phase = the earliest phase with an unmet gate**; within-phase tasks
+   tick independently with a progress affordance ("2 of 4"). The dashboard "next step" = highest-impact
+   incomplete task **in the current phase** — so proof-of-funds only surfaces once the student reaches Phase D
+   (this is the clean fix for [[MV-38]]; [[MV-27]] mirrored rows fold into the per-phase view too).
+
+**Still a founder call before build:** confirm the A–E spine + the hybrid (parallel-within-phase) model; whether
+to show the realistic long-lead callouts (attestation ~3–8 wks, police 6-mo validity, OSHC-from-course-start);
+and how literal to be about conditional offers (English as a CoE gate) without overwhelming a first-time student.
+
 ## Acceptance criteria (post design sign-off)
 
 - [ ] The plan presents as an **ordered, guided journey** (sequenced/numbered or phase-stepped), not an
