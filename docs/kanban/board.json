@@ -752,7 +752,7 @@
     },
     {
       "id": "MV-55",
-      "col": "blocked",
+      "col": "ready",
       "pri": "P3",
       "owner": "agent",
       "badge": "",
@@ -776,7 +776,7 @@
     },
     {
       "id": "MV-57",
-      "col": "blocked",
+      "col": "ready",
       "pri": "P3",
       "owner": "agent",
       "badge": "",
