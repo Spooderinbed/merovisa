@@ -44,6 +44,10 @@ function oxfordAnd(items: string[]): string {
 
 const SOF_REQUIREMENTS = NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "bank-requirement").map((r) => r.summary).join(" and ");
 const SOF_MECHANISMS = NEPAL_SOURCE_OF_FUNDS.filter((r) => r.kind === "remittance-mechanism").map((r) => r.summary).join(" ");
+// B.016 — what an NOC fundamentally is, framed generally (study abroad), not AU-only.
+// Already surfaced on the per-program checklist (SOF_DEF); leading the plan's NOC step
+// with the same ledgered definition makes the Phase C funds walkthrough self-explanatory.
+const NOC_DEFINITION = NEPAL_SOURCE_OF_FUNDS.find((r) => r.kind === "definition")!.summary;
 const NOC_DOCS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "required-document").map((r) => r.summary);
 const NOC_STEPS = NEPAL_NOC_JOURNEY.filter((r) => r.kind === "process-step").map((r) => r.summary).join(" ");
 const CERTIFIED_COPIES = AU_DOCUMENT_PREPARATION.filter((r) => r.kind === "certified-copy").map((r) => r.summary);
@@ -132,11 +136,18 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
 
   // NEPAL SOURCE OF FUNDS / REMITTANCE (NRB rules) — once a remittable funding source is declared
   if (s.finance?.source && s.finance.source !== "scholarship-dependent") {
+    // Cross-reference the NOC step only when it's actually in this plan (AU-committed);
+    // otherwise the reference would dangle. Describes the dependency/overlap, not a
+    // strict sequence — get the NOC early, since the bank releases forex once it's issued.
+    const nocStep =
+      inputs.primaryDestinationId === "australia"
+        ? " Getting that No Objection Certificate is its own step in this plan — start it early, because your bank can only release the money once it's issued."
+        : "";
     out.push({
       kind: "prepare-fund-remittance",
       impact: "medium",
       title: "Prepare to release your funds from Nepal",
-      body: `Moving money abroad for study runs through Nepal Rastra Bank. Your bank requires ${SOF_REQUIREMENTS}. ${SOF_MECHANISMS}`,
+      body: `Moving money abroad for study runs through Nepal Rastra Bank. Your bank requires ${SOF_REQUIREMENTS}. ${SOF_MECHANISMS}${nocStep}`,
       timeEstimate: "1-2 weeks",
     });
   }
@@ -211,8 +222,8 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       impact: "medium",
       title: "Apply for your NOC (No Objection Certificate)",
       body:
-        `Once your offer arrives, apply for your No Objection Certificate (NOC) — the permit from ` +
-        `Nepal's Ministry of Education that your bank needs before it can remit tuition. The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ` +
+        `${NOC_DEFINITION} Once your offer arrives, apply for it — the permit your bank needs ` +
+        `before it can remit tuition. The MoEST portal asks for ${oxfordAnd(NOC_DOCS)}. ` +
         `${NOC_STEPS} It can take time, so start as soon as you're accepted.`,
       timeEstimate: "1-2 weeks",
     });

@@ -764,13 +764,13 @@
     },
     {
       "id": "MV-56",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
-      "file": null,
+      "file": "cards/MV-56-funds-release-walkthrough.md",
       "title": "My Plan: assemble funds-release-from-Nepal walkthrough",
-      "summary": "Founder ask (2026-06-26): the funds-release pieces exist (NRB no-objection + MoEST NOC + bank financial evidence) via lib/data/source/nepal-source-of-funds.ts + nepal-noc-journey.ts and partly render (lib/plan/generator.ts:138,214) but are NOT assembled into one coherent 'release your funds' walkthrough. Assemble into a single Phase C/D plan step from already-ledgered data. Effort M, MOSTLY UNBLOCKED (data already sliced). Pairs with MV-57 (the lodgement/pre-departure half).",
+      "summary": "SHIPPED 2026-06-26 (branch mv-51, awaits PR merge). MV-37's A–E timeline already groups apply-for-noc + prepare-fund-remittance into Phase C (adjacent) — so the 'scattered' half was already fixed; this card makes them READ as one walkthrough using ledgered data, WITHOUT merging (Codex-confirmed: merging breaks the different gates [finance.source vs australia], per-kind completion.ts/sources.ts/VISA_PREP_KINDS wiring, and per-step done-tracking). Two copy-only generator changes: (1) lead apply-for-noc with the ledgered B.016 NOC definition (already on the per-program checklist via SOF_DEF; now in the plan too — framed generally 'study abroad', not AU-only); (2) prepare-fund-remittance appends an AU-gated cross-reference to the NOC step ('its own step in this plan … bank releases the money once it's issued'), suppressed when no destination so it never dangles. No phase/sources/completion change; no dataset edit (only consumes B.016's summary → no reconcile/drift impact). TDD +2 (definition surfaced; cross-ref present-when-AU / absent-when-unset). Gate: typecheck clean, lint 0 err, suite 1377 (was 1375). Founder: merge PR → Done. Pairs with MV-57 (RESEARCH-BLOCKED lodgement/pre-departure half).",
       "created": "2026-06-26",
       "entered": "2026-06-26"
     },

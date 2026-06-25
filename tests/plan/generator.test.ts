@@ -132,6 +132,41 @@ describe("generatePlan", () => {
     expect(canada.some((i) => i.kind === "apply-for-noc")).toBe(false);
   });
 
+  // MV-56 — assemble the funds-release-from-Nepal walkthrough. The NOC + remittance
+  // pieces already land adjacently in Phase C (MV-37); these two checks make them
+  // READ as one coherent walkthrough using already-ledgered data, without merging
+  // the two separately-gated, separately-tracked steps.
+  it("leads the apply-for-NOC step with the ledgered NOC definition (B.016), framed generally not AU-only", () => {
+    const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+    const noc = items.find((i) => i.kind === "apply-for-noc");
+    // B.016 (noc-definition): the NOC is the Government of Nepal's approval to study
+    // abroad — a general permit, NOT an Australia-only document.
+    expect(noc?.body).toContain(
+      "the approval the Government of Nepal grants Nepalese students to study abroad",
+    );
+  });
+
+  it("cross-links the remittance step to the NOC step as one walkthrough — only when the NOC step is present (no dangling reference)", () => {
+    // AU committed → apply-for-noc is emitted, so the remittance step can point to it.
+    const au = generatePlan({
+      sections: { finance: { source: "self-funded" } },
+      primaryDestinationId: "australia", matches: [], policy,
+    });
+    expect(au.some((i) => i.kind === "apply-for-noc")).toBe(true);
+    const remitAu = au.find((i) => i.kind === "prepare-fund-remittance");
+    expect(remitAu?.body).toContain("its own step in this plan");
+
+    // No destination → apply-for-noc is NOT emitted, so the remittance step must not
+    // dangle a reference to a step that isn't in the plan (honest cross-reference).
+    const none = generatePlan({
+      sections: { finance: { source: "self-funded" } },
+      primaryDestinationId: null, matches: [], policy,
+    });
+    const remitNone = none.find((i) => i.kind === "prepare-fund-remittance");
+    expect(remitNone).toBeTruthy();
+    expect(remitNone?.body).not.toContain("its own step in this plan");
+  });
+
   it("adds the translate-and-certify item for an Australian primary destination (A.026–A.028, A.041–A.042)", () => {
     const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
     const prep = items.find((i) => i.kind === "translate-certify-documents");
