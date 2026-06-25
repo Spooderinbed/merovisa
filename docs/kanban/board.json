@@ -716,13 +716,13 @@
     },
     {
       "id": "MV-52",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "badge": "",
-      "file": null,
+      "file": "cards/MV-52-doc-acquisition-guidance-rows.md",
       "title": "Surface doc-acquisition guidance on academic + English-test rows",
-      "summary": "Founder ask (2026-06-26): how/where/when-to-obtain guidance is wired + renders for passport/NOC/police but MISSING on academic transcripts (SLC/+2/bachelors/masters) and IELTS/PTE rows — even though backing typed datasets EXIST and are just unwired (lib/data/source/nepal-english-test-centres.ts British Council 9 + IDP 4 cities + fee; nepal-document-processing-times.ts TU equivalence 3d). Mirror the passport conditional-note pattern (lib/checklist/generator.ts:121-129) to attach notes to the missing rows. Pure generator+dataset wiring; data already ledgered. Effort M, NO data dep. RUNNER-UP to MV-51 (Codex-concurred).",
+      "summary": "SHIPPED 2026-06-26 (branch mv-51) → In Review. Wired two already-ledgered datasets onto the rows that lacked acquisition guidance: nepal-document-processing-times.ts (TU equivalence 3 working days, A.087) onto bachelors/masters-transcript rows (conditional 'if your degree is from Tribhuvan University' copy, no profile field needed); nepal-english-test-centres.ts onto a new IELTS-only 'Where to sit IELTS in Nepal' info step (British Council 9 + IDP 4 locations + NPR 36,000 fee). Trust-first: PTE/TOEFL centre rows NOT fabricated (dataset defers them) — row gated on testKind==='ielts'. Source-display guard mirrors biometrics. lib/checklist/generator.ts only; no component change (checklist-item already renders note+source). TDD +4, gate green (typecheck, lint 0 err, 1368 tests). Founder merges PR → Done.",
       "created": "2026-06-26",
       "entered": "2026-06-26"
     },

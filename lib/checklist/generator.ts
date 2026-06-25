@@ -17,6 +17,8 @@ import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process
 import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
 import { AU_WORKING_WITH_AGENTS } from "@/lib/data/source/au-working-with-agents";
 import { NEPAL_INCOME_CERTIFICATION } from "@/lib/data/source/nepal-income-certification";
+import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-document-processing-times";
+import { NEPAL_ENGLISH_TEST_CENTRES } from "@/lib/data/source/nepal-english-test-centres";
 import type {
   ChecklistItem,
   ChecklistRequirement,
@@ -106,6 +108,35 @@ const INCOME_CERT = NEPAL_INCOME_CERTIFICATION[0]!; // all rows share the Lalitp
 const SPONSOR_INCOME_NOTE =
   "In Nepal, sponsor income is typically certified at the local ward office — Lalitpur Metropolitan City publishes the document list: rental income needs the tenancy agreement; business or agricultural income the business-registration certificate plus audit report; salary or pension the original letter from the employer; fixed-deposit or savings interest a bank certificate; foreign income a recommendation letter authenticated by the Nepali embassy there or that country's embassy in Nepal. For an English income statement, include citizenship and relationship certificates.";
 
+// Transcript turnaround (A.087): TU equivalence regular service. Framed conditionally in
+// copy ("If your degree is from Tribhuvan University") since there's no profile field for
+// the issuing university — TU is by far the most common, and the line is no-op for others.
+const TU_EQUIVALENCE = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "tu-equivalence-regular")!;
+const TRANSCRIPT_NOTE =
+  "If your degree is from Tribhuvan University, allow time for an academic equivalence " +
+  `certificate — TU's Curriculum Development Centre issues one in about ${TU_EQUIVALENCE.typicalBusinessDays} working ` +
+  "days on regular service.";
+const TRANSCRIPT_SOURCE: ChecklistSource = { url: TU_EQUIVALENCE.source, lastVerified: TU_EQUIVALENCE.lastVerified };
+
+// IELTS test-centre logistics (J1). Only IELTS is sourced from the operators — PTE/TOEFL
+// centre data is deferred in the dataset, so this row is gated on IELTS and never fabricated
+// for the other tests.
+const BRITISH_COUNCIL_IELTS = NEPAL_ENGLISH_TEST_CENTRES.find((c) => c.id === "ielts-british-council")!;
+const IDP_IELTS = NEPAL_ENGLISH_TEST_CENTRES.find((c) => c.id === "ielts-idp")!;
+const IELTS_CENTRES_NOTE =
+  `IELTS runs in Nepal through two operators: ${BRITISH_COUNCIL_IELTS.operator} (${BRITISH_COUNCIL_IELTS.locationCount} locations) ` +
+  `and ${IDP_IELTS.operator} (${IDP_IELTS.locationCount} centres). Both test in Kathmandu; ${IDP_IELTS.operator}'s ` +
+  `computer-delivered sitting fee is around NPR ${IDP_IELTS.computerDeliveredFeeNpr!.toLocaleString()}.`;
+// SOURCE-DISPLAY GUARD: the note carries claims from both centre records, but the SourceLine
+// shows one URL — point it at the British Council dates/fees/locations page (the dominant
+// nine-location operator, the natural primary for "where can I sit IELTS in Nepal"). The IDP
+// count + fee stay reconcile-backed via J1.012/J1.018 in NEPAL_ENGLISH_TEST_CENTRES, independent
+// of the rendered URL (mirrors the biometrics guard).
+const IELTS_CENTRES_SOURCE: ChecklistSource = {
+  url: BRITISH_COUNCIL_IELTS.source,
+  lastVerified: BRITISH_COUNCIL_IELTS.lastVerified,
+};
+
 function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
   if (kind === null) return "info";
   return uploaded.has(kind) ? "have" : "missing";
@@ -147,9 +178,9 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     add({ key: "slc-see", kind: "slc-see", label: "SLC / SEE certificate", group: "academic", stage: "now", requirement: "required" });
   } else {
     if (program.level === "doctorate") {
-      add({ key: "masters-transcript", kind: "masters-transcript", label: "Master's transcript", group: "academic", stage: "now", requirement: "required" });
+      add({ key: "masters-transcript", kind: "masters-transcript", label: "Master's transcript", group: "academic", stage: "now", requirement: "required", note: TRANSCRIPT_NOTE, source: TRANSCRIPT_SOURCE });
     }
-    add({ key: "bachelors-transcript", kind: "bachelors-transcript", label: "Bachelor's transcript", group: "academic", stage: "now", requirement: "required" });
+    add({ key: "bachelors-transcript", kind: "bachelors-transcript", label: "Bachelor's transcript", group: "academic", stage: "now", requirement: "required", note: TRANSCRIPT_NOTE, source: TRANSCRIPT_SOURCE });
     add({ key: "plus-two", kind: "plus-two", label: "+2 / Higher Secondary", group: "academic", stage: "now", requirement: "recommended" });
     add({ key: "slc-see", kind: "slc-see", label: "SLC / SEE certificate", group: "academic", stage: "now", requirement: "recommended" });
   }
@@ -178,6 +209,21 @@ export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
     note: englishNote,
     source: program.source ? { url: program.source, lastVerified: program.lastVerified || undefined } : undefined,
   });
+  // Where to sit the test (now-stage info step). IELTS-only — the dataset defers PTE/TOEFL
+  // centre logistics, so we never fabricate them for the other tests.
+  if (testKind === "ielts") {
+    add({
+      key: "ielts-centres",
+      kind: null,
+      label: "Where to sit IELTS in Nepal",
+      group: "english",
+      stage: "now",
+      requirement: "recommended",
+      infoKind: "step",
+      note: IELTS_CENTRES_NOTE,
+      source: IELTS_CENTRES_SOURCE,
+    });
+  }
   if (isNursing) {
     add({ key: "ahpra", kind: null, label: "AHPRA registration", group: "academic", stage: "now", requirement: "required", infoKind: "note", note: "Nursing pathways involve registration with the Australian Health Practitioner Regulation Agency (AHPRA) — confirm your program's requirements with the provider." });
   }
