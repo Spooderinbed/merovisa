@@ -704,11 +704,11 @@
     },
     {
       "id": "MV-51",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "badge": "",
-      "file": null,
+      "file": "cards/MV-51-optimistic-save-state-flip.md",
       "title": "Optimistic save-state flip (Not saved / Shortlisted / Applied)",
       "summary": "Founder-reported perf bug (2026-06-26): the status pills freeze (disabled) for the whole server round-trip — no optimistic update — and 'Applied' is slowest because the route chains captureApplication→freeze→insertAttempt→insertEvent. Fix: components/matches/shortlist-button.tsx choose() — capture prev, setStatus(next) immediately, then await fetch; revert on !ok/throw. No API change; optionally fire captureApplication non-blocking. Root cause: shortlist-button.tsx:26-36 + app/api/shortlist/route.ts:27-47 + lib/outcomes/on-apply.ts:33-49. Existing 4 button tests tolerate an optimistic version; extend for flip+rollback. Effort S, NO data dep. Verified by 6-agent read-only workflow 2026-06-26. RECOMMENDED FIRST SLICE.",
       "created": "2026-06-26",
