@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-25",
+  "updated": "2026-06-26",
   "staleDays": 7,
   "columns": [
     {
@@ -701,6 +701,90 @@
       "summary": "Phase C (audit #27, P3). One restrained teal hand-stroke mark on GENUINE success empty states only (never error/incomplete), extending the existing IconShield/IconGuide/IconDoc thin-stroke family muted to text-ink-faint. No AI spot-art. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #27.",
       "created": "2026-06-25",
       "entered": "2026-06-25"
+    },
+    {
+      "id": "MV-51",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "Optimistic save-state flip (Not saved / Shortlisted / Applied)",
+      "summary": "Founder-reported perf bug (2026-06-26): the status pills freeze (disabled) for the whole server round-trip — no optimistic update — and 'Applied' is slowest because the route chains captureApplication→freeze→insertAttempt→insertEvent. Fix: components/matches/shortlist-button.tsx choose() — capture prev, setStatus(next) immediately, then await fetch; revert on !ok/throw. No API change; optionally fire captureApplication non-blocking. Root cause: shortlist-button.tsx:26-36 + app/api/shortlist/route.ts:27-47 + lib/outcomes/on-apply.ts:33-49. Existing 4 button tests tolerate an optimistic version; extend for flip+rollback. Effort S, NO data dep. Verified by 6-agent read-only workflow 2026-06-26. RECOMMENDED FIRST SLICE.",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
+      "id": "MV-52",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "Surface doc-acquisition guidance on academic + English-test rows",
+      "summary": "Founder ask (2026-06-26): how/where/when-to-obtain guidance is wired + renders for passport/NOC/police but MISSING on academic transcripts (SLC/+2/bachelors/masters) and IELTS/PTE rows — even though backing typed datasets EXIST and are just unwired (lib/data/source/nepal-english-test-centres.ts British Council 9 + IDP 4 cities + fee; nepal-document-processing-times.ts TU equivalence 3d). Mirror the passport conditional-note pattern (lib/checklist/generator.ts:121-129) to attach notes to the missing rows. Pure generator+dataset wiring; data already ledgered. Effort M, NO data dep. RUNNER-UP to MV-51 (Codex-concurred).",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
+      "id": "MV-53",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "Global document checklist + persisted 'I have this' toggle",
+      "summary": "Founder ask (2026-06-26): the document checklist is ONLY per-program (/checklist/[programId]); no global view, not in nav, and no persisted 'obtained' state — 'have' is inferred from file-upload presence only (documents.status column was DROPPED in migration 20260605000000_simplify_documents.sql:4). Add a program-agnostic checklist (reuse DOCUMENT_META at lib/documents/types.ts:19) at a new global route+nav entry, with a per-kind obtained toggle persisting to a new owner+kind status store (Supabase table or restored status column, RLS) so the tick survives reload independent of upload; render the existing have/✓ visual from it. RISK (Codex): confirm schema/column intent BEFORE writing tests — a wrong column name invalidates goldens. Keep per-program views. Effort M, NO data dep.",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
+      "id": "MV-54",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "Scholarships: surface held application open/close dates",
+      "summary": "Founder ask (2026-06-26): scholarships is a flat 5-row reference list, intentionally guidance-free per the trust-first honesty guard (components/matches/scholarships-panel.tsx). UNBLOCKED quick win: surface the applicationOpens/applicationCloses dates already HELD but never rendered (lib/data/source/australia-awards-scholarship.ts:15-35; au-scholarships.ts) as a 'key dates' line per row. Expand ScholarshipRow + panel. Effort M (small), NO data dep. Pairs with the research-blocked eligibility/how-to half (MV-55).",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
+      "id": "MV-55",
+      "col": "blocked",
+      "pri": "P3",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "Scholarships how-to: eligibility + application-process dataset (RESEARCH-BLOCKED)",
+      "summary": "Founder ask (2026-06-26) — the RESEARCH-BLOCKED half of scholarship guidance. Full ask = per-award eligibility criteria + application steps + required docs. Backing data is THIN: only 10 J2 findings (docs/research-briefs/findings/J.jsonl), benefit/amount-centric — NO eligibility/process layer exists to surface. UNBLOCKS WHEN: an eligibility+application-process dataset is sourced & ledgered per scholarship, then expand ScholarshipsPanel with a 'Who's eligible / How to apply' block. Effort M, DATA-DEP. Part of the slicing backlog, not a UI bug.",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
+      "id": "MV-56",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "My Plan: assemble funds-release-from-Nepal walkthrough",
+      "summary": "Founder ask (2026-06-26): the funds-release pieces exist (NRB no-objection + MoEST NOC + bank financial evidence) via lib/data/source/nepal-source-of-funds.ts + nepal-noc-journey.ts and partly render (lib/plan/generator.ts:138,214) but are NOT assembled into one coherent 'release your funds' walkthrough. Assemble into a single Phase C/D plan step from already-ledgered data. Effort M, MOSTLY UNBLOCKED (data already sliced). Pairs with MV-57 (the lodgement/pre-departure half).",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
+      "id": "MV-57",
+      "col": "blocked",
+      "pri": "P3",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "My Plan: post-offer→visa-lodgement + pre-departure sequencing (RESEARCH-BLOCKED)",
+      "summary": "Founder ask (2026-06-26) — RESEARCH-BLOCKED half of the plan gap. Plan says 'Once your offer arrives' (lib/plan/generator.ts:214) but never sequences how to GET the offer (submit uni application) or lodge Subclass 500 (ImmiAccount/VFS), and pre-departure is absent. Pre-departure/arrival/lodgement data sits as PENDING (unsliced) rows in docs/research-briefs/findings/H.jsonl (68 pending) + B.jsonl (VFS/payment G14-18); offer-acquisition (uni application-portal steps) has NO ledger data — needs NEW research. UNBLOCKS WHEN: H/B pending rows sliced into lib/data/source + offer-portal research sourced. Effort L, DATA-DEP.",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
     }
   ]
 }
