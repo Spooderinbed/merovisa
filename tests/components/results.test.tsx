@@ -33,7 +33,10 @@ const aarav: StudentProfile = {
 describe("Results", () => {
   it("renders the core path (verdict, factor bars, intake, matches, cost, accuracy, conversion) top-level", () => {
     const payload = assemble(aarav, new Date("2026-06-03"));
-    render(<Results payload={payload} destination="australia" />);
+    // A persisted anonymous assessment has an id — the success path that shows the
+    // keep-it / 3-day-expiry conversion copy. (The id:null persist-miss path is
+    // covered by the conversion-paths/conversion-prompt component tests.)
+    render(<Results payload={payload} destination="australia" assessmentId="11815637-f603-4821-8dd0-d9e52560c4f6" />);
     expect(screen.getByText("Academic fit")).toBeInTheDocument();
     expect(screen.getByText(/Intake timing/i)).toBeInTheDocument();
     expect(screen.getByText(/matched your profile/)).toBeInTheDocument();
