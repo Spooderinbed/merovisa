@@ -1,7 +1,7 @@
 # MV-36 — Honest CRICOS link (provider-code framing; subject deep-link is infeasible)
 
-**Column:** Ready · **Priority:** P2 · **Owner:** agent · **Gate:** none (presentational copy)
-**Created:** 2026-06-24
+**Column:** In Review · **Priority:** P2 · **Owner:** agent · **Gate:** typecheck/lint/suite green
+**Created:** 2026-06-24 · **Branch:** `mv-36-cricos-honesty` · **Shipped:** 2026-06-26
 **Related:** [[MV-07]] (shipped the `CRICOS <code>` link; deliberately chose the register homepage),
 [[MV-24]] (harvested the provider directory). Evidence: product-review audit `wf_5fb5dfa7-009` + live probe
 of `cricos.education.gov.au` (both 2026-06-24).
@@ -47,13 +47,29 @@ MVP scope.
 
 ## Acceptance criteria
 
-- [ ] Card copy distinguishes provider/institution code from course code (no false confidence).
-- [ ] The register link is framed honestly ("search this code"), not as a direct deep-link.
-- [ ] Pinned CRICOS test updated; goldens byte-identical (presentational only).
+- [x] Card copy distinguishes provider/institution code from course code (no false confidence).
+- [x] The register link is framed honestly ("search the register"), not as a direct deep-link.
+- [x] Pinned CRICOS test updated; goldens byte-identical (presentational only).
+
+## What shipped
+
+- `components/matches/program-card.tsx`: the CRICOS line label changed from
+  `CRICOS {code} ↗` to **`Provider CRICOS {code} · search the register ↗`** — naming it as the
+  provider/institution code and the link as a register **search** (the register is WebForms with
+  no deep-link). The `title` tooltip now spells out that `{code}` is the provider code, **not** the
+  course code needed on **visa form 157A**, and that the register has no direct link so you search
+  the code there. `cricos.source` (register homepage) and the lookup are unchanged — no data work.
+- `tests/components/matches/program-card.test.tsx`: the pinned test now asserts the
+  `Provider CRICOS 00026A`/`search the register` label, the homepage href, and the `course code`
+  tooltip framing.
+
+## Gate
+
+- `npm run typecheck` — clean · `npm run lint` — 0 errors (pre-existing build.mjs warning only).
+- Full suite — **1395 passed (235 files)** · goldens N/A/byte-identical (presentational; no scorer path).
 
 ## Resume notes (cold agent)
 
 - Do NOT try to build a deep-link — the live probe above proves it's infeasible at the data layer AND the
   register layer. The slice is copy/labeling honesty only.
-- Files: `components/matches/program-card.tsx:133-142` (the link), `lib/data/cricos-lookup.ts` (the `source`
-  field if you add a helper), `tests/components/matches/program-card.test.tsx:118-126`.
+- Out-of-scope follow-up: anon-results MatchCard CRICOS parity (P3, own slice).

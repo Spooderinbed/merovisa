@@ -115,14 +115,21 @@ describe("ProgramCard", () => {
     expect(screen.queryByText(/Good to know/i)).not.toBeInTheDocument();
   });
 
-  it("surfaces the provider's CRICOS code as a verifiable link when one is sourced", () => {
+  // Honesty (MV-36): the code we hold is the PROVIDER/institution code, not the course
+  // code a student needs on visa form 157A — and the register has no deep-link, so the
+  // link is a search, not a direct entry. The label must say both.
+  it("frames the CRICOS code as the provider code and the register link as a search", () => {
     const sydney: MatchResult = {
       ...m,
       university: { ...m.university, id: "sydney", name: "University of Sydney", city: "Sydney" },
     };
     render(<ProgramCard match={sydney} initialStatus={null} />);
-    const link = screen.getByRole("link", { name: /CRICOS 00026A/i });
+    const link = screen.getByRole("link", { name: /Provider CRICOS 00026A/i });
+    // Honest about the destination: a register search, not a direct deep-link to this entry.
+    expect(link).toHaveTextContent(/search the register/i);
     expect(link).toHaveAttribute("href", "https://cricos.education.gov.au/");
+    // Tooltip spells out the provider-vs-course-code distinction (no false 157A confidence).
+    expect(link.getAttribute("title")).toMatch(/course code/i);
   });
 
   it("renders no CRICOS line when the university has no sourced code", () => {

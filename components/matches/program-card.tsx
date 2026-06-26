@@ -131,13 +131,16 @@ export function ProgramCard({
             Document checklist →
           </a>
           {cricos ? (
+            // Honest framing (MV-36): this is the PROVIDER (institution) CRICOS code, not the
+            // course code a student needs on visa form 157A — and the register is a WebForms
+            // site with no deep-link, so the link is a search of the code, not a direct entry.
             <SourceAnchor
               surface="matches"
               href={cricos.source}
-              title={`Verify ${cricos.provider} on the official CRICOS register`}
+              title={`${cricos.cricosCode} is ${cricos.provider}'s provider (institution) CRICOS code — not the course code you'll need on visa form 157A. The official register has no direct link, so search this code there.`}
               className="font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
             >
-              CRICOS {cricos.cricosCode} ↗
+              Provider CRICOS {cricos.cricosCode} &middot; search the register ↗
             </SourceAnchor>
           ) : null}
           {evidence ? (
