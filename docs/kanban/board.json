@@ -487,15 +487,15 @@
     },
     {
       "id": "MV-36",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
-      "badge": "presentational; subject deep-link verified infeasible",
+      "badge": "SHIPPED 2026-06-26 → PR",
       "file": "cards/MV-36-cricos-link-honesty.md",
       "title": "Honest CRICOS link (provider-code framing; subject deep-link infeasible)",
-      "summary": "READY (agent-ownable, copy). Founder #1: 'why don't we link to the actual CRICOS page of their subject?' VERIFIED INFEASIBLE (live probe + data audit 2026-06-24, recorded so nobody re-investigates): (1) we hold ONLY provider/institution codes — au-cricos-codes.ts, au-cricos-directory.ts (1,669 providers) and au-nepal-evidence-levels.ts are all keyed by INSTITUTION CRICOS code (Sydney 00026A = the whole uni); per-course codes were never sourced, so there's nothing to deep-link a subject with. (2) cricos.education.gov.au is an ASP.NET WebForms site (Course/CourseSearch.aspx + Institution/InstitutionSearch.aspx, form-POST+ViewState, only /api/js) with NO ?code= deep-link URL — homepage is the only shareable URL (why MV-07 hard-coded it + a test pins it). Slice = make the EXISTING link honest, not fake a deep-link: relabel as the PROVIDER code (not the course code students need for visa form 157A — false-confidence risk, audit P2) + an honest 'search this code on the register' helper (audit P1); update the pinned program-card.test.tsx:124. Extends MV-07. OUT OF SCOPE: per-course harvest + deep-link (both infeasible). Dossier: cards/MV-36-cricos-link-honesty.md.",
+      "summary": "SHIPPED 2026-06-26 → PR. Founder #1 ('link the actual CRICOS page of their subject?') VERIFIED INFEASIBLE (recorded so nobody re-investigates): we hold only PROVIDER/institution codes (Sydney 00026A = whole uni; per-course codes never sourced) AND cricos.education.gov.au is WebForms with no ?code= deep-link (homepage is the only shareable URL — why MV-07 hard-coded it). So this slice makes the EXISTING link honest, not a fake deep-link: program-card.tsx CRICOS line relabelled 'CRICOS {code} ↗' → 'Provider CRICOS {code} · search the register ↗' (names it the provider code, not the course code a student needs on visa form 157A — false-confidence fix; and frames the link as a register SEARCH, not a direct entry). Tooltip now spells out the provider-vs-course-code distinction + 'register has no direct link'. cricos.source/lookup unchanged (no data work). Pinned program-card.test.tsx updated to assert the new label + course-code tooltip. Extends MV-07. OUT OF SCOPE (infeasible/own slice): per-course harvest, deep-link, anon-MatchCard parity. TDD; gate green: typecheck clean, lint 0 errors, suite 1395, goldens byte-identical (presentational).",
       "created": "2026-06-24",
-      "entered": "2026-06-24"
+      "entered": "2026-06-26"
     },
     {
       "id": "MV-37",
