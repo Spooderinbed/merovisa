@@ -37,9 +37,28 @@ describe("WorkingWithAgents", () => {
     ).toBeInTheDocument();
   });
 
+  it("surfaces the three gov depth rows verbatim (G.078, G.082, G.095)", () => {
+    render(<WorkingWithAgents />);
+    expect(
+      screen.getByText(
+        "No MARN to hand? You can also search the OMARA public register by the agent's business location.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "An authorised recipient only receives your mail — they must not give immigration assistance unless they're also a registered agent, legal practitioner, or exempt person.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The same analysis estimates students who still use an agent for a transfer may pay around AUD 255 per enrolment.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("links rows to their government sources", () => {
     render(<WorkingWithAgents />);
-    expect(screen.getByRole("link", { name: "OMARA register" })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "OMARA register" })[0]).toHaveAttribute(
       "href",
       expect.stringContaining("portal.mara.gov.au"),
     );

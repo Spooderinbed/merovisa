@@ -77,6 +77,15 @@ export const AU_WORKING_WITH_AGENTS: WorkingWithAgentsFact[] = [
     provenance: { findingRefs: ["G.077"], source: MARA_PORTAL_SEARCH },
   },
   {
+    id: "verify-business-location",
+    section: "verify-register",
+    label: "OMARA register",
+    summary: "No MARN to hand? You can also search the OMARA public register by the agent's business location.",
+    source: MARA_PORTAL_SEARCH,
+    lastVerified: VERIFIED,
+    provenance: { findingRefs: ["G.078"], source: MARA_PORTAL_SEARCH },
+  },
+  {
     id: "agent-standards",
     section: "verify-register",
     label: "OMARA",
@@ -143,6 +152,16 @@ export const AU_WORKING_WITH_AGENTS: WorkingWithAgentsFact[] = [
     lastVerified: VERIFIED,
     provenance: { findingRefs: ["G.081"], source: FORM_956 },
   },
+  {
+    id: "recipient-not-adviser",
+    section: "formal-representation",
+    label: "Form 956",
+    summary:
+      "An authorised recipient only receives your mail — they must not give immigration assistance unless they're also a registered agent, legal practitioner, or exempt person.",
+    source: FORM_956,
+    lastVerified: VERIFIED,
+    provenance: { findingRefs: ["G.082"], source: FORM_956 },
+  },
   // ── The 2026 commission ban ───────────────────────────────────────────────────
   {
     id: "commission-ban",
@@ -175,6 +194,16 @@ export const AU_WORKING_WITH_AGENTS: WorkingWithAgentsFact[] = [
     source: OIA_IMPACT,
     lastVerified: VERIFIED,
     provenance: { findingRefs: ["G.094"], source: OIA_IMPACT },
+  },
+  {
+    id: "student-paid-estimate",
+    section: "commission-ban",
+    label: "Impact analysis",
+    summary:
+      "The same analysis estimates students who still use an agent for a transfer may pay around AUD 255 per enrolment.",
+    source: OIA_IMPACT,
+    lastVerified: VERIFIED,
+    provenance: { findingRefs: ["G.095"], source: OIA_IMPACT },
   },
   {
     id: "direct-pay-risk",
