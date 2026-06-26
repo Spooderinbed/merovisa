@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ShortlistButton } from "@/components/matches/shortlist-button";
 
@@ -65,5 +65,68 @@ describe("ShortlistButton (3-state status control)", () => {
     render(<ShortlistButton programId="p1" initialStatus="shortlisted" />);
     await userEvent.click(screen.getByRole("button", { name: "Shortlisted" }));
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// A controllable promise so a test can hold the network "in flight" and assert
+// what the pills do BEFORE the server has answered.
+function deferred() {
+  let resolve!: (value: Response) => void;
+  const promise = new Promise<Response>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+describe("ShortlistButton — optimistic flip + rollback (MV-51)", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("flips the pill to the chosen status immediately, before the request resolves", async () => {
+    const d = deferred();
+    vi.spyOn(globalThis, "fetch").mockReturnValue(d.promise);
+    render(<ShortlistButton programId="p1" initialStatus="shortlisted" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Applied" }));
+
+    // Request is still pending (never resolved) — the active state can only be
+    // optimistic, not driven by the response.
+    expect(screen.getByRole("button", { name: "Applied" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Shortlisted" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("keeps every pill clickable while a request is in flight (no disabled lag)", async () => {
+    const d = deferred();
+    vi.spyOn(globalThis, "fetch").mockReturnValue(d.promise);
+    render(<ShortlistButton programId="p1" initialStatus={null} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Shortlisted" }));
+
+    expect(screen.getByRole("button", { name: "Not saved" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Shortlisted" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Applied" })).not.toBeDisabled();
+  });
+
+  it("rolls the pill back to the previous status when the server rejects", async () => {
+    const d = deferred();
+    vi.spyOn(globalThis, "fetch").mockReturnValue(d.promise);
+    render(<ShortlistButton programId="p1" initialStatus="shortlisted" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Applied" }));
+    // optimistic flip happened first
+    expect(screen.getByRole("button", { name: "Applied" })).toHaveAttribute("aria-pressed", "true");
+
+    // server says no
+    d.resolve(new Response(null, { status: 500 }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Shortlisted" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(screen.getByRole("button", { name: "Applied" })).toHaveAttribute("aria-pressed", "false");
   });
 });

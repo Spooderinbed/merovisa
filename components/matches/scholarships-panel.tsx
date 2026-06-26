@@ -38,6 +38,12 @@ export function ScholarshipsPanel() {
               {row.who}
             </span>
             <p className="text-[14px] text-ink-soft">{row.whatItCovers}</p>
+            {row.studyEligibility ? (
+              <p className="font-mono text-[12px] text-ink-soft">{row.studyEligibility}</p>
+            ) : null}
+            {row.applicationWindow ? (
+              <p className="font-mono text-[12px] text-ink-soft">{row.applicationWindow}</p>
+            ) : null}
             <SourceAnchor
               surface="matches"
               href={row.source}

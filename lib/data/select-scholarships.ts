@@ -30,6 +30,19 @@ export interface ScholarshipRow {
   amount: string;
   source: string;
   lastVerified?: string;
+  /**
+   * Readable application window ("Applications open …, close …"), present only
+   * when the funder publishes fixed open/close dates. Absent when no dates are
+   * held — never invented (trust-first honest absence).
+   */
+  applicationWindow?: string;
+  /**
+   * Who the award is actually for, when it materially narrows the applicant pool
+   * (e.g. research-degree-only). Present only where a real restriction is held —
+   * absent where the level is unrestricted (honest absence), so coursework
+   * applicants aren't misled into chasing research-only awards.
+   */
+  studyEligibility?: string;
 }
 
 const BENEFIT_LABEL: Record<AustraliaAwardsBenefit, string> = {
@@ -45,6 +58,27 @@ function joinBenefits(labels: string[]): string {
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 }
 
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Render a fixed ISO date ("YYYY-MM-DD") as "D Mon YYYY" deterministically — by
+ * splitting the parts, not via Date(), so there is no timezone drift.
+ */
+function formatIsoDate(iso: string): string {
+  const year = iso.slice(0, 4);
+  const month = Number(iso.slice(5, 7));
+  const day = Number(iso.slice(8, 10));
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+/** Build the readable application-window line from the held open/close dates. */
+function formatWindow(opens: string, closes: string): string {
+  return `Applications open ${formatIsoDate(opens)}, close ${formatIsoDate(closes)}`;
+}
+
 export function selectScholarships(): ScholarshipRow[] {
   // Australia Awards first — the Nepal-scoped, fully-funded award leads the list.
   const awardsRows: ScholarshipRow[] = AUSTRALIA_AWARDS_SCHOLARSHIPS.map((s) => ({
@@ -55,6 +89,8 @@ export function selectScholarships(): ScholarshipRow[] {
     amount: "Fully funded",
     source: s.source,
     lastVerified: s.lastVerified,
+    // The Australia Awards record holds a fixed application window; surface it.
+    applicationWindow: formatWindow(s.applicationOpens, s.applicationCloses),
   }));
 
   const otherRows: ScholarshipRow[] = AU_SCHOLARSHIPS.map((s) => ({
@@ -65,6 +101,10 @@ export function selectScholarships(): ScholarshipRow[] {
     amount: formatAmount(s),
     source: s.source,
     lastVerified: s.lastVerified,
+    // Surface a research-degree restriction where held; absent otherwise.
+    studyEligibility: s.researchDegreeOnly
+      ? "Research degrees only — PhD or research master's"
+      : undefined,
   }));
 
   return [...awardsRows, ...otherRows];
@@ -84,9 +124,10 @@ function formatAmount(s: (typeof AU_SCHOLARSHIPS)[number]): string {
     return `More than ${s.annualScholarshipCount.toLocaleString()} awarded per year`;
   }
   if (s.totalAnnualValueAud !== undefined) {
-    // Published as a floor ("over AUD N"); show in millions to stay readable.
+    // A funder-wide pool ("over AUD N across ALL its scholarships"), not a single
+    // applyable award — label it so a student never reads it as one they'd receive.
     const millions = s.totalAnnualValueAud / 1_000_000;
-    return `Over AUD ${millions.toLocaleString()} million awarded per year`;
+    return `Over AUD ${millions.toLocaleString()} million awarded across all its scholarships per year`;
   }
   return "See provider";
 }

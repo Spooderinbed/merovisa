@@ -21,18 +21,24 @@ export function ShortlistButton({
   initialStatus: Status;
 }) {
   const [status, setStatus] = useState<Status>(initialStatus);
-  const [busy, setBusy] = useState(false);
 
   const choose = async (next: Status) => {
-    if (busy || next === status) return;
-    setBusy(true);
-    const res = await fetch("/api/shortlist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ programId, status: next }),
-    });
-    if (res.ok) setStatus(next);
-    setBusy(false);
+    if (next === status) return;
+    const prev = status;
+    // Optimistic: reflect the choice instantly so the pill never lags behind the
+    // tap. The /api/shortlist round-trip (which for "Applied" also freezes the
+    // prediction and opens an attempt) confirms in the background.
+    setStatus(next);
+    try {
+      const res = await fetch("/api/shortlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programId, status: next }),
+      });
+      if (!res.ok) setStatus(prev); // server rejected — roll the pill back
+    } catch {
+      setStatus(prev); // network failed — roll the pill back
+    }
   };
 
   return (
@@ -49,7 +55,6 @@ export function ShortlistButton({
               key={step.label}
               type="button"
               onClick={() => choose(step.value)}
-              disabled={busy}
               aria-pressed={active}
               className={`rounded-pill px-3 py-1 text-[13px] font-medium transition ${
                 active ? "bg-strong-tint text-strong" : "text-ink-soft hover:bg-bg-tint"

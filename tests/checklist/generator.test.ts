@@ -337,4 +337,45 @@ describe("generateChecklist", () => {
     const items = generateChecklist({ program: { ...baseProgram, field: "nursing" }, sections: {}, uploadedKinds: noKinds });
     expect(byKey(items, "ahpra")).toMatchObject({ kind: null, status: "info", infoKind: "note" });
   });
+
+  // MV-52: wire the already-ledgered Nepal doc-acquisition datasets onto the rows that
+  // were missing them — the transcript row (TU equivalence turnaround, A.087) and the
+  // English row (IELTS test-centre logistics, J1). No new data; pure wiring.
+  it("attaches TU academic-equivalence processing-time guidance to the bachelor's transcript (MV-52, A.087)", () => {
+    const txn = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "bachelors-transcript");
+    expect(txn?.kind).toBe("bachelors-transcript"); // still a document row, not an info item
+    expect(txn?.note).toContain("Tribhuvan University");
+    expect(txn?.note).toContain("equivalence");
+    expect(txn?.note).toContain("3 working days"); // typicalBusinessDays from the dataset
+    expect(txn?.source?.url).toBe("https://tucdc.edu.np/faq");
+    expect(txn?.source?.lastVerified).toBe("2026-06-05");
+  });
+
+  it("attaches the same equivalence guidance to the master's transcript for a doctorate program (MV-52)", () => {
+    const items = generateChecklist({ program: { ...baseProgram, level: "doctorate" }, sections: {}, uploadedKinds: noKinds });
+    const mtxn = byKey(items, "masters-transcript");
+    expect(mtxn?.note).toContain("equivalence");
+    expect(mtxn?.source?.url).toBe("https://tucdc.edu.np/faq");
+  });
+
+  it("adds a Nepal IELTS test-centre logistics info step when the test is (or defaults to) IELTS (MV-52, J1)", () => {
+    const items = generateChecklist({ program: baseProgram, sections: { english: { test: "ielts" } }, uploadedKinds: noKinds });
+    const centres = byKey(items, "ielts-centres");
+    expect(centres).toMatchObject({
+      kind: null, status: "info", group: "english", stage: "now", requirement: "recommended", infoKind: "step",
+    });
+    expect(centres?.note).toContain("British Council");
+    expect(centres?.note).toContain("IDP");
+    expect(centres?.note).toContain("Kathmandu");
+    expect(centres?.note).toContain("9 locations"); // British Council locationCount
+    expect(centres?.note).toContain("36,000"); // IDP computer-delivered fee (NPR), locale-formatted
+    expect(centres?.source?.url).toContain("britishcouncil.org.np");
+    // default (no english section) also defaults to IELTS → the row is present
+    expect(byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "ielts-centres")).toBeTruthy();
+  });
+
+  it("does NOT fabricate test-centre logistics for PTE or TOEFL — only IELTS is sourced (MV-52)", () => {
+    expect(keys(generateChecklist({ program: baseProgram, sections: { english: { test: "pte" } }, uploadedKinds: noKinds }))).not.toContain("ielts-centres");
+    expect(keys(generateChecklist({ program: baseProgram, sections: { english: { test: "toefl" } }, uploadedKinds: noKinds }))).not.toContain("ielts-centres");
+  });
 });
