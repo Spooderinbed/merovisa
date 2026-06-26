@@ -10,12 +10,12 @@ import { invalidatePlan } from "@/lib/plan/invalidate";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
 import {
   sanitizeFilename,
-  verifyImageMagic,
+  verifyFileMagic,
   extensionFor,
 } from "@/lib/documents/upload-validation";
 
 const MAX_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
 export async function POST(request: Request): Promise<Response> {
   const supabase = await createSupabaseServerClient();
@@ -46,7 +46,7 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Invalid document kind" }, { status: 422 });
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "File must be JPG, PNG, or WebP" }, { status: 422 });
+    return NextResponse.json({ error: "File must be JPG, PNG, WebP, or PDF" }, { status: 422 });
   }
   if (file.size > MAX_SIZE) {
     return NextResponse.json({ error: "File must be under 5MB" }, { status: 422 });
@@ -71,9 +71,9 @@ export async function POST(request: Request): Promise<Response> {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   // Magic-byte check — defense against MIME spoofing.
-  if (!verifyImageMagic(buffer, file.type)) {
+  if (!verifyFileMagic(buffer, file.type)) {
     return NextResponse.json(
-      { error: "File contents do not match the declared image type" },
+      { error: "File contents do not match the declared file type" },
       { status: 422 },
     );
   }

@@ -70,14 +70,14 @@ export function DocumentCard({
     try {
       const res = await fetch(`/api/documents/${doc.id}/view`);
       if (!res.ok) {
-        setNotification("Could not load image");
+        setNotification("Could not load document");
         return;
       }
       const data = (await res.json()) as { url: string };
       setViewUrl(data.url);
       setViewerOpen(true);
     } catch {
-      setNotification("Could not load image");
+      setNotification("Could not load document");
     } finally {
       setFetchingUrl(false);
     }
@@ -113,7 +113,7 @@ export function DocumentCard({
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -146,6 +146,7 @@ export function DocumentCard({
         <DocumentViewerModal
           url={viewUrl}
           label={meta.label}
+          isPdf={/\.pdf$/i.test(doc.originalName)}
           onClose={() => { setViewerOpen(false); setViewUrl(null); }}
         />
       )}

@@ -41,6 +41,18 @@
   ],
   "cards": [
     {
+      "id": "MV-61",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-06-26 → PR (branch mv-61-pdf-upload); Tier-1 journey-completeness",
+      "file": "cards/MV-61-pdf-upload.md",
+      "title": "Accept PDF document uploads (transcripts, offers, loan letters, CoEs)",
+      "summary": "IN REVIEW — SHIPPED 2026-06-26 on branch mv-61-pdf-upload (founder merges to master to close → Done). First Tier-1 fix from the 2026-06-26 strategic reassessment: the document store accepted images only, so every real checklist document (transcripts, offer letters, loan sanction letters, CoEs — all PDFs) hit a 422. Under the north star (app must be complete enough that a student never needs a consultancy) an un-fileable document store is a bounce point. Added PDF end-to-end: ALLOWED_TYPES + rejection copy 'File must be JPG, PNG, WebP, or PDF' (app/api/documents/upload/route.ts); verifyImageMagic renamed verifyFileMagic with a %PDF (25 50 44 46) branch that rejects MIME spoofs both ways + extensionFor pdf->'pdf' (lib/documents/upload-validation.ts); file-picker accept adds application/pdf (components/documents/document-card.tsx); DocumentViewerModal gains isPdf and renders an iframe instead of a broken <img>, view-error copy 'image'->'document'. TDD RED->GREEN; gate green: typecheck clean, lint 0 errors (1 pre-existing build.mjs warning), full suite 235 files / 1402 tests (was 1396). No scorer/goldens/migration. Dossier: cards/MV-61-pdf-upload.md.",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
       "id": "MV-01",
       "col": "done",
       "done": "2026-06-19",

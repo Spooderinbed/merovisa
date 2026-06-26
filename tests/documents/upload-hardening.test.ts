@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import {
   sanitizeFilename,
-  verifyImageMagic,
+  verifyFileMagic,
   extensionFor,
 } from "@/lib/documents/upload-validation";
 
@@ -33,21 +33,21 @@ describe("sanitizeFilename", () => {
   });
 });
 
-describe("verifyImageMagic", () => {
+describe("verifyFileMagic", () => {
   test("PNG bytes verify as image/png", () => {
     const png = Buffer.from([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
     ]);
-    expect(verifyImageMagic(png, "image/png")).toBe(true);
-    expect(verifyImageMagic(png, "image/jpeg")).toBe(false);
+    expect(verifyFileMagic(png, "image/png")).toBe(true);
+    expect(verifyFileMagic(png, "image/jpeg")).toBe(false);
   });
 
   test("JPEG bytes verify as image/jpeg", () => {
     const jpeg = Buffer.from([
       0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
-    expect(verifyImageMagic(jpeg, "image/jpeg")).toBe(true);
-    expect(verifyImageMagic(jpeg, "image/png")).toBe(false);
+    expect(verifyFileMagic(jpeg, "image/jpeg")).toBe(true);
+    expect(verifyFileMagic(jpeg, "image/png")).toBe(false);
   });
 
   test("WebP bytes verify as image/webp", () => {
@@ -55,13 +55,28 @@ describe("verifyImageMagic", () => {
       0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0,
       0x57, 0x45, 0x42, 0x50,
     ]);
-    expect(verifyImageMagic(webp, "image/webp")).toBe(true);
-    expect(verifyImageMagic(webp, "image/png")).toBe(false);
+    expect(verifyFileMagic(webp, "image/webp")).toBe(true);
+    expect(verifyFileMagic(webp, "image/png")).toBe(false);
+  });
+
+  test("PDF bytes verify as application/pdf", () => {
+    // "%PDF-1.4" followed by padding to clear the 12-byte minimum.
+    const pdf = Buffer.from("%PDF-1.4\n%\xe2\xe3", "latin1");
+    expect(verifyFileMagic(pdf, "application/pdf")).toBe(true);
+    // A real PDF declared as an image must still be rejected.
+    expect(verifyFileMagic(pdf, "image/png")).toBe(false);
+  });
+
+  test("image bytes declared as application/pdf are rejected", () => {
+    const png = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+    ]);
+    expect(verifyFileMagic(png, "application/pdf")).toBe(false);
   });
 
   test("rejects garbage bytes", () => {
-    expect(verifyImageMagic(Buffer.from("not an image yet"), "image/png")).toBe(false);
-    expect(verifyImageMagic(Buffer.alloc(5), "image/png")).toBe(false);
+    expect(verifyFileMagic(Buffer.from("not an image yet"), "image/png")).toBe(false);
+    expect(verifyFileMagic(Buffer.alloc(5), "image/png")).toBe(false);
   });
 });
 
@@ -70,9 +85,10 @@ describe("extensionFor", () => {
     expect(extensionFor("image/jpeg")).toBe("jpg");
     expect(extensionFor("image/png")).toBe("png");
     expect(extensionFor("image/webp")).toBe("webp");
+    expect(extensionFor("application/pdf")).toBe("pdf");
   });
 
   test("unknown returns 'bin'", () => {
-    expect(extensionFor("application/pdf")).toBe("bin");
+    expect(extensionFor("application/zip")).toBe("bin");
   });
 });

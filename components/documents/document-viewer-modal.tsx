@@ -5,10 +5,12 @@ import { useEffect } from "react";
 export function DocumentViewerModal({
   url,
   label,
+  isPdf = false,
   onClose,
 }: {
   url: string;
   label: string;
+  isPdf?: boolean;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -43,13 +45,22 @@ export function DocumentViewerModal({
             Close ✕
           </button>
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={url}
-          alt={label}
-          className="max-h-[80vh] w-auto rounded-lg object-contain"
-          onClick={(e) => e.stopPropagation()}
-        />
+        {isPdf ? (
+          <iframe
+            src={url}
+            title={`${label} preview`}
+            className="h-[80vh] w-[85vw] max-w-[900px] rounded-lg bg-surface"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={url}
+            alt={label}
+            className="max-h-[80vh] w-auto rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
       </div>
     </div>
   );

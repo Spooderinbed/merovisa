@@ -20,10 +20,21 @@ export function sanitizeFilename(name: string): string {
 /**
  * Verify the leading bytes of a buffer match the declared MIME type.
  * Defends against MIME spoofing where an attacker sends arbitrary content
- * under a trusted Content-Type.
+ * under a trusted Content-Type. Covers the image types plus PDF — the real
+ * format of transcripts, offer letters, loan sanctions, and CoEs.
  */
-export function verifyImageMagic(buffer: Buffer, declaredType: string): boolean {
+export function verifyFileMagic(buffer: Buffer, declaredType: string): boolean {
   if (buffer.length < 12) return false;
+
+  // PDF: 25 50 44 46 ("%PDF")
+  if (
+    buffer[0] === 0x25 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x44 &&
+    buffer[3] === 0x46
+  ) {
+    return declaredType === "application/pdf";
+  }
 
   // JPEG: FF D8 FF
   if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
@@ -70,6 +81,8 @@ export function extensionFor(mimeType: string): string {
       return "png";
     case "image/webp":
       return "webp";
+    case "application/pdf":
+      return "pdf";
     default:
       return "bin";
   }
