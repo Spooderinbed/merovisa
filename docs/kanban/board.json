@@ -704,7 +704,7 @@
     },
     {
       "id": "MV-51",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "",
@@ -716,7 +716,7 @@
     },
     {
       "id": "MV-52",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "",
@@ -728,7 +728,7 @@
     },
     {
       "id": "MV-53",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
@@ -740,7 +740,7 @@
     },
     {
       "id": "MV-54",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
@@ -764,7 +764,7 @@
     },
     {
       "id": "MV-56",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
@@ -788,7 +788,7 @@
     },
     {
       "id": "MV-58",
-      "col": "inreview",
+      "col": "done",
       "pri": "P3",
       "owner": "agent",
       "badge": "",
