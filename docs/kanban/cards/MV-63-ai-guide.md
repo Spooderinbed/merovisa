@@ -1,6 +1,6 @@
 # MV-63 — AI guide (Phase 6): grounded, source-citing chat that explains (never decides)
 
-**Column:** In Progress · **Priority:** P1 (founder-directed) · **Owner:** agent
+**Column:** In Review · **Priority:** P1 (founder-directed) · **Owner:** agent
 **Branch:** `mv-63-ai-guide` · **Started:** 2026-06-26
 **Vision:** `docs/memory/project_vision.md` — *"AI guide that explains reasoning, not decides — rule-based first, AI explains."* The MVP design spec deferred Phase 6 to a separate spec that was never written, so **this card IS the Phase 6 design/build plan.**
 
@@ -19,9 +19,9 @@ Rule-based engine stays authoritative; the guide is an **explanation layer** ove
 results + MyVisa's already-sourced corridor data. Server-side only (key never reaches the browser).
 
 ```
-app/(app)/guide/page.tsx  (server: load user's primary assessment) 
-   └─ components/guide/guide-chat.tsx  (client: message list + input → POST /api/guide/chat)
-        └─ app/api/guide/chat/route.ts  (auth-gate + Zod + Upstash rate-limit)
+app/(app)/guide/page.tsx  (server: load user's primary assessment)  ✅ SHIPPED
+   └─ components/guide/guide-chat.tsx  (client: message list + input → POST /api/guide/chat)  ✅ SHIPPED
+        └─ app/api/guide/chat/route.ts  (auth-gate + Zod + Upstash rate-limit)  ✅ SHIPPED
              ├─ lib/guide/context.ts        ← assembles grounding context (assessment + sourced facts)  ✅ SHIPPED
              ├─ lib/guide/system-prompt.ts  ← GUIDE_SYSTEM_PROMPT (the guardrails)  ✅ SHIPPED
              └─ lib/guide/deepseek.ts       ← server-side DeepSeek client            ✅ SHIPPED
@@ -59,13 +59,17 @@ grounded-over-creative.
   - Tests (12): context = banded-verdict/no-leak, factor sources, matches+evidence, plan, sourced cost,
     null-payload-no-fabrication; route = 401, 422, 429, 200+system-first/user-last wiring, grounding on
     the student's own data, 503-on-provider-failure (no `reply`).
-- **Slice 3 — UI (NEXT):**
-  - `components/guide/guide-chat.tsx` — client chat (message list, input, pending state, visible error on
-    failure per MV-62), calm-authority styling, no streaming for MVP.
-  - `app/(app)/guide/page.tsx` — replace the "coming soon" stub; server-load the assessment, pass a
-    short grounding summary + an empty-state nudge if no assessment yet.
-  - Tests: renders, sends, shows reply, surfaces error.
-  - One PR when slices 2+3 land (slice 1 rides along on the branch).
+- **Slice 3 — UI (✅ DONE):**
+  - `components/guide/guide-chat.tsx` — client chat (message list, textarea + Ask, pending "thinking…",
+    visible `role="alert"` error on failure per MV-62 — never a fabricated reply). Sends `{ message,
+    history(last 12) }` to `/api/guide/chat`, appends the reply on success. Calm-authority styling
+    (teal/paper, thin borders, pill button), no streaming for MVP.
+  - `app/(app)/guide/page.tsx` — replaced the "coming soon" stub; server component, `getUser()` →
+    `redirect("/auth?next=/guide")`, loads the primary assessment to drive an empty-state nudge
+    ("Run your assessment") while still offering the chat for general corridor questions.
+  - Tests (6): chat renders/sends+reply/visible-error/no-empty-post; page replaces-stub + assessment-nudge.
+  - Obsolete `tests/app/app-stubs.test.tsx` (asserted the stub) deleted — superseded by guide-page test.
+  - **One PR for slices 1–3 (this branch). Merge to master is founder-gated.**
 
 ## Acceptance criteria
 
@@ -73,15 +77,17 @@ grounded-over-creative.
 - [x] Guardrail system prompt pinned by tests.
 - [x] Route is auth-gated + rate-limited + Zod-validated; grounds on the user's own data; cites sources.
 - [x] Refuses to write applications/SOPs and out-of-corridor questions (enforced by `GUIDE_SYSTEM_PROMPT`).
-- [ ] Chat UI replaces the stub; failures are visible (no silent/fabricated fallback). ← slice 3
-- [x] No raw scores/% in the grounding (banded verdicts only); full gate green (slices 1–2).
+- [x] Chat UI replaces the stub; failures are visible (no silent/fabricated fallback).
+- [x] No raw scores/% in the grounding (banded verdicts only); full gate green (slices 1–3).
 
-## Gate (slices 1–2)
+## Gate (slices 1–3)
 
-- `npm run typecheck` clean · `npm run lint` 0 errors · full suite **1432** (1411 → 1420 slice 1 → 1432 slice 2) · goldens N/A.
+- `npm run typecheck` clean · `npm run lint` 0 errors · full suite **1437** (1411 → 1420 s1 → 1432 s2 → 1437 s3, net of the deleted obsolete stub test) · goldens N/A.
 
 ## Resume notes (cold agent)
 
-- Build on branch `mv-63-ai-guide`. Slice 1 is committed. Do slice 2 then slice 3, TDD, then ONE PR.
+- All three slices are committed on branch `mv-63-ai-guide`. Feature build is COMPLETE; the card is in
+  review awaiting the founder-gated `gh pr merge`.
 - The key is in `.env.local` (gitignored) — never echo it, never commit it, never put it in a test.
-- Production won't work until the founder adds `DEEPSEEK_API_KEY` to Vercel — flag it on the PR.
+- **Production won't work until the founder (1) rotates the key [shared in plaintext] and (2) adds
+  `DEEPSEEK_API_KEY` to Vercel.** Until (2), the route returns its calm 503 in prod — flagged on the PR.
