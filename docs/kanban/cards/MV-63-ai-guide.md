@@ -1,6 +1,6 @@
 # MV-63 — AI guide (Phase 6): grounded, source-citing chat that explains (never decides)
 
-**Column:** In Review · **Priority:** P1 (founder-directed) · **Owner:** agent
+**Column:** Done (PR #10 merged → master `e6d7ab1`, 2026-06-26) · **Priority:** P1 (founder-directed) · **Owner:** agent
 **Branch:** `mv-63-ai-guide` · **Started:** 2026-06-26
 **Vision:** `docs/memory/project_vision.md` — *"AI guide that explains reasoning, not decides — rule-based first, AI explains."* The MVP design spec deferred Phase 6 to a separate spec that was never written, so **this card IS the Phase 6 design/build plan.**
 
@@ -86,8 +86,10 @@ grounded-over-creative.
 
 ## Resume notes (cold agent)
 
-- All three slices are committed on branch `mv-63-ai-guide`. Feature build is COMPLETE; the card is in
-  review awaiting the founder-gated `gh pr merge`.
-- The key is in `.env.local` (gitignored) — never echo it, never commit it, never put it in a test.
-- **Production won't work until the founder (1) rotates the key [shared in plaintext] and (2) adds
-  `DEEPSEEK_API_KEY` to Vercel.** Until (2), the route returns its calm 503 in prod — flagged on the PR.
+- **DONE — PR #10 merged to master (`e6d7ab1`), live on Vercel.** Branch `mv-63-ai-guide` deleted.
+- Key handling: the original DeepSeek key was in `.env.local` (gitignored, never committed). Founder
+  confirmed that key is now **dead**, so the plaintext-exposure risk is moot — no rotation needed.
+- **The guide will only return real answers in prod once a VALID `DEEPSEEK_API_KEY` is set in the Vercel
+  env.** Until then the route serves its calm 503 by design (no crash, no fabricated answer). No code
+  change needed — just the env var. Optional follow-ups: streaming, conversation persistence, per-message
+  source chips, anonymous (pre-account) access.
