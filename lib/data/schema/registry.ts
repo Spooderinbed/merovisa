@@ -748,9 +748,10 @@ export const DATA_MODULES: DataModuleEntry[] = [
     recordInterface: "GenuineStudentFact",
   },
   {
-    // Slice 3 — working-with-agents gov core (category G). 16 prose rows / 16 findings:
-    // whether you need an agent, who may lawfully assist, verifying the OMARA register, what
-    // an agent owes you, Form 956 representation, and the 2026 onshore commission ban. All
+    // Slice 3 — working-with-agents gov core (category G). 19 prose rows / 19 findings:
+    // whether you need an agent, who may lawfully assist, verifying the OMARA register (by MARN
+    // or business location), what an agent owes you, Form 956 representation (incl. the
+    // authorised-recipient limit), and the 2026 onshore commission ban. All
     // findingRefs are fresh category-G rows (no cross-category reuse). Rendered after
     // GenuineStudent on the results page. Fact-only: no scorer reads it.
     category: "G",
