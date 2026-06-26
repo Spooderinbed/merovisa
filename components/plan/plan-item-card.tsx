@@ -18,10 +18,12 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
   const [done, setDone] = useState(item.status === "done");
   const [dismissed, setDismissed] = useState(item.status === "dismissed");
   const [started, setStarted] = useState(item.startedAt !== null);
+  const [error, setError] = useState<string | null>(null);
   const meta = completionFor(item.kind);
 
   const post = async (body: Record<string, unknown>): Promise<boolean> => {
     setBusy(true);
+    setError(null);
     const res = await fetch("/api/plan/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -30,6 +32,11 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
     setBusy(false);
     return !!res?.ok;
   };
+
+  // A swallowed action (network drop or a non-ok response) used to leave the card
+  // unchanged with no feedback — on a flaky connection that reads as a broken app.
+  // Surface it so the student knows the tap didn't take and can retry.
+  const SAVE_ERROR = "We couldn’t save that just now — try again.";
 
   const setStatus = async (status: "done" | "dismissed" | "todo") => {
     if (await post({ status })) {
@@ -41,6 +48,8 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
       setDismissed(status === "dismissed");
       setStarted(false);
       onChanged?.();
+    } else {
+      setError(SAVE_ERROR);
     }
   };
 
@@ -49,6 +58,8 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
       track("plan_action", { kind: item.kind, action: next ? "started" : "reopened" });
       setStarted(next);
       onChanged?.();
+    } else {
+      setError(SAVE_ERROR);
     }
   };
 
@@ -134,6 +145,11 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
           </button>
         )}
       </header>
+      {error ? (
+        <p role="alert" className="text-[13px] text-reach">
+          {error}
+        </p>
+      ) : null}
       {item.body ? <p className="text-[15px] text-ink-soft">{item.body}</p> : null}
       {sourcesFor(item.kind).map((src) => (
         <SourceLine key={src.url} url={src.url} lastVerified={src.lastVerified} surface="plan" />

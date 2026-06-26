@@ -137,4 +137,38 @@ describe("PlanItemCard", () => {
     expect(screen.getByText(/^Dismissed$/)).toBeInTheDocument();
     expect(screen.getByText("Upload IELTS")).not.toHaveClass("line-through");
   });
+
+  // The action POST must never fail silently — a swallowed tap reads as a broken
+  // app on a flaky Nepal connection. Surface the failure and keep the item's state.
+  it("surfaces an error and keeps the item open when the Done action POST fails (network)", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
+    render(<PlanItemCard item={item} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Done$/i }));
+    expect(await screen.findByText(/couldn.t save/i)).toBeInTheDocument();
+    // Not silently marked done.
+    expect(screen.getByText("Upload IELTS")).not.toHaveClass("line-through");
+    expect(screen.getByRole("button", { name: /^Done$/i })).toBeInTheDocument();
+  });
+
+  it("surfaces an error and keeps the item open when the action POST returns non-ok", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
+    render(<PlanItemCard item={item} />);
+    await userEvent.click(screen.getByRole("button", { name: /Dismiss/i }));
+    expect(await screen.findByText(/couldn.t save/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Dismissed$/)).toBeNull();
+  });
+
+  it("clears the error and applies the change on a successful retry", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    render(<PlanItemCard item={item} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Done$/i }));
+    expect(await screen.findByText(/couldn.t save/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Done$/i }));
+    expect(screen.queryByText(/couldn.t save/i)).toBeNull();
+    expect(screen.getByText("Upload IELTS")).toHaveClass("line-through");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
