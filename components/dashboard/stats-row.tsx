@@ -11,18 +11,21 @@ function Stat({ label, value, href }: { label: string; value: string | number; h
 }
 
 export function StatsRow({
-  universities,
+  savedPrograms,
   documents,
   profilePct,
 }: {
-  universities: number | null;
+  savedPrograms: number | null;
   documents: number | null;
   profilePct: number;
 }) {
   const dash = "—";
   return (
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Stat label="Universities" value={universities ?? dash} href="/matches" />
+      {/* Counts shortlisted PROGRAMS (one row per program_id), not distinct universities —
+          so it's labelled "Saved programs". A bare 0 then reads "none saved yet", never
+          "0 universities exist". */}
+      <Stat label="Saved programs" value={savedPrograms ?? dash} href="/matches" />
       <Stat label="Documents" value={documents ?? dash} href="/documents" />
       <Stat label="Profile" value={bandLabel(profilePct)} href="/profile" />
       {/* Scholarship matching isn't built yet — an honest non-link tile, not a doorway to a stub. */}

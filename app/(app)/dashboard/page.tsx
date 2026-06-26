@@ -85,7 +85,7 @@ export default async function DashboardPage() {
           A frozen tracker / empty shell reads as fake on a trust-first product. The real
           progress signals live in StatsRow. Audit: docs/audits/2026-06-18-full-app-evaluation.md (Q10). */}
       <StatsRow
-        universities={shortlist.length}
+        savedPrograms={shortlist.length}
         documents={documents.length}
         profilePct={completenessPct}
       />
