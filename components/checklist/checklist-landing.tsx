@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; name: string }[] }) {
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">
@@ -8,6 +10,19 @@ export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; n
           Each program has its own checklist — what you need now, and what comes after your offer.
         </p>
       </header>
+
+      <Link
+        href="/checklist/all"
+        className="flex items-center justify-between rounded-xl border border-line bg-bg-tint p-4 hover:border-primary"
+      >
+        <span className="flex flex-col gap-0.5">
+          <span className="text-[15px] text-ink">Your overall document checklist</span>
+          <span className="text-[13px] text-ink-soft">
+            One running list across every program — tick off each document as you obtain it.
+          </span>
+        </span>
+        <span className="ml-4 shrink-0 text-[13px] text-primary">Open →</span>
+      </Link>
 
       {shortlisted.length > 0 ? (
         <ul className="flex flex-col gap-2">

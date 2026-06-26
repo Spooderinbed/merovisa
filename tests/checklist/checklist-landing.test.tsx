@@ -15,4 +15,11 @@ describe("ChecklistLanding", () => {
     render(<ChecklistLanding shortlisted={[]} />);
     expect(screen.getByRole("link", { name: /documents vault/i })).toHaveAttribute("href", "/documents");
   });
+  it("offers the global, program-agnostic checklist", () => {
+    render(<ChecklistLanding shortlisted={[]} />);
+    expect(screen.getByRole("link", { name: /overall document checklist/i })).toHaveAttribute(
+      "href",
+      "/checklist/all",
+    );
+  });
 });

@@ -728,13 +728,13 @@
     },
     {
       "id": "MV-53",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
-      "file": null,
+      "file": "cards/MV-53-global-document-checklist.md",
       "title": "Global document checklist + persisted 'I have this' toggle",
-      "summary": "Founder ask (2026-06-26): the document checklist is ONLY per-program (/checklist/[programId]); no global view, not in nav, and no persisted 'obtained' state — 'have' is inferred from file-upload presence only (documents.status column was DROPPED in migration 20260605000000_simplify_documents.sql:4). Add a program-agnostic checklist (reuse DOCUMENT_META at lib/documents/types.ts:19) at a new global route+nav entry, with a per-kind obtained toggle persisting to a new owner+kind status store (Supabase table or restored status column, RLS) so the tick survives reload independent of upload; render the existing have/✓ visual from it. RISK (Codex): confirm schema/column intent BEFORE writing tests — a wrong column name invalidates goldens. Keep per-program views. Effort M, NO data dep.",
+      "summary": "SHIPPED 2026-06-26 (branch mv-51, +18 tests, suite 1395, gate green). Option B (Codex-concurred): a new orthogonal table public.document_status (owner, kind, obtained, primary key (owner,kind)) carries upload-independent 'obtained' state — documents (file_path/file_size NOT NULL) and lib/checklist/generator.ts left UNTOUCHED, so zero golden churn (generator + document/checklist tests stayed green, 80 untouched). kinds check-constraint + Zod enum are both the exact DOCUMENT_KINDS (machine-verified 20/20, same order). Shipped: migration 20260626000000_add_document_status.sql (owner-scoped RLS mirroring the outcomes idiom, UPDATE policy has using+with-check, authenticated not service_role, no backfill); status-repo.ts (listObtainedKinds / setObtained = upsert-ON / delete-OFF); validation/documents.ts; POST app/api/documents/status (mirrors outcomes/event: safeParse 422, getUser 401, owner from session); global page app/(app)/checklist/all iterating GROUPS/DOCUMENT_META; optimistic 'use client' toggle with rollback; reachable via a new 'Your overall document checklist' card on the existing /checklist landing (least-invasive — NAV_APP/mobile-tab-bar untouched; per-program views intact). Founder residuals (not blockers): apply migration to prod; merge PR→Done; nav label/IA sign-off.",
       "created": "2026-06-26",
       "entered": "2026-06-26"
     },

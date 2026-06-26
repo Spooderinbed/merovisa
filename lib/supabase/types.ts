@@ -83,6 +83,27 @@ export type Database = {
         }
         Relationships: []
       }
+      document_status: {
+        Row: {
+          kind: string
+          obtained: boolean
+          owner: string
+          updated_at: string
+        }
+        Insert: {
+          kind: string
+          obtained?: boolean
+          owner: string
+          updated_at?: string
+        }
+        Update: {
+          kind?: string
+          obtained?: boolean
+          owner?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           assessment_id: string | null
