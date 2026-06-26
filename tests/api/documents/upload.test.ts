@@ -42,7 +42,7 @@ vi.mock("@/lib/rate-limit/upstash", () => ({ checkRateLimit }));
 // Magic-byte check passes so we reach the flag-flip block.
 vi.mock("@/lib/documents/upload-validation", () => ({
   sanitizeFilename: (n: string) => n,
-  verifyImageMagic: () => true,
+  verifyFileMagic: () => true,
   extensionFor: () => "png",
 }));
 
@@ -50,9 +50,9 @@ import { POST } from "@/app/api/documents/upload/route";
 
 // jsdom/undici can't round-trip a multipart Request body, so stub formData()
 // directly instead of relying on the runtime to parse it.
-function uploadReq(kind: string): Request {
+function uploadReq(kind: string, type = "image/png"): Request {
   const form = new FormData();
-  const file = new File([new Uint8Array([1, 2, 3])], "proof.png", { type: "image/png" });
+  const file = new File([new Uint8Array([1, 2, 3])], "proof", { type });
   form.set("file", file);
   form.set("kind", kind);
   return {
@@ -123,5 +123,17 @@ describe("POST /api/documents/upload", () => {
     expect(storageRemove).toHaveBeenCalled();
     // No false flag-flip after a failed primary write.
     expect(patchProfileSection).not.toHaveBeenCalled();
+  });
+
+  it("accepts a PDF — the real format of transcripts, offers, and loan letters", async () => {
+    const res = await POST(uploadReq("offer-letter", "application/pdf"));
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects a disallowed type with 422", async () => {
+    const res = await POST(uploadReq("passport", "application/zip"));
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error).toMatch(/PDF/);
   });
 });
