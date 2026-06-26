@@ -42,7 +42,7 @@
   "cards": [
     {
       "id": "MV-61",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-06-26 → PR (branch mv-61-pdf-upload); Tier-1 journey-completeness",
@@ -487,7 +487,7 @@
     },
     {
       "id": "MV-35",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-06-26 → PR",
@@ -499,7 +499,7 @@
     },
     {
       "id": "MV-36",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "SHIPPED 2026-06-26 → PR",
@@ -596,7 +596,7 @@
     },
     {
       "id": "MV-41",
-      "col": "inreview",
+      "col": "done",
       "pri": "P0",
       "owner": "agent",
       "badge": "SHIPPED 2026-06-26 → PR (client dead-CTA fix; server already correct)",
@@ -608,7 +608,7 @@
     },
     {
       "id": "MV-62",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-06-26 → PR",
@@ -824,7 +824,7 @@
     },
     {
       "id": "MV-59",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
