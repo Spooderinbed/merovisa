@@ -607,6 +607,18 @@
       "entered": "2026-06-26"
     },
     {
+      "id": "MV-62",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-06-26 → PR",
+      "file": "cards/MV-62-resilience-boundaries.md",
+      "title": "Resilience: error + loading boundaries + no silently-swallowed taps",
+      "summary": "SHIPPED 2026-06-26 → PR. Tier-1 journey-reliability. The real user is on a flaky connection: a thrown live Supabase read (dashboard six-way Promise.all at dashboard/page.tsx:47, matches four-way) crashed signed-in pages to a blank frame, and a dropped plan-action tap did nothing with no feedback — both read as 'broken app' = bounce to a consultancy. Scoped DOWN from the ~30-file resilience proposal to the highest-leverage set: ONE app/(app)/error.tsx (covers ALL signed-in routes — they share the (app) group: calm branded 'couldn't load this page, your data is safe' + working reset), ONE app/(app)/loading.tsx (flat-paper skeleton, aria-busy, no spinner), app/global-error.tsx (root-layout fallback, self-contained <html>/<body>, inline brand hex since CSS/fonts may be what failed), and components/plan/plan-item-card.tsx (the silent .catch(()=>null) now surfaces a role=alert 'We couldn't save that just now — try again' and keeps prior state; mirrors outcome-self-report.tsx). Out of scope: bespoke per-route skeletons, anon/marketing trees, toast infra, Sentry wiring (follow-up). TDD RED→GREEN: plan-item-card.test.tsx (+3: network-fail/non-ok/retry-clears), new tests/app/error-boundaries.test.tsx (3). Gate green: typecheck clean, lint 0 errors, suite 1401. Founder copy review on the two messages.",
+      "created": "2026-06-26",
+      "entered": "2026-06-26"
+    },
+    {
       "id": "MV-42",
       "col": "backlog",
       "pri": "P1",
