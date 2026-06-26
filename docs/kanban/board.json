@@ -584,15 +584,15 @@
     },
     {
       "id": "MV-41",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P0",
       "owner": "agent",
-      "badge": "",
-      "file": null,
-      "title": "Conversion seam: kill silent id:null + no-account retain path",
-      "summary": "Phase B (audit #2, P0). Audit re-flags app/api/assess/route.ts returning 200 with id:null on a persist miss → silently disables save CTAs; OAuth is the only retain door. VERIFY-FIRST: heavily overlaps already-shipped MV-28 (recoverable anon results) / MV-31 (persist-failure path) / MV-32 — confirm the actual residual against current route.ts BEFORE building (per the MV-17 hallucination lesson). Then: return persisted:false (not silent null) → retry; add a no-account copy-link / email-to-self path; demote OAuth to one of two doors. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #2.",
+      "badge": "SHIPPED 2026-06-26 → PR (client dead-CTA fix; server already correct)",
+      "file": "cards/MV-41-dead-cta.md",
+      "title": "Conversion seam: kill silent id:null dead-CTA",
+      "summary": "SHIPPED 2026-06-26 → PR. VERIFY-FIRST done: the SERVER residual the audit flagged is already closed — app/api/assess/route.ts logs the anon persist miss and still returns the payload (results render), and surfaces 500 only for signed-in users (route.ts:119-146, shipped via MV-28/31/32). The live residual was purely CLIENT: ConversionPaths + ConversionPrompt rendered a SILENTLY disabled 'Continue with Google' button under 'Keep your assessment / expires in 3 days' copy when assessmentId is null — a dead CTA plus a FALSE expiry promise (nothing was saved). Fix: on id:null both components now drop the dead button + false expiry and show honest 'We couldn't save this assessment …' copy with a real recovery — a 'Run it again' link to /assess?new=1. NO email-to-self/copy-link path (the old card summary's idea): that retrieval system does not exist, so implying it would fabricate a feature (trust-first) — re-run is the one truthful recovery. TDD RED→GREEN: conversion-paths.test.tsx (+2, replaced the obsolete 'disables button' test), new-state in conversion-prompt.test.tsx (+2), results.test.tsx core-path render now passes a real id. Gate green: typecheck clean, lint 0 errors, suite 1397 (was 1396). Founder copy review: the 'couldn't save / Run it again' wording. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #2.",
       "created": "2026-06-25",
-      "entered": "2026-06-25"
+      "entered": "2026-06-26"
     },
     {
       "id": "MV-42",

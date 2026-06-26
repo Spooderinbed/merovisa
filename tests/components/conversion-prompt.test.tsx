@@ -25,8 +25,17 @@ describe("ConversionPrompt", () => {
     expect(startClaimOAuth).toHaveBeenCalledWith(ASSESSMENT_UUID);
   });
 
-  it("disables the button when there is no assessment id", () => {
-    render(<ConversionPrompt assessmentId={null} />);
-    expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeDisabled();
+  describe("when the assessment failed to persist (id:null)", () => {
+    it("shows an honest could-not-save message instead of a dead Continue button", () => {
+      render(<ConversionPrompt assessmentId={null} />);
+      expect(screen.getByText(/couldn.t save/i)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Continue with Google/i })).not.toBeInTheDocument();
+    });
+
+    it("offers a real recovery: a link to run the assessment again", () => {
+      render(<ConversionPrompt assessmentId={null} />);
+      const retry = screen.getByRole("link", { name: /run it again/i });
+      expect(retry).toHaveAttribute("href", "/assess?new=1");
+    });
   });
 });

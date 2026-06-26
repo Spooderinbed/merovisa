@@ -75,8 +75,21 @@ describe("ConversionPaths", () => {
     expect(screen.queryByText(/come back later/i)).not.toBeInTheDocument();
   });
 
-  it("disables the Google button when there is no assessment id", () => {
-    render(<ConversionPaths assessmentId={null} />);
-    expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeDisabled();
+  describe("when the assessment failed to persist (id:null)", () => {
+    it("shows an honest could-not-save message instead of a dead Continue button", () => {
+      render(<ConversionPaths assessmentId={null} />);
+      // Honest: say plainly it wasn't saved.
+      expect(screen.getByText(/couldn.t save/i)).toBeInTheDocument();
+      // No silently-dead Google button claiming to "keep" a non-existent assessment.
+      expect(screen.queryByRole("button", { name: /Continue with Google/i })).not.toBeInTheDocument();
+      // No false 3-day expiry promise when nothing was actually saved.
+      expect(screen.queryByText(/expires in 3 days/i)).not.toBeInTheDocument();
+    });
+
+    it("offers a real recovery: a link to run the assessment again", () => {
+      render(<ConversionPaths assessmentId={null} />);
+      const retry = screen.getByRole("link", { name: /run it again/i });
+      expect(retry).toHaveAttribute("href", "/assess?new=1");
+    });
   });
 });
