@@ -809,18 +809,6 @@
       "title": "Working-with-agents panel: three gov depth rows (G.078/G.082/G.095)",
       "created": "2026-06-26",
       "entered": "2026-06-26"
-    },
-    {
-      "id": "MV-60",
-      "col": "backlog",
-      "pri": "P3",
-      "owner": "agent",
-      "badge": "",
-      "file": "cards/MV-60-register-verification-cta.md",
-      "summary": "Queued (founder copy-gated). Turn the working-with-agents panel's 'Check the register first' section into an actionable, gov-quoted 'verify your agent on the OMARA register before you pay' callout (reuses G.077/G.078/G.084 — no new findings). Codex: marginally higher trust value than a flat link AND safe ONLY if framed as quoting the government, not a MyVisa-branded button; copy is the whole risk surface → blocked on founder copy sign-off. Build is trivial once wording is fixed.",
-      "title": "Working-with-agents: actionable 'verify your agent' register CTA",
-      "created": "2026-06-26",
-      "entered": "2026-06-26"
     }
   ]
 }
