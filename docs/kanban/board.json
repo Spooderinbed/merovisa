@@ -475,15 +475,15 @@
     },
     {
       "id": "MV-35",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "label/correctness fix",
-      "file": null,
+      "badge": "SHIPPED 2026-06-26 → PR",
+      "file": "cards/MV-35-saved-programs-tile.md",
       "title": "Fix the dashboard \"Universities\" tile (counts programs, mislabeled)",
-      "summary": "READY (agent-ownable). Product-review audit #5 (wf_5fb5dfa7-009): the dashboard 'Universities' tile value is shortlist.length (app/(app)/dashboard/page.tsx:88) = the count of shortlisted PROGRAMS, not universities (listShortlistForUser returns one row per program_id). So 3 degrees at one university reads 'Universities = 3' (P1 mislabel). listShortlistForUser applies no status filter, so a withdrawn program still increments the count (P2; note 'withdrawn' is currently unreachable in the live UI). A brand-new user sees a bare '0' under 'Universities' with no caption — could read as '0 universities exist' on a trust-first product (P2). No fabrication, no raw % — a faithful count of the user's own rows, only mislabeled. Fix: relabel to 'Shortlist'/'Saved programs' in components/dashboard/stats-row.tsx:25 (value already matches), OR compute a true distinct-university count (map program_id→universityId) and exclude withdrawn; add empty-state sub-copy so 0 reads 'none saved yet'. Self-contained; doesn't map to existing cards. Evidence: audit wf_5fb5dfa7-009.",
+      "summary": "SHIPPED 2026-06-26 → PR. Audit #5 (wf_5fb5dfa7-009): the dashboard 'Universities' tile rendered shortlist.length (dashboard/page.tsx:88) = count of shortlisted PROGRAMS (one row per program_id), so 3 degrees at one university read 'Universities = 3' and a new user's bare '0' could read as '0 universities exist'. No fabrication/raw % — a faithful count, only mislabeled. Fix (chosen = honest relabel, value already matches): tile → 'Saved programs', prop universities→savedPrograms (the internal name carried the same mislabel); the student shortlists programs not universities, so 'saved programs' is the truthful AND more useful number, and it keeps the change surgical (no university-id plumbing). 'Saved programs: 0' now reads 'none saved yet'. The 'withdrawn still counts' P2 is NOT actioned — the audit itself notes 'withdrawn' is unreachable in the live UI. TDD: stats-row.test.tsx updated (asserts 'Saved programs', NOT 'Universities'). Gate green: typecheck clean, lint 0 errors, suite 1395. Goldens N/A.",
       "created": "2026-06-24",
-      "entered": "2026-06-24"
+      "entered": "2026-06-26"
     },
     {
       "id": "MV-36",
