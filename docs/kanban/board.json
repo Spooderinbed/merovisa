@@ -745,7 +745,7 @@
     },
     {
       "id": "MV-68",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "DONE 2026-06-27 (audit ran, docs reconciled) → In Review on branch mv-68-audit. 4-agent read-only fan-out. FINDINGS: (1) document-readiness loop is PARTIALLY wired — no 'X of Y → ready to apply' aggregate; three isolated done-signals (upload→program-checklist 'Have', plan-state mirror, global document_status toggle) with NO rollup, and MV-53's /checklist/all toggle is a dead-end branch (listObtainedKinds has one caller, feeds only its own checkboxes). (2) plan/results/dashboard trust CLEAN (no fabricated copy, no raw %). (3) journey-progression visual ABSENT (confirms MV-45). (4) (marketing) group has NO error/loading boundary despite live auth reads (route-resilience gap). (5) AI guide FULLY BUILT, graceful 503, gated only on Vercel DEEPSEEK_API_KEY (not Anthropic). Reconciled CLAUDE.md:7-9 + PROJECT_STATUS.md:5/31/65-67/425 (Phase 5+6 shipped). TRUE NEXT SLICE (by student outcome): MV-69 document-readiness rollup (recommended) > MV-70 (marketing) boundary > MV-45 progression visual. Report: docs/audits/2026-06-27-mv68-ground-truth-audit.md. Founder-gated merge of branch mv-68-audit.",
@@ -757,7 +757,7 @@
     },
     {
       "id": "MV-69",
-      "col": "ready",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "NEXT (MV-68 audit 2026-06-27, top pick by student outcome). The document-readiness rollup — the consultancy-replacement reassurance 'am I actually ready to apply?'",
