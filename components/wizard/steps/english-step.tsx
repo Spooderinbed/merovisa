@@ -26,7 +26,7 @@ const TEST_SCALE: Record<EnglishTest, { min: number; max: number; step: number; 
   toefl: { min: 0, max: 120, step: 1, default: 79, label: "TOEFL iBT score" },
 };
 
-export function EnglishStep({ profile, setField, callouts }: StepProps) {
+export function EnglishStep({ profile, setField, callouts, eyebrow }: StepProps) {
   const status = profile.englishStatus;
   const test: EnglishTest = profile.englishTest ?? "ielts";
   const scale = TEST_SCALE[test];
@@ -48,7 +48,7 @@ export function EnglishStep({ profile, setField, callouts }: StepProps) {
 
   return (
     <StepShell
-      eyebrow="Step 7"
+      eyebrow={eyebrow}
       title="Where are you with English?"
       subtext="Most destinations need proof of English. Even a planned test helps us tailor your matches."
       callouts={callouts}

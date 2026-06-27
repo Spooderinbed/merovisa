@@ -10,10 +10,10 @@ import type { StepProps } from "./types";
 const SUPPORTED_COUNTRY = "Nepal";
 const COMING_SOON = ["India", "Bangladesh", "Pakistan", "Nigeria", "Other"];
 
-export function HomeCountryStep({ profile, setField, callouts }: StepProps) {
+export function HomeCountryStep({ profile, setField, callouts, eyebrow }: StepProps) {
   return (
     <StepShell
-      eyebrow="Step 1"
+      eyebrow={eyebrow}
       title="Where are you applying from?"
       subtext="We're starting with Nepal — more countries are coming soon."
       callouts={callouts}

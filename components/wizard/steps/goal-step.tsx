@@ -14,10 +14,10 @@ const GOALS: Array<{ value: Goal; label: string; description: string }> = [
   { value: "research", label: "Research opportunities", description: "Academic and research depth" },
 ];
 
-export function GoalStep({ profile, setField, callouts }: StepProps) {
+export function GoalStep({ profile, setField, callouts, eyebrow }: StepProps) {
   return (
     <StepShell
-      eyebrow="Step 9"
+      eyebrow={eyebrow}
       title="What matters most to you?"
       subtext="We use this to order and label your matches around what you care about — where we have the data to."
       callouts={callouts}

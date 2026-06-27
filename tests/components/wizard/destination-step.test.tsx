@@ -4,7 +4,7 @@ import { DestinationStep } from "@/components/wizard/steps/destination-step";
 import { isStepComplete } from "@/components/wizard/step-meta";
 
 function renderStep(setField = vi.fn()) {
-  render(<DestinationStep profile={{}} setField={setField} callouts={null} />);
+  render(<DestinationStep profile={{}} setField={setField} callouts={null} eyebrow="Step 1" />);
   return setField;
 }
 

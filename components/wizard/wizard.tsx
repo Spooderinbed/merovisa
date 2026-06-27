@@ -70,7 +70,12 @@ export function Wizard({
       </div>
 
       <div key={w.stepKey} className="flex-1">
-        <StepComponent profile={w.profile} setField={w.setField} callouts={calloutNodes} />
+        <StepComponent
+          profile={w.profile}
+          setField={w.setField}
+          callouts={calloutNodes}
+          eyebrow={w.stepEyebrow}
+        />
       </div>
 
       <div className="flex items-center justify-between">

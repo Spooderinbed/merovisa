@@ -6,7 +6,7 @@ import { HomeCountryStep } from "@/components/wizard/steps/home-country-step";
 describe("HomeCountryStep", () => {
   it("offers Nepal inside a labelled radiogroup and selects it with percentage-nepal", async () => {
     const setField = vi.fn();
-    render(<HomeCountryStep profile={{ homeCountry: "Nepal" }} setField={setField} callouts={null} />);
+    render(<HomeCountryStep profile={{ homeCountry: "Nepal" }} setField={setField} callouts={null} eyebrow="Step 1" />);
     const group = screen.getByRole("radiogroup", { name: /Home country/i });
     expect(group).toBeInTheDocument();
     const nepal = screen.getByRole("radio", { name: /Nepal/ });
@@ -16,7 +16,7 @@ describe("HomeCountryStep", () => {
   });
 
   it("notes that more countries are coming soon", () => {
-    render(<HomeCountryStep profile={{ homeCountry: "Nepal" }} setField={vi.fn()} callouts={null} />);
+    render(<HomeCountryStep profile={{ homeCountry: "Nepal" }} setField={vi.fn()} callouts={null} eyebrow="Step 1" />);
     expect(screen.getByText(/More countries coming soon: India/i)).toBeInTheDocument();
   });
 });

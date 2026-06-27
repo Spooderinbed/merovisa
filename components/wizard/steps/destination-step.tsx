@@ -20,10 +20,10 @@ function isSelectable(value: Destination): boolean {
   return isDestinationSupported(value) || value === "not-sure";
 }
 
-export function DestinationStep({ profile, setField, callouts }: StepProps) {
+export function DestinationStep({ profile, setField, callouts, eyebrow }: StepProps) {
   return (
     <StepShell
-      eyebrow="Step 2"
+      eyebrow={eyebrow}
       title="Where do you want to go?"
       subtext="We fully cover Nepal → Australia today — more destinations are on the way. Pick Australia, or let us show you where you fit best."
       callouts={callouts}

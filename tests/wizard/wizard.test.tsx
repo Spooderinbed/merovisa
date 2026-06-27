@@ -17,6 +17,27 @@ describe("Wizard", () => {
     expect(screen.getByRole("button", { name: /Continue/ })).toBeDisabled();
   });
 
+  it("numbers a no-gap student's later steps from the visible position, not an absolute index (MV-64)", async () => {
+    render(<Wizard onComplete={vi.fn()} />);
+    // Drive to the english step choosing a recent graduation year, so the
+    // conditional gap step stays hidden (the common no-gap path).
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ })); // -> destination
+    await userEvent.click(screen.getByRole("radio", { name: /Australia/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ })); // -> education
+    await userEvent.click(screen.getByRole("radio", { name: /Bachelor's degree/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ })); // -> field of study
+    await userEvent.click(screen.getByRole("radio", { name: /Computer Science/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ })); // -> graduation year
+    await userEvent.click(screen.getByRole("radio", { name: String(new Date().getFullYear()) }));
+    await userEvent.click(screen.getByRole("button", { name: /Continue/ })); // -> english
+
+    expect(screen.getByText(/Where are you with English\?/)).toBeInTheDocument();
+    // With gap hidden the live counter reads "Step 6 of 8" -> the eyebrow must
+    // match it, not the buried "Step 7" the static eyebrow used to show.
+    expect(screen.getByText("Step 6 of 8")).toBeInTheDocument();
+    expect(screen.getByText("Step 6")).toBeInTheDocument();
+  });
+
   it("renders a callout inline when the current answer triggers one", async () => {
     render(<Wizard onComplete={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /Continue/ })); // -> destination
