@@ -1,4 +1,5 @@
 import type { IntakeTiming } from "@/lib/timing/intake";
+import { buildIntakeTimeline } from "@/lib/timing/intake";
 
 const STATUS_CLS = {
   open: "text-strong",
@@ -6,11 +7,45 @@ const STATUS_CLS = {
   closed: "text-reach",
 } as const;
 
+// Dot fill mirrors the verdict palette: on-track / tight / closed.
+const TICK_CLS = {
+  open: "bg-strong",
+  tight: "bg-possible",
+  closed: "bg-reach",
+} as const;
+
 export function IntakeTimingCard({ intake }: { intake: IntakeTiming }) {
+  const timeline = buildIntakeTimeline(intake);
   return (
     <section className="rounded-lg border border-line bg-surface p-6">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Intake timing</span>
-      <p className="mt-3 text-[19px] text-ink">
+      {/* A calendar-proportioned tick-timeline: `now` anchors the start, intake ticks
+          sit at their real distance ahead, coloured by how open the window is. The
+          nearest + alternatives text below carries the same intakes accessibly, so the
+          visual is aria-hidden to avoid duplicate screen-reader output. */}
+      <div className="mt-5" aria-hidden="true" data-testid="intake-timeline">
+        <div className="relative mx-6 h-12">
+          <div className="absolute inset-x-0 top-4 h-px bg-line" />
+          <div className="absolute top-2 flex -translate-x-1/2 flex-col items-center" style={{ left: "0%" }}>
+            <span className="block h-4 w-px bg-ink-faint" />
+            <span className="mt-1 font-mono text-[10px] uppercase tracking-wide text-ink-faint">Now</span>
+          </div>
+          {timeline.map((p) => (
+            <div
+              key={`${p.name}-${p.year}`}
+              className="absolute top-[11px] flex -translate-x-1/2 flex-col items-center"
+              style={{ left: `${p.offsetPct}%` }}
+              title={p.note}
+            >
+              <span className={`block h-2.5 w-2.5 rounded-full ${TICK_CLS[p.status]}`} />
+              <span className="mt-1 whitespace-nowrap font-mono text-[10px] uppercase tracking-wide text-ink-soft">
+                {p.name.slice(0, 3)} {p.year}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <p className="mt-6 text-[19px] text-ink">
         Nearest realistic intake:{" "}
         <span className="font-medium">
           {intake.nearest.name} {intake.nearest.year}

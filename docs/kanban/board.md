@@ -30,9 +30,9 @@
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-72** · P1 · [Progression visual #16: intake tick-timeline on the results surface](MV-72-intake-tick-timeline.md) — _Audit #16 ('intake timing has no timeline'). IntakeTimingCard rendered only a text list; add a calm flat tick-timeline above it: a 'Now' anchor + status-coloured intake ticks (open/tight/closed = verdict palette) at real calendar distance. NO new/invented data — positions derive only from each intake's existing month/year (computeIntakeTiming -> AUSTRALIA.intakes, DHA source + lastVerified 2026-06-02). Geometry is a pure unit-tested buildIntakeTimeline(timing, now) in lib/timing/intake.ts (mirrors computeIntakeTiming's now-param); component stays presentational. Timeline is aria-hidden — the nearest sentence + deadline notes + alternatives list below remain the accessible source of truth (no info lost, no duplicate SR output). Existing copy unchanged. TDD +9 (5 helper + 4 component); typecheck/lint clean; full suite 244/1472; goldens byte-identical (no scoring touched). Visual spacing is a blind judgment call (results surface is auth-gated, not browser-verifiable) — easy to nudge. Branch off master -> PR, founder-gated merge._
 
 ## Blocked — 4
 
