@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics/events";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
@@ -11,21 +10,33 @@ import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
  * still on screen, instead of waiting for the full ConversionPaths card at the
  * bottom. Anonymous mode only; never rendered for signed-in (owned) results.
  */
-export function ConversionPrompt({ assessmentId }: { assessmentId: string | null }) {
-  // Persist miss (id:null): nothing to keep, so we don't show a dead "keep it"
-  // button — we say it wasn't saved and link to a fresh run (the one real recovery).
+export function ConversionPrompt({
+  assessmentId,
+  onRetrySave,
+  retryingSave = false,
+}: {
+  assessmentId: string | null;
+  /** Re-POSTs the already-computed answers in place — supplied by AssessFlow. */
+  onRetrySave?: () => void;
+  retryingSave?: boolean;
+}) {
+  // Persist miss (id:null): the results are already computed and on screen — only
+  // the server save failed. We don't show a dead "keep it" button, nor a link that
+  // wipes the wizard and results; we offer an in-place retry of the same answers.
   if (!assessmentId) {
     return (
       <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[15px] text-ink-soft">
-          We couldn&apos;t save this assessment, so it won&apos;t be kept. Run it again to try saving it.
+          We couldn&apos;t save this — your results are still here. Try again.
         </p>
-        <Link
-          href="/assess?new=1"
-          className="inline-flex shrink-0 items-center rounded-pill bg-primary px-[22px] py-3 text-[16px] font-medium text-on-primary hover:bg-primary-ink"
+        <button
+          type="button"
+          onClick={onRetrySave}
+          disabled={retryingSave}
+          className="inline-flex shrink-0 items-center rounded-pill bg-primary px-[22px] py-3 text-[16px] font-medium text-on-primary hover:bg-primary-ink disabled:opacity-60"
         >
-          Run it again
-        </Link>
+          {retryingSave ? "Saving…" : "Try saving again"}
+        </button>
       </section>
     );
   }
