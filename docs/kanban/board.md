@@ -22,17 +22,17 @@
 - **MV-49** · P3 · Flag pills + quiet NP home nod — _Phase C (audit #19, P2-P3). Replace marketing emoji flags (Windows tofu-box risk) with a bordered IBM Plex Mono ISO-code pill or flat single-colour SVG; add a quiet NP home nod for the Nepali user. Make Nepal->Australia specificity visible in copy/markup, not pixels. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #19._
 - **MV-50** · P3 · Hand-SVG marks on success empty states — _Phase C (audit #27, P3). One restrained teal hand-stroke mark on GENUINE success empty states only (never error/incomplete), extending the existing IconShield/IconGuide/IconDoc thin-stroke family muted to text-ink-faint. No AI spot-art. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #27._
 
-## Ready (WIP 5) — 1
+## Ready (WIP 5) — 0
 
-- **MV-70** · P2 · Resilience: error + loading boundaries for the (marketing) group — _MV-68 audit finding #4. The (marketing) route group has NO error.tsx or loading.tsx, yet app/(marketing)/page.tsx, app/(marketing)/auth/page.tsx, and app/(marketing)/layout.tsx all do live supabase.auth.getUser() reads. A thrown/slow auth read on the first-impression landing surface -> blank frame or a bubble to the document-replacing global-error.tsx. FIX (TDD, mirrors MV-62/MV-66): app/(marketing)/error.tsx (calm branded retry inside the marketing chrome) + app/(marketing)/loading.tsx (flat-paper skeleton). Note: a layout.tsx throw still bubbles past a group error boundary to global-error (same Next@16 semantics as (app)/(focused)); the page-level reads are what this catches. +2 tests in tests/app/error-boundaries.test.tsx. Lower student-outcome impact than MV-69 (landing, not the deep journey) but completes resilience parity. Effort S. Branch mv-70-marketing-boundaries off master -> PR, founder-gated merge._
+_empty_
 
 ## In progress (WIP 1) — 0
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-70** · P2 · [Resilience: error + loading boundaries for the (marketing) group](MV-70-marketing-boundary.md) — _MV-68 audit finding #4. The (marketing) route group has NO error.tsx or loading.tsx, yet app/(marketing)/page.tsx, app/(marketing)/auth/page.tsx, and app/(marketing)/layout.tsx all do live supabase.auth.getUser() reads. A thrown/slow auth read on the first-impression landing surface -> blank frame or a bubble to the document-replacing global-error.tsx. FIX (TDD, mirrors MV-62/MV-66): app/(marketing)/error.tsx (calm branded retry inside the marketing chrome) + app/(marketing)/loading.tsx (flat-paper skeleton). KEY (Codex gpt-5.5/xhigh confirmed against installed next@16 docs): a same-segment layout.tsx throw bubbles PAST the group error boundary to global-error, AND loading.tsx does not cover the layout await -- so the boundary files only catch the PAGE-level reads. The audited failure path (layout's auth.getUser() probe on the anonymous homepage) is fixed by a narrowly-scoped try/catch in layout.tsx that degrades to the signed-out 'marketing' variant + logs loudly (page.tsx/auth.tsx reads are followed by redirect() so they must NOT be try/caught -- the error boundary covers their throws). Scope (d) = both boundary files + layout try/catch. +2 tests in tests/app/error-boundaries.test.tsx + new tests/app/marketing-layout.test.tsx (degrade-on-failure is the key honesty property). Lower student-outcome impact than MV-69 (landing, not the deep journey) but completes resilience parity. Effort S. Branch mv-70-marketing-boundary off master -> PR, founder-gated merge._
 
 ## Blocked — 4
 

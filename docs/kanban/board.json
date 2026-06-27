@@ -769,13 +769,13 @@
     },
     {
       "id": "MV-70",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "badge": "From MV-68 audit (route-resilience parity gap). Cheap completion of the MV-62/MV-66 boundary story.",
-      "file": null,
+      "file": "MV-70-marketing-boundary.md",
       "title": "Resilience: error + loading boundaries for the (marketing) group",
-      "summary": "MV-68 audit finding #4. The (marketing) route group has NO error.tsx or loading.tsx, yet app/(marketing)/page.tsx, app/(marketing)/auth/page.tsx, and app/(marketing)/layout.tsx all do live supabase.auth.getUser() reads. A thrown/slow auth read on the first-impression landing surface -> blank frame or a bubble to the document-replacing global-error.tsx. FIX (TDD, mirrors MV-62/MV-66): app/(marketing)/error.tsx (calm branded retry inside the marketing chrome) + app/(marketing)/loading.tsx (flat-paper skeleton). Note: a layout.tsx throw still bubbles past a group error boundary to global-error (same Next@16 semantics as (app)/(focused)); the page-level reads are what this catches. +2 tests in tests/app/error-boundaries.test.tsx. Lower student-outcome impact than MV-69 (landing, not the deep journey) but completes resilience parity. Effort S. Branch mv-70-marketing-boundaries off master -> PR, founder-gated merge.",
+      "summary": "MV-68 audit finding #4. The (marketing) route group has NO error.tsx or loading.tsx, yet app/(marketing)/page.tsx, app/(marketing)/auth/page.tsx, and app/(marketing)/layout.tsx all do live supabase.auth.getUser() reads. A thrown/slow auth read on the first-impression landing surface -> blank frame or a bubble to the document-replacing global-error.tsx. FIX (TDD, mirrors MV-62/MV-66): app/(marketing)/error.tsx (calm branded retry inside the marketing chrome) + app/(marketing)/loading.tsx (flat-paper skeleton). KEY (Codex gpt-5.5/xhigh confirmed against installed next@16 docs): a same-segment layout.tsx throw bubbles PAST the group error boundary to global-error, AND loading.tsx does not cover the layout await -- so the boundary files only catch the PAGE-level reads. The audited failure path (layout's auth.getUser() probe on the anonymous homepage) is fixed by a narrowly-scoped try/catch in layout.tsx that degrades to the signed-out 'marketing' variant + logs loudly (page.tsx/auth.tsx reads are followed by redirect() so they must NOT be try/caught -- the error boundary covers their throws). Scope (d) = both boundary files + layout try/catch. +2 tests in tests/app/error-boundaries.test.tsx + new tests/app/marketing-layout.test.tsx (degrade-on-failure is the key honesty property). Lower student-outcome impact than MV-69 (landing, not the deep journey) but completes resilience parity. Effort S. Branch mv-70-marketing-boundary off master -> PR, founder-gated merge.",
       "created": "2026-06-27",
       "entered": "2026-06-27"
     },

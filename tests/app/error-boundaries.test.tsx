@@ -7,6 +7,8 @@ import AppLoading from "@/app/(app)/loading";
 import GlobalError from "@/app/global-error";
 import FocusedError from "@/app/(focused)/error";
 import FocusedLoading from "@/app/(focused)/loading";
+import MarketingError from "@/app/(marketing)/error";
+import MarketingLoading from "@/app/(marketing)/loading";
 
 describe("signed-in route error boundary", () => {
   it("shows a calm, reassuring message and a working retry", async () => {
@@ -56,6 +58,30 @@ describe("focused (results) route error boundary", () => {
 describe("focused (results) route loading skeleton", () => {
   it("announces a busy state to assistive tech", () => {
     const { container } = render(<FocusedLoading />);
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+  });
+});
+
+// The (marketing) group is the first-impression surface — landing, how, trust,
+// destinations, auth — and its page.tsx / auth/page.tsx do live supabase reads. A
+// page-level throw previously bubbled to the document-replacing global-error. This
+// boundary catches it inside the marketing chrome with a calm retry. Copy stays
+// honest: an anonymous visitor has nothing saved, so it must NOT claim saved data.
+describe("marketing route error boundary", () => {
+  it("offers a calm retry without over-claiming saved data (anonymous surface)", async () => {
+    const reset = vi.fn();
+    render(<MarketingError error={new Error("marketing read failed")} reset={reset} />);
+    expect(screen.getByText(/couldn.t load this page/i)).toBeInTheDocument();
+    expect(screen.queryByText(/saved data/i)).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("marketing route loading skeleton", () => {
+  it("announces a busy state to assistive tech", () => {
+    const { container } = render(<MarketingLoading />);
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
