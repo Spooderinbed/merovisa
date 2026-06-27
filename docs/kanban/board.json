@@ -769,7 +769,7 @@
     },
     {
       "id": "MV-70",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "From MV-68 audit (route-resilience parity gap). Cheap completion of the MV-62/MV-66 boundary story.",
@@ -781,7 +781,7 @@
     },
     {
       "id": "MV-71",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "First MV-45 sub-slice (founder-picked #28). Completes the bidirectional Checklist<->Plan link.",
@@ -793,7 +793,7 @@
     },
     {
       "id": "MV-72",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "In Review on branch mv-72-intake-timeline (PR). 2nd sub-slice of the MV-45 umbrella (after MV-71). Design-division audit #16 — intake timing finally has a timeline.",
