@@ -732,6 +732,18 @@
       "entered": "2026-06-27"
     },
     {
+      "id": "MV-66",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-06-27 → PR. Adds error.tsx + loading.tsx to the (focused) group — the last unprotected segment (anonymous results + recovered assessment view). Gate green: typecheck clean, lint 0 errors, suite 1449 / 242 files (+2). Adversarial Codex gpt-5.5/xhigh review: semantics correct, scope complete, tokens resolve, a11y ok; its one REAL finding is pre-existing in global-error.tsx (out of scope), spun as follow-up.",
+      "file": null,
+      "title": "Resilience: error + loading boundaries for the (focused) results routes",
+      "summary": "Journey-reliability follow-on to MV-62 (which covered the signed-in (app) group: dashboard/matches/plan/profile/etc.). The (focused) route group had NO error/loading boundary, yet it hosts the single most conversion-critical surface: the anonymous wizard+results (app/(focused)/assess/page.tsx — live reads getUser + getPrimaryAssessmentForUser) and the recovered/saved assessment view (app/(focused)/assessment/[id]/page.tsx — live reads getRecoverableAssessment/getOwnedAssessment + a legacy-shape catalogue recompute via listAllPrograms/listAllUniversities). A thrown read there bubbled past the layout to app/global-error.tsx, which REPLACES the whole document (no FocusBar, bare inline styling) — a jarring dead-end on the results page; a slow read showed a blank frame. FIX (TDD, mirrors MV-62's (app) pattern): app/(focused)/error.tsx (calm branded retry, renders inside the layout so FocusBar stays; HONEST copy — names 'your results', claims only 'usually a connection hiccup', does NOT assert saved-data-is-safe since an anonymous persist-miss may have nothing saved) + app/(focused)/loading.tsx (flat-paper skeleton shaped like the results column — verdict panel over match cards — aria-busy, sr-only Loading, no spinner). matches/plan deliberately NOT touched (already covered by MV-62) — scoped to the one genuinely-missing group. Next.js semantics (next@16): a group-level error.tsx/loading.tsx catches the page reads under assess/ and assessment/[id]/; the layout's own getUser() throw still bubbles to global-error (expected, same as (app)). TDD RED→GREEN: +2 tests in tests/app/error-boundaries.test.tsx (focused error names results + retry calls reset; focused loading announces aria-busy). Gate green: typecheck clean, lint 0 errors, suite 1449/242 (was 1447). Adversarial Codex gpt-5.5/xhigh review confirmed correct semantics, complete (focused)-tree scope, all design tokens resolve, a11y ok. FOLLOW-UP (out of scope, pre-existing from MV-62): app/global-error.tsx:36 'Your saved data is safe' can be false for an anonymous user on the rare layout-bubble path — spun as a separate fix. Branch mv-66-focused-boundaries -> PR, founder-gated merge.",
+      "created": "2026-06-27",
+      "entered": "2026-06-27"
+    },
+    {
       "id": "MV-48",
       "col": "backlog",
       "pri": "P2",
