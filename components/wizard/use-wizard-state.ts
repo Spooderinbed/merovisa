@@ -39,12 +39,16 @@ function writePersistedWizard(value: PersistedWizard): void {
 
 export const WIZARD_STEPS = [
   "homeCountry",
+  // Destination sits second so the full corridor (Nepal → destination) — and
+  // therefore whether we cover it — is settled before the six effort screens.
+  // A student bound for an unsupported corridor learns it up front rather than
+  // after answering education/grades/English (MV-47, audit #23).
+  "destination",
   "education",
   "fieldOfStudy",
   "graduationYear",
   "gap",
   "english",
-  "destination",
   "budget",
   "goal",
 ] as const;

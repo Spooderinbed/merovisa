@@ -12,7 +12,7 @@ export function GraduationYearStep({ profile, setField, callouts }: StepProps) {
   const isEarlier = typeof selected === "number" && !RECENT_YEARS.includes(selected);
   return (
     <StepShell
-      eyebrow="Step 4"
+      eyebrow="Step 5"
       title="When did (or will) you graduate?"
       subtext="We use this to assess your timeline and flag anything visa officers look at."
       callouts={callouts}

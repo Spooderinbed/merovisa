@@ -8,7 +8,7 @@ import type { StepProps } from "./types";
 export function FieldOfStudyStep({ profile, setField, callouts }: StepProps) {
   return (
     <StepShell
-      eyebrow="Step 3"
+      eyebrow="Step 4"
       title="What do you want to study?"
       subtext="This affects which universities, fee ranges, and visa categories apply to you."
       callouts={callouts}

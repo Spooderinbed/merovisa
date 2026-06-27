@@ -48,7 +48,7 @@ export function EnglishStep({ profile, setField, callouts }: StepProps) {
 
   return (
     <StepShell
-      eyebrow="Step 6"
+      eyebrow="Step 7"
       title="Where are you with English?"
       subtext="Most destinations need proof of English. Even a planned test helps us tailor your matches."
       callouts={callouts}

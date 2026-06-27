@@ -21,7 +21,7 @@ export function GapStep({ profile, setField, callouts }: StepProps) {
   };
   return (
     <StepShell
-      eyebrow="Step 5"
+      eyebrow="Step 6"
       title="What were you doing in that time?"
       subtext="Pick all that apply. Explaining this well actually strengthens your visa case."
       callouts={callouts}

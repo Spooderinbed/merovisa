@@ -20,14 +20,14 @@ describe("useWizardState sessionStorage persistence (MV-28 half a)", () => {
     // First mount: answer a couple of steps and advance.
     const first = renderHook(() => useWizardState(undefined, { persist: true }));
     act(() => first.result.current.setField({ graduationYear: currentYear }));
-    act(() => void first.result.current.next()); // homeCountry -> education
-    act(() => void first.result.current.next()); // education -> fieldOfStudy
-    expect(first.result.current.stepKey).toBe("fieldOfStudy");
+    act(() => void first.result.current.next()); // homeCountry -> destination
+    act(() => void first.result.current.next()); // destination -> education
+    expect(first.result.current.stepKey).toBe("education");
     first.unmount();
 
     // Second mount (sessionStorage intact): no re-answering, position restored.
     const second = renderHook(() => useWizardState(undefined, { persist: true }));
-    expect(second.result.current.stepKey).toBe("fieldOfStudy");
+    expect(second.result.current.stepKey).toBe("education");
     expect(second.result.current.profile.graduationYear).toBe(currentYear);
     expect(second.result.current.stepIndex).toBe(2);
   });
