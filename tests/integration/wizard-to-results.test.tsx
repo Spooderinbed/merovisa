@@ -38,24 +38,24 @@ describe("wizard → results seam", () => {
     // Step 1 — home country: Nepal is preselected.
     await user.click(next());
 
-    // Step 2 — education: choose a level (grade defaults to 70%).
+    // Step 2 — destination (MV-47: corridor question is now up front).
+    await user.click(screen.getByRole("radio", { name: "Australia" }));
+    await user.click(next());
+
+    // Step 3 — education: choose a level (grade defaults to 70%).
     await user.click(screen.getByRole("radio", { name: /Bachelor's degree/ }));
     await user.click(next());
 
-    // Step 3 — field of study.
+    // Step 4 — field of study.
     await user.click(screen.getByRole("radio", { name: /Computer Science/ }));
     await user.click(next());
 
-    // Step 4 — graduation year: current year ⇒ no gap ⇒ gap step is skipped.
+    // Step 5 — graduation year: current year ⇒ no gap ⇒ gap step is skipped.
     await user.click(screen.getByRole("radio", { name: String(CURRENT_YEAR) }));
     await user.click(next());
 
-    // Step 5 — English status.
+    // Step 6 — English status.
     await user.click(screen.getByRole("radio", { name: "Not taken" }));
-    await user.click(next());
-
-    // Step 6 — destination.
-    await user.click(screen.getByRole("radio", { name: "Australia" }));
     await user.click(next());
 
     // Step 7 — budget: currency/budget default; choose a funding source.

@@ -697,15 +697,15 @@
     },
     {
       "id": "MV-47",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "",
+      "badge": "PR",
       "file": null,
       "title": "Move the corridor question to Step 1",
-      "summary": "Phase B (audit #23, P1). The destination/corridor question is buried at Step 7, so a Canada-bound student answers six screens before learning the corridor is unsupported (reads as bait-and-switch). Move destination to/near Step 1 (use-wizard-state.ts order) so coverage is known before effort. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #23.",
+      "summary": "Phase B (audit #23, P1). The destination/corridor question is buried at Step 7, so a Canada-bound student answers six screens before learning the corridor is unsupported (reads as bait-and-switch). Move destination to/near Step 1 (use-wizard-state.ts order) so coverage is known before effort. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #23. SHIPPED 2026-06-27 (branch mv-47-corridor-step1, TDD): destination reordered to position 2 in WIZARD_STEPS (right after homeCountry — corridor known before the six effort screens); 6 static step-eyebrows renumbered (dest 7→2, edu→3, field→4, gradYear→5, gap→6, english→7); 5 order-encoding tests updated (use-wizard-state, use-wizard-state-persist, wizard, wizard-to-results integration) + 1 new explicit corridor-position test. Side benefit: nursing-ahpra/cs-competitive field-of-study callouts now fire (they need destination=australia, previously unset until step 7). Gate green: typecheck/lint clean, suite 1438. RESIDUAL (own card, not bundled — belongs in MV-42 design primitives): per-step 'Step N' eyebrows are static, so for the no-gap student english/budget/goal still mismatch the live header counter by 1 (pre-existing, not worsened).",
       "created": "2026-06-25",
-      "entered": "2026-06-25"
+      "entered": "2026-06-27"
     },
     {
       "id": "MV-48",
@@ -817,7 +817,7 @@
     },
     {
       "id": "MV-57",
-      "col": "ready",
+      "col": "blocked",
       "pri": "P3",
       "owner": "agent",
       "badge": "",

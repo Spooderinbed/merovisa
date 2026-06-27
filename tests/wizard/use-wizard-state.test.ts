@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { useWizardState, visibleStepsFor } from "@/components/wizard/use-wizard-state";
+import { useWizardState, visibleStepsFor, WIZARD_STEPS } from "@/components/wizard/use-wizard-state";
 
 const currentYear = new Date().getFullYear();
 
@@ -26,9 +26,18 @@ describe("useWizardState", () => {
   it("advances and goes back", () => {
     const { result } = renderHook(() => useWizardState());
     act(() => void result.current.next());
-    expect(result.current.stepKey).toBe("education");
+    expect(result.current.stepKey).toBe("destination");
     act(() => result.current.back());
     expect(result.current.stepKey).toBe("homeCountry");
+  });
+
+  it("asks the destination (corridor) question right after home country, before the effort steps", () => {
+    // MV-47: coverage must be known before the six effort screens, so a
+    // Canada-bound student learns the corridor is unsupported up front rather
+    // than after answering education/grades/English (the bait-and-switch).
+    expect(WIZARD_STEPS[0]).toBe("homeCountry");
+    expect(WIZARD_STEPS[1]).toBe("destination");
+    expect(WIZARD_STEPS.indexOf("destination")).toBeLessThan(WIZARD_STEPS.indexOf("education"));
   });
 
   it("reveals the gap step after a gap-inducing graduation year", () => {

@@ -16,7 +16,7 @@ export function EducationStep({ profile, setField, callouts }: StepProps) {
   const grade = profile.grade ?? 70;
   return (
     <StepShell
-      eyebrow="Step 2"
+      eyebrow="Step 3"
       title="Your education so far"
       subtext="Pick your level and set your grade as a percentage — we compare it against each university's bar."
       callouts={callouts}
