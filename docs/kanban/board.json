@@ -697,10 +697,10 @@
     },
     {
       "id": "MV-47",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
-      "badge": "PR",
+      "badge": "DONE 2026-06-27 — PR #11 MERGED to master (96129d9). Corridor now Step 2; static step-eyebrows renumbered. No-gap eyebrow↔counter off-by-one residual spun to MV-64.",
       "file": null,
       "title": "Move the corridor question to Step 1",
       "summary": "Phase B (audit #23, P1). The destination/corridor question is buried at Step 7, so a Canada-bound student answers six screens before learning the corridor is unsupported (reads as bait-and-switch). Move destination to/near Step 1 (use-wizard-state.ts order) so coverage is known before effort. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #23. SHIPPED 2026-06-27 (branch mv-47-corridor-step1, TDD): destination reordered to position 2 in WIZARD_STEPS (right after homeCountry — corridor known before the six effort screens); 6 static step-eyebrows renumbered (dest 7→2, edu→3, field→4, gradYear→5, gap→6, english→7); 5 order-encoding tests updated (use-wizard-state, use-wizard-state-persist, wizard, wizard-to-results integration) + 1 new explicit corridor-position test. Side benefit: nursing-ahpra/cs-competitive field-of-study callouts now fire (they need destination=australia, previously unset until step 7). Gate green: typecheck/lint clean, suite 1438. RESIDUAL (own card, not bundled — belongs in MV-42 design primitives): per-step 'Step N' eyebrows are static, so for the no-gap student english/budget/goal still mismatch the live header counter by 1 (pre-existing, not worsened).",
@@ -716,6 +716,18 @@
       "file": null,
       "title": "Anonymous persist-miss: recover in place, not a dead 'Run it again'",
       "summary": "Consultancy-replacement / journey-reliability (primary C; Codex gpt-5.5 + Claude agreed). On an anonymous persist miss (POST /api/assess returns 200 with id:null — the DB insert failed), BOTH results CTAs (ConversionPrompt near the verdict + the ConversionPaths card at the bottom) linked to /assess?new=1, which wiped the wizard + results sessionStorage and dumped the student back to a BLANK 9-step wizard — and if the DB was still down it looped forever (a guaranteed bounce to a consultancy). But the full profile + computed payload are already in memory; only the server save failed. FIX (TDD): thread an in-place onRetrySave (+ retryingSave) from AssessFlow.save() through Results into both CTAs; the dead /assess?new=1 link becomes a 'Try saving again' button that re-POSTs the same answers (no wizard reset, no data loss), and on success the prompt flips to the real 'Continue with Google' conversion. Honest copy, no false 3-day-expiry promise. Other /assess?new=1 links (interstitial, unsupported-corridor notice, marketing) left untouched — those are legit fresh starts. Files: components/results/{conversion-prompt,conversion-paths,results}.tsx + components/assess/assess-flow.tsx. TDD: rewrote the 2 persist-miss component tests (link -> button + onRetrySave + disabled-while-saving) + a new AssessFlow integration test (persist miss recovers to a real id, fetch called twice, wizard never re-run). Gate green: typecheck clean, lint 0 errors, suite 1441 / 241 files. Branch mv-65-persist-miss-retry -> PR #15, founder-gated merge.",
+      "created": "2026-06-27",
+      "entered": "2026-06-27"
+    },
+    {
+      "id": "MV-64",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "PR — eyebrow now derived from the visible-step index: one stepNumber (clampedIndex+1) feeds both stepLabel and the new stepEyebrow, threaded StepProps→StepShell; all 9 hardcoded eyebrow=\"Step N\" deleted (drift class killed). TDD +2 (hook invariant: no-gap english is 'Step 6' == counter; Wizard integration: drives to english as no-gap student, eyebrow reads 'Step 6' not the static 'Step 7'). Gate green: typecheck clean, suite 1440, lint 0 errors.",
+      "file": null,
+      "title": "Eyebrow↔counter consolidation: derive each step's 'Step N' from the visible-step index",
+      "summary": "MV-47's flagged residual + the MV-42 drift-class kill. Each wizard step hardcodes eyebrow=\"Step N\" in its StepShell, but the gap step is conditional, so for the common no-gap student english/budget/goal render Step 7/8/9 while the live header counter (stepLabel in use-wizard-state.ts) correctly reads Step 6/7/8 of 8 — the eyebrow contradicts the counter. Fix: derive each step's eyebrow from the same visible-step index that feeds stepLabel (one source of truth), thread it via StepProps→StepShell, and delete all 9 hardcoded eyebrow=\"Step N\". TDD: failing test = a no-gap student's english step renders eyebrow 'Step 6' (matching the counter), not 'Step 7'. Branch mv-64-eyebrow-counter off master (post-#11).",
       "created": "2026-06-27",
       "entered": "2026-06-27"
     },

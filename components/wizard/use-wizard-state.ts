@@ -79,6 +79,13 @@ export interface WizardState {
   totalSteps: number;
   /** Single source of truth for the on-screen counter, e.g. "Step 6 of 8". */
   stepLabel: string;
+  /**
+   * The current step's eyebrow, e.g. "Step 6" — the same number as stepLabel so
+   * a step's eyebrow can never drift from the live counter (the conditional gap
+   * step used to push later eyebrows one ahead). Steps render this, never a
+   * hardcoded "Step N".
+   */
+  stepEyebrow: string;
   isFirst: boolean;
   isLast: boolean;
   setField: (patch: Partial<StudentProfile>) => void;
@@ -104,6 +111,8 @@ export function useWizardState(
   const visible = useMemo(() => visibleStepsFor(profile), [profile]);
   const clampedIndex = Math.min(index, visible.length - 1);
   const stepKey = visible[clampedIndex] ?? "homeCountry";
+  // One number feeds both the counter and the eyebrow, so they cannot disagree.
+  const stepNumber = clampedIndex + 1;
 
   const setField = useCallback((patch: Partial<StudentProfile>) => {
     setProfile((prev) => ({ ...prev, ...patch }));
@@ -123,7 +132,8 @@ export function useWizardState(
     stepKey,
     stepIndex: clampedIndex,
     totalSteps: visible.length,
-    stepLabel: `Step ${clampedIndex + 1} of ${visible.length}`,
+    stepLabel: `Step ${stepNumber} of ${visible.length}`,
+    stepEyebrow: `Step ${stepNumber}`,
     isFirst: clampedIndex === 0,
     isLast: clampedIndex === visible.length - 1,
     setField,

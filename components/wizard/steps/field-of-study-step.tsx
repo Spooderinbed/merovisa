@@ -5,10 +5,10 @@ import { OptionCard } from "@/components/ui/option-card";
 import { StepShell } from "@/components/wizard/step-shell";
 import type { StepProps } from "./types";
 
-export function FieldOfStudyStep({ profile, setField, callouts }: StepProps) {
+export function FieldOfStudyStep({ profile, setField, callouts, eyebrow }: StepProps) {
   return (
     <StepShell
-      eyebrow="Step 4"
+      eyebrow={eyebrow}
       title="What do you want to study?"
       subtext="This affects which universities, fee ranges, and visa categories apply to you."
       callouts={callouts}

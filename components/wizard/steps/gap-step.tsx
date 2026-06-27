@@ -13,7 +13,7 @@ const REASONS: Array<{ value: GapReason; label: string }> = [
   { value: "preparing", label: "Preparing for tests / applications" },
 ];
 
-export function GapStep({ profile, setField, callouts }: StepProps) {
+export function GapStep({ profile, setField, callouts, eyebrow }: StepProps) {
   const current = profile.gapReasons ?? [];
   const toggle = (value: GapReason) => {
     const next = current.includes(value) ? current.filter((r) => r !== value) : [...current, value];
@@ -21,7 +21,7 @@ export function GapStep({ profile, setField, callouts }: StepProps) {
   };
   return (
     <StepShell
-      eyebrow="Step 6"
+      eyebrow={eyebrow}
       title="What were you doing in that time?"
       subtext="Pick all that apply. Explaining this well actually strengthens your visa case."
       callouts={callouts}

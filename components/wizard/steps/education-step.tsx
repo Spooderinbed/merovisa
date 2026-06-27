@@ -12,11 +12,11 @@ const LEVELS: Array<{ value: EducationLevel; label: string }> = [
   { value: "masters", label: "Master's degree" },
 ];
 
-export function EducationStep({ profile, setField, callouts }: StepProps) {
+export function EducationStep({ profile, setField, callouts, eyebrow }: StepProps) {
   const grade = profile.grade ?? 70;
   return (
     <StepShell
-      eyebrow="Step 3"
+      eyebrow={eyebrow}
       title="Your education so far"
       subtext="Pick your level and set your grade as a percentage — we compare it against each university's bar."
       callouts={callouts}

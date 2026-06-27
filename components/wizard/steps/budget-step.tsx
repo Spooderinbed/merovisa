@@ -35,7 +35,7 @@ const FAMILY_OPTIONS: Array<{ value: FamilyMode; label: string }> = [
   { value: "partner-kids", label: "Partner + children" },
 ];
 
-export function BudgetStep({ profile, setField, callouts }: StepProps) {
+export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) {
   const stored = profile.budgetCurrency;
   const currency: WizardCurrency = stored === "USD" ? "USD" : "NPR";
   const range = RANGES[currency];
@@ -67,7 +67,7 @@ export function BudgetStep({ profile, setField, callouts }: StepProps) {
 
   return (
     <StepShell
-      eyebrow="Step 8"
+      eyebrow={eyebrow}
       title="What's your yearly budget?"
       subtext="Tuition plus living costs, per year. A rough figure is fine."
       callouts={callouts}

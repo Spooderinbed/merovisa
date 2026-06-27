@@ -63,6 +63,18 @@ describe("useWizardState", () => {
     expect(result.current.stepLabel).toBe("Step 1 of 9");
   });
 
+  it("numbers each step from its visible position, so the eyebrow agrees with the live counter (MV-64)", () => {
+    const { result } = renderHook(() => useWizardState());
+    // No gap (default profile carries no graduationYear) -> 8 visible steps, gap
+    // hidden. Advance to the english step (visible index 5).
+    for (let i = 0; i < 5; i++) act(() => void result.current.next());
+    expect(result.current.stepKey).toBe("english");
+    // The eyebrow and the counter must share the same number: english is the 6th
+    // visible step here, not the absolute "Step 7" it sat at when gap was present.
+    expect(result.current.stepLabel).toBe("Step 6 of 8");
+    expect(result.current.stepEyebrow).toBe("Step 6");
+  });
+
   it("reports done on the final step", () => {
     const { result } = renderHook(() => useWizardState());
     for (let i = 0; i < 7; i++) act(() => void result.current.next());

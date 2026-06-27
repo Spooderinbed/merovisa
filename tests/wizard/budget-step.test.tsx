@@ -13,7 +13,7 @@ const auProfile: Partial<StudentProfile> = {
 
 const renderStep = (profile: Partial<StudentProfile>) => {
   const setField = vi.fn();
-  render(<BudgetStep profile={profile} setField={setField} callouts={null} />);
+  render(<BudgetStep profile={profile} setField={setField} callouts={null} eyebrow="Step 1" />);
   return { setField };
 };
 

@@ -7,12 +7,12 @@ import type { StepProps } from "./types";
 const CURRENT_YEAR = new Date().getFullYear();
 const RECENT_YEARS = Array.from({ length: 7 }, (_, i) => CURRENT_YEAR - i);
 
-export function GraduationYearStep({ profile, setField, callouts }: StepProps) {
+export function GraduationYearStep({ profile, setField, callouts, eyebrow }: StepProps) {
   const selected = profile.graduationYear;
   const isEarlier = typeof selected === "number" && !RECENT_YEARS.includes(selected);
   return (
     <StepShell
-      eyebrow="Step 5"
+      eyebrow={eyebrow}
       title="When did (or will) you graduate?"
       subtext="We use this to assess your timeline and flag anything visa officers look at."
       callouts={callouts}
