@@ -5,6 +5,7 @@ import { safeNext } from "@/lib/auth/safe-next";
 import { getProgram, listAllUniversities } from "@/lib/programs/repo";
 import { getProfile } from "@/lib/profiles/repo";
 import { listDocumentsForUser } from "@/lib/documents/repo";
+import { listObtainedKinds } from "@/lib/documents/status-repo";
 import { listAllPlanForUser } from "@/lib/plan/repo";
 import { generateChecklist } from "@/lib/checklist/generator";
 import { planStatesForChecklist } from "@/lib/checklist/plan-links";
@@ -28,17 +29,20 @@ export default async function ProgramChecklistPage({ params }: { params: Promise
   const program = await getProgram(supabase, programId);
   if (!program) notFound();
 
-  const [universities, profile, docs, planRows] = await Promise.all([
+  const [universities, profile, docs, planRows, obtainedKinds] = await Promise.all([
     listAllUniversities(supabase),
     getProfile(supabase, user.id),
     listDocumentsForUser(supabase, user.id),
     listAllPlanForUser(supabase, user.id),
+    listObtainedKinds(supabase, user.id),
   ]);
   const university = universities.find((u) => u.id === program.universityId) ?? null;
   const sections = (profile?.sections ?? {}) as ProfileSections;
   const uploadedKinds = new Set<DocumentKind>(docs.map((d) => d.kind));
 
-  const items = generateChecklist({ program, sections, uploadedKinds, nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
+  // obtainedKinds (self-reported on /checklist/all) fold into the rows as "obtained" — the
+  // global toggle is no longer a dead end; it now flows into per-program rows + readiness (MV-69).
+  const items = generateChecklist({ program, sections, uploadedKinds, obtainedKinds, nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
   // Step rows mirror their plan item's state — the plan is the single completion authority.
   return <ChecklistView program={program} university={university} items={items} planStates={planStatesForChecklist(planRows)} />;
 }

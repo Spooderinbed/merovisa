@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { ChecklistView } from "@/components/checklist/checklist-view";
 import { generateChecklist } from "@/lib/checklist/generator";
 import type { Program } from "@/lib/programs/types";
+import type { ChecklistItem } from "@/lib/checklist/types";
 import type { DocumentKind } from "@/lib/documents/types";
 
 const program: Program = {
@@ -44,5 +45,30 @@ describe("ChecklistView", () => {
     render(<ChecklistView program={program} university={null} items={items} />);
     expect(screen.getByText(/reference for everything this program requires/i)).toBeInTheDocument();
     expect(screen.getByText(/your single action queue/i)).toBeInTheDocument();
+  });
+
+  it("shows an honest 'X of Y ready' count on each stage section", () => {
+    const items = generateChecklist({ program, sections: {}, uploadedKinds: new Set<DocumentKind>(["passport"]) });
+    render(<ChecklistView program={program} university={null} items={items} />);
+    expect(screen.getByText(/^1 of \d+ ready$/)).toBeInTheDocument(); // now: passport ready
+    expect(screen.getByText(/^0 of \d+ ready$/)).toBeInTheDocument(); // after-offer: nothing yet
+  });
+
+  it("shows the ready-to-apply line only when every now-stage required item is ready, and never over-claims visa-readiness", () => {
+    const onlyNowRequired: ChecklistItem[] = [
+      { key: "passport", kind: "passport", label: "Passport", group: "identity", stage: "now", requirement: "required", status: "have" },
+    ];
+    render(<ChecklistView program={program} university={null} items={onlyNowRequired} />);
+    expect(screen.getByText(/ready to start applying/i)).toBeInTheDocument();
+    expect(screen.getByText(/^1 of 1 ready$/)).toBeInTheDocument();
+  });
+
+  it("omits the ready-to-apply line while a now-stage required item is still missing", () => {
+    const notReady: ChecklistItem[] = [
+      { key: "passport", kind: "passport", label: "Passport", group: "identity", stage: "now", requirement: "required", status: "missing" },
+    ];
+    render(<ChecklistView program={program} university={null} items={notReady} />);
+    expect(screen.queryByText(/ready to start applying/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/^0 of 1 ready$/)).toBeInTheDocument();
   });
 });

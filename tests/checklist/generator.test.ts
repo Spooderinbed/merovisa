@@ -40,6 +40,23 @@ describe("generateChecklist", () => {
     expect(byKey(items, "national-id")?.status).toBe("missing");
   });
 
+  it("marks a self-reported (obtained) kind as 'obtained', distinct from uploaded 'have' (MV-69 reconnect)", () => {
+    const items = generateChecklist({
+      program: baseProgram, sections: {}, uploadedKinds: noKinds,
+      obtainedKinds: new Set<DocumentKind>(["national-id"]),
+    });
+    expect(byKey(items, "national-id")?.status).toBe("obtained");
+    expect(byKey(items, "passport")?.status).toBe("missing");
+  });
+
+  it("an uploaded file wins over a self-report for the same kind (stronger evidence)", () => {
+    const items = generateChecklist({
+      program: baseProgram, sections: {}, uploadedKinds: new Set<DocumentKind>(["passport"]),
+      obtainedKinds: new Set<DocumentKind>(["passport"]),
+    });
+    expect(byKey(items, "passport")?.status).toBe("have");
+  });
+
   it("states the program's English requirement and sources it", () => {
     const eng = byKey(generateChecklist({ program: baseProgram, sections: {}, uploadedKinds: noKinds }), "english");
     expect(eng?.requirement).toBe("required");
