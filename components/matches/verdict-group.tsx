@@ -1,12 +1,7 @@
 import type { MatchResult, MatchVerdict } from "@/lib/matches/types";
+import { VERDICT_LABELS } from "@/lib/scoring/verdict-labels";
 import { ProgramCard } from "./program-card";
 import type { Status } from "./shortlist-button";
-
-const HEADLINE = {
-  strong: "Strong matches",
-  possible: "Possible",
-  reach: "Reach",
-} as const;
 
 export function VerdictGroup({
   verdict,
@@ -21,7 +16,7 @@ export function VerdictGroup({
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-[20px] font-medium text-ink">
-        {HEADLINE[verdict]} ({matches.length})
+        {VERDICT_LABELS[verdict].groupLabel} ({matches.length})
       </h2>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {matches.map((m) => (

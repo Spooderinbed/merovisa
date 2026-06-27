@@ -637,15 +637,15 @@
     },
     {
       "id": "MV-42",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "",
+      "badge": "PR",
       "file": null,
       "title": "Shared design primitives (VerdictPill + Card + VERDICT_LABELS)",
-      "summary": "Phase B (audit #9/#12/#13/#26, P1). Extract one VerdictPill (hand-rolled 4x) + one Card/Panel shell (copy-pasted ~10x); bake role->radius (8 input / 12 card / 16 panel); centralize VERDICT_LABELS (labels worded 5 ways across surfaces, group headers append '(N)' at call site); give bespoke pill-buttons a disabled:opacity-50/pointer-events-none + standard loading-copy contract; one neutral teal meter colour. Stops the radius/label/state drift. Note: #8 AccuracyMeter recolor likely already shipped via Phase A + MV-32 — verify before touching. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #9,#12,#13,#26.",
+      "summary": "Phase B (audit #9/#12/#13/#26, P1). Extract one VerdictPill (hand-rolled 4x) + one Card/Panel shell (copy-pasted ~10x); bake role->radius (8 input / 12 card / 16 panel); centralize VERDICT_LABELS (labels worded 5 ways across surfaces, group headers append '(N)' at call site); give bespoke pill-buttons a disabled:opacity-50/pointer-events-none + standard loading-copy contract; one neutral teal meter colour. Stops the radius/label/state drift. Note: #8 AccuracyMeter recolor likely already shipped via Phase A + MV-32 — verify before touching. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #9,#12,#13,#26. SLICE 1 SHIPPED 2026-06-27 (PR pending): centralised VERDICT_LABELS — one lib/scoring/verdict-labels.ts (label singular + groupLabel plural) now feeds both the verdict-card pill and the verdict-group header; the divergent VERDICT_META.label / HEADLINE dicts are gone; output byte-identical; TDD +4 (suite 1441), typecheck clean, lint 0 errors. Inventory corrected the audit's premises: VerdictPill is hand-rolled in 1 place not 4 (the others were worktree copies) so extraction is skipped as premature abstraction; AccuracyMeter is already bg-primary teal (Phase A) so it's a no-op. SLICE 2 (deferred, independent of master): Card/Panel shell extraction (~12 copies, biggest/riskiest) + bespoke pill-button disabled/loading contract (refresh-button, document-viewer-modal, guide-chat). DEFERRED behind PR #11: the eyebrow<->counter consolidation edits the same 9 wizard step files MV-47 renumbers, so it must land after MV-47 merges to master to avoid a head-on conflict.",
       "created": "2026-06-25",
-      "entered": "2026-06-25"
+      "entered": "2026-06-27"
     },
     {
       "id": "MV-43",
