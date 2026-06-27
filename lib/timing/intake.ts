@@ -65,3 +65,32 @@ export function computeIntakeTiming(
   const alternatives = options.filter((o) => o !== nearest);
   return { nearest, alternatives };
 }
+
+/** An intake placed on the timeline track: `offsetPct` is its distance from `now` (0) to the furthest intake (100). */
+export interface IntakeTimelinePoint extends IntakeOption {
+  offsetPct: number;
+}
+
+/**
+ * Lay every intake (nearest + alternatives) on a single chronological track for the
+ * tick-timeline: `now` anchors the start (0%) and the furthest intake the end (100%),
+ * so the gap before each tick reflects real calendar distance. Pure geometry — no
+ * dates are invented; positions derive only from each option's month/year.
+ */
+export function buildIntakeTimeline(
+  timing: IntakeTiming,
+  now: Date = new Date(),
+): IntakeTimelinePoint[] {
+  const options = [timing.nearest, ...timing.alternatives]
+    .slice()
+    .sort((a, b) => a.year - b.year || a.month - b.month);
+
+  const msFromNow = (o: IntakeOption) =>
+    new Date(o.year, o.month - 1, 1).getTime() - now.getTime();
+  const furthest = options.reduce((max, o) => Math.max(max, msFromNow(o)), 0);
+
+  return options.map((o) => {
+    const raw = furthest > 0 ? (msFromNow(o) / furthest) * 100 : 0;
+    return { ...o, offsetPct: Math.min(100, Math.max(0, raw)) };
+  });
+}
