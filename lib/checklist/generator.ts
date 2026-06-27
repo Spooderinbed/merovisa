@@ -30,6 +30,9 @@ export interface ChecklistInputs {
   program: Program;
   sections: ProfileSections;
   uploadedKinds: Set<DocumentKind>;
+  /** Kinds the student self-reported as obtained on the global checklist (no file). Optional
+   * so existing callers/tests are unaffected; folded into status as "obtained" (MV-69). */
+  obtainedKinds?: Set<DocumentKind>;
   nepalAssessmentLevel?: "L2" | "L3";
 }
 
@@ -137,17 +140,24 @@ const IELTS_CENTRES_SOURCE: ChecklistSource = {
   lastVerified: BRITISH_COUNCIL_IELTS.lastVerified,
 };
 
-function statusFor(kind: DocumentKind | null, uploaded: Set<DocumentKind>): ChecklistStatus {
+function statusFor(
+  kind: DocumentKind | null,
+  uploaded: Set<DocumentKind>,
+  obtained: Set<DocumentKind>,
+): ChecklistStatus {
   if (kind === null) return "info";
-  return uploaded.has(kind) ? "have" : "missing";
+  if (uploaded.has(kind)) return "have"; // an uploaded file outranks a self-report
+  if (obtained.has(kind)) return "obtained";
+  return "missing";
 }
 
 export function generateChecklist(inputs: ChecklistInputs): ChecklistItem[] {
   const { program, sections, uploadedKinds } = inputs;
+  const obtainedKinds = inputs.obtainedKinds ?? new Set<DocumentKind>();
   const level = inputs.nepalAssessmentLevel ?? "L3";
   const items: ChecklistItem[] = [];
   const add = (it: Omit<ChecklistItem, "status">) =>
-    items.push({ ...it, status: statusFor(it.kind, uploadedKinds) });
+    items.push({ ...it, status: statusFor(it.kind, uploadedKinds, obtainedKinds) });
 
   // IDENTITY (now) — the passport row gains a conditional how-to-start note when not uploaded.
   const passportMissing = !uploadedKinds.has("passport");

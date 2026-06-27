@@ -16,6 +16,13 @@ describe("ChecklistItem", () => {
     expect(screen.getByText(/Have/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Upload/i })).not.toBeInTheDocument();
   });
+  it("marks an obtained (self-reported) item as checked with a distinct 'Marked obtained' chip, and still offers upload", () => {
+    render(<ul><ChecklistItem item={{ ...base, status: "obtained" }} /></ul>);
+    expect(screen.getByText("Marked obtained")).toBeInTheDocument();
+    expect(screen.getByText("✓ Passport bio page")).toBeInTheDocument();
+    // self-report is not an uploaded file — still let them attach one
+    expect(screen.getByRole("link", { name: /Upload/i })).toHaveAttribute("href", "/documents");
+  });
   it("shows a Recommended tag for recommended items", () => {
     render(<ul><ChecklistItem item={{ ...base, requirement: "recommended" }} /></ul>);
     expect(screen.getByText(/Recommended/i)).toBeInTheDocument();

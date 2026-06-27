@@ -4,7 +4,7 @@ import type { PlanItemRow } from "@/lib/plan/types";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getProgram, listAllUniversities, getProfile, listDocumentsForUser, listAllPlanForUser } =
+const { getUser, getProgram, listAllUniversities, getProfile, listDocumentsForUser, listAllPlanForUser, listObtainedKinds } =
   vi.hoisted(() => ({
     getUser: vi.fn(),
     getProgram: vi.fn(),
@@ -12,6 +12,7 @@ const { getUser, getProgram, listAllUniversities, getProfile, listDocumentsForUs
     getProfile: vi.fn(),
     listDocumentsForUser: vi.fn(),
     listAllPlanForUser: vi.fn(),
+    listObtainedKinds: vi.fn(),
   }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
@@ -19,12 +20,16 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/programs/repo", () => ({ getProgram, listAllUniversities }));
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
+vi.mock("@/lib/documents/status-repo", () => ({ listObtainedKinds }));
 vi.mock("@/lib/plan/repo", () => ({ listAllPlanForUser }));
 vi.mock("next/headers", () => ({ headers: async () => new Map() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("@/components/checklist/checklist-view", () => ({
-  ChecklistView: ({ planStates }: { planStates?: Record<string, string> }) => (
-    <div data-testid="view">{JSON.stringify(planStates ?? null)}</div>
+  ChecklistView: ({ planStates, items }: { planStates?: Record<string, string>; items?: { key: string; status: string }[] }) => (
+    <div>
+      <div data-testid="view">{JSON.stringify(planStates ?? null)}</div>
+      <div data-testid="items">{JSON.stringify((items ?? []).map((i) => ({ key: i.key, status: i.status })))}</div>
+    </div>
   ),
 }));
 
@@ -52,6 +57,17 @@ describe("/checklist/[programId] page", () => {
     getProfile.mockReset().mockResolvedValue(null);
     listDocumentsForUser.mockReset().mockResolvedValue([]);
     listAllPlanForUser.mockReset().mockResolvedValue([]);
+    listObtainedKinds.mockReset().mockResolvedValue(new Set());
+  });
+
+  it("folds self-reported (obtained) kinds into the generated checklist (MV-69 reconnect)", async () => {
+    listObtainedKinds.mockResolvedValue(new Set(["national-id"]));
+    const ui = await ProgramChecklistPage({ params: Promise.resolve({ programId: "p1" }) });
+    render(ui);
+    expect(listObtainedKinds).toHaveBeenCalledWith(expect.anything(), "u1");
+    const items = JSON.parse(screen.getByTestId("items").textContent || "[]") as { key: string; status: string }[];
+    expect(items.find((i) => i.key === "national-id")?.status).toBe("obtained");
+    expect(items.find((i) => i.key === "passport")?.status).toBe("missing"); // not obtained, not uploaded
   });
 
   it("fetches the plan and passes derived per-key state to the view", async () => {
