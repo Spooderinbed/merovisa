@@ -5,6 +5,8 @@ import userEvent from "@testing-library/user-event";
 import AppError from "@/app/(app)/error";
 import AppLoading from "@/app/(app)/loading";
 import GlobalError from "@/app/global-error";
+import FocusedError from "@/app/(focused)/error";
+import FocusedLoading from "@/app/(focused)/loading";
 
 describe("signed-in route error boundary", () => {
   it("shows a calm, reassuring message and a working retry", async () => {
@@ -33,5 +35,28 @@ describe("global (root) error boundary", () => {
     expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The (focused) group hosts the anonymous results (assess) and the recovered/saved
+// assessment view (assessment/[id]) — both doing live Supabase reads. Without these
+// boundaries a thrown read bubbled to global-error (document-replacing, no FocusBar)
+// and a slow read showed a blank frame. This is the conversion-critical surface, so
+// a failed/slow load must recover calmly in place, not dead-end the student.
+describe("focused (results) route error boundary", () => {
+  it("names the results context and offers a working retry", async () => {
+    const reset = vi.fn();
+    render(<FocusedError error={new Error("assessment read failed")} reset={reset} />);
+    expect(screen.getByText(/couldn.t load your results/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("focused (results) route loading skeleton", () => {
+  it("announces a busy state to assistive tech", () => {
+    const { container } = render(<FocusedLoading />);
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 });
