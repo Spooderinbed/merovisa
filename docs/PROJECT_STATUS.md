@@ -2,7 +2,7 @@
 
 > **Current work state now lives on the kanban board** (`docs/kanban/` — open `board.html`, read `board.md`, or ask Claude to "show me the board"). This file remains the **phase log / history**: what works, known issues, decisions. For "what's being worked on right now," see the board.
 
-**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist now shipped too, 2026-06-08) · **signed-in flows manually smoked green + prod build verified 2026-06-08**
+**Snapshot:** 2026-06-08, scorer-wiring slices 1–3 + Phase A cost-to-apply + Phase B (B1 visa-English floor + B2 dependents capacity, incl. signed-in family.situation mapping + family child-count field) + /matches seed-parity guard + lint-gate restoration + /matches provenance surfacing merged · **status reconciled 2026-06-08** (Phase 5 documents vault confirmed shipped & live — 9 migrations, MCP-verified; per-program checklist now shipped too, 2026-06-08) · **signed-in flows manually smoked green + prod build verified 2026-06-08** · **2026-06-27:** Phase 6 AI guide shipped too (grounded DeepSeek chat, parked on a Vercel `DEEPSEEK_API_KEY`); this 2026-06-08 snapshot is historical — see the kanban (`docs/kanban/`) for live state.
 **Tests:** 749 passing across 162 test files
 **Typecheck:** clean
 **Build:** clean — prod build re-verified 2026-06-08 (routes incl. `/checklist`, `/checklist/[programId]`, `/api/plan/action`, `/api/shortlist`, `/api/profile/section`, `/api/assess`, `/api/leads`)
@@ -28,7 +28,7 @@
 | `/plan` | Impact-ranked (High/Medium/Low) action items with Done/Dismiss/Undo, closed items collapse, regenerates on profile change |
 | `/documents` | **Phase 5 — shipped & live.** Auth-gated documents vault: upload / list / view / delete photos of visa-ready documents, organised by a typed taxonomy (`DOCUMENT_META` → Identity/Academic/Financial/Visa groups). Reached from the work/english/finance profile editors. Service-role-only RLS. |
 | `/checklist` | **Phase 5 — shipped 2026-06-08.** Landing lists shortlisted programs → each program's `/checklist/[programId]` view. Rule-derived generator maps a program's requirements → vault documents, split by stage (what you need **now** / **after your offer**), have/missing from uploads, financial items keyed to funding source, DHA-sourced funds note. Reached from each ProgramCard + the dashboard Documents stat. |
-| Stub (`/guide`) | "Coming soon — landing in Phase 6" with back-to-dashboard CTA. |
+| `/guide` | **Phase 6 — shipped.** Grounded DeepSeek chat (stateless, non-streaming): `/guide` page + `components/guide/guide-chat.tsx` + `app/api/guide/chat/route.ts`, grounded by `lib/guide/{deepseek,context,system-prompt}.ts`. Returns a calm "unavailable" 503 until a valid `DEEPSEEK_API_KEY` is set in Vercel; the UI shows a `role="alert"` notice and the page still renders. |
 | `/api/profile/section` | Zod-validated PATCH for any of 13 sections, auth-gated, invalidates plan after save (try/catch protected) |
 | `/api/assess` | Anonymous path persists with 3-day TTL; signed-in path persists as owner, sets `is_primary` if none, bootstraps profile if missing, invalidates plan |
 | `/api/shortlist`, `/api/plan/action` | Auth-gated POST endpoints with admin client writes via service role |
@@ -62,9 +62,9 @@
 - **Shipped:** `documents` table + an upload/view/delete flow (the original `checklist_items` + OCR design was simplified away — see `simplify_documents_drop_ocr_columns`), the `/documents` vault page, three `/api/documents/*` routes, `lib/documents/{repo,types}.ts`, service-role-only RLS (`fix_documents_rls_service_role_only`). The typed taxonomy (`DOCUMENT_META`) already groups document kinds into Identity/Academic/Financial/Visa. (Confirmed: real Supabase Storage — signed URLs, magic-byte validation, 5 MB image cap, rate-limited; an upload auto-flips the profile flag + re-scores + invalidates the plan.)
 - **Per-program checklist — shipped 2026-06-08.** Spec `docs/superpowers/specs/2026-06-08-per-program-checklist-design.md`, plan `docs/superpowers/plans/2026-06-08-per-program-checklist.md`. A pure rule-derived generator (`lib/checklist/generator.ts` — no migration, no scoring touched) turns a program + profile + uploaded kinds into stage-grouped (`now` / `after-offer`) checklist items; financial items derive from the profile funding source; scholarship/AHPRA are informational (`kind: null`) items; the DHA funds note carries a `SourceLine`. `/checklist/[programId]` page + `/checklist` landing + a ProgramCard link. Upload-from-checklist is a deep-link to the vault (clarity over upload UX, per the user's guard). 29 new tests; goldens byte-identical. **Smoked green 2026-06-08** (dev-session seam): `/checklist/[programId]` renders every rule correctly (bachelors→+2/SLC, parents-family→bank+sponsor, DHA sourced note + AL3 seasoning, gap→employment, visa in "After your offer"), and an uploaded passport flips its item to "Have". The prod build lists the route — the first-hit 404 seen in dev was a Next on-demand-compile artifact, absent in production.
 
-### 🚫 Not built yet
+### ✅ Phase 6 (AI guide) — shipped, parked on a Vercel key
 
-- Phase 6: `guide_threads` + `guide_messages` tables, `private.owns_thread()` security-definer helper, `/guide` page with SSE-streamed chat, Anthropic SDK integration with prompt caching. **Blocks at runtime without `ANTHROPIC_API_KEY` set in `.env.local`.**
+- **Shipped (a different shape than originally specced):** `/guide` page + `components/guide/guide-chat.tsx` client chat + `app/api/guide/chat/route.ts`, grounded by `lib/guide/{deepseek,context,system-prompt}.ts`, tests under `tests/guide/`. As built it is **stateless and non-streaming** — no `guide_threads`/`guide_messages` tables, no `owns_thread()` helper, no SSE — and uses **DeepSeek's OpenAI-compatible endpoint, not Anthropic**. A missing key throws in `deepseek.ts`, the route catches it and returns a calm `503`, and the UI shows a `role="alert"` "couldn't answer just now" while the page still renders. **Founder-owed:** set a valid `DEEPSEEK_API_KEY` in Vercel to enable replies.
 
 ---
 
@@ -422,7 +422,7 @@ supabase/migrations/
 
 ## What to do next — recommended order
 
-_(Reconciled 2026-06-08. Lint cleanup ✓ done (`3c8810c`). Phase A/B scorer-wiring ✓ done. Phase 5 documents vault + per-program checklist ✓ shipped. Signed-in flows ✓ manually smoked green; prod build ✓ passes. Center of gravity is now **release-readiness for the Nepal→Australia journey**, framed by the five student questions below.)_
+_(Reconciled 2026-06-27. Phases 0–6 all merged — incl. Phase 5 documents vault + per-program checklist and Phase 6 AI guide (parked on a Vercel `DEEPSEEK_API_KEY`). Center of gravity is now **completing & hardening the self-serve Nepal→Australia journey** (journey completeness + reliability), framed by the five student questions below. Current work state lives on the kanban (`docs/kanban/`); the per-slice history below this line is retained as a phase log.)_
 
 **Definition of "Nepal→Australia complete"** — a real student can answer: (1) can I apply? (2) what's my biggest risk? (3) what money + documents do I need? (4) which programs are realistic? (5) what do I do next?
 

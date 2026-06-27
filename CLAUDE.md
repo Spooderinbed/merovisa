@@ -4,9 +4,9 @@ Trust-first platform for international students to assess their real chances of 
 
 ## Project State
 
-- **Phase:** MVP in active development. Phases 0–4 merged (marketing + chrome, signed-in shell, full profile editor, programs/matches, plan generator). Current focus: sourcing & reconciling real Nepal→Australia data and wiring the sourced config into the scoring engine.
-- **Built:** Anonymous 9-step wizard → results, OAuth sign-in, dashboard, profile (13 sections), matches, plan. Server-side scoring engine, Supabase persistence (5 migrations, RLS enabled), 380+ tests.
-- **Not built yet:** Phase 5 (documents + checklist + Storage), Phase 6 (AI guide chat).
+- **Phase:** MVP, Phases 0–6 merged (marketing + chrome, signed-in shell, full profile editor, programs/matches, plan generator, documents vault + per-program checklist + Storage, AI guide chat). Current focus: completing & hardening the self-serve Nepal→Australia journey — every self-serve dead-end is a bounce to a consultancy, which the app exists to replace.
+- **Built:** Anonymous 9-step wizard → results, OAuth sign-in, dashboard, profile (13 sections), matches, plan, documents vault + per-program checklist (Supabase Storage, RLS), AI guide chat (grounded DeepSeek). Server-side scoring engine, Supabase persistence (10+ migrations, RLS enabled), 1400+ tests.
+- **Founder-owed (not a build gap):** the AI guide is built but returns a calm "unavailable" 503 until a valid `DEEPSEEK_API_KEY` is set in Vercel. No phase remains unbuilt — pick work by **student outcome** (journey completeness + reliability), not "% findings wired" (a retired vanity metric).
 - **Living status:** `docs/PROJECT_STATUS.md` is the authoritative **phase log / history** — what works, known issues. **Current work state lives on the kanban** (`docs/kanban/` — see Work tracking below), not here. Keep both current; don't duplicate detail.
 - **Design spec:** `docs/superpowers/specs/2026-06-02-onboarding-mvp-design.md`. Prototype `index.html` is a design-language reference, not production code.
 
