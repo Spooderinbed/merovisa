@@ -463,7 +463,8 @@
     },
     {
       "id": "MV-33",
-      "col": "inreview",
+      "col": "done",
+      "done": "2026-06-27",
       "pri": "P1",
       "owner": "agent",
       "badge": "Part A shipped (subtitle reconciled) · Part B → MV-39",
@@ -475,7 +476,8 @@
     },
     {
       "id": "MV-34",
-      "col": "inreview",
+      "col": "done",
+      "done": "2026-06-27",
       "pri": "P1",
       "owner": "agent",
       "badge": "shipped: Applied-freeze disclosure",
@@ -511,7 +513,8 @@
     },
     {
       "id": "MV-37",
-      "col": "inreview",
+      "col": "done",
+      "done": "2026-06-27",
       "pri": "P2",
       "owner": "founder+agent",
       "badge": "Slice 1 SHIPPED 2026-06-25 (phase-grouped A–E timeline) · slice 2 deferred (per-application multi-track + entry states)",
@@ -535,7 +538,8 @@
     },
     {
       "id": "MV-39",
-      "col": "inreview",
+      "col": "done",
+      "done": "2026-06-27",
       "pri": "P2",
       "owner": "agent",
       "badge": "SHIPPED 2026-06-25 → PR (branch mv-39-outcome-self-report); first slice under branch+PR flow",
@@ -584,7 +588,8 @@
     },
     {
       "id": "MV-40",
-      "col": "inreview",
+      "col": "done",
+      "done": "2026-06-27",
       "pri": "P1",
       "owner": "agent",
       "badge": "human-gate",
