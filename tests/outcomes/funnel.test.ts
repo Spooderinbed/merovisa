@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { deriveFunnelStage, buildOutcomeFunnel } from "@/lib/outcomes/funnel";
+import { deriveFunnelStage, buildOutcomeFunnel, buildOutcomeRail } from "@/lib/outcomes/funnel";
+import type { OutcomeRail } from "@/lib/outcomes/funnel";
 import type { EventType } from "@/lib/outcomes/types";
 import type { PredictionRow, AttemptRow, EventRow } from "@/lib/outcomes/repo";
 
@@ -130,6 +131,19 @@ describe("buildOutcomeFunnel", () => {
     expect(byId.get("att-2")!.nextEvents).toEqual(["offer_accepted"]);
   });
 
+  it("carries each attempt's reached event types onto the row for the journey rail", () => {
+    const predictions = [prediction("pred-2", "prog-2", "possible")];
+    const attempts = [attempt("att-2", "pred-2", "prog-2")];
+    const events = [
+      ev("att-2", "applied", "2026-01-05T00:00:00Z"),
+      ev("att-2", "offer_received", "2026-01-09T00:00:00Z"),
+    ];
+
+    const rows = buildOutcomeFunnel({ predictions, attempts, events, programLookup });
+
+    expect(rows[0]!.events).toEqual(["applied", "offer_received"]);
+  });
+
   it("falls back gracefully when the program is not in the lookup", () => {
     const predictions = [prediction("pred-9", "prog-unknown", "reach")];
     const attempts = [attempt("att-9", "pred-9", "prog-unknown")];
@@ -150,5 +164,107 @@ describe("buildOutcomeFunnel", () => {
     const rows = buildOutcomeFunnel({ predictions: [], attempts, events, programLookup });
 
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe("buildOutcomeRail", () => {
+  const states = (r: OutcomeRail) => r.steps.map((s) => s.state);
+  const labels = (r: OutcomeRail) => r.steps.map((s) => s.label);
+
+  it("always lays the four canonical steps in journey order", () => {
+    const rail = buildOutcomeRail(["applied"]);
+    expect(rail.steps.map((s) => s.key)).toEqual(["applied", "offer", "visa_lodged", "granted"]);
+    expect(labels(rail)).toEqual(["Applied", "Offer", "Visa lodged", "Granted"]);
+  });
+
+  it("marks Applied as the current step when only an application exists", () => {
+    const rail = buildOutcomeRail(["applied"]);
+    expect(states(rail)).toEqual(["current", "upcoming", "upcoming", "upcoming"]);
+    expect(rail.steps.every((s) => s.tone !== "reach")).toBe(true);
+  });
+
+  it("fills Applied and makes Offer current once an offer arrives", () => {
+    const rail = buildOutcomeRail(["applied", "offer_received"]);
+    expect(states(rail)).toEqual(["passed", "current", "upcoming", "upcoming"]);
+  });
+
+  it("collapses offer_accepted / coe into the single Offer step", () => {
+    const rail = buildOutcomeRail(["applied", "offer_received", "offer_accepted", "coe_issued"]);
+    expect(states(rail)).toEqual(["passed", "current", "upcoming", "upcoming"]);
+  });
+
+  it("fills the whole rail for a granted visa, never lighting red", () => {
+    const rail = buildOutcomeRail([
+      "applied",
+      "offer_received",
+      "offer_accepted",
+      "coe_issued",
+      "visa_lodged",
+      "visa_granted",
+    ]);
+    expect(states(rail)).toEqual(["passed", "passed", "passed", "current"]);
+    expect(rail.steps.every((s) => s.tone !== "reach")).toBe(true);
+  });
+
+  it("treats enrolment as a complete journey too", () => {
+    const rail = buildOutcomeRail([
+      "applied",
+      "offer_received",
+      "offer_accepted",
+      "coe_issued",
+      "visa_lodged",
+      "visa_granted",
+      "enrolled",
+    ]);
+    expect(states(rail)).toEqual(["passed", "passed", "passed", "current"]);
+  });
+
+  it("stops a rejection at the Offer step with a red exit marker, never advancing", () => {
+    const rail = buildOutcomeRail(["applied", "application_rejected"]);
+    expect(states(rail)).toEqual(["passed", "exit", "upcoming", "upcoming"]);
+    expect(rail.steps[1]).toMatchObject({ label: "Rejected", tone: "reach" });
+    expect(rail.steps[3]!.state).toBe("upcoming");
+  });
+
+  it("stops a refusal at the Granted position, replacing the label with 'Refused' (never 'Granted')", () => {
+    const rail = buildOutcomeRail([
+      "applied",
+      "offer_received",
+      "offer_accepted",
+      "coe_issued",
+      "visa_lodged",
+      "visa_refused",
+    ]);
+    expect(states(rail)).toEqual(["passed", "passed", "passed", "exit"]);
+    expect(rail.steps[3]).toMatchObject({ label: "Refused", tone: "reach" });
+    expect(labels(rail)).not.toContain("Granted");
+  });
+
+  it("renders a withdrawal as a neutral stop — the student's own choice, never red", () => {
+    const rail = buildOutcomeRail(["applied", "offer_received", "withdrawn"]);
+    expect(states(rail)).toEqual(["passed", "passed", "exit", "upcoming"]);
+    expect(rail.steps[2]).toMatchObject({ label: "Withdrawn", tone: "neutral" });
+    expect(rail.steps.every((s) => s.tone !== "reach")).toBe(true);
+  });
+
+  it("exits a withdrawal right after applying at the Offer step", () => {
+    const rail = buildOutcomeRail(["applied", "withdrawn"]);
+    expect(states(rail)).toEqual(["passed", "exit", "upcoming", "upcoming"]);
+    expect(rail.steps[1]).toMatchObject({ label: "Withdrawn", tone: "neutral" });
+  });
+
+  it("builds an honest aria-label that never implies an unreached Granted", () => {
+    const rail = buildOutcomeRail([
+      "applied",
+      "offer_received",
+      "offer_accepted",
+      "coe_issued",
+      "visa_lodged",
+      "visa_refused",
+    ]);
+    expect(rail.ariaLabel).toMatch(/^Application progress:/);
+    expect(rail.ariaLabel).toContain("Refused");
+    expect(rail.ariaLabel).toContain("Granted not reached");
+    expect(rail.ariaLabel).not.toContain("Granted reached");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -15,8 +15,15 @@ const row = (overrides: Partial<OutcomeFunnelRow> = {}): OutcomeFunnelRow => ({
   intake: "2026-02",
   lastUpdated: "2026-01-02T00:00:00Z",
   nextEvents: [],
+  events: ["applied"],
   ...overrides,
 });
+
+const refusedRow = () =>
+  row({
+    stage: "visa_refused",
+    events: ["applied", "offer_received", "offer_accepted", "coe_issued", "visa_lodged", "visa_refused"],
+  });
 
 describe("OutcomeFunnel (honest subtitle — MV-33A)", () => {
   it("does not promise a verification the app cannot perform", () => {
@@ -43,5 +50,38 @@ describe("OutcomeFunnel — self-report control (MV-39)", () => {
     render(<OutcomeFunnel rows={[row({ stage: "enrolled", nextEvents: [] })]} />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByText(/report an update/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("OutcomeFunnel — journey rail (MV-73)", () => {
+  it("renders the four-step journey rail on each application row", () => {
+    render(<OutcomeFunnel rows={[row({ events: ["applied", "offer_received"] })]} />);
+    const rail = screen.getByTestId("outcome-rail");
+    expect(within(rail).getByText("Applied")).toBeInTheDocument();
+    expect(within(rail).getByText("Offer")).toBeInTheDocument();
+    expect(within(rail).getByText("Visa lodged")).toBeInTheDocument();
+    expect(within(rail).getByText("Granted")).toBeInTheDocument();
+  });
+
+  it("replaces 'Granted' with the honest terminal word when a visa is refused", () => {
+    render(<OutcomeFunnel rows={[refusedRow()]} />);
+    const rail = screen.getByTestId("outcome-rail");
+    expect(within(rail).getByText("Refused")).toBeInTheDocument();
+    expect(within(rail).queryByText("Granted")).not.toBeInTheDocument();
+  });
+
+  it("exposes an honest rail aria-label that never implies an unreached Granted", () => {
+    render(<OutcomeFunnel rows={[refusedRow()]} />);
+    const rail = screen.getByTestId("outcome-rail");
+    expect(rail.getAttribute("aria-label")).toContain("Granted not reached");
+  });
+
+  it("shows a withdrawal as a neutral stop, never a red failure", () => {
+    render(<OutcomeFunnel rows={[row({ stage: "withdrawn", events: ["applied", "offer_received", "withdrawn"] })]} />);
+    const rail = screen.getByTestId("outcome-rail");
+    expect(within(rail).getByText("Withdrawn")).toBeInTheDocument();
+    // Withdrawal is the student's own choice — the rail must not paint it the reach (red) tone.
+    expect(rail.querySelector(".border-reach")).toBeNull();
+    expect(rail.querySelector(".text-reach")).toBeNull();
   });
 });
