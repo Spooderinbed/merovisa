@@ -678,8 +678,8 @@
       "owner": "agent",
       "badge": "",
       "file": null,
-      "title": "Progression visuals (funnel rail + intake timeline + plan<->checklist chips)",
-      "summary": "Phase B (audit #15/#16/#28, P1). Surfaces named for progression show none: add a thin stepped rail per outcome-funnel row (Applied->Offer->Visa lodged->Granted), a tick-timeline w/ 'now' marker on intake-timing, and surface the Checklist<->Plan link as mono status chips (planState on ChecklistItem, stage tag on PlanItemCard) + a verdict->bars 'why this band' bridge. Flat dots, mono labels — no new vocabulary. COORDINATE: the funnel row now also carries the just-merged MV-39 self-report control. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #15,#16,#28.",
+      "title": "Progression visuals UMBRELLA (funnel rail + intake timeline + plan<->checklist chips)",
+      "summary": "DECOMPOSED 2026-06-28 (was too big for one slice -- 4-5 distinct visuals on different surfaces). Tracks the REMAINING work; pick one sub-slice at a time. Phase B (audit #15/#16/#28, P1). DONE/carved out: #28 chip-on-ChecklistItem already shipped (MV-23 thread); #28 stage-tag-on-PlanItemCard -> MV-71 (in progress). REMAINING here: (#15) thin stepped rail per outcome-funnel row (Applied->Offer->Visa lodged->Granted) -- COORDINATE w/ the merged MV-39 self-report control on the same row; (#16) tick-timeline w/ 'now' marker on results/intake-timing.tsx; PLUS the MV-68-audit reframing: a global cross-stage 'where am I' journey rail in app/(app)/layout.tsx (wizard->results->account->documents->apply) -- biggest, warrants its own brainstorm. Flat dots, mono labels -- no new vocabulary. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #15,#16,#28 + 2026-06-27-mv68-ground-truth-audit.md #3.",
       "created": "2026-06-25",
       "entered": "2026-06-25"
     },
@@ -778,6 +778,18 @@
       "summary": "MV-68 audit finding #4. The (marketing) route group has NO error.tsx or loading.tsx, yet app/(marketing)/page.tsx, app/(marketing)/auth/page.tsx, and app/(marketing)/layout.tsx all do live supabase.auth.getUser() reads. A thrown/slow auth read on the first-impression landing surface -> blank frame or a bubble to the document-replacing global-error.tsx. FIX (TDD, mirrors MV-62/MV-66): app/(marketing)/error.tsx (calm branded retry inside the marketing chrome) + app/(marketing)/loading.tsx (flat-paper skeleton). Note: a layout.tsx throw still bubbles past a group error boundary to global-error (same Next@16 semantics as (app)/(focused)); the page-level reads are what this catches. +2 tests in tests/app/error-boundaries.test.tsx. Lower student-outcome impact than MV-69 (landing, not the deep journey) but completes resilience parity. Effort S. Branch mv-70-marketing-boundaries off master -> PR, founder-gated merge.",
       "created": "2026-06-27",
       "entered": "2026-06-27"
+    },
+    {
+      "id": "MV-71",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "First MV-45 sub-slice (founder-picked #28). Completes the bidirectional Checklist<->Plan link.",
+      "file": "MV-71-plan-checklist-stage-tag.md",
+      "title": "Progression visual #28b: checklist-stage tag on PlanItemCard (reverse Plan->Checklist link)",
+      "summary": "Carved out of the over-scoped MV-45. Design-division audit #28 ('Checklist<->Plan relationship asserted in copy, never shown') has TWO halves: (a) mono planState chip on ChecklistItem -- ALREADY SHIPS (checklist-item.tsx PLAN_CHIP + 'Track in your plan ->', from the MV-23 thread); (b) stage tag on PlanItemCard -- NOT built. This slice builds (b): a mono 'Checklist - Now' / 'Checklist - After offer' tag on each plan card whose kind mirrors a checklist requirement, closing the loop (checklist rows already point INTO the plan; plan cards now point BACK to the checklist stage). Reverse lookup planKind->ChecklistStage lives in lib/checklist/plan-links.ts (owns the mapping), backed by a static map GUARDED by a drift test that generates a checklist and asserts each linked key's stage matches (the generator stays the single source). Stages are mixed (3 now: doc-preparation/agent-marn/sponsor-income-cert; 4 after-offer: noc-application/biometrics/police-certificate/gs-responses) so the tag is genuinely informative. Vocabulary matches the checklist sections ('What you need now' / 'After your offer') -- no new terms (audit constraint). TDD: extend tests/checklist/plan-links.test.ts + new tests/plan/plan-item-card.test.tsx. Flat mono pill, calm-authority. Effort S. Branch mv-71-plan-checklist-stage-tag off master -> PR, founder-gated merge.",
+      "created": "2026-06-28",
+      "entered": "2026-06-28"
     },
     {
       "id": "MV-48",

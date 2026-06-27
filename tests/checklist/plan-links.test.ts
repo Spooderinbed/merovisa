@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { CHECKLIST_PLAN_LINKS, planStatesForChecklist } from "@/lib/checklist/plan-links";
+import {
+  CHECKLIST_PLAN_LINKS,
+  planStatesForChecklist,
+  checklistStageForPlanKind,
+} from "@/lib/checklist/plan-links";
 import { VISA_PREP_KINDS } from "@/lib/plan/phases";
 import { generateChecklist } from "@/lib/checklist/generator";
 import type { PlanItemRow } from "@/lib/plan/types";
@@ -59,6 +63,31 @@ describe("CHECKLIST_PLAN_LINKS", () => {
       "agent-marn": "verify-agent-marn",
       "sponsor-income-cert": "certify-sponsor-income",
     });
+  });
+
+  // Drift guard: the PlanItemCard stage tag derives planKind -> stage from a static map
+  // (lib/checklist/plan-links). The generator stays the single source of stage truth, so
+  // assert the map agrees with what the generator actually emits for every linked row.
+  it("checklistStageForPlanKind matches the generator's stage for every linked key (no drift)", () => {
+    for (const [checklistKey, planKind] of Object.entries(CHECKLIST_PLAN_LINKS)) {
+      const item = items.find((i) => i.key === checklistKey)!;
+      expect(checklistStageForPlanKind(planKind), `stage drift for ${planKind}`).toBe(item.stage);
+    }
+  });
+});
+
+describe("checklistStageForPlanKind", () => {
+  it("returns the checklist stage for a plan kind that mirrors a checklist requirement", () => {
+    expect(checklistStageForPlanKind("apply-for-noc")).toBe("after-offer");
+    expect(checklistStageForPlanKind("verify-agent-marn")).toBe("now");
+    expect(checklistStageForPlanKind("translate-certify-documents")).toBe("now");
+  });
+
+  it("returns null for a plan kind with no checklist mirror", () => {
+    // prepare-health-exam is a real visa-prep kind, but its checklist row is the
+    // vault-bound `medical` document (unmapped) — so the plan card carries no stage tag.
+    expect(checklistStageForPlanKind("prepare-health-exam")).toBeNull();
+    expect(checklistStageForPlanKind("not-a-real-kind")).toBeNull();
   });
 });
 

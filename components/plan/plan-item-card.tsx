@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PlanItemRow } from "@/lib/plan/types";
 import { completionFor } from "@/lib/plan/completion";
 import { sourcesFor } from "@/lib/plan/sources";
+import { checklistStageForPlanKind } from "@/lib/checklist/plan-links";
 import { SourceLine } from "@/components/results/source-line";
 import { ImpactPill } from "./impact-pill";
 import { track } from "@/lib/analytics/events";
@@ -20,6 +21,10 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
   const [started, setStarted] = useState(item.startedAt !== null);
   const [error, setError] = useState<string | null>(null);
   const meta = completionFor(item.kind);
+  // Reverse Plan→Checklist link: when this action mirrors a checklist requirement,
+  // tag which checklist stage it belongs to — a quiet classification (shown on open
+  // and closed cards alike), in the checklist's own "now" / "after offer" vocabulary.
+  const checklistStage = checklistStageForPlanKind(item.kind);
 
   const post = async (body: Record<string, unknown>): Promise<boolean> => {
     setBusy(true);
@@ -72,8 +77,13 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ImpactPill impact={item.impact} />
+            {checklistStage ? (
+              <span className={statePill}>
+                Checklist · {checklistStage === "now" ? "Now" : "After offer"}
+              </span>
+            ) : null}
             {!isClosed && started ? <span className={statePill}>In progress</span> : null}
             {/* Done = completed; Dismissed = opted out, so its title keeps no strike. */}
             {done ? <span className={statePill}>Done</span> : null}
