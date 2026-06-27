@@ -60,6 +60,9 @@ export function AssessFlow({
   const [assessmentId, setAssessmentId] = useState<string | null>(restored?.assessmentId ?? null);
   const [recapElapsed, setRecapElapsed] = useState(false);
   const [error, setError] = useState(false);
+  // True while a save POST is in flight — lets the persist-miss recovery button on
+  // the results screen show "Saving…" / disable so a retry can't be double-fired.
+  const [retryingSave, setRetryingSave] = useState(false);
 
   useEffect(() => {
     if (phase !== "recap" || !payload || !recapElapsed) return;
@@ -88,6 +91,7 @@ export function AssessFlow({
   const save = async (completed: StudentProfile) => {
     setRecapElapsed(false);
     setError(false);
+    setRetryingSave(true);
     try {
       const res = await fetch("/api/assess", {
         method: "POST",
@@ -100,6 +104,8 @@ export function AssessFlow({
       setPayload(data.payload);
     } catch {
       setError(true);
+    } finally {
+      setRetryingSave(false);
     }
   };
 
@@ -117,6 +123,10 @@ export function AssessFlow({
         destination={profile.destination}
         mode={signedIn ? "owned" : "anonymous"}
         assessmentId={assessmentId}
+        // Persist-miss recovery is anonymous-only — signed-in users save server-side.
+        // Re-POSTs the in-memory answers in place; the wizard is never re-run.
+        onRetrySave={signedIn ? undefined : () => void save(profile)}
+        retryingSave={retryingSave}
       />
     );
   }

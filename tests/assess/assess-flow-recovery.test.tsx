@@ -15,9 +15,18 @@ vi.mock("@/components/assess/profile-recap", () => ({
   },
 }));
 vi.mock("@/components/results/results", () => ({
-  Results: ({ assessmentId, mode }: { assessmentId: string | null; mode: string }) => (
+  Results: ({
+    assessmentId,
+    mode,
+    onRetrySave,
+  }: {
+    assessmentId: string | null;
+    mode: string;
+    onRetrySave?: () => void;
+  }) => (
     <div>
-      results:{mode}:{assessmentId}
+      results:{mode}:{String(assessmentId)}
+      {onRetrySave ? <button onClick={onRetrySave}>retry-save</button> : null}
     </div>
   ),
 }));
@@ -64,6 +73,30 @@ describe("AssessFlow sessionStorage recovery (MV-28 half a)", () => {
     render(<AssessFlow fresh />);
     expect(screen.getByText("finish")).toBeInTheDocument();
     expect(screen.queryByText(/results:anonymous:aid-stale/)).not.toBeInTheDocument();
+  });
+
+  it("recovers a persist miss (id:null) in place — re-saves without re-running the wizard", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: null, payload: { ok: true } }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "aid-saved", payload: { ok: true } }), { status: 200 }),
+      );
+    const userEvent = (await import("@testing-library/user-event")).default;
+
+    render(<AssessFlow />);
+    await userEvent.click(screen.getByText("finish"));
+    // Persist missed: results still show (id:null), never dropping to the wizard.
+    await waitFor(() => expect(screen.getByText(/results:anonymous:null/)).toBeInTheDocument());
+
+    // Retry re-POSTs the same already-computed answers in place and recovers an id.
+    await userEvent.click(screen.getByText("retry-save"));
+    await waitFor(() => expect(screen.getByText(/results:anonymous:aid-saved/)).toBeInTheDocument());
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("finish")).not.toBeInTheDocument();
   });
 
   it("does NOT persist results for signed-in users", async () => {

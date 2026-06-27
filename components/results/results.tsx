@@ -28,11 +28,16 @@ export function Results({
   destination,
   mode = "anonymous",
   assessmentId = null,
+  onRetrySave,
+  retryingSave = false,
 }: {
   payload: AssessmentPayload;
   destination: Destination;
   mode?: "anonymous" | "owned";
   assessmentId?: string | null;
+  /** Anonymous persist-miss recovery: re-saves in place (AssessFlow-supplied). */
+  onRetrySave?: () => void;
+  retryingSave?: boolean;
 }) {
   const conversionRef = useRef<HTMLDivElement>(null);
   const scrollToConversion = () =>
@@ -69,7 +74,9 @@ export function Results({
       {/* Capture the conversion moment while the verdict is still on screen —
           anonymous only; signed-in users already own the assessment. The full
           ConversionPaths card still sits at the bottom for those who scroll. */}
-      {owned ? null : <ConversionPrompt assessmentId={assessmentId} />}
+      {owned ? null : (
+        <ConversionPrompt assessmentId={assessmentId} onRetrySave={onRetrySave} retryingSave={retryingSave} />
+      )}
       {/* Core path reads first: verdict → factors → CTA → timing → matches → cost → next step.
           The heavy government-reference panels follow, folded into a collapsed
           "Know before you go" disclosure so a first-time anonymous student is not met
@@ -113,7 +120,7 @@ export function Results({
         <NextSteps />
       ) : (
         <div ref={conversionRef}>
-          <ConversionPaths assessmentId={assessmentId} />
+          <ConversionPaths assessmentId={assessmentId} onRetrySave={onRetrySave} retryingSave={retryingSave} />
         </div>
       )}
     </div>

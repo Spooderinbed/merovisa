@@ -27,15 +27,24 @@ describe("ConversionPrompt", () => {
 
   describe("when the assessment failed to persist (id:null)", () => {
     it("shows an honest could-not-save message instead of a dead Continue button", () => {
-      render(<ConversionPrompt assessmentId={null} />);
+      render(<ConversionPrompt assessmentId={null} onRetrySave={() => {}} />);
       expect(screen.getByText(/couldn.t save/i)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Continue with Google/i })).not.toBeInTheDocument();
     });
 
-    it("offers a real recovery: a link to run the assessment again", () => {
-      render(<ConversionPrompt assessmentId={null} />);
-      const retry = screen.getByRole("link", { name: /run it again/i });
-      expect(retry).toHaveAttribute("href", "/assess?new=1");
+    it("retries the save in place via a button — not a link that wipes the wizard and results", async () => {
+      const onRetrySave = vi.fn();
+      render(<ConversionPrompt assessmentId={null} onRetrySave={onRetrySave} />);
+      // The old "Run it again" link routed to /assess?new=1, which cleared the
+      // wizard + results and forced a full re-answer. The recovery is now in-place.
+      expect(screen.queryByRole("link", { name: /run it again/i })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: /try saving again/i }));
+      expect(onRetrySave).toHaveBeenCalledTimes(1);
+    });
+
+    it("disables the retry button while a save is in flight", () => {
+      render(<ConversionPrompt assessmentId={null} onRetrySave={() => {}} retryingSave />);
+      expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled();
     });
   });
 });
