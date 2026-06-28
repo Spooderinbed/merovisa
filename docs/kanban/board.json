@@ -925,7 +925,7 @@
     },
     {
       "id": "MV-57",
-      "col": "inreview",
+      "col": "done",
       "pri": "P3",
       "owner": "agent",
       "badge": "",
