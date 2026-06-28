@@ -54,8 +54,12 @@ export function VerdictCard({
       ? REACH_SEVERE_LINE
       : meta.line;
   return (
+    // Two-beat reveal (audit #25): the card rises (beat 1), then the band pill
+    // settles ~120ms later (beat 2) so the verdict carries more weight than a
+    // sibling card. Only the word-label pill is staggered — the never-shown score
+    // is never animated, so the motion can't imply a computed number.
     <section className="animate-rise rounded-lg border border-line bg-surface p-6">
-      <span className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12.5px] ${meta.cls}`}>
+      <span className={`animate-settle inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12.5px] ${meta.cls}`}>
         {VERDICT_LABELS[verdict].label}
       </span>
       <h2 className="mt-4 text-[clamp(24px,3vw,32px)]">{line}</h2>
