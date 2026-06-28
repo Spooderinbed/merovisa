@@ -5,7 +5,7 @@
 > dashboard is [board.html](board.html) (open in a browser). See [README.md](README.md)
 > for how the board works.
 >
-> _Last updated: 2026-06-28 · stale threshold: 7d_
+> _Last updated: 2026-06-29 · stale threshold: 7d_
 
 
 ## Backlog — 7
@@ -26,9 +26,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-79** · P1 · [Guide: neutralise client-forged assistant history (prompt-injection defense)](cards/MV-79-guide-untrusted-history.md) — _IN REVIEW 2026-06-29 (branch mv-79-guide-untrusted-history, founder-gated merge). Codex finding #1 from the MV-78 go-live trust review (the meatiest residual). POST /api/guide/chat spread the browser history verbatim, incl. role:"assistant" turns -- the chat API treats those as the model's OWN authoritative prior output, so any client could forge "Your visa is guaranteed approved" and the guide would build on it (worst fabrication path for a trust-first guide). Fix: new pure buildSafeHistoryMessages() (lib/guide/history.ts) folds the whole transcript into ONE user-role block framed as unverified/browser-reported, authority pointed back at the server-built system context -- no client message ever reaches the provider as role:assistant. Multi-turn continuity preserved (labelled Student asked/Guide replied); current question stays the trusted final user turn; server re-grounds facts every turn anyway. TDD +4 (3 helper + 1 route injection-defense); typecheck+lint clean; suite 251 files / 1588 green._
 
 ## Blocked — 3
 

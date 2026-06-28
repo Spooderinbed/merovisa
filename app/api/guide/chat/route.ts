@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit/upstash";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { listOpenPlanForUser } from "@/lib/plan/repo";
 import { buildGuideContext } from "@/lib/guide/context";
+import { buildSafeHistoryMessages } from "@/lib/guide/history";
 import { GUIDE_SYSTEM_PROMPT } from "@/lib/guide/system-prompt";
 import { deepseekChat, type ChatMessage } from "@/lib/guide/deepseek";
 import type { AssessmentPayload } from "@/lib/results/types";
@@ -53,10 +54,13 @@ export async function POST(request: Request): Promise<Response> {
   const payload = (primaryRow?.result as unknown as AssessmentPayload | undefined) ?? null;
   const context = buildGuideContext({ payload, planItems });
 
+  // The browser-supplied transcript is folded into a single, clearly-untrusted user
+  // block — never re-emitted as role:"assistant" — so a client cannot forge a prior
+  // guide turn ("your visa is guaranteed") and have the model treat it as its own fact.
   const messages: ChatMessage[] = [
     { role: "system", content: GUIDE_SYSTEM_PROMPT },
     { role: "system", content: context },
-    ...(parsed.data.history ?? []).map((m): ChatMessage => ({ role: m.role, content: m.content })),
+    ...buildSafeHistoryMessages(parsed.data.history),
     { role: "user", content: parsed.data.message },
   ];
 
