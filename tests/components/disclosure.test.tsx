@@ -61,4 +61,18 @@ describe("Disclosure", () => {
     );
     expect(screen.getByText("Government reference")).toBeInTheDocument();
   });
+
+  it("renders an optional trailing adornment in the trigger, beside the chevron", () => {
+    render(
+      <Disclosure title="Section" trailing={<span>Complete</span>}>
+        <p>Body</p>
+      </Disclosure>,
+    );
+    // The adornment lives inside the trigger so it is visible while collapsed,
+    // and it is part of the button — never a focus-stealing nested control.
+    const trigger = screen.getByRole("button", { name: /Section/ });
+    const badge = screen.getByText("Complete");
+    expect(badge).toBeInTheDocument();
+    expect(trigger).toContainElement(badge);
+  });
 });

@@ -8,7 +8,7 @@
 > _Last updated: 2026-06-28 · stale threshold: 7d_
 
 
-## Backlog — 10
+## Backlog — 9
 
 - **MV-11** · P3 · AI guide — _Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable._
 - **MV-21** · P3 · [Surface verified program English requirements (RMIT + Deakin)](cards/MV-21-program-english-enrichment.md) — _BACKLOG (founder-DB-gated). The MV-13 follow-on scoped out by MV-20: 9 Category-E ready findings hold verified program-level IELTS for programs ALREADY in the live bridged catalogue (Deakin Master of Data Science 6.5/6.0; RMIT B-Computer-Science 6.5/6.0, B-Nursing 7.0 + intake, B-Education 7.5, B-Pharmacy-Hons 7.0/6.5, M-Social-Work 7.0/7.0), but those cards currently show 'English requirement not listed — confirm with provider'. Surfacing them is a slice not a copy edit: the RMIT TS module has NO English field (needs a type-field add + 5 rows); bridge-fact-parity + seed-migration-parity force module->seed->a NEW prod-UPDATE migration (founder-gated, MV-13's is already applied). Possible goldens impact (min_english may feed match eligibility) is a build-time design question. Flip to used is automatic once cited (findingRefs + FLIP_STATUS). E.050 (Deakin) is the cleanest minimal first increment (uni module already has the field shape). Do NOT start without founder approval of the prod migration. Dossier: cards/MV-21-program-english-enrichment.md._
@@ -18,7 +18,6 @@
 - **MV-48** · P2 · Marketing imagery: two treated photos + imagery-policy.md — _Phase C (audit 'AI-imagery strategy' + Phase C, P2; FOUNDER-GATED — outward-facing brand). WRITE docs/imagery-policy.md (positive/negative prompt guardrails, anchored on authentic 20-24yo Nepali students) BEFORE any photo ships. Then exactly two heavily-treated documentary photos under ONE warm-paper recipe: landing-hero 4:5 (banded beside headline, never behind text) + Australia destination-header 16:9. Product body stays imageless forever (the anti-AI-look defense). Founder approves the actual images before they go live. Spec: docs/audits/2026-06-25-design-division-polish-audit.md._
 - **MV-49** · P3 · Flag pills + quiet NP home nod — _Phase C (audit #19, P2-P3). Replace marketing emoji flags (Windows tofu-box risk) with a bordered IBM Plex Mono ISO-code pill or flat single-colour SVG; add a quiet NP home nod for the Nepali user. Make Nepal->Australia specificity visible in copy/markup, not pixels. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #19._
 - **MV-50** · P3 · Hand-SVG marks on success empty states — _Phase C (audit #27, P3). One restrained teal hand-stroke mark on GENUINE success empty states only (never error/incomplete), extending the existing IconShield/IconGuide/IconDoc thin-stroke family muted to text-ink-faint. No AI spot-art. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #27._
-- **MV-75** · P2 · Fold profile accordion onto disclosure primitive — _Phase B (audit #21, P2). Carved out of MV-44 2026-06-28 (that slice shipped #11 matches-tablist). Two divergent accordion implementations: components/ui/disclosure.tsx (the primitive, has a trailing chevron) vs components/profile/section-accordion.tsx (its own impl, lacks the chevron). Fold section-accordion onto the ui/disclosure primitive with an optional trailing-slot (so profile sections gain the chevron + a single keyboard/aria behaviour to maintain). DRY refactor, not user-blocking. Verify both surfaces (profile section headers + wherever disclosure is used) stay visually + behaviourally correct; goldens byte-identical. TDD. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #21._
 - **MV-76** · P2 · Verdict reveal + Applied-commit motion (audit #25) — _Phase B (audit #25, P2). Carved out of MV-46 2026-06-28 (that slice shipped the audit-#24 completion beats). The trust-sensitive motion left to do: give ONLY the verdict a two-beat reveal (card rises, band pill settles ~120ms later) + a quiet confirm beat when an outcome is committed (the MV-39 Applied control). Touches the banded verdict surface and the MV-39 outcome control, so it wants its own careful slice -- never animate the verdict in a way that implies a score; respect the prefers-reduced-motion block. TDD. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #25._
 
 ## Ready (WIP 5) — 0
@@ -29,9 +28,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-75** · P2 · [Fold profile accordion onto disclosure primitive](cards/MV-75-disclosure-consolidation.md) — _Phase B (audit #21, P2). Carved out of MV-44 2026-06-28 (that slice shipped #11 matches-tablist). Two divergent accordion implementations: components/ui/disclosure.tsx (the primitive, has a trailing chevron) vs components/profile/section-accordion.tsx (its own impl, lacks the chevron). Fold section-accordion onto the ui/disclosure primitive with an optional trailing-slot (so profile sections gain the chevron + a single keyboard/aria behaviour to maintain). DRY refactor, not user-blocking. Verify both surfaces (profile section headers + wherever disclosure is used) stay visually + behaviourally correct; goldens byte-identical. TDD. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #21. → SHIPPED 2026-06-28 (TDD): Disclosure gains an optional trailing slot; SectionAccordion reimplemented as a thin wrapper over it, inheriting the chevron + aria-controls + ease-calm. Public API unchanged; results/profile consumers behave identically. +3 tests, suite 1560/248 files, typecheck+lint clean. In Review on branch mv-75-disclosure-consolidation, PR #31, founder-gated merge._
 
 ## Blocked — 3
 
