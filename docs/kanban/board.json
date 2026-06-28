@@ -1018,6 +1018,18 @@
       "summary": "IN REVIEW 2026-06-28 (PR #29, branch mv-77-journey-rail, founder-gated merge). Carved from the MV-45 umbrella -- the global cross-stage \"where am I\" orientation rail (consultancy-replacement: here is the sequence, you are here, next is X). A DASHBOARD PANEL (founder pick over persistent chrome -- we already have AppBar + MobileTabBar). 6 stages Assessed->Profile->Matches->Plan->Documents->Apply, each progress-derived from real signals only (mirrors buildReadiness/ReadinessMap); +1 query (listShortlistForUser), Plan load widened to all-items (zero net extra). Codex gpt-5.5 xhigh: SOUND-WITH-TWEAKS, all 3 adopted (Matches reached-word \"shortlisted\" not \"done\"; Assessed gated on scored result; Plan engagement covers completed items). Pure buildJourney() in lib/journey/journey.ts + presentational JourneyRail; honest frontier + visible skipped-gap; sr-only word-state summary; no reach-red. Spec: docs/superpowers/specs/2026-06-28-journey-rail-design.md. TDD. Apply=#15-funnel detail stays in MV-73 (no dup).",
       "created": "2026-06-28",
       "entered": "2026-06-28"
+    },
+    {
+      "id": "MV-78",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "PR #32",
+      "file": "cards/MV-78-guide-go-live-hardening.md",
+      "title": "AI guide go-live trust hardening (Codex review)",
+      "summary": "Codex (gpt-5.5 xhigh) pre-go-live trust review of the now-LIVE AI guide (MV-63, key set in Vercel 2026-06-29). SHIPPED the one material, clean must-fix: a provider timeout (AbortSignal.timeout 20s) in lib/guide/deepseek.ts so a hung DeepSeek call aborts → the route serves its calm 503 instead of hanging (the calm-503 trust promise was otherwise broken). TDD +1. The system prompt + context builder are already trust-sound (scoring internals omitted, banded-only, no-draft, auth-gated). Remaining 7 Codex findings TRIAGED in the dossier for founder to prioritize: worth-doing = #1 untrusted client assistant-history (prompt-injection) + #7 per-line cost-note; SKIP/YAGNI = #2 hard output-filter (system prompt is the v1 gate); low/near-FP = #4 base-url allowlist, #5/#6 reason numbers, #8 source deferral. TDD; typecheck+lint clean.",
+      "created": "2026-06-29",
+      "entered": "2026-06-29"
     }
   ]
 }
