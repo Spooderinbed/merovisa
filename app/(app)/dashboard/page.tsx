@@ -4,7 +4,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { getProfile } from "@/lib/profiles/repo";
-import { listShortlistForUser } from "@/lib/matches/repo";
 import { listDocumentsForUser } from "@/lib/documents/repo";
 import { listOpenPlanForUser } from "@/lib/plan/repo";
 import { selectNextStep } from "@/lib/plan/select";
@@ -15,9 +14,10 @@ import { buildOutcomeFunnel, type OutcomeFunnelRow } from "@/lib/outcomes/funnel
 import { Greeting } from "@/components/dashboard/greeting";
 import { SnapshotCard } from "@/components/dashboard/snapshot-card";
 import { PromptCard, type PromptState } from "@/components/dashboard/prompt-card";
-import { StatsRow } from "@/components/dashboard/stats-row";
+import { ReadinessMap } from "@/components/dashboard/readiness-map";
 import { OutcomeFunnel } from "@/components/outcomes/outcome-funnel";
 import type { AssessmentPayload } from "@/lib/results/types";
+import type { ReadinessSignals } from "@/lib/readiness/readiness";
 import type { ProfileSections } from "@/lib/profiles/sections";
 import { humanize } from "@/lib/text/humanize";
 
@@ -44,10 +44,9 @@ export default async function DashboardPage() {
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
   const user = userData.user;
-  const [primaryRow, profileRow, shortlist, documents, planItems, outcomes] = await Promise.all([
+  const [primaryRow, profileRow, documents, planItems, outcomes] = await Promise.all([
     getPrimaryAssessmentForUser(supabase, user.id),
     getProfile(supabase, user.id),
-    listShortlistForUser(supabase, user.id),
     listDocumentsForUser(supabase, user.id),
     listOpenPlanForUser(supabase, user.id),
     getOutcomesForUser(supabase, user.id),
@@ -57,6 +56,16 @@ export default async function DashboardPage() {
   const name = profileSections?.personal?.name ?? null;
   const completenessPct = profileRow?.completeness ?? 0;
   const prompt = pickPrompt(profileRow, primary, planItems);
+
+  // The readiness map decomposes the single verdict into the four scored signals the
+  // student acts on — built from data already loaded above (zero extra queries). A
+  // legacy payload missing the dimension breakdown degrades honestly to "add detail".
+  const dims = primary?.result.dimensions;
+  const readinessSignals: ReadinessSignals = {
+    dimensions: dims ? { academic: dims.academic, financial: dims.financial, visa: dims.visa } : null,
+    profilePct: completenessPct,
+    documentCount: documents.length,
+  };
 
   // The outcome funnel only matters once the user has opened an application attempt;
   // resolve program names only then so the common (no-attempt) path stays cheap.
@@ -80,15 +89,7 @@ export default async function DashboardPage() {
         <SnapshotCard primary={primary} destinationLabel={primaryRow?.destination_id ? humanize(primaryRow.destination_id) : null} />
         <PromptCard prompt={prompt} />
       </div>
-      {/* "Your journey" (5-stage tracker) and "Recent updates" were removed: the only
-          per-user stage signal is the first stage, and there's no source feeding updates.
-          A frozen tracker / empty shell reads as fake on a trust-first product. The real
-          progress signals live in StatsRow. Audit: docs/audits/2026-06-18-full-app-evaluation.md (Q10). */}
-      <StatsRow
-        savedPrograms={shortlist.length}
-        documents={documents.length}
-        profilePct={completenessPct}
-      />
+      <ReadinessMap signals={readinessSignals} />
       <OutcomeFunnel rows={outcomeRows} />
     </div>
   );

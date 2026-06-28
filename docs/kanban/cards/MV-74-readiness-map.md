@@ -1,6 +1,6 @@
 # MV-74 — Dashboard "readiness map" (decomposed verdict)
 
-**Column:** Ready · **Priority:** P2 · **Owner:** agent · **Branch:** `mv-74-readiness-map` (off master)
+**Column:** In Review · **Priority:** P2 · **Owner:** agent · **Branch:** `mv-74-readiness-map` (off master)
 
 A dashboard card titled **"Your readiness"** that decomposes the single banded verdict into an
 honest map — **what's strong, what needs work, what's a risk** — each row backed by a signal the
@@ -37,20 +37,38 @@ extra queries.
 
 ## Acceptance criteria
 
-- [ ] `lib/readiness/readiness.ts` — pure `buildReadiness(ReadinessSignals): Readiness`; band per
+- [x] `lib/readiness/readiness.ts` — pure `buildReadiness(ReadinessSignals): Readiness`; band per
       dimension row from factor influences (risk→risk, only-positive→strong, else→needs-work,
       under-informed→add-detail); documents 0→not-started / >0→in-progress; `dimensions: null`
       (no assessment) → dimension rows `add-detail` → wizard; why-line = most decision-relevant
       factor; never emits a numeric score into a row; honest `ariaLabel`.
-- [ ] `components/dashboard/readiness-map.tsx` — "Your readiness" card; header completeness line;
-      4 `next/link` rows with word+colour band pills (verdict palette: teal/amber/reach-red +
+- [x] `components/dashboard/readiness-map.tsx` — "Your readiness" card; header completeness line;
+      4 link rows with word+colour band pills (verdict palette: teal/amber/reach-red +
       neutral); reach-red only for a genuine `risk` band; no raw `%` in any row; same
-      calm-authority tokens; `aria` band words; 44px targets.
-- [ ] `app/(app)/dashboard/page.tsx` — build `ReadinessSignals` from already-loaded `primary` /
+      calm-authority tokens; `aria` band words; 44px targets; sr-only one-line summary.
+- [x] `app/(app)/dashboard/page.tsx` — build `ReadinessSignals` from already-loaded `primary` /
       `completenessPct` / `documents.length`; render `ReadinessMap` in the `StatsRow` slot; remove
-      the old "Your journey was removed…" comment. Zero extra queries.
-- [ ] `components/dashboard/stats-row.tsx` removed if unreferenced after the swap (verify first).
-- [ ] No migration / no scoring change; verdict + copy goldens byte-identical.
+      the old "Your journey was removed…" comment. Zero extra queries (also dropped the now-orphaned
+      `listShortlistForUser` load — only `StatsRow` used it).
+- [x] `components/dashboard/stats-row.tsx` (+ its test) removed — unreferenced in production after the swap.
+- [x] No migration / no scoring change; verdict + copy goldens byte-identical.
+
+## Evidence (build 2026-06-28)
+
+Verified the real engine shape first: `AssessmentResult.dimensions = { academic, financial, visa,
+profileStrength }`, each `DimensionScore = { value, factors: Array<{ label, influence:
+"positive"|"neutral"|"risk", detail: string, source? }> }` (`lib/scoring/types.ts:136-164`); the
+dashboard exposes it as `primary.result.dimensions`. The band predicate was locked against that
+shape by the helper tests (factor-influence only — `value` is never read or rendered).
+
+- TDD: RED→GREEN for both units. `tests/readiness/readiness.test.ts` (12) +
+  `tests/components/dashboard/readiness-map.test.tsx` (7); `tests/app/dashboard-page.test.tsx`
+  updated for the `StatsRow`→`ReadinessMap` swap; `stats-row.test.tsx` removed.
+- **Gate green:** `npm run typecheck` clean · `npm run lint` clean (only a pre-existing unrelated
+  `build.mjs` warning) · `npx vitest run` **1500 passed / 247 files** (branch baseline 1484 + 19 new
+  − 3 removed = 1500). Goldens byte-identical.
+- Surface is auth-gated (signed-in dashboard); verified by unit + integration tests rather than a
+  browser preview, consistent with prior dashboard/results slices.
 
 ## Test plan (TDD)
 

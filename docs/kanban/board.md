@@ -22,17 +22,17 @@
 - **MV-49** · P3 · Flag pills + quiet NP home nod — _Phase C (audit #19, P2-P3). Replace marketing emoji flags (Windows tofu-box risk) with a bordered IBM Plex Mono ISO-code pill or flat single-colour SVG; add a quiet NP home nod for the Nepali user. Make Nepal->Australia specificity visible in copy/markup, not pixels. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #19._
 - **MV-50** · P3 · Hand-SVG marks on success empty states — _Phase C (audit #27, P3). One restrained teal hand-stroke mark on GENUINE success empty states only (never error/incomplete), extending the existing IconShield/IconGuide/IconDoc thin-stroke family muted to text-ink-faint. No AI spot-art. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #27._
 
-## Ready (WIP 5) — 1
+## Ready (WIP 5) — 0
 
-- **MV-74** · P2 · [Dashboard readiness map (decomposed verdict)](cards/MV-74-readiness-map.md) — _Design LOCKED + founder-approved 2026-06-28 (branch mv-74-readiness-map). Dashboard "Your readiness" card decomposing the single banded verdict into an honest map: rows Academics & English / Money & funding / Visa readiness (band from each scored dimension's factor influences: risk->risk, only-positive->strong, else->needs-work, under-informed->add-detail) + Documents (cheap honest count: not-started / in-progress, never "ready"). Completeness = quiet header line (not a row); Applications stay in OutcomeFunnel. SUPERSEDES the rejected global journey-rail design (linear step-N-of-6 funnel duplicated PromptCard+StatsRow; always-on marker = nagging chrome) per Codex gpt-5.5 + dashboard-read validation. Surfaces the engine's existing dimensions breakdown (funds+English ARE collected/scored, not data-blocked). Pure buildReadiness(signals) helper + presentational ReadinessMap REPLACING StatsRow; zero extra queries (reads primary AssessmentPayload dimensions already loaded). No scoring/migration; goldens byte-identical. Spec docs/superpowers/specs/2026-06-28-readiness-map-design.md. NEXT = BUILD per spec (TDD) after compact._
+_empty_
 
 ## In progress (WIP 1) — 0
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-74** · P2 · [Dashboard readiness map (decomposed verdict)](cards/MV-74-readiness-map.md) — _Design LOCKED + founder-approved 2026-06-28 (branch mv-74-readiness-map). Dashboard "Your readiness" card decomposing the single banded verdict into an honest map: rows Academics & English / Money & funding / Visa readiness (band from each scored dimension's factor influences: risk->risk, only-positive->strong, else->needs-work, under-informed->add-detail) + Documents (cheap honest count: not-started / in-progress, never "ready"). Completeness = quiet header line (not a row); Applications stay in OutcomeFunnel. SUPERSEDES the rejected global journey-rail design (linear step-N-of-6 funnel duplicated PromptCard+StatsRow; always-on marker = nagging chrome) per Codex gpt-5.5 + dashboard-read validation. Surfaces the engine's existing dimensions breakdown (funds+English ARE collected/scored, not data-blocked). Pure buildReadiness(signals) helper + presentational ReadinessMap REPLACING StatsRow; zero extra queries (reads primary AssessmentPayload dimensions already loaded). No scoring/migration; goldens byte-identical. Spec docs/superpowers/specs/2026-06-28-readiness-map-design.md. NEXT = BUILD per spec (TDD) after compact._
 
 ## Blocked — 4
 

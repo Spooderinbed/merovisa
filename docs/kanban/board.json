@@ -949,7 +949,7 @@
     },
     {
       "id": "MV-74",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
