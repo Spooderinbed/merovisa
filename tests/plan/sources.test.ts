@@ -9,6 +9,8 @@ import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certifi
 import { AU_STUDENT_VISA_REQUIREMENTS } from "@/lib/data/source/au-student-visa-requirements";
 import { NEPAL_SOURCE_OF_FUNDS } from "@/lib/data/source/nepal-source-of-funds";
 import { NEPAL_INCOME_CERTIFICATION } from "@/lib/data/source/nepal-income-certification";
+import { AU_ENROLMENT_LODGEMENT_SOURCES } from "@/lib/data/source/au-enrolment-lodgement";
+import { AU_SUBCLASS_500_APPLICATION_CHARGE_AUD } from "@/lib/data/policy/au-visa-fees";
 
 /**
  * The plan source map (lib/plan/sources.ts) holds LITERAL URLs/dates so it can be
@@ -94,5 +96,47 @@ describe("plan sources drift guard", () => {
 
   it("season-funds-six-months carries no source (a recommendation, not a published figure)", () => {
     expect(sourcesFor("season-funds-six-months")).toEqual([]);
+  });
+
+  // MV-57 journey-spine connective steps.
+  it("submit-university-applications → Study Australia how-to-apply", () => {
+    const howTo = AU_ENROLMENT_LODGEMENT_SOURCES.find((r) => r.id === "study-australia-how-to-apply")!;
+    const src = sourcesFor("submit-university-applications")[0]!;
+    expect(src.url).toBe(howTo.source);
+    expect(src.lastVerified).toBe(howTo.lastVerified);
+  });
+
+  it("accept-offer → Study Australia how-to-apply", () => {
+    const howTo = AU_ENROLMENT_LODGEMENT_SOURCES.find((r) => r.id === "study-australia-how-to-apply")!;
+    const src = sourcesFor("accept-offer")[0]!;
+    expect(src.url).toBe(howTo.source);
+    expect(src.lastVerified).toBe(howTo.lastVerified);
+  });
+
+  it("get-coe → in-repo CoE requirement row (DHA web-evidentiary-tool)", () => {
+    const coe = AU_STUDENT_VISA_REQUIREMENTS.find((r) => r.id === "coe")!;
+    const src = sourcesFor("get-coe")[0]!;
+    expect(src.url).toBe(coe.source);
+    expect(src.lastVerified).toBe(coe.lastVerified);
+  });
+
+  it("arrange-oshc → in-repo OSHC requirement row (DHA web-evidentiary-tool)", () => {
+    const oshc = AU_STUDENT_VISA_REQUIREMENTS.find((r) => r.id === "oshc")!;
+    const src = sourcesFor("arrange-oshc")[0]!;
+    expect(src.url).toBe(oshc.source);
+    expect(src.lastVerified).toBe(oshc.lastVerified);
+  });
+
+  it("lodge-subclass-500 → DHA Subclass 500 application-charge listing", () => {
+    const src = sourcesFor("lodge-subclass-500")[0]!;
+    expect(src.url).toBe(AU_SUBCLASS_500_APPLICATION_CHARGE_AUD.provenance.source);
+    expect(src.lastVerified).toBe(AU_SUBCLASS_500_APPLICATION_CHARGE_AUD.provenance.lastVerified);
+  });
+
+  it("track-visa-decision → DHA after-you-apply", () => {
+    const after = AU_ENROLMENT_LODGEMENT_SOURCES.find((r) => r.id === "dha-after-you-apply")!;
+    const src = sourcesFor("track-visa-decision")[0]!;
+    expect(src.url).toBe(after.source);
+    expect(src.lastVerified).toBe(after.lastVerified);
   });
 });

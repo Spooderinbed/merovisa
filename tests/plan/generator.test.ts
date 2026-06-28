@@ -341,6 +341,85 @@ describe("generatePlan", () => {
       expect(agent?.timeEstimate).toBe("10 minutes");
     });
 
+    // MV-57 journey-spine: the six connective steps that fill the empty Apply / Confirm /
+    // Prepare-visa / Visa-decision slots so the plan reads end-to-end.
+    describe("journey-spine connective steps (MV-57)", () => {
+      const SPINE = [
+        "submit-university-applications",
+        "accept-offer",
+        "get-coe",
+        "arrange-oshc",
+        "lodge-subclass-500",
+        "track-visa-decision",
+      ] as const;
+
+      it("emits all six connective steps for an Australian primary destination, with non-empty titles + bodies", () => {
+        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        for (const kind of SPINE) {
+          const step = items.find((i) => i.kind === kind);
+          expect(step, `missing ${kind}`).toBeTruthy();
+          expect(step!.title.length).toBeGreaterThan(0);
+          expect(step!.body.length).toBeGreaterThan(0);
+        }
+      });
+
+      it("emits none of the six connective steps for a non-AU or unset destination", () => {
+        for (const dest of [null, "canada"]) {
+          const items = generatePlan({ sections: {}, primaryDestinationId: dest, matches: [], policy });
+          for (const kind of SPINE) {
+            expect(items.some((i) => i.kind === kind), `${kind} leaked for ${dest}`).toBe(false);
+          }
+        }
+      });
+
+      it("hedges the submit-applications copy — never claims every provider has a portal", () => {
+        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        const submit = items.find((i) => i.kind === "submit-university-applications")!;
+        expect(submit.body).toContain("there's no single national portal");
+        expect(submit.body.toLowerCase()).not.toContain("every provider has a portal");
+        expect(submit.body.toLowerCase()).not.toMatch(/each provider has (its own|a) portal/);
+      });
+
+      it("cross-references the NOC + fund-release steps in the accept-offer copy (no 'just pay')", () => {
+        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        const accept = items.find((i) => i.kind === "accept-offer")!;
+        expect(accept.body).toContain("Letter of Offer");
+        expect(accept.body).toContain("NOC");
+        expect(accept.body).toContain("once your funds are released");
+      });
+
+      it("get-coe carries the 1 January 2025 mandatory-CoE fact from the in-repo CoE row", () => {
+        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        const coe = items.find((i) => i.kind === "get-coe")!;
+        expect(coe.body).toContain("1 January 2025");
+        expect(coe.body).toContain("Confirmation of Enrolment");
+      });
+
+      it("arrange-oshc carries the start-a-week-before / whole-stay rule", () => {
+        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        const oshc = items.find((i) => i.kind === "arrange-oshc")!;
+        expect(oshc.body.toLowerCase()).toContain("week before");
+        expect(oshc.body).toContain("OSHC");
+      });
+
+      it("lodge-subclass-500 carries the ImmiAccount route, the AUD 2,000 figure, and the 'currently … confirm' fee hedge, with high impact", () => {
+        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        const lodge = items.find((i) => i.kind === "lodge-subclass-500")!;
+        expect(lodge.impact).toBe("high");
+        expect(lodge.body).toContain("ImmiAccount");
+        expect(lodge.body).toMatch(/AUD 2,000/);
+        expect(lodge.body).toContain("currently");
+        expect(lodge.body).toContain("confirm the current amount");
+      });
+
+      it("track-visa-decision describes ImmiAccount monitoring after lodging", () => {
+        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        const track = items.find((i) => i.kind === "track-visa-decision")!;
+        expect(track.body).toContain("ImmiAccount");
+        expect(track.body.toLowerCase()).toContain("respond");
+      });
+    });
+
     it("emits certify-sponsor-income only for sponsor-backed funding (slice 6, user-locked copy)", () => {
       const body =
         "If a parent or family member funds your study, their income needs to be documented, not just stated. Ward offices certify each income type with specific papers — Lalitpur Metropolitan City's published list: rental income needs the tenancy agreement; business or agricultural income the business-registration certificate plus audit report; salary or pension the original letter from the employer; fixed-deposit or savings interest a bank certificate; foreign income a recommendation letter authenticated by the Nepali embassy in that country or that country's embassy in Nepal. For the English income statement, include citizenship and relationship certificates. Gather the set for your sponsor's income type before you go.";

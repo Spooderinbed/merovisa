@@ -924,6 +924,22 @@ export interface WorkingWithAgentsFact extends Provenanced {
 }
 
 /**
+ * Enrolment → lodgement connective-step source rows (MV-57 journey-spine). The two
+ * genuinely-new government pages this slice cites — Study Australia's "How to apply
+ * to study" (submit / accept-offer / CoE narrative) and DHA's "After you apply"
+ * (track-your-decision) — need a sourced home so the plan-source drift guard stays
+ * meaningful. DISPLAY-pattern data: per-row `source` + `lastVerified`, no findingRefs
+ * (the rows are the connective spine's provenance, not a scoring leaf); no scorer reads
+ * it. Pinned by tests/plan/sources.test.ts to the literals in lib/plan/sources.ts.
+ */
+export interface AuEnrolmentLodgementSource {
+  id: "study-australia-how-to-apply" | "dha-after-you-apply";
+  label: string; // short human label
+  source: string; // canonical gov URL for the plan SourceLine
+  lastVerified: string; // ISO date the page was verified
+}
+
+/**
  * Nepal-side sponsor income certification (slice ⑥, category A): Lalitpur Metropolitan
  * City's published income-type → required-documents map, consumed by the plan + checklist
  * generators (the sponsor-income-cert step). Fact-only — no scorer reads it; machine-checked

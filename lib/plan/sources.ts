@@ -63,6 +63,28 @@ const SOURCES: Record<string, PlanSource[]> = {
   // hand-written prose (not interpolated from the module), so the drift guard pins the
   // URL/date; prose fidelity to the rows is a separate, still-open concern.
   "certify-sponsor-income": [{ url: "https://lalitpurmun.gov.np/faq", lastVerified: "2026-06-05" }],
+
+  // MV-57 journey-spine connective steps. Each literal is pinned by the drift guard to its
+  // canonical module: submit/accept → Study Australia how-to-apply (au-enrolment-lodgement);
+  // get-coe / arrange-oshc → the in-repo coe/oshc requirement rows (au-student-visa-requirements);
+  // lodge → DHA Subclass 500 listing (au-visa-fees); track → DHA after-you-apply (au-enrolment-lodgement).
+  "submit-university-applications": [
+    { url: "https://www.studyaustralia.gov.au/en/plan-your-studies/how-to-apply-to-study", lastVerified: "2026-06-28" },
+  ],
+  "accept-offer": [
+    { url: "https://www.studyaustralia.gov.au/en/plan-your-studies/how-to-apply-to-study", lastVerified: "2026-06-28" },
+  ],
+  "get-coe": [{ url: "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool", lastVerified: "2026-06-05" }],
+  "arrange-oshc": [{ url: "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool", lastVerified: "2026-06-05" }],
+  "lodge-subclass-500": [
+    { url: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500", lastVerified: "2026-06-07" },
+  ],
+  "track-visa-decision": [
+    {
+      url: "https://immi.homeaffairs.gov.au/help-support/applying-online-or-on-paper/online/after-you-apply",
+      lastVerified: "2026-06-28",
+    },
+  ],
 };
 
 export function sourcesFor(kind: string): PlanSource[] {
