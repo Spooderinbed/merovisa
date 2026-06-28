@@ -120,14 +120,14 @@ describe("/matches page", () => {
     listShortlistForUser.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
-    await userEvent.click(screen.getByRole("button", { name: /Scholarships/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /Scholarships/i }));
     // Scholarships now surfaces real sourced data (Australia Awards first), framed
     // as a reference list — never a personalized eligibility claim.
     expect(screen.getAllByText(/Australia Awards/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/not a personalized eligibility check/i)).toBeInTheDocument();
     expect(screen.queryByText(/you qualify/i)).not.toBeInTheDocument();
     // Cost estimate now shows the real sourced first-year estimate (OSHC range live).
-    await userEvent.click(screen.getByRole("button", { name: /Cost estimate/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /Cost estimate/i }));
     expect(screen.getByText(/First-year cost estimate/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "AUD 680–949" })).toBeInTheDocument();
     expect(screen.queryByText(/Coming soon/i)).not.toBeInTheDocument();
