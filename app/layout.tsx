@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
+import { THEME_INIT_SCRIPT } from "@/lib/theme/theme-init";
 import "./globals.css";
 
 const sans = Hanken_Grotesk({
@@ -24,8 +25,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="light" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" data-theme="light" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <body suppressHydrationWarning>
+        {/* Pre-hydration: follow the OS colour scheme before first paint (MV-43). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <AnalyticsProvider />
         {children}
       </body>
