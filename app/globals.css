@@ -40,6 +40,12 @@
 
   --animate-fade: fade 0.5s var(--ease-calm) both;
   --animate-rise: rise 0.55s var(--ease-calm) both;
+  /* The second beat of the verdict reveal: holds hidden through the first ~120ms
+     (22% of 0.55s) so it lands after the card rise, then settles. The pause is
+     baked into the keyframe rather than animation-delay, so the reduced-motion
+     guard (which only zeroes duration) still collapses it to the final state with
+     no blank flash. */
+  --animate-settle: settle 0.55s var(--ease-calm) both;
 }
 
 @keyframes fade {
@@ -57,6 +63,18 @@
     transform: translateY(12px);
   }
   to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes settle {
+  0%,
+  22% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
     opacity: 1;
     transform: none;
   }

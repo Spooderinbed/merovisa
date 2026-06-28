@@ -36,13 +36,33 @@ export function OutcomeSelfReport({
   const router = useRouter();
   const [pending, setPending] = useState<EventType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A quiet confirm beat (audit #25): once a milestone is recorded, acknowledge it
+  // before the row advances. Deliberately neutral — "Saved", no colour, no glyph —
+  // because the same control reports a refusal as well as an offer, and recording
+  // bad news must never read as a celebration.
+  const [confirmed, setConfirmed] = useState(false);
 
   const options = nextEvents.filter((e) => EVENT_LABEL[e] !== undefined);
+
+  // The beat belongs to the step the student just left; when router.refresh brings
+  // down the next legal steps, the set changes and the acknowledgment clears. Reset
+  // during render (React's endorsed "adjust state on prop change" pattern) rather
+  // than in an effect, so there's no extra paint of a stale "Saved".
+  const eventsKey = options.join(",");
+  const [seenKey, setSeenKey] = useState(eventsKey);
+  if (seenKey !== eventsKey) {
+    setSeenKey(eventsKey);
+    setConfirmed(false);
+  }
+
   if (options.length === 0) return null;
 
   async function report(eventType: EventType) {
     setPending(eventType);
     setError(null);
+    // Any new attempt retires the prior acknowledgment, so a stale click that then
+    // fails can never leave a contradictory "Saved" sitting beside the error.
+    setConfirmed(false);
     try {
       const res = await fetch("/api/outcomes/event", {
         method: "POST",
@@ -53,6 +73,7 @@ export function OutcomeSelfReport({
         setError("We couldn’t save that just now — try again.");
         return;
       }
+      setConfirmed(true);
       router.refresh();
     } catch {
       setError("We couldn’t save that just now — try again.");
@@ -63,8 +84,13 @@ export function OutcomeSelfReport({
 
   return (
     <div className="mt-3 flex flex-col gap-1.5 border-t border-line pt-3">
-      <span className="font-mono text-[10.5px] uppercase tracking-wide text-ink-faint">
+      <span className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide text-ink-faint">
         Report an update
+        {confirmed ? (
+          // Eases in promptly (no front hold) so a fast router.refresh can't clear
+          // it before it's seen. Neutral on purpose — see the confirmed comment above.
+          <span className="animate-fade text-ink-soft">Saved</span>
+        ) : null}
       </span>
       <div className="flex flex-wrap gap-1.5">
         {options.map((eventType) => (

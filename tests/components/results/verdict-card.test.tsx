@@ -100,6 +100,20 @@ describe("VerdictCard verdict wording source (MV-42)", () => {
   });
 });
 
+describe("VerdictCard two-beat reveal (audit #25)", () => {
+  it("keeps the card rise (beat 1) and gives the band pill its own delayed settle (beat 2)", () => {
+    const { container } = render(<VerdictCard verdict="strong" />);
+    // Beat 1 — the whole card still rises on mount.
+    expect(container.querySelector("section")?.className).toContain("animate-rise");
+    // Beat 2 — only the band pill carries the staggered settle, landing a beat later.
+    const pill = screen.getByText("Strong match");
+    expect(pill.className).toContain("animate-settle");
+    // Trust guard: the animated second beat carries only the band word — never a
+    // score-like number. The reveal must never imply a computed percentage.
+    expect(pill.textContent ?? "").not.toMatch(/\d/);
+  });
+});
+
 describe("VerdictCard amber text contrast (a11y #10)", () => {
   it("paints the possible badge with the darker AA ink, not the bare amber fill token", () => {
     const { container } = render(<VerdictCard verdict="possible" rulesVerified="x" />);
