@@ -51,6 +51,8 @@ export interface OutcomeFunnelRow {
   lastUpdated: string;
   /** The legal next milestones the student can self-report from this row (S7). */
   nextEvents: EventType[];
+  /** Every event type recorded against this attempt — drives the journey rail (MV-73). */
+  events: EventType[];
 }
 
 export interface BuildOutcomeFunnelInput {
@@ -99,8 +101,109 @@ export function buildOutcomeFunnel(input: BuildOutcomeFunnelInput): OutcomeFunne
       intake: attempt.intake,
       lastUpdated,
       nextEvents,
+      events: eventTypes,
     });
   }
 
   return rows.sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
+}
+
+// --- Journey rail (MV-73) -------------------------------------------------
+// A four-step horizontal rail showing where an attempt sits on the canonical
+// happy path. The rail STOPS honestly: a rejection, refusal, or withdrawal
+// marks an exit instead of ever lighting a milestone the student never reached.
+
+/** The fixed milestones the rail renders, in journey order. */
+export type RailStepKey = "applied" | "offer" | "visa_lodged" | "granted";
+
+/** `passed`/`current`/`upcoming` are the happy path; `exit` is where a stopped journey halts. */
+export type RailStepState = "passed" | "current" | "upcoming" | "exit";
+
+/** `reach` is the verdict-red used for rejection/refusal; `neutral` is the grey used for a student's own withdrawal. */
+export type RailTone = "positive" | "reach" | "neutral";
+
+export interface RailStep {
+  key: RailStepKey;
+  /** The happy-path label, or the terminal word (Rejected/Refused/Withdrawn) at the exit step. */
+  label: string;
+  state: RailStepState;
+  tone: RailTone;
+}
+
+export interface OutcomeRail {
+  steps: RailStep[];
+  ariaLabel: string;
+}
+
+const RAIL_KEYS: RailStepKey[] = ["applied", "offer", "visa_lodged", "granted"];
+const RAIL_LABELS: Record<RailStepKey, string> = {
+  applied: "Applied",
+  offer: "Offer",
+  visa_lodged: "Visa lodged",
+  granted: "Granted",
+};
+// Any of these collapses into the single "Offer" step — there is no separate accepted rung.
+const OFFER_EVENTS: EventType[] = ["offer_received", "conditional_offer", "offer_accepted", "coe_issued"];
+
+function railAriaLabel(steps: RailStep[]): string {
+  const parts = steps.map((s) => {
+    switch (s.state) {
+      case "passed":
+        return `${s.label} done`;
+      case "current":
+        return `${s.label} reached`;
+      case "exit":
+        // s.label is the terminal word; name the happy milestone it never reached.
+        return `${s.label}, ${RAIL_LABELS[s.key]} not reached`;
+      default:
+        return `${s.label} not reached`;
+    }
+  });
+  return `Application progress: ${parts.join(", ")}.`;
+}
+
+/**
+ * Map an attempt's event types onto the four-step journey rail. Pure: positions
+ * derive only from which milestones the events confirm — nothing is inferred or
+ * invented. A stopped journey (rejection/refusal/withdrawal) halts one step past
+ * the furthest milestone reached and never paints a later step as achieved; a
+ * withdrawal reads neutral (the student's own choice), not red.
+ */
+export function buildOutcomeRail(events: EventType[]): OutcomeRail {
+  const set = new Set(events);
+  const reachedOffer = OFFER_EVENTS.some((e) => set.has(e));
+  const reachedLodged = set.has("visa_lodged");
+  const reachedGranted = set.has("visa_granted") || set.has("enrolled");
+
+  // The furthest happy-path milestone the events confirm. An opened attempt always
+  // carries a root 'applied' event, so the floor is the Applied step (index 0).
+  let reachedIndex = 0;
+  if (reachedGranted) reachedIndex = 3;
+  else if (reachedLodged) reachedIndex = 2;
+  else if (reachedOffer) reachedIndex = 1;
+
+  const rejected = set.has("application_rejected");
+  const refused = set.has("visa_refused");
+  const withdrawn = set.has("withdrawn");
+  const stopped = rejected || refused || withdrawn;
+
+  // The rail halts one step past the furthest milestone reached, marking why it
+  // stopped. Withdrawal is the student's own decision — neutral, never red.
+  const exitIndex = reachedIndex + 1;
+  const exitTone: RailTone = withdrawn ? "neutral" : "reach";
+  const exitLabel = refused ? "Refused" : rejected ? "Rejected" : "Withdrawn";
+  const hasExit = stopped && exitIndex <= 3;
+
+  const steps: RailStep[] = RAIL_KEYS.map((key, i) => {
+    if (hasExit) {
+      if (i < exitIndex) return { key, label: RAIL_LABELS[key], state: "passed", tone: "positive" };
+      if (i === exitIndex) return { key, label: exitLabel, state: "exit", tone: exitTone };
+      return { key, label: RAIL_LABELS[key], state: "upcoming", tone: "neutral" };
+    }
+    if (i < reachedIndex) return { key, label: RAIL_LABELS[key], state: "passed", tone: "positive" };
+    if (i === reachedIndex) return { key, label: RAIL_LABELS[key], state: "current", tone: "positive" };
+    return { key, label: RAIL_LABELS[key], state: "upcoming", tone: "neutral" };
+  });
+
+  return { steps, ariaLabel: railAriaLabel(steps) };
 }

@@ -1,4 +1,6 @@
-import type { FunnelStage, OutcomeFunnelRow } from "@/lib/outcomes/funnel";
+import type { FunnelStage, OutcomeFunnelRow, RailStep } from "@/lib/outcomes/funnel";
+import { buildOutcomeRail } from "@/lib/outcomes/funnel";
+import type { EventType } from "@/lib/outcomes/types";
 import { cn } from "@/lib/utils";
 import { OutcomeSelfReport } from "./outcome-self-report";
 
@@ -26,6 +28,50 @@ function updatedLabel(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// Calm flat dots — reached steps fill teal, the current step adds a thin ring, and
+// a stopped journey's exit dot is a hollow ring (red for rejection/refusal, grey
+// for a withdrawal). Shape + label carry the state, never colour alone.
+function railDotCls(step: RailStep): string {
+  if (step.state === "exit") {
+    return step.tone === "reach" ? "border-2 border-reach bg-surface" : "border-2 border-ink-faint bg-surface";
+  }
+  if (step.state === "passed") return "bg-strong border border-strong";
+  if (step.state === "current") return "bg-strong ring-2 ring-strong/30";
+  return "border border-line bg-surface"; // upcoming
+}
+
+function railLabelCls(step: RailStep): string {
+  if (step.state === "exit") return step.tone === "reach" ? "text-reach" : "text-ink-faint";
+  if (step.state === "upcoming") return "text-ink-faint";
+  return "text-ink-soft";
+}
+
+/**
+ * The journey rail (MV-73): a four-step Applied → Offer → Visa lodged → Granted
+ * track per attempt. Positions come from the pure rail helper; a stopped journey
+ * halts at an honest exit marker rather than ever lighting an unreached Granted.
+ */
+function OutcomeRailView({ events }: { events: EventType[] }) {
+  const rail = buildOutcomeRail(events);
+  return (
+    <div role="group" aria-label={rail.ariaLabel} data-testid="outcome-rail" className="relative mt-3">
+      {/* Baseline runs through the dot centres (first → last); hollow dots sit on
+          bg-surface so the line doesn't show through their middle. */}
+      <div aria-hidden className="absolute left-[12.5%] right-[12.5%] top-[5px] h-px bg-line" />
+      <div className="relative flex">
+        {rail.steps.map((step) => (
+          <div key={step.key} className="flex flex-1 flex-col items-center gap-1.5">
+            <span aria-hidden className={cn("h-2.5 w-2.5 rounded-full", railDotCls(step))} />
+            <span className={cn("text-center font-mono text-[10px] uppercase tracking-wide", railLabelCls(step))}>
+              {step.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OutcomeRow({ row }: { row: OutcomeFunnelRow }) {
   const verdict = VERDICT_CHIP[row.verdict];
   const stage = STAGE_META[row.stage];
@@ -44,6 +90,7 @@ function OutcomeRow({ row }: { row: OutcomeFunnelRow }) {
           {stage.label}
         </span>
       </div>
+      <OutcomeRailView events={row.events} />
       <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-soft">
         {verdict ? (
           <span className={cn("rounded-pill px-2 py-0.5 font-mono text-[11px]", verdict.cls)}>

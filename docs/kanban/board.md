@@ -30,9 +30,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-73** · P1 · [Progression visual #15: outcome-funnel journey rail on the dashboard](MV-73-outcome-funnel-rail.md) — _SHIPPED 2026-06-28 on branch mv-73-outcome-funnel-rail (founder merges to master to close -> Done). 3rd sub-slice of the MV-45 umbrella (after MV-71/MV-72); design-division audit #15. The signed-in dashboard's 'Your applications' rows (components/outcomes/outcome-funnel.tsx) showed only a stage badge -- no at-a-glance 'where am I on the journey'. Added a calm flat four-step rail Applied -> Offer -> Visa lodged -> Granted per row, slotted under the [program . stage badge] line and above the [verdict . intake . updated] meta; MV-39 self-report buttons stay last; existing stage badge kept. Design Codex-locked (gpt-5.5 Option A): the rail STOPS honestly and NEVER lights an unreached Granted -- a rejection exits red-hollow at Offer ('Rejected'), a refusal exits red-hollow at the Granted position labelled 'Refused' (not 'Granted'), a withdrawal is the student's own choice so it exits NEUTRAL GREY (never red) one step past the furthest reached milestone ('Withdrawn'); no intermediate steps are inferred -- fill only what the event stream confirms. Trust: data is the real DB event stream (outcome_events, RLS-scoped), zero fabrication. Plumbing: added events:EventType[] onto OutcomeFunnelRow (buildOutcomeFunnel now carries each attempt's reached event types) so a withdrawal keeps its pre-exit position (the single final 'stage' loses it); the rail geometry/states live in a pure unit-tested buildOutcomeRail(events) in lib/outcomes/funnel.ts (MV-72 buildIntakeTimeline pattern) and the component stays presentational. a11y: shape+label carry state (never colour alone) + one honest aria-label per rail ('Application progress: ... Refused, Granted not reached.'). TDD RED->GREEN +16 (11 helper terminal-state cases + 1 plumbing + 4 component render); gate green: typecheck clean, lint 0 errors (1 pre-existing build.mjs warning), full vitest 246 files / 1500 tests (was 1484 on master). No scorer/DB/migration; goldens byte-identical. Dossier: cards/MV-73-outcome-funnel-rail.md. Founder-owed: merge PR -> Done; visual spacing (dot/label sizes, baseline insets) is a blind call -- dashboard is auth-gated, can't browser-verify here._
 
 ## Blocked — 4
 
