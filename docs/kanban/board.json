@@ -997,13 +997,13 @@
     },
     {
       "id": "MV-76",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
-      "badge": "",
+      "badge": "PR #30",
       "file": null,
       "title": "Verdict reveal + Applied-commit motion (audit #25)",
-      "summary": "Phase B (audit #25, P2). Carved out of MV-46 2026-06-28 (that slice shipped the audit-#24 completion beats). The trust-sensitive motion left to do: give ONLY the verdict a two-beat reveal (card rises, band pill settles ~120ms later) + a quiet confirm beat when an outcome is committed (the MV-39 Applied control). Touches the banded verdict surface and the MV-39 outcome control, so it wants its own careful slice -- never animate the verdict in a way that implies a score; respect the prefers-reduced-motion block. TDD. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #25.",
+      "summary": "Phase B (audit #25, P2). BUILT+SHIPPED 2026-06-28 -> PR #30 (In Review, branch mv-76-verdict-reveal, founder-gated merge). Two-beat verdict reveal + a neutral outcome confirm beat, both Codex trust-checked (no score leak, no celebration on a refusal, reduced-motion sound). Verdict card keeps animate-rise (beat 1); the band-label pill ALONE gets a new animate-settle (beat 2) whose ~120ms hold is baked into the keyframe (0%,22% of 0.55s) NOT animation-delay, so the global prefers-reduced-motion guard collapses it with no blank flash and the never-shown score is never animated. MV-39 OutcomeSelfReport: a successful POST shows a deliberately neutral \"Saved\" (text-ink-soft, no colour/glyph -- the same control reports a refusal as well as an offer) that eases in via animate-fade (no hold, can not be clipped by a fast router.refresh) and clears when the legal-next-steps set advances (render-time seenKey reset, not an effect). Codex round folded 2 fixes pre-merge: clear confirmed on any new attempt (never \"Saved\"+error together); fade not settle for the note. TDD +4 (suite 248 files / 1561). Optional staggered factor-bars deliberately skipped (animating a numeric surface = trust risk). Spec docs/superpowers/specs/2026-06-28-verdict-reveal-design.md; audit docs/audits/2026-06-25-design-division-polish-audit.md #25.",
       "created": "2026-06-28",
       "entered": "2026-06-28"
     },
