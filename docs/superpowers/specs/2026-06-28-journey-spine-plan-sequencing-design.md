@@ -40,8 +40,8 @@ Every new step was verified against a live government source on 2026-06-28; noth
 - **Submit / offer / CoE** — Study Australia, *How to apply to study*
   (`https://www.studyaustralia.gov.au/en/plan-your-studies/how-to-apply-to-study`): apply via the
   provider's website or by emailing it directly; a Letter of Offer is issued; **"the CoE will be
-  sent after you have accepted your Letter of Offer and paid your deposit"**; and a CoE is
-  **mandatory to lodge since 1 Jan 2025 — the application is invalid without it**.
+  sent after you have accepted your Letter of Offer and paid your deposit"**, and you need it for
+  your student visa application. *(No dated CoE mandate is asserted — no in-repo row carries one.)*
 - **CoE / OSHC** — already human-verified rows in `lib/data/source/au-student-visa-requirements.ts`
   (`coe` A.002/A.118–A.122; `oshc` A.006–A.010/I.026), DHA-sourced, `lastVerified: 2026-06-05`.
 - **Lodge** — DHA Subclass 500 listing
@@ -79,9 +79,9 @@ is **self-report** (Done / Mark as in progress / Dismiss) — no account state b
    *(Accept is the decision now; paying the deposit depends on the NOC/remittance steps, so we
    cross-reference rather than imply you just pay.)*
 3. **Get your CoE** — "After you accept your offer and pay the deposit, your provider issues an
-   electronic Confirmation of Enrolment (CoE). Since 1 January 2025 you must include a CoE when you
-   lodge your student visa — without it the application is invalid. Your CoE shows your course
-   dates and fees."
+   electronic Confirmation of Enrolment (CoE). You'll need it for your student visa application —
+   it shows your course start and end dates and fees." *(Limited to the in-repo `coe` row's facts;
+   no dated mandate is asserted.)*
 4. **Arrange OSHC** — "Your visa requires Overseas Student Health Cover. Buy a policy that starts at
    least a week before your course and runs for your whole stay, and keep the insurer name and
    policy dates for your application." *(From the in-repo `oshc` row.)*
