@@ -649,15 +649,15 @@
     },
     {
       "id": "MV-43",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "",
+      "badge": "BUILT+SHIPPED 2026-06-28 → PR #27 (branch mv-43-dark-mode, founder-gated merge). Founder picked Option A (auto-follow OS, no toggle) via AskUserQuestion. New lib/theme/theme-init.ts THEME_INIT_SCRIPT (dependency-free try/catch IIFE, first child of <body>) reads matchMedia prefers-color-scheme pre-paint and flips data-theme + color-scheme on <html>; <html> gains suppressHydrationWarning, keeps data-theme='light' SSR/no-JS default (no flash, no hydration mismatch). body already uses background-color (not shorthand). TDD 4 jsdom tests across dark/light/no-matchMedia/throwing; suite 1548/248; typecheck+lint clean; build passes. NOT live-screenshotted (port 3000 occupied by another node proc) — founder sees it on preview deploy.",
       "file": null,
       "title": "Wire dark mode (activate the dead token set)",
       "summary": "Phase B (audit #14, P1). The complete dark-mode token block is dead code behind a hardcoded data-theme='light' (layout.tsx:27). Add pre-hydration matchMedia prefers-color-scheme (or a light/dark/system toggle); keep the background-color (not shorthand) rule per the documented dark-mode custom-property re-resolution bug. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #14.",
       "created": "2026-06-25",
-      "entered": "2026-06-25"
+      "entered": "2026-06-28"
     },
     {
       "id": "MV-44",
