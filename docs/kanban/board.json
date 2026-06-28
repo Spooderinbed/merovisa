@@ -805,7 +805,7 @@
     },
     {
       "id": "MV-73",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "In Review on branch mv-73-outcome-funnel-rail (PR). 3rd MV-45 sub-slice (design-division #15). Codex-locked Option A: terminal states stop honestly, never light Granted.",
@@ -961,13 +961,25 @@
     },
     {
       "id": "MV-74",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "",
       "file": "cards/MV-74-readiness-map.md",
       "summary": "Design LOCKED + founder-approved 2026-06-28 (branch mv-74-readiness-map). Dashboard \"Your readiness\" card decomposing the single banded verdict into an honest map: rows Academics & English / Money & funding / Visa readiness (band from each scored dimension's factor influences: risk->risk, only-positive->strong, else->needs-work, under-informed->add-detail) + Documents (cheap honest count: not-started / in-progress, never \"ready\"). Completeness = quiet header line (not a row); Applications stay in OutcomeFunnel. SUPERSEDES the rejected global journey-rail design (linear step-N-of-6 funnel duplicated PromptCard+StatsRow; always-on marker = nagging chrome) per Codex gpt-5.5 + dashboard-read validation. Surfaces the engine's existing dimensions breakdown (funds+English ARE collected/scored, not data-blocked). Pure buildReadiness(signals) helper + presentational ReadinessMap REPLACING StatsRow; zero extra queries (reads primary AssessmentPayload dimensions already loaded). No scoring/migration; goldens byte-identical. Spec docs/superpowers/specs/2026-06-28-readiness-map-design.md. NEXT = BUILD per spec (TDD) after compact.",
       "title": "Dashboard readiness map (decomposed verdict)",
+      "created": "2026-06-28",
+      "entered": "2026-06-28"
+    },
+    {
+      "id": "MV-67",
+      "col": "done",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "Trust-copy fix on the ONLY anon-reachable error boundary (global-error.tsx, MV-62). Tiny, self-contained, TDD.",
+      "file": "MV-67-global-error-copy.md",
+      "title": "Fix global-error.tsx false 'saved data is safe' claim (anon trust)",
+      "summary": "BACKLOG (agent-ownable, founder-gated merge). app/global-error.tsx (the root-layout last-resort boundary shipped in MV-62) renders 'We hit an unexpected error loading MyVisa. Your saved data is safe. Please try again.' at ~line 36 (confirmed present). That saved-data claim is NOT always true: global-error is the ONLY error boundary an ANONYMOUS visitor can reach (it fires when a layout itself throws -- e.g. app/(focused)/layout.tsx or the root layout getUser() -- past the per-segment error.tsx). An anon user whose assessment hit a persist-miss (POST /api/assess returned 200 with id:null) may have NOTHING saved server-side, so promising their data is safe is a false reassurance on a trust-first product. FIX (surgical, copy-only): reword app/global-error.tsx to drop the unconditional saved-data claim and keep only what is always true -- e.g. 'We hit an unexpected error loading MyVisa. This is usually temporary - please try again.' Do NOT touch app/(app)/error.tsx (signed-in only, so 'your saved data is safe' is correct there) or app/(focused)/error.tsx (already avoids the claim -- both confirmed present). TDD: update the global-error describe block in tests/app/error-boundaries.test.tsx to assert the honest copy, watch it fail, then change the file. Gate: typecheck + lint + npx vitest run tests/app/error-boundaries.test.tsx (+ full suite before PR). No scoring/DB/migration; goldens byte-identical. Branch mv-67-global-error-copy off master, PR, founder-gated merge. Sourced from the founder 2026-06-28. Dossier: cards/MV-67-global-error-copy.md.",
       "created": "2026-06-28",
       "entered": "2026-06-28"
     }
