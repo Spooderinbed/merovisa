@@ -804,6 +804,18 @@
       "entered": "2026-06-28"
     },
     {
+      "id": "MV-67",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "Trust-copy fix on the ONLY anon-reachable error boundary (global-error.tsx, MV-62). Tiny, self-contained, TDD.",
+      "file": "MV-67-global-error-copy.md",
+      "title": "Fix global-error.tsx false 'saved data is safe' claim (anon trust)",
+      "summary": "BACKLOG (agent-ownable, founder-gated merge). app/global-error.tsx (the root-layout last-resort boundary shipped in MV-62) renders 'We hit an unexpected error loading MyVisa. Your saved data is safe. Please try again.' at ~line 36 (confirmed present). That saved-data claim is NOT always true: global-error is the ONLY error boundary an ANONYMOUS visitor can reach (it fires when a layout itself throws -- e.g. app/(focused)/layout.tsx or the root layout getUser() -- past the per-segment error.tsx). An anon user whose assessment hit a persist-miss (POST /api/assess returned 200 with id:null) may have NOTHING saved server-side, so promising their data is safe is a false reassurance on a trust-first product. FIX (surgical, copy-only): reword app/global-error.tsx to drop the unconditional saved-data claim and keep only what is always true -- e.g. 'We hit an unexpected error loading MyVisa. This is usually temporary - please try again.' Do NOT touch app/(app)/error.tsx (signed-in only, so 'your saved data is safe' is correct there) or app/(focused)/error.tsx (already avoids the claim -- both confirmed present). TDD: update the global-error describe block in tests/app/error-boundaries.test.tsx to assert the honest copy, watch it fail, then change the file. Gate: typecheck + lint + npx vitest run tests/app/error-boundaries.test.tsx (+ full suite before PR). No scoring/DB/migration; goldens byte-identical. Branch mv-67-global-error-copy off master, PR, founder-gated merge. Sourced from the founder 2026-06-28. Dossier: cards/MV-67-global-error-copy.md.",
+      "created": "2026-06-28",
+      "entered": "2026-06-28"
+    },
+    {
       "id": "MV-48",
       "col": "backlog",
       "pri": "P2",
