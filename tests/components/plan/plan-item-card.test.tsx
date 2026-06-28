@@ -72,6 +72,16 @@ describe("PlanItemCard", () => {
     expect(screen.getByRole("button", { name: /Undo/i })).toBeInTheDocument();
   });
 
+  // Audit #24: the open→closed treatment (border, fill, the opacity-70 dim) used
+  // to switch instantly. Ease it so completing a step settles calmly. The global
+  // prefers-reduced-motion block collapses this to a near-instant step.
+  it("eases the open→closed state change (calm settle, not an instant flip)", () => {
+    const { container } = render(<PlanItemCard item={{ ...item, status: "done" }} />);
+    const article = container.querySelector("article");
+    expect(article?.className).toContain("transition");
+    expect(article?.className).toContain("ease-calm");
+  });
+
   it("verified item: no Done button, CTA to the completing surface, Dismiss kept", () => {
     render(<PlanItemCard item={{ ...item, kind: "upload-ielts-report" }} />);
     expect(screen.queryByRole("button", { name: /^Done$/i })).toBeNull();
