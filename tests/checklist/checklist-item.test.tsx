@@ -19,10 +19,24 @@ describe("ChecklistItem", () => {
   it("marks an obtained (self-reported) item as checked with a distinct 'Marked obtained' chip, and still offers upload", () => {
     render(<ul><ChecklistItem item={{ ...base, status: "obtained" }} /></ul>);
     expect(screen.getByText("Marked obtained")).toBeInTheDocument();
-    expect(screen.getByText("✓ Passport bio page")).toBeInTheDocument();
+    expect(screen.getByText("Passport bio page")).toBeInTheDocument();
     // self-report is not an uploaded file — still let them attach one
     expect(screen.getByRole("link", { name: /Upload/i })).toHaveAttribute("href", "/documents");
   });
+  // Audit #24: the completion mark was a bare literal "✓ " glued onto the label
+  // string. Replace it with the design-language option-card checkmark — a styled,
+  // aria-hidden element, separate from the (now glyph-free) label text.
+  it("renders the styled completion check (not a literal '✓ ' in the label) when done", () => {
+    const { container, rerender } = render(<ul><ChecklistItem item={{ ...base, status: "obtained" }} /></ul>);
+    expect(screen.getByText("Passport bio page")).toBeInTheDocument();
+    const check = container.querySelector("span.bg-primary");
+    expect(check).not.toBeNull();
+    expect(check).toHaveAttribute("aria-hidden");
+    expect(check?.textContent).toBe("✓");
+    rerender(<ul><ChecklistItem item={{ ...base, status: "missing" }} /></ul>);
+    expect(container.querySelector("span.bg-primary")).toBeNull();
+  });
+
   it("shows a Recommended tag for recommended items", () => {
     render(<ul><ChecklistItem item={{ ...base, requirement: "recommended" }} /></ul>);
     expect(screen.getByText(/Recommended/i)).toBeInTheDocument();
@@ -62,7 +76,7 @@ describe("ChecklistItem plan-linked state (mirrors the plan — no second comple
   it("shows the checked have treatment when the plan item is done", () => {
     const { container } = render(<ul><ChecklistItem item={step} planState="done" /></ul>);
     expect(screen.getByText("Done")).toBeInTheDocument();
-    expect(screen.getByText("✓ No Objection Certificate (NOC)")).toBeInTheDocument();
+    expect(screen.getByText("No Objection Certificate (NOC)")).toBeInTheDocument();
     expect(container.querySelector("li")?.className).toContain("border-primary");
     expect(screen.queryByRole("link", { name: /Track in your plan/i })).not.toBeInTheDocument();
   });

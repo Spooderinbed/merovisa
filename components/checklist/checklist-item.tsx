@@ -28,7 +28,17 @@ export function ChecklistItem({ item, planState }: { item: Item; planState?: Lin
   return (
     <li className={`flex flex-col gap-1 rounded-lg border p-3 ${isDone ? "border-primary bg-surface" : "border-line bg-bg-tint"}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] text-ink">{isDone ? "✓ " : ""}{item.label}</span>
+        <span className="flex items-center gap-2">
+          {isDone ? (
+            <span
+              aria-hidden
+              className="grid size-4 shrink-0 place-items-center rounded-pill border border-primary bg-primary text-[10px] leading-none text-on-primary"
+            >
+              ✓
+            </span>
+          ) : null}
+          <span className="text-[15px] text-ink">{item.label}</span>
+        </span>
         <div className="flex items-center gap-2">
           {item.kind !== null && item.requirement === "recommended" && (
             <span className="rounded-pill border border-line px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-wide text-ink-faint">

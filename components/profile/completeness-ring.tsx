@@ -13,7 +13,7 @@ export function CompletenessRing({
         <svg viewBox="0 0 100 100" width="96" height="96" aria-hidden>
           <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="6" fill="none" className="text-line-2" />
           <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="6" fill="none"
-            className="text-primary"
+            className="text-primary transition-[stroke-dashoffset] duration-700 ease-calm"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             transform="rotate(-90 50 50)"
