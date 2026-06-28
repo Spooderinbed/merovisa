@@ -673,15 +673,15 @@
     },
     {
       "id": "MV-45",
-      "col": "backlog",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
-      "badge": "",
+      "badge": "COMPLETE 2026-06-28 — all sub-slices shipped: #28 chip (MV-23) + stage-tag (MV-71); #15 funnel rail (MV-73); #16 intake timeline (MV-72); #3 dashboard journey panel (MV-77)",
       "file": null,
       "title": "Progression visuals UMBRELLA (funnel rail + intake timeline + plan<->checklist chips)",
       "summary": "DECOMPOSED 2026-06-28 (was too big for one slice -- 4-5 distinct visuals on different surfaces). Tracks the REMAINING work; pick one sub-slice at a time. Phase B (audit #15/#16/#28, P1). DONE/carved out: #28 chip-on-ChecklistItem already shipped (MV-23 thread); #28 stage-tag-on-PlanItemCard -> MV-71 (in progress). REMAINING here: (#15) thin stepped rail per outcome-funnel row (Applied->Offer->Visa lodged->Granted) -- COORDINATE w/ the merged MV-39 self-report control on the same row; (#16) tick-timeline w/ 'now' marker on results/intake-timing.tsx; PLUS the MV-68-audit reframing: a global cross-stage 'where am I' journey rail in app/(app)/layout.tsx (wizard->results->account->documents->apply) -- biggest, warrants its own brainstorm. Flat dots, mono labels -- no new vocabulary. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #15,#16,#28 + 2026-06-27-mv68-ground-truth-audit.md #3.",
       "created": "2026-06-25",
-      "entered": "2026-06-25"
+      "entered": "2026-06-28"
     },
     {
       "id": "MV-46",
@@ -985,10 +985,10 @@
     },
     {
       "id": "MV-75",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
-      "badge": "PR #31",
+      "badge": "merged → master (PR #31)",
       "file": "cards/MV-75-disclosure-consolidation.md",
       "title": "Fold profile accordion onto disclosure primitive",
       "summary": "Phase B (audit #21, P2). Carved out of MV-44 2026-06-28 (that slice shipped #11 matches-tablist). Two divergent accordion implementations: components/ui/disclosure.tsx (the primitive, has a trailing chevron) vs components/profile/section-accordion.tsx (its own impl, lacks the chevron). Fold section-accordion onto the ui/disclosure primitive with an optional trailing-slot (so profile sections gain the chevron + a single keyboard/aria behaviour to maintain). DRY refactor, not user-blocking. Verify both surfaces (profile section headers + wherever disclosure is used) stay visually + behaviourally correct; goldens byte-identical. TDD. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #21. → SHIPPED 2026-06-28 (TDD): Disclosure gains an optional trailing slot; SectionAccordion reimplemented as a thin wrapper over it, inheriting the chevron + aria-controls + ease-calm. Public API unchanged; results/profile consumers behave identically. +3 tests, suite 1560/248 files, typecheck+lint clean. In Review on branch mv-75-disclosure-consolidation, PR #31, founder-gated merge.",
@@ -997,10 +997,10 @@
     },
     {
       "id": "MV-76",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
-      "badge": "PR #30",
+      "badge": "merged → master (PR #30)",
       "file": null,
       "title": "Verdict reveal + Applied-commit motion (audit #25)",
       "summary": "Phase B (audit #25, P2). BUILT+SHIPPED 2026-06-28 -> PR #30 (In Review, branch mv-76-verdict-reveal, founder-gated merge). Two-beat verdict reveal + a neutral outcome confirm beat, both Codex trust-checked (no score leak, no celebration on a refusal, reduced-motion sound). Verdict card keeps animate-rise (beat 1); the band-label pill ALONE gets a new animate-settle (beat 2) whose ~120ms hold is baked into the keyframe (0%,22% of 0.55s) NOT animation-delay, so the global prefers-reduced-motion guard collapses it with no blank flash and the never-shown score is never animated. MV-39 OutcomeSelfReport: a successful POST shows a deliberately neutral \"Saved\" (text-ink-soft, no colour/glyph -- the same control reports a refusal as well as an offer) that eases in via animate-fade (no hold, can not be clipped by a fast router.refresh) and clears when the legal-next-steps set advances (render-time seenKey reset, not an effect). Codex round folded 2 fixes pre-merge: clear confirmed on any new attempt (never \"Saved\"+error together); fade not settle for the note. TDD +4 (suite 248 files / 1561). Optional staggered factor-bars deliberately skipped (animating a numeric surface = trust risk). Spec docs/superpowers/specs/2026-06-28-verdict-reveal-design.md; audit docs/audits/2026-06-25-design-division-polish-audit.md #25.",
@@ -1009,10 +1009,10 @@
     },
     {
       "id": "MV-77",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
-      "badge": "PR #29",
+      "badge": "merged → master (PR #29)",
       "file": null,
       "title": "Dashboard \"Your journey\" panel (MV-45 #3 where-am-I rail)",
       "summary": "IN REVIEW 2026-06-28 (PR #29, branch mv-77-journey-rail, founder-gated merge). Carved from the MV-45 umbrella -- the global cross-stage \"where am I\" orientation rail (consultancy-replacement: here is the sequence, you are here, next is X). A DASHBOARD PANEL (founder pick over persistent chrome -- we already have AppBar + MobileTabBar). 6 stages Assessed->Profile->Matches->Plan->Documents->Apply, each progress-derived from real signals only (mirrors buildReadiness/ReadinessMap); +1 query (listShortlistForUser), Plan load widened to all-items (zero net extra). Codex gpt-5.5 xhigh: SOUND-WITH-TWEAKS, all 3 adopted (Matches reached-word \"shortlisted\" not \"done\"; Assessed gated on scored result; Plan engagement covers completed items). Pure buildJourney() in lib/journey/journey.ts + presentational JourneyRail; honest frontier + visible skipped-gap; sr-only word-state summary; no reach-red. Spec: docs/superpowers/specs/2026-06-28-journey-rail-design.md. TDD. Apply=#15-funnel detail stays in MV-73 (no dup).",
