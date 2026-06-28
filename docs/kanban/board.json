@@ -985,13 +985,13 @@
     },
     {
       "id": "MV-75",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
-      "badge": "",
-      "file": null,
+      "badge": "PR #31",
+      "file": "cards/MV-75-disclosure-consolidation.md",
       "title": "Fold profile accordion onto disclosure primitive",
-      "summary": "Phase B (audit #21, P2). Carved out of MV-44 2026-06-28 (that slice shipped #11 matches-tablist). Two divergent accordion implementations: components/ui/disclosure.tsx (the primitive, has a trailing chevron) vs components/profile/section-accordion.tsx (its own impl, lacks the chevron). Fold section-accordion onto the ui/disclosure primitive with an optional trailing-slot (so profile sections gain the chevron + a single keyboard/aria behaviour to maintain). DRY refactor, not user-blocking. Verify both surfaces (profile section headers + wherever disclosure is used) stay visually + behaviourally correct; goldens byte-identical. TDD. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #21.",
+      "summary": "Phase B (audit #21, P2). Carved out of MV-44 2026-06-28 (that slice shipped #11 matches-tablist). Two divergent accordion implementations: components/ui/disclosure.tsx (the primitive, has a trailing chevron) vs components/profile/section-accordion.tsx (its own impl, lacks the chevron). Fold section-accordion onto the ui/disclosure primitive with an optional trailing-slot (so profile sections gain the chevron + a single keyboard/aria behaviour to maintain). DRY refactor, not user-blocking. Verify both surfaces (profile section headers + wherever disclosure is used) stay visually + behaviourally correct; goldens byte-identical. TDD. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #21. → SHIPPED 2026-06-28 (TDD): Disclosure gains an optional trailing slot; SectionAccordion reimplemented as a thin wrapper over it, inheriting the chevron + aria-controls + ease-calm. Public API unchanged; results/profile consumers behave identically. +3 tests, suite 1560/248 files, typecheck+lint clean. In Review on branch mv-75-disclosure-consolidation, PR #31, founder-gated merge.",
       "created": "2026-06-28",
       "entered": "2026-06-28"
     },

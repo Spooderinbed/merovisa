@@ -13,12 +13,15 @@ import { cn } from "@/lib/utils";
 export function Disclosure({
   title,
   subtitle,
+  trailing,
   defaultOpen = false,
   children,
   className,
 }: {
   title: string;
   subtitle?: string;
+  /** Optional adornment shown in the trigger beside the chevron (e.g. a status pill). */
+  trailing?: ReactNode;
   defaultOpen?: boolean;
   children: ReactNode;
   className?: string;
@@ -39,14 +42,17 @@ export function Disclosure({
           <span className="text-[16px] font-medium text-ink">{title}</span>
           {subtitle ? <span className="text-[13.5px] text-ink-soft">{subtitle}</span> : null}
         </span>
-        <span
-          className={cn(
-            "shrink-0 text-ink-faint transition-transform duration-200 ease-calm",
-            open && "rotate-90",
-          )}
-          aria-hidden
-        >
-          &rsaquo;
+        <span className="flex shrink-0 items-center gap-3">
+          {trailing}
+          <span
+            className={cn(
+              "text-ink-faint transition-transform duration-200 ease-calm",
+              open && "rotate-90",
+            )}
+            aria-hidden
+          >
+            &rsaquo;
+          </span>
         </span>
       </button>
       {open ? (
