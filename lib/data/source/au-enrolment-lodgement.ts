@@ -7,7 +7,7 @@ import type { AuEnrolmentLodgementSource } from "@/lib/data/types";
  *
  * - Study Australia, "How to apply to study" — apply via the provider's own website
  *   or by emailing it; a Letter of Offer is issued; the CoE is sent after you accept
- *   the offer and pay the deposit; a CoE is mandatory to lodge since 1 Jan 2025.
+ *   the offer and pay the deposit, and you need it for the visa application.
  *   Backs the `submit-university-applications` and `accept-offer` plan steps.
  * - DHA, "After you apply" — use ImmiAccount to check messages and application status
  *   and respond to requests. Backs the `track-visa-decision` plan step.

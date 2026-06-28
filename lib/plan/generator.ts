@@ -328,8 +328,11 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       timeEstimate: "1-2 weeks",
     });
 
-    // C · Confirm — accept the offer. Paying the deposit depends on the NOC/remittance steps,
-    // so we cross-reference them rather than imply you just pay.
+    // C · Confirm — accept the offer. Paying the deposit depends on the NOC and (when present)
+    // the fund-release step, so we cross-reference whichever steps are actually in this plan
+    // rather than imply you just pay. The fund-release step is only emitted when a remittable
+    // funding source is declared, so its reference is conditional to avoid a dangling pointer.
+    const fundReleaseInPlan = !!s.finance?.source && s.finance.source !== "scholarship-dependent";
     out.push({
       kind: "accept-offer",
       impact: "medium",
@@ -337,20 +340,23 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
       body:
         "If a university accepts you, it sends a Letter of Offer with the course, conditions and the deposit to pay. " +
         "Accept it per the offer letter. You'll pay the deposit from Nepal once your funds are released — " +
-        "see the NOC and fund-release steps in this plan.",
+        (fundReleaseInPlan
+          ? "see the NOC and fund-release steps in this plan."
+          : "see the NOC step in this plan."),
       timeEstimate: "1-3 days",
     });
 
-    // C · Confirm — the CoE. Reuses the human-verified CoE row's facts; CoE is mandatory to lodge
-    // since 1 Jan 2025, so without it the application is invalid.
+    // C · Confirm — the CoE. Copy is limited to the human-verified CoE row's facts
+    // (lib/data/source/au-student-visa-requirements.ts → "coe"): issued after you accept and pay
+    // the deposit; needed for the visa application; shows course start/end dates and fees. No
+    // dated mandate is asserted — the in-repo row carries none.
     out.push({
       kind: "get-coe",
       impact: "medium",
       title: "Get your Confirmation of Enrolment (CoE)",
       body:
         "After you accept your offer and pay the deposit, your provider issues an electronic Confirmation of Enrolment (CoE). " +
-        "Since 1 January 2025 you must include a CoE when you lodge your student visa — without it the application is invalid. " +
-        "Your CoE shows your course dates and fees.",
+        "You'll need it for your student visa application — it shows your course start and end dates and fees.",
       timeEstimate: "Days to weeks",
     });
 

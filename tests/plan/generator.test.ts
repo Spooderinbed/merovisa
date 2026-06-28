@@ -380,19 +380,39 @@ describe("generatePlan", () => {
         expect(submit.body.toLowerCase()).not.toMatch(/each provider has (its own|a) portal/);
       });
 
-      it("cross-references the NOC + fund-release steps in the accept-offer copy (no 'just pay')", () => {
-        const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
-        const accept = items.find((i) => i.kind === "accept-offer")!;
-        expect(accept.body).toContain("Letter of Offer");
-        expect(accept.body).toContain("NOC");
-        expect(accept.body).toContain("once your funds are released");
+      it("accept-offer references the fund-release step only when that step is in the plan (no dangling cross-reference)", () => {
+        // A remittable funding source emits prepare-fund-remittance, so the reference is real.
+        const withFunds = generatePlan({
+          sections: { finance: { source: "parents-family" } },
+          primaryDestinationId: "australia",
+          matches: [],
+          policy,
+        });
+        expect(withFunds.some((i) => i.kind === "prepare-fund-remittance")).toBe(true);
+        const acceptWith = withFunds.find((i) => i.kind === "accept-offer")!;
+        expect(acceptWith.body).toContain("Letter of Offer");
+        expect(acceptWith.body).toContain("NOC");
+        expect(acceptWith.body).toContain("once your funds are released");
+        expect(acceptWith.body).toContain("fund-release");
+
+        // No remittable source → no prepare-fund-remittance step → the copy must NOT point at it.
+        const noFunds = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
+        expect(noFunds.some((i) => i.kind === "prepare-fund-remittance")).toBe(false);
+        const acceptNo = noFunds.find((i) => i.kind === "accept-offer")!;
+        expect(acceptNo.body).toContain("NOC");
+        expect(acceptNo.body).toContain("once your funds are released");
+        expect(acceptNo.body).not.toContain("fund-release");
       });
 
-      it("get-coe carries the 1 January 2025 mandatory-CoE fact from the in-repo CoE row", () => {
+      it("get-coe states only the in-repo CoE-row facts — no unsourced '1 January 2025 / invalid' claim", () => {
         const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
         const coe = items.find((i) => i.kind === "get-coe")!;
-        expect(coe.body).toContain("1 January 2025");
         expect(coe.body).toContain("Confirmation of Enrolment");
+        expect(coe.body).toContain("student visa application");
+        expect(coe.body.toLowerCase()).toContain("course start");
+        // Honesty guard: the in-repo CoE row carries no dated mandate — never assert one.
+        expect(coe.body).not.toContain("2025");
+        expect(coe.body.toLowerCase()).not.toContain("invalid");
       });
 
       it("arrange-oshc carries the start-a-week-before / whole-stay rule", () => {
