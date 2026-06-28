@@ -3,13 +3,14 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getPrimaryAssessmentForUser, getProfile, listDocumentsForUser, listOpenPlanForUser, getOutcomesForUser } = vi.hoisted(() => ({
+const { getUser, getPrimaryAssessmentForUser, getProfile, listDocumentsForUser, listAllPlanForUser, getOutcomesForUser, listShortlistForUser } = vi.hoisted(() => ({
   getUser: vi.fn(),
   getPrimaryAssessmentForUser: vi.fn(),
   getProfile: vi.fn(),
   listDocumentsForUser: vi.fn(),
-  listOpenPlanForUser: vi.fn(),
+  listAllPlanForUser: vi.fn(),
   getOutcomesForUser: vi.fn(),
+  listShortlistForUser: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -18,8 +19,9 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
-vi.mock("@/lib/plan/repo", () => ({ listOpenPlanForUser }));
+vi.mock("@/lib/plan/repo", () => ({ listAllPlanForUser }));
 vi.mock("@/lib/outcomes/repo", () => ({ getOutcomesForUser }));
+vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
 vi.mock("@/components/dashboard/snapshot-card", () => ({
   SnapshotCard: ({ primary }: { primary: unknown }) => <div data-testid="snap">{primary ? "has-snap" : "empty-snap"}</div>,
 }));
@@ -32,6 +34,12 @@ vi.mock("@/components/dashboard/greeting", () => ({
   Greeting: ({ name }: { name: string | null }) => <div data-testid="greet">{name ?? "anon"}</div>,
 }));
 vi.mock("@/components/dashboard/readiness-map",   () => ({ ReadinessMap:    () => <div data-testid="rm" /> }));
+// Surface the derived profilePct signal so the wiring (real data → real panel) is asserted.
+vi.mock("@/components/dashboard/journey-rail", () => ({
+  JourneyRail: ({ signals }: { signals: { profilePct: number } }) => (
+    <div data-testid="journey">journey:{signals.profilePct}</div>
+  ),
+}));
 
 import DashboardPage from "@/app/(app)/dashboard/page";
 
@@ -41,10 +49,12 @@ describe("/dashboard page", () => {
     getPrimaryAssessmentForUser.mockReset();
     getProfile.mockReset();
     listDocumentsForUser.mockReset();
-    listOpenPlanForUser.mockReset();
-    listOpenPlanForUser.mockResolvedValue([]);
+    listAllPlanForUser.mockReset();
+    listAllPlanForUser.mockResolvedValue([]);
     getOutcomesForUser.mockReset();
     getOutcomesForUser.mockResolvedValue({ predictions: [], attempts: [], events: [] });
+    listShortlistForUser.mockReset();
+    listShortlistForUser.mockResolvedValue([]);
   });
 
   const openItem = {
@@ -77,9 +87,10 @@ describe("/dashboard page", () => {
     expect(screen.getByTestId("snap")).toHaveTextContent("has-snap");
     expect(screen.getByTestId("prompt")).toBeInTheDocument();
     expect(screen.getByTestId("rm")).toBeInTheDocument();
+    expect(screen.getByTestId("journey")).toBeInTheDocument();
   });
 
-  it("does not render the fake 'Your journey' tracker (no per-user stage data backs it)", async () => {
+  it("renders the real, signal-backed 'Your journey' panel (the old fake empty tracker is gone)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
     getPrimaryAssessmentForUser.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
@@ -89,7 +100,9 @@ describe("/dashboard page", () => {
     listDocumentsForUser.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
-    expect(screen.queryByText(/Your journey/i)).not.toBeInTheDocument();
+    // The panel now exists AND is fed the real profile-completeness signal (80) —
+    // it is no longer the data-less tracker that was removed.
+    expect(screen.getByTestId("journey")).toHaveTextContent("journey:80");
   });
 
   it("does not render the always-empty 'Recent updates' panel (no source yet)", async () => {
@@ -125,7 +138,7 @@ describe("/dashboard page", () => {
     });
     getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
     listDocumentsForUser.mockResolvedValue([]);
-    listOpenPlanForUser.mockResolvedValue([openItem]);
+    listAllPlanForUser.mockResolvedValue([openItem]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("prompt")).toHaveTextContent("next:Upload your IELTS report");
@@ -139,7 +152,7 @@ describe("/dashboard page", () => {
     });
     getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
     listDocumentsForUser.mockResolvedValue([]);
-    listOpenPlanForUser.mockResolvedValue([]);
+    listAllPlanForUser.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("prompt")).toHaveTextContent("caught-up");
@@ -153,7 +166,7 @@ describe("/dashboard page", () => {
     });
     getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
     listDocumentsForUser.mockResolvedValue([]);
-    listOpenPlanForUser.mockResolvedValue([
+    listAllPlanForUser.mockResolvedValue([
       { ...openItem, kind: "apply-for-noc", startedAt: "2026-06-10T00:00:00Z" },
     ]);
     const ui = await DashboardPage();
