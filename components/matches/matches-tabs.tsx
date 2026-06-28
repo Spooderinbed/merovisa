@@ -1,26 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Tab = "universities" | "scholarships" | "cost";
 
-// Hoisted to module scope so its identity is stable across renders. Defined inside
-// MatchesTabs (as a closure component) it was a fresh type every render, so React
-// remounted all three buttons on each render / tab switch.
-function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-active={active ? "true" : "false"}
-      className={`rounded-pill px-4 py-2 text-[14px] ${
-        active ? "bg-primary text-on-primary" : "text-ink-soft hover:bg-bg-tint"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
+const TABS: { key: Tab; label: string }[] = [
+  { key: "universities", label: "Universities" },
+  { key: "scholarships", label: "Scholarships" },
+  { key: "cost", label: "Cost estimate" },
+];
+
+const tabId = (key: Tab) => `matches-tab-${key}`;
+const panelId = (key: Tab) => `matches-panel-${key}`;
 
 export function MatchesTabs({
   universities,
@@ -32,14 +23,74 @@ export function MatchesTabs({
   cost: React.ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("universities");
+  // Stable per-tab button refs so keyboard navigation can move focus to the
+  // newly-selected tab (roving tabindex + automatic activation).
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+
+  function select(key: Tab) {
+    setTab(key);
+    tabRefs.current[key]?.focus();
+  }
+
+  function onTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    let next = index;
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        next = (index + 1) % TABS.length;
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        next = (index - 1 + TABS.length) % TABS.length;
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = TABS[next];
+    if (target) select(target.key);
+  }
+
+  const panelContent = tab === "universities" ? universities : tab === "scholarships" ? scholarships : cost;
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap gap-2">
-        <TabButton active={tab === "universities"} label="Universities" onClick={() => setTab("universities")} />
-        <TabButton active={tab === "scholarships"} label="Scholarships" onClick={() => setTab("scholarships")} />
-        <TabButton active={tab === "cost"} label="Cost estimate" onClick={() => setTab("cost")} />
+      <div role="tablist" aria-label="Match categories" className="flex flex-wrap gap-2">
+        {TABS.map(({ key, label }, index) => {
+          const active = tab === key;
+          return (
+            <button
+              key={key}
+              ref={(el) => {
+                tabRefs.current[key] = el;
+              }}
+              type="button"
+              role="tab"
+              id={tabId(key)}
+              aria-selected={active}
+              aria-controls={panelId(key)}
+              tabIndex={active ? 0 : -1}
+              data-active={active ? "true" : "false"}
+              onClick={() => select(key)}
+              onKeyDown={(event) => onTabKeyDown(event, index)}
+              className={`rounded-pill px-4 py-2 text-[14px] ${
+                active ? "bg-primary text-on-primary font-medium" : "text-ink-soft hover:bg-bg-tint"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
-      <div>{tab === "universities" ? universities : tab === "scholarships" ? scholarships : cost}</div>
+      <div role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} tabIndex={0}>
+        {panelContent}
+      </div>
     </div>
   );
 }
