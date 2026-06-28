@@ -33,7 +33,7 @@ export default function GlobalError({
         <main style={{ maxWidth: 520, margin: "0 auto", padding: "80px 20px" }}>
           <h1 style={{ fontSize: 24, lineHeight: 1.3, margin: 0 }}>Something went wrong</h1>
           <p style={{ fontSize: 15, color: "#55554e", marginTop: 12 }}>
-            We hit an unexpected error loading MyVisa. Your saved data is safe. Please try again.
+            We hit an unexpected error loading MyVisa. This is usually temporary — please try again.
           </p>
           <button
             type="button"

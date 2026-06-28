@@ -805,7 +805,7 @@
     },
     {
       "id": "MV-67",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "badge": "Trust-copy fix on the ONLY anon-reachable error boundary (global-error.tsx, MV-62). Tiny, self-contained, TDD.",

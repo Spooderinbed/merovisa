@@ -38,6 +38,17 @@ describe("global (root) error boundary", () => {
     await userEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(reset).toHaveBeenCalledTimes(1);
   });
+
+  // global-error fires when a layout itself throws, past every per-segment error.tsx —
+  // the one boundary an anonymous visitor can reach. An anon assessment that hit a
+  // persist-miss (id:null) has nothing saved, so promising "your saved data is safe"
+  // here is a false reassurance on a trust-first product. Copy must state only what's
+  // always true (MV-67).
+  it("does not promise saved data is safe — the one boundary anonymous users reach", () => {
+    render(<GlobalError error={new Error("root layout blew up")} reset={vi.fn()} />);
+    expect(screen.queryByText(/saved data/i)).toBeNull();
+    expect(screen.getByText(/usually temporary/i)).toBeInTheDocument();
+  });
 });
 
 // The (focused) group hosts the anonymous results (assess) and the recovered/saved
