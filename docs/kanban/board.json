@@ -958,6 +958,18 @@
       "title": "Working-with-agents panel: three gov depth rows (G.078/G.082/G.095)",
       "created": "2026-06-26",
       "entered": "2026-06-26"
+    },
+    {
+      "id": "MV-74",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "",
+      "file": "cards/MV-74-readiness-map.md",
+      "summary": "Design LOCKED + founder-approved 2026-06-28 (branch mv-74-readiness-map). Dashboard \"Your readiness\" card decomposing the single banded verdict into an honest map: rows Academics & English / Money & funding / Visa readiness (band from each scored dimension's factor influences: risk->risk, only-positive->strong, else->needs-work, under-informed->add-detail) + Documents (cheap honest count: not-started / in-progress, never \"ready\"). Completeness = quiet header line (not a row); Applications stay in OutcomeFunnel. SUPERSEDES the rejected global journey-rail design (linear step-N-of-6 funnel duplicated PromptCard+StatsRow; always-on marker = nagging chrome) per Codex gpt-5.5 + dashboard-read validation. Surfaces the engine's existing dimensions breakdown (funds+English ARE collected/scored, not data-blocked). Pure buildReadiness(signals) helper + presentational ReadinessMap REPLACING StatsRow; zero extra queries (reads primary AssessmentPayload dimensions already loaded). No scoring/migration; goldens byte-identical. Spec docs/superpowers/specs/2026-06-28-readiness-map-design.md. NEXT = BUILD per spec (TDD) after compact.",
+      "title": "Dashboard readiness map (decomposed verdict)",
+      "created": "2026-06-28",
+      "entered": "2026-06-28"
     }
   ]
 }
