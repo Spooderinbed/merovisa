@@ -5,17 +5,20 @@ import { safeNext } from "@/lib/auth/safe-next";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { getProfile } from "@/lib/profiles/repo";
 import { listDocumentsForUser } from "@/lib/documents/repo";
-import { listOpenPlanForUser } from "@/lib/plan/repo";
+import { listAllPlanForUser } from "@/lib/plan/repo";
 import { selectNextStep } from "@/lib/plan/select";
 import type { PlanItemRow } from "@/lib/plan/types";
 import { getOutcomesForUser } from "@/lib/outcomes/repo";
+import { listShortlistForUser } from "@/lib/matches/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { buildOutcomeFunnel, type OutcomeFunnelRow } from "@/lib/outcomes/funnel";
 import { Greeting } from "@/components/dashboard/greeting";
 import { SnapshotCard } from "@/components/dashboard/snapshot-card";
 import { PromptCard, type PromptState } from "@/components/dashboard/prompt-card";
 import { ReadinessMap } from "@/components/dashboard/readiness-map";
+import { JourneyRail } from "@/components/dashboard/journey-rail";
 import { OutcomeFunnel } from "@/components/outcomes/outcome-funnel";
+import { deriveJourneySignals } from "@/lib/journey/journey";
 import type { AssessmentPayload } from "@/lib/results/types";
 import type { ReadinessSignals } from "@/lib/readiness/readiness";
 import type { ProfileSections } from "@/lib/profiles/sections";
@@ -44,18 +47,34 @@ export default async function DashboardPage() {
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
   const user = userData.user;
-  const [primaryRow, profileRow, documents, planItems, outcomes] = await Promise.all([
+  const [primaryRow, profileRow, documents, allPlanItems, outcomes, shortlist] = await Promise.all([
     getPrimaryAssessmentForUser(supabase, user.id),
     getProfile(supabase, user.id),
     listDocumentsForUser(supabase, user.id),
-    listOpenPlanForUser(supabase, user.id),
+    listAllPlanForUser(supabase, user.id),
     getOutcomesForUser(supabase, user.id),
+    listShortlistForUser(supabase, user.id),
   ]);
   const primary = (primaryRow?.result as unknown as AssessmentPayload | undefined) ?? null;
   const profileSections = (profileRow?.sections as ProfileSections | undefined) ?? null;
   const name = profileSections?.personal?.name ?? null;
   const completenessPct = profileRow?.completeness ?? 0;
-  const prompt = pickPrompt(profileRow, primary, planItems);
+  // The prompt brain looks only at open items; the journey rail needs the whole plan
+  // (a finished plan is engagement too, so it can't be read from open items alone).
+  const openPlanItems = allPlanItems.filter((p) => p.status === "todo");
+  const prompt = pickPrompt(profileRow, primary, openPlanItems);
+
+  // "Your journey" — the cross-stage "where am I" rail, derived from the data already
+  // loaded above (one extra query: the shortlist). Every stage is a real signal.
+  const journeySignals = deriveJourneySignals({
+    hasAssessment: primary !== null,
+    profilePct: completenessPct,
+    shortlistCount: shortlist.length,
+    planItems: allPlanItems,
+    documentCount: documents.length,
+    attemptCount: outcomes.attempts.length,
+    events: outcomes.events.map((e) => e.eventType),
+  });
 
   // The readiness map decomposes the single verdict into the four scored signals the
   // student acts on — built from data already loaded above (zero extra queries). A
@@ -85,6 +104,7 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
       <Greeting name={name} partOfDay={partOfDay()} />
+      <JourneyRail signals={journeySignals} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
         <SnapshotCard primary={primary} destinationLabel={primaryRow?.destination_id ? humanize(primaryRow.destination_id) : null} />
         <PromptCard prompt={prompt} />
