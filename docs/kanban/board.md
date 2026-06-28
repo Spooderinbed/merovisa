@@ -29,9 +29,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-77** · P1 · Dashboard "Your journey" panel (MV-45 #3 where-am-I rail) — _IN REVIEW 2026-06-28 (PR #29, branch mv-77-journey-rail, founder-gated merge). Carved from the MV-45 umbrella -- the global cross-stage "where am I" orientation rail (consultancy-replacement: here is the sequence, you are here, next is X). A DASHBOARD PANEL (founder pick over persistent chrome -- we already have AppBar + MobileTabBar). 6 stages Assessed->Profile->Matches->Plan->Documents->Apply, each progress-derived from real signals only (mirrors buildReadiness/ReadinessMap); +1 query (listShortlistForUser), Plan load widened to all-items (zero net extra). Codex gpt-5.5 xhigh: SOUND-WITH-TWEAKS, all 3 adopted (Matches reached-word "shortlisted" not "done"; Assessed gated on scored result; Plan engagement covers completed items). Pure buildJourney() in lib/journey/journey.ts + presentational JourneyRail; honest frontier + visible skipped-gap; sr-only word-state summary; no reach-red. Spec: docs/superpowers/specs/2026-06-28-journey-rail-design.md. TDD. Apply=#15-funnel detail stays in MV-73 (no dup)._
 
 ## Blocked — 3
 
