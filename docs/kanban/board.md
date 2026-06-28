@@ -5,7 +5,7 @@
 > dashboard is [board.html](board.html) (open in a browser). See [README.md](README.md)
 > for how the board works.
 >
-> _Last updated: 2026-06-27 · stale threshold: 7d_
+> _Last updated: 2026-06-28 · stale threshold: 7d_
 
 
 ## Backlog — 11
@@ -17,10 +17,10 @@
 - **MV-43** · P1 · Wire dark mode (activate the dead token set) — _Phase B (audit #14, P1). The complete dark-mode token block is dead code behind a hardcoded data-theme='light' (layout.tsx:27). Add pre-hydration matchMedia prefers-color-scheme (or a light/dark/system toggle); keep the background-color (not shorthand) rule per the documented dark-mode custom-property re-resolution bug. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #14._
 - **MV-44** · P1 · Accessible tabs + unified accordion — _Phase B (audit #11/#21, P1). matches-tabs has no tab semantics + colour-only selection + no focus (WCAG 1.4.1) -> promote to a real tablist (aria-selected/controls, roving tabindex) or reuse the Segmented radiogroup. Fold the two divergent accordions (ui/disclosure.tsx vs profile/section-accordion.tsx) onto one primitive with an optional trailing chevron slot. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #11,#21._
 - **MV-45** · P1 · Progression visuals UMBRELLA (funnel rail + intake timeline + plan<->checklist chips) — _DECOMPOSED 2026-06-28 (was too big for one slice -- 4-5 distinct visuals on different surfaces). Tracks the REMAINING work; pick one sub-slice at a time. Phase B (audit #15/#16/#28, P1). DONE/carved out: #28 chip-on-ChecklistItem already shipped (MV-23 thread); #28 stage-tag-on-PlanItemCard -> MV-71 (in progress). REMAINING here: (#15) thin stepped rail per outcome-funnel row (Applied->Offer->Visa lodged->Granted) -- COORDINATE w/ the merged MV-39 self-report control on the same row; (#16) tick-timeline w/ 'now' marker on results/intake-timing.tsx; PLUS the MV-68-audit reframing: a global cross-stage 'where am I' journey rail in app/(app)/layout.tsx (wizard->results->account->documents->apply) -- biggest, warrants its own brainstorm. Flat dots, mono labels -- no new vocabulary. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #15,#16,#28 + 2026-06-27-mv68-ground-truth-audit.md #3._
-- **MV-46** · P2 · Motion + completion beats (guarded by reduced-motion) — _Phase B (audit #24/#25, P1-P2). Give ONLY the verdict a two-beat reveal (card rises, band pill settles ~120ms later); animate the completeness-ring arc (transition-[stroke-dashoffset], snaps today); ease plan 'Done'; replace the literal '✓ ' checklist string with the styled option-card checkmark; a quiet Applied-commit confirm. All inside calm-authority (no spinners/confetti) and MUST respect the Phase-A prefers-reduced-motion block. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #24,#25._
 - **MV-48** · P2 · Marketing imagery: two treated photos + imagery-policy.md — _Phase C (audit 'AI-imagery strategy' + Phase C, P2; FOUNDER-GATED — outward-facing brand). WRITE docs/imagery-policy.md (positive/negative prompt guardrails, anchored on authentic 20-24yo Nepali students) BEFORE any photo ships. Then exactly two heavily-treated documentary photos under ONE warm-paper recipe: landing-hero 4:5 (banded beside headline, never behind text) + Australia destination-header 16:9. Product body stays imageless forever (the anti-AI-look defense). Founder approves the actual images before they go live. Spec: docs/audits/2026-06-25-design-division-polish-audit.md._
 - **MV-49** · P3 · Flag pills + quiet NP home nod — _Phase C (audit #19, P2-P3). Replace marketing emoji flags (Windows tofu-box risk) with a bordered IBM Plex Mono ISO-code pill or flat single-colour SVG; add a quiet NP home nod for the Nepali user. Make Nepal->Australia specificity visible in copy/markup, not pixels. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #19._
 - **MV-50** · P3 · Hand-SVG marks on success empty states — _Phase C (audit #27, P3). One restrained teal hand-stroke mark on GENUINE success empty states only (never error/incomplete), extending the existing IconShield/IconGuide/IconDoc thin-stroke family muted to text-ink-faint. No AI spot-art. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #27._
+- **MV-76** · P2 · Verdict reveal + Applied-commit motion (audit #25) — _Phase B (audit #25) — carved from MV-46, the two completion beats on trust-sensitive surfaces left out of the audit-#24 slice: (1) give ONLY the verdict a two-beat reveal (card rises, band pill settles ~120ms later) — never animate the band wording/colour itself, banded verdicts stay honest; (2) a quiet Applied-commit confirm on the MV-39 outcome self-report control when a milestone is recorded. Both inside calm-authority (no spinners/confetti) and MUST respect the Phase-A prefers-reduced-motion block. Needs care: touches the verdict component + the MV-39 OutcomeSelfReport control. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #25._
 
 ## Ready (WIP 5) — 0
 
@@ -30,9 +30,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-46** · P2 · Ease the three inert completion beats (audit #24) — _Phase B (audit #24, P2) — SHIPPED the three inert-element completion beats -> PR #28 (branch mv-46-completion-beats, In Review). Calm-authority motion for elements that snapped: completeness-ring arc eases stroke-dashoffset (grows when a section completes); plan-item card eases its open->closed treatment (border/fill/opacity-70 dim); checklist tick is now the styled option-card checkmark (aria-hidden span) instead of a literal '✓ ' glued onto the label text. All ride ease-calm + collapse under the global prefers-reduced-motion block; no spinners/confetti. TDD +3 (one per beat, each watched fail first), 2 existing checklist assertions updated for the styled tick; gate green (typecheck/lint clean, suite 247 files/1547). Audit #25 (verdict two-beat reveal + Applied-commit confirm, trust-sensitive surfaces) carved -> MV-76. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #24._
 
 ## Blocked — 3
 

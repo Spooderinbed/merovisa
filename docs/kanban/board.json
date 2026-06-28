@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-27",
+  "updated": "2026-06-28",
   "staleDays": 7,
   "columns": [
     {
@@ -685,15 +685,15 @@
     },
     {
       "id": "MV-46",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
-      "badge": "",
+      "badge": "PR #28",
       "file": null,
-      "title": "Motion + completion beats (guarded by reduced-motion)",
-      "summary": "Phase B (audit #24/#25, P1-P2). Give ONLY the verdict a two-beat reveal (card rises, band pill settles ~120ms later); animate the completeness-ring arc (transition-[stroke-dashoffset], snaps today); ease plan 'Done'; replace the literal '✓ ' checklist string with the styled option-card checkmark; a quiet Applied-commit confirm. All inside calm-authority (no spinners/confetti) and MUST respect the Phase-A prefers-reduced-motion block. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #24,#25.",
+      "title": "Ease the three inert completion beats (audit #24)",
+      "summary": "Phase B (audit #24, P2) — SHIPPED the three inert-element completion beats -> PR #28 (branch mv-46-completion-beats, In Review). Calm-authority motion for elements that snapped: completeness-ring arc eases stroke-dashoffset (grows when a section completes); plan-item card eases its open->closed treatment (border/fill/opacity-70 dim); checklist tick is now the styled option-card checkmark (aria-hidden span) instead of a literal '✓ ' glued onto the label text. All ride ease-calm + collapse under the global prefers-reduced-motion block; no spinners/confetti. TDD +3 (one per beat, each watched fail first), 2 existing checklist assertions updated for the styled tick; gate green (typecheck/lint clean, suite 247 files/1547). Audit #25 (verdict two-beat reveal + Applied-commit confirm, trust-sensitive surfaces) carved -> MV-76. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #24.",
       "created": "2026-06-25",
-      "entered": "2026-06-25"
+      "entered": "2026-06-28"
     },
     {
       "id": "MV-47",
@@ -980,6 +980,18 @@
       "file": "MV-67-global-error-copy.md",
       "title": "Fix global-error.tsx false 'saved data is safe' claim (anon trust)",
       "summary": "BACKLOG (agent-ownable, founder-gated merge). app/global-error.tsx (the root-layout last-resort boundary shipped in MV-62) renders 'We hit an unexpected error loading MyVisa. Your saved data is safe. Please try again.' at ~line 36 (confirmed present). That saved-data claim is NOT always true: global-error is the ONLY error boundary an ANONYMOUS visitor can reach (it fires when a layout itself throws -- e.g. app/(focused)/layout.tsx or the root layout getUser() -- past the per-segment error.tsx). An anon user whose assessment hit a persist-miss (POST /api/assess returned 200 with id:null) may have NOTHING saved server-side, so promising their data is safe is a false reassurance on a trust-first product. FIX (surgical, copy-only): reword app/global-error.tsx to drop the unconditional saved-data claim and keep only what is always true -- e.g. 'We hit an unexpected error loading MyVisa. This is usually temporary - please try again.' Do NOT touch app/(app)/error.tsx (signed-in only, so 'your saved data is safe' is correct there) or app/(focused)/error.tsx (already avoids the claim -- both confirmed present). TDD: update the global-error describe block in tests/app/error-boundaries.test.tsx to assert the honest copy, watch it fail, then change the file. Gate: typecheck + lint + npx vitest run tests/app/error-boundaries.test.tsx (+ full suite before PR). No scoring/DB/migration; goldens byte-identical. Branch mv-67-global-error-copy off master, PR, founder-gated merge. Sourced from the founder 2026-06-28. Dossier: cards/MV-67-global-error-copy.md.",
+      "created": "2026-06-28",
+      "entered": "2026-06-28"
+    },
+    {
+      "id": "MV-76",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "",
+      "file": null,
+      "title": "Verdict reveal + Applied-commit motion (audit #25)",
+      "summary": "Phase B (audit #25) — carved from MV-46, the two completion beats on trust-sensitive surfaces left out of the audit-#24 slice: (1) give ONLY the verdict a two-beat reveal (card rises, band pill settles ~120ms later) — never animate the band wording/colour itself, banded verdicts stay honest; (2) a quiet Applied-commit confirm on the MV-39 outcome self-report control when a milestone is recorded. Both inside calm-authority (no spinners/confetti) and MUST respect the Phase-A prefers-reduced-motion block. Needs care: touches the verdict component + the MV-39 OutcomeSelfReport control. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #25.",
       "created": "2026-06-28",
       "entered": "2026-06-28"
     }
