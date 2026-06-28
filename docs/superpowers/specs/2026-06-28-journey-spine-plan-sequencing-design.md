@@ -185,3 +185,24 @@ line and self-report controls.
 - Pre-departure / arrival steps — a future slice (research-blocked `H.jsonl`).
 - Any per-application live state (that is the MV-73 outcome funnel's job, rendered separately).
 - New scoring, new "next action" brain, persistence, or migration — none needed.
+
+## Evidence
+
+Built via strict TDD (failing test → minimal code → green) on `mv-57-journey-spine`.
+
+- **Suite:** 247 files / **1544 tests** green (was 1500 → +44 this slice). `npm run typecheck` clean;
+  `npm run lint` 0 errors (1 pre-existing warning in `docs/kanban/build.mjs`, untouched).
+- **Files changed:** `lib/plan/generator.ts` (six AU-gated steps + sourced fee constant),
+  `lib/plan/phases.ts` (six `KIND_PHASE` entries + `JOURNEY_RANK`/`journeyRank`),
+  `lib/plan/select.ts` (`withinPhase` consults `journeyRank` first),
+  `lib/plan/sources.ts` (six new drift-guarded source entries), `lib/data/types.ts`
+  (`AuEnrolmentLodgementSource` interface).
+- **Files created:** `lib/data/source/au-enrolment-lodgement.ts` (Study Australia how-to-apply +
+  DHA after-you-apply, `lastVerified: 2026-06-28`).
+- **Ordering confirmed by tests:** Phase C = accept-offer → apply-for-noc →
+  prepare-fund-remittance → get-coe; `lodge-subclass-500` sorts last in D; `track-visa-decision`
+  is the sole E step; existing A/B/D within-phase order regression-pinned unchanged.
+- **completion.ts:** untouched — `completionFor` already defaults unknown kinds to the
+  self-report shape (verified by the existing `select.test.ts` "defaults unknown kinds" case),
+  so the six connective kinds get Done / Mark in progress / Dismiss with no edit.
+- **VISA_PREP_KINDS unchanged** → the `tests/checklist/plan-links.test.ts` drift guard stays green.

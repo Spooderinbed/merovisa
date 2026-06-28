@@ -26,13 +26,13 @@
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-57** · P3 · [My Plan: journey-spine connective steps (offer→CoE→OSHC→lodge→track)](../superpowers/specs/2026-06-28-journey-spine-plan-sequencing-design.md) — _Founder ask (2026-06-26) — RESEARCH-BLOCKED half of the plan gap. Plan says 'Once your offer arrives' (lib/plan/generator.ts:214) but never sequences how to GET the offer (submit uni application) or lodge Subclass 500 (ImmiAccount/VFS), and pre-departure is absent. Pre-departure/arrival/lodgement data sits as PENDING (unsliced) rows in docs/research-briefs/findings/H.jsonl (68 pending) + B.jsonl (VFS/payment G14-18); offer-acquisition (uni application-portal steps) has NO ledger data — needs NEW research. UNBLOCKS WHEN: H/B pending rows sliced into lib/data/source + offer-portal research sourced. Effort L, DATA-DEP._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-57** · P3 · [My Plan: journey-spine connective steps (offer→CoE→OSHC→lodge→track)](../superpowers/specs/2026-06-28-journey-spine-plan-sequencing-design.md) — _Founder ask (2026-06-26) — RESEARCH-BLOCKED half of the plan gap. Plan says 'Once your offer arrives' (lib/plan/generator.ts:214) but never sequences how to GET the offer (submit uni application) or lodge Subclass 500 (ImmiAccount/VFS), and pre-departure is absent. Pre-departure/arrival/lodgement data sits as PENDING (unsliced) rows in docs/research-briefs/findings/H.jsonl (68 pending) + B.jsonl (VFS/payment G14-18); offer-acquisition (uni application-portal steps) has NO ledger data — needs NEW research. UNBLOCKS WHEN: H/B pending rows sliced into lib/data/source + offer-portal research sourced. Effort L, DATA-DEP._
 
 ## Blocked — 3
 
