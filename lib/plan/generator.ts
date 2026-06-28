@@ -15,6 +15,7 @@ import { AU_POLICE_CERTIFICATE } from "@/lib/data/source/au-police-certificate";
 import { NEPAL_POLICE_CERTIFICATE } from "@/lib/data/source/nepal-police-certificate";
 import { NEPAL_DOCUMENT_PROCESSING_TIMES } from "@/lib/data/source/nepal-document-processing-times";
 import { NEPAL_PASSPORT_PROCESS } from "@/lib/data/source/nepal-passport-process";
+import { AU_SUBCLASS_500_APPLICATION_CHARGE_AUD } from "@/lib/data/policy/au-visa-fees";
 
 export interface GeneratorInputs {
   sections: ProfileSections;
@@ -65,6 +66,10 @@ const PP_CENTRE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "choose-centre")!.
 const PP_BARCODE = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "barcode-copy")!.summary;        // A.045
 const PP_BIO = NEPAL_PASSPORT_PROCESS.find((r) => r.id === "enrolment-biometrics")!.summary;    // A.046
 const PASSPORT_CENTRAL_DAYS = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id === "passport-central")!.typicalBusinessDays; // A.049 (read-only)
+// MV-57 journey-spine: the sourced Subclass 500 charge figure. The CoE/OSHC facts are
+// composed into locked prose from the human-verified coe/oshc requirement rows (their URLs
+// are pinned by the plan-source drift guard); the volatile fee rides this sourced constant.
+const SUBCLASS_500_CHARGE_AUD = AU_SUBCLASS_500_APPLICATION_CHARGE_AUD.value; // AUD 2,000 (re-verify 2026-07-01)
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];
@@ -303,6 +308,91 @@ export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
         "Confirm your agent on the OMARA public register — search it by their MARN (Migration Agent Registration Number) — before you pay or sign anything. " +
         "Not using an agent? Dismiss this step — you can apply for the visa yourself.",
       timeEstimate: "10 minutes",
+    });
+  }
+
+  // JOURNEY-SPINE CONNECTIVE STEPS (MV-57) — fill the empty Apply / Confirm / Prepare-visa /
+  // Visa-decision slots so the plan reads end-to-end. AU-gated (same gate as the other AU steps),
+  // calm future-tense, generic by design (no per-provider mechanics), self-report completion.
+  // Phase + within-phase order are set in lib/plan/phases.ts (KIND_PHASE + JOURNEY_RANK).
+  if (inputs.primaryDestinationId === "australia") {
+    // B · Apply — the phase's headline action. Hedged: not every provider runs a portal.
+    out.push({
+      kind: "submit-university-applications",
+      impact: "medium",
+      title: "Submit your university applications",
+      body:
+        "Apply to each university on your shortlist. Most accept applications through their own website, " +
+        "or by emailing them for an application form — there's no single national portal. " +
+        "Check each provider's 'how to apply' page for what they need.",
+      timeEstimate: "1-2 weeks",
+    });
+
+    // C · Confirm — accept the offer. Paying the deposit depends on the NOC and (when present)
+    // the fund-release step, so we cross-reference whichever steps are actually in this plan
+    // rather than imply you just pay. The fund-release step is only emitted when a remittable
+    // funding source is declared, so its reference is conditional to avoid a dangling pointer.
+    const fundReleaseInPlan = !!s.finance?.source && s.finance.source !== "scholarship-dependent";
+    out.push({
+      kind: "accept-offer",
+      impact: "medium",
+      title: "Accept your offer",
+      body:
+        "If a university accepts you, it sends a Letter of Offer with the course, conditions and the deposit to pay. " +
+        "Accept it per the offer letter. You'll pay the deposit from Nepal once your funds are released — " +
+        (fundReleaseInPlan
+          ? "see the NOC and fund-release steps in this plan."
+          : "see the NOC step in this plan."),
+      timeEstimate: "1-3 days",
+    });
+
+    // C · Confirm — the CoE. Copy is limited to the human-verified CoE row's facts
+    // (lib/data/source/au-student-visa-requirements.ts → "coe"): issued after you accept and pay
+    // the deposit; needed for the visa application; shows course start/end dates and fees. No
+    // dated mandate is asserted — the in-repo row carries none.
+    out.push({
+      kind: "get-coe",
+      impact: "medium",
+      title: "Get your Confirmation of Enrolment (CoE)",
+      body:
+        "After you accept your offer and pay the deposit, your provider issues an electronic Confirmation of Enrolment (CoE). " +
+        "You'll need it for your student visa application — it shows your course start and end dates and fees.",
+      timeEstimate: "Days to weeks",
+    });
+
+    // D · Prepare visa — OSHC. From the in-repo oshc requirement row.
+    out.push({
+      kind: "arrange-oshc",
+      impact: "medium",
+      title: "Arrange your health cover (OSHC)",
+      body:
+        "Your visa requires Overseas Student Health Cover (OSHC). Buy a policy that starts at least a week before your course " +
+        "and runs for your whole stay, and keep the insurer name and policy dates for your application.",
+      timeEstimate: "1-2 days",
+    });
+
+    // D · Prepare visa — lodge. Sorts last in D (JOURNEY_RANK). Fee hedged "currently … confirm"
+    // because it re-verifies 2026-07-01; the figure rides the sourced constant + drift guard.
+    out.push({
+      kind: "lodge-subclass-500",
+      impact: "high",
+      title: "Lodge your Subclass 500 visa in ImmiAccount",
+      body:
+        "You lodge the student visa yourself, online, through an ImmiAccount. Create the account, complete the application, " +
+        `attach your CoE, OSHC, financial evidence and the documents you've prepared, pay the visa application charge ` +
+        `(currently AUD ${SUBCLASS_500_CHARGE_AUD.toLocaleString()} — confirm the current amount), and submit.`,
+      timeEstimate: "1-2 days",
+    });
+
+    // E · Visa decision — track. The sole E step.
+    out.push({
+      kind: "track-visa-decision",
+      impact: "low",
+      title: "Track your visa decision",
+      body:
+        "After you lodge, track your application in ImmiAccount — check messages and status there, and respond promptly " +
+        "if they ask for more documents, biometrics or a health exam.",
+      timeEstimate: "Ongoing",
     });
   }
 

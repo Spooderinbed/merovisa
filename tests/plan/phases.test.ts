@@ -5,6 +5,7 @@ import {
   phaseOrder,
   isVisaPrep,
   visaPrepOrder,
+  journeyRank,
   VISA_PREP_KINDS,
 } from "@/lib/plan/phases";
 
@@ -64,6 +65,75 @@ describe("phaseOf", () => {
     expect(phaseOf("future-profile-thing")).toBe("A");
     // A future kind added to VISA_PREP_KINDS auto-lands in the visa phase.
     expect(VISA_PREP_KINDS.every((k) => phaseOf(k) === "C" || phaseOf(k) === "D")).toBe(true);
+  });
+});
+
+describe("phaseOf — MV-57 journey-spine connective steps", () => {
+  it("submit-university-applications lands in Phase B (apply)", () => {
+    expect(phaseOf("submit-university-applications")).toBe("B");
+  });
+
+  it("accept-offer and get-coe land in Phase C (confirm your place)", () => {
+    expect(phaseOf("accept-offer")).toBe("C");
+    expect(phaseOf("get-coe")).toBe("C");
+  });
+
+  it("arrange-oshc and lodge-subclass-500 land in Phase D (prepare your visa)", () => {
+    expect(phaseOf("arrange-oshc")).toBe("D");
+    expect(phaseOf("lodge-subclass-500")).toBe("D");
+  });
+
+  it("track-visa-decision lands in Phase E (visa decision)", () => {
+    expect(phaseOf("track-visa-decision")).toBe("E");
+  });
+
+  it("the six connective kinds are NOT visa-prep (no checklist mirror, drift guard untouched)", () => {
+    for (const k of [
+      "submit-university-applications",
+      "accept-offer",
+      "get-coe",
+      "arrange-oshc",
+      "lodge-subclass-500",
+      "track-visa-decision",
+    ]) {
+      expect(isVisaPrep(k)).toBe(false);
+    }
+  });
+});
+
+describe("journeyRank — within-phase primary ordering key", () => {
+  it("orders Phase C: accept-offer < apply-for-noc < prepare-fund-remittance < get-coe", () => {
+    expect(journeyRank("accept-offer")).toBeLessThan(journeyRank("apply-for-noc"));
+    expect(journeyRank("apply-for-noc")).toBeLessThan(journeyRank("prepare-fund-remittance"));
+    expect(journeyRank("prepare-fund-remittance")).toBeLessThan(journeyRank("get-coe"));
+  });
+
+  it("ranks lodge-subclass-500 after every other Phase D prep step", () => {
+    for (const k of [
+      "arrange-oshc",
+      "upload-proof-of-funds",
+      "season-funds-six-months",
+      "prepare-gs-answers",
+      "translate-certify-documents",
+      "prepare-health-exam",
+      "prepare-biometrics",
+      "prepare-police-certificate",
+      "verify-agent-marn",
+      "certify-sponsor-income",
+    ]) {
+      expect(journeyRank(k)).toBeLessThan(journeyRank("lodge-subclass-500"));
+    }
+  });
+
+  it("gives submit-university-applications a rank (first in B, ahead of any unranked default)", () => {
+    expect(journeyRank("submit-university-applications")).toBeLessThan(journeyRank("start-passport-process"));
+  });
+
+  it("gives unranked kinds a single shared default so existing A/B/D order is preserved", () => {
+    // Two unranked, same-phase kinds tie on journeyRank — their relative order then falls
+    // through to the existing visaPrepOrder → impact → id keys, unchanged.
+    expect(journeyRank("set-name")).toBe(journeyRank("add-grade"));
+    expect(journeyRank("upload-proof-of-funds")).toBe(journeyRank("season-funds-six-months"));
   });
 });
 

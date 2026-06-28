@@ -1,5 +1,5 @@
 import type { Impact, PlanItemRow } from "./types";
-import { PLAN_PHASES, phaseOf, phaseOrder, visaPrepOrder, type PlanPhase } from "./phases";
+import { PLAN_PHASES, phaseOf, phaseOrder, journeyRank, visaPrepOrder, type PlanPhase } from "./phases";
 
 export interface PlanPhaseGroup {
   phase: PlanPhase;
@@ -8,12 +8,16 @@ export interface PlanPhaseGroup {
 
 const IMPACT_RANK: Record<Impact, number> = { high: 0, medium: 1, low: 2 };
 
-/** Student-meaningful, deterministic order within a phase: the curated visa-prep
- *  sequence first (Genuine Student leads), then by impact, then by id. Never by
- *  created_at — batch inserts share a timestamp, so creation order is an artifact, not
- *  a meaning. The id tiebreak keeps every surface (plan page + dashboard) in agreement. */
+/** Student-meaningful, deterministic order within a phase: the explicit journey rank
+ *  first (MV-57 — the connective accept→…→CoE / lodge-last / track-sole sequence), then
+ *  the curated visa-prep sequence (Genuine Student leads), then by impact, then by id.
+ *  Unranked kinds share one journeyRank default, so they tie on that key and fall through
+ *  to the existing visaPrepOrder → impact → id keys — preserving all current ordering.
+ *  Never by created_at — batch inserts share a timestamp, so creation order is an artifact,
+ *  not a meaning. The id tiebreak keeps every surface (plan page + dashboard) in agreement. */
 function withinPhase(a: PlanItemRow, b: PlanItemRow): number {
   return (
+    journeyRank(a.kind) - journeyRank(b.kind) ||
     visaPrepOrder(a.kind) - visaPrepOrder(b.kind) ||
     IMPACT_RANK[a.impact] - IMPACT_RANK[b.impact] ||
     a.id - b.id

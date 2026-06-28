@@ -44,6 +44,61 @@ describe("orderOpenItems", () => {
   });
 });
 
+describe("orderOpenItems — MV-57 journey-spine within-phase order", () => {
+  it("Phase C reads accept-offer → apply-for-noc → prepare-fund-remittance → get-coe", () => {
+    // Shuffled input; journeyRank fixes the Nepal-real funds-release sequence regardless
+    // of impact (apply-for-noc/prepare-fund-remittance are medium, the connective steps too).
+    const items = [
+      mk({ id: 1, kind: "get-coe", impact: "medium" }),
+      mk({ id: 2, kind: "prepare-fund-remittance", impact: "medium" }),
+      mk({ id: 3, kind: "apply-for-noc", impact: "medium" }),
+      mk({ id: 4, kind: "accept-offer", impact: "medium" }),
+    ];
+    expect(orderOpenItems(items).map((i) => i.kind)).toEqual([
+      "accept-offer",
+      "apply-for-noc",
+      "prepare-fund-remittance",
+      "get-coe",
+    ]);
+  });
+
+  it("lodge-subclass-500 sorts last in Phase D, after every prep step", () => {
+    const items = [
+      mk({ id: 1, kind: "lodge-subclass-500", impact: "high" }), // high impact, but must still sort last
+      mk({ id: 2, kind: "arrange-oshc", impact: "medium" }),
+      mk({ id: 3, kind: "upload-proof-of-funds", impact: "high" }),
+      mk({ id: 4, kind: "season-funds-six-months", impact: "high" }),
+      mk({ id: 5, kind: "prepare-gs-answers", impact: "high" }),
+    ];
+    const ordered = orderOpenItems(items).map((i) => i.kind);
+    expect(ordered[ordered.length - 1]).toBe("lodge-subclass-500");
+  });
+
+  it("track-visa-decision is the sole Phase E step, sorting after all of D", () => {
+    const items = [
+      mk({ id: 1, kind: "track-visa-decision", impact: "low" }),
+      mk({ id: 2, kind: "lodge-subclass-500", impact: "high" }),
+      mk({ id: 3, kind: "submit-university-applications", impact: "medium" }),
+    ];
+    const ordered = orderOpenItems(items).map((i) => i.kind);
+    // B before D before E: submit (B) → lodge (D) → track (E).
+    expect(ordered).toEqual(["submit-university-applications", "lodge-subclass-500", "track-visa-decision"]);
+  });
+
+  it("regression: existing within-phase A/B/D order is unchanged by the journeyRank key", () => {
+    // Same fixture as the headline orderOpenItems test above — unranked kinds tie on
+    // journeyRank and fall through to the existing visaPrepOrder → impact → id keys.
+    const items = [
+      mk({ id: 1, kind: "prepare-police-certificate", impact: "medium" }),
+      mk({ id: 2, kind: "prepare-gs-answers", impact: "high" }),
+      mk({ id: 3, kind: "add-grade", impact: "high" }),
+      mk({ id: 4, kind: "set-name", impact: "low" }),
+      mk({ id: 5, kind: "upload-ielts-report", impact: "medium" }),
+    ];
+    expect(orderOpenItems(items).map((i) => i.id)).toEqual([3, 5, 4, 2, 1]);
+  });
+});
+
 describe("orderOpenItems determinism", () => {
   it("orders strictly by phase then impact then id — never by creation time", () => {
     // id 6 is Phase A (gap evidence), id 4 is Phase D (proof of funds): A precedes D

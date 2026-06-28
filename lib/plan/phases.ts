@@ -68,14 +68,54 @@ const KIND_PHASE = new Map<string, PhaseId>([
   ["document-gap-evidence", "A"],
   // B · Apply — prerequisites for lodging applications.
   ["start-passport-process", "B"],
+  // B · Apply — the headline action this phase promises.
+  ["submit-university-applications", "B"],
   // C · Confirm your place — post-offer steps tied to accepting + paying.
+  ["accept-offer", "C"],
   ["apply-for-noc", "C"],
   ["prepare-fund-remittance", "C"],
-  // D · Prepare your visa — Subclass 500 lodgement evidence. (The remaining
-  // VISA_PREP_KINDS land here via the fallback below.)
+  ["get-coe", "C"],
+  // D · Prepare your visa — Subclass 500 lodgement evidence + the lodge step itself.
+  // (The remaining VISA_PREP_KINDS land here via the fallback below.)
   ["upload-proof-of-funds", "D"],
   ["season-funds-six-months", "D"],
+  ["arrange-oshc", "D"],
+  ["lodge-subclass-500", "D"],
+  // E · Visa decision — track the lodged application.
+  ["track-visa-decision", "E"],
 ]);
+
+/**
+ * Within-phase journey rank (MV-57). The PRIMARY key in select.ts#withinPhase, ahead of the
+ * existing visaPrepOrder → impact → id fallback. withinPhase only ever compares same-phase
+ * items (groupByPhase / phaseOrder pre-separate phases), so one monotonic rank is safe.
+ *
+ * Only the kinds whose order this slice must FIX are ranked; every unranked kind shares the
+ * DEFAULT below, so two unranked same-phase kinds tie here and fall through to the existing
+ * keys — preserving all current A/B/D ordering. The connective steps interleave:
+ *   B: submit-university-applications first.
+ *   C: accept-offer → apply-for-noc → prepare-fund-remittance → get-coe.
+ *   D: …existing prep (unranked, current order)… → lodge-subclass-500 last.
+ *   E: track-visa-decision (sole step).
+ */
+const JOURNEY_RANK_DEFAULT = 100;
+const JOURNEY_RANK = new Map<string, number>([
+  // B — the apply headline leads its phase.
+  ["submit-university-applications", 0],
+  // C — accept → NOC → remittance → CoE (the Nepal-real funds-release sequence).
+  ["accept-offer", 10],
+  ["apply-for-noc", 20],
+  ["prepare-fund-remittance", 30],
+  ["get-coe", 40],
+  // D — lodge sorts AFTER every prep step (default 100), so rank it beyond the default.
+  ["lodge-subclass-500", 200],
+  // E — track is the sole step; rank kept low for clarity (no peers to order against).
+  ["track-visa-decision", 0],
+]);
+
+/** Within-phase journey rank for a kind; unranked kinds share one default so existing
+ *  same-phase order is preserved (the rank ties and the next sort key decides). */
+export const journeyRank = (kind: string): number => JOURNEY_RANK.get(kind) ?? JOURNEY_RANK_DEFAULT;
 
 /**
  * The journey phase a plan kind belongs to. Unmapped kinds default to the visa phase
