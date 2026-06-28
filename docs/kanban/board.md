@@ -26,13 +26,13 @@
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-44** · P1 · Accessible matches tablist (WCAG 1.4.1) — _SCOPED 2026-06-28 to audit #11 only (the P1 user-facing WCAG 1.4.1 win); the bundled P2 accordion-fold #21 carved to MV-75 (different surface, lower priority, keeps this slice surgical). #11: components/matches/matches-tabs.tsx renders fake tabs -- plain buttons, no tab semantics, colour-only selection, panel has no role -- failing WCAG 1.4.1 (use of colour) + 4.1.2 (name/role/value). Promote to a real WAI-ARIA tablist: role=tablist/tab/tabpanel, aria-selected/aria-controls/aria-labelledby, roving tabindex (active=0, rest=-1) with Arrow/Home/End nav + automatic activation, plus a non-colour weight cue on the active tab; focus ring rides the Phase-A global :focus-visible. Props API unchanged so app/(app)/matches/page.tsx is untouched. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #11._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-44** · P1 · Accessible matches tablist (WCAG 1.4.1) — _SCOPED 2026-06-28 to audit #11 only (the P1 user-facing WCAG 1.4.1 win); the bundled P2 accordion-fold #21 carved to MV-75 (different surface, lower priority, keeps this slice surgical). #11: components/matches/matches-tabs.tsx renders fake tabs -- plain buttons, no tab semantics, colour-only selection, panel has no role -- failing WCAG 1.4.1 (use of colour) + 4.1.2 (name/role/value). Promote to a real WAI-ARIA tablist: role=tablist/tab/tabpanel, aria-selected/aria-controls/aria-labelledby, roving tabindex (active=0, rest=-1) with Arrow/Home/End nav + automatic activation, plus a non-colour weight cue on the active tab; focus ring rides the Phase-A global :focus-visible. Props API unchanged so app/(app)/matches/page.tsx is untouched. Spec: docs/audits/2026-06-25-design-division-polish-audit.md #11._
 
 ## Blocked — 3
 
