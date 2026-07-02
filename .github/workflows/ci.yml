@@ -79,8 +79,12 @@ jobs:
       # The smoke `skipIf`s when its env vars are absent, so a silent export
       # failure would green CI having tested nothing. Assert the vars are set, the
       # stack answers, and that the run actually executed (>0 passed, 0 skipped).
+      # NO_COLOR: the greps below parse the log, so vitest's ANSI color codes
+      # must be off or the escape bytes break the pattern match.
       - name: Run integration smoke
         shell: bash
+        env:
+          NO_COLOR: "1"
         run: |
           test -n "$SUPABASE_TEST_URL"
           test -n "$SUPABASE_TEST_SERVICE_ROLE_KEY"

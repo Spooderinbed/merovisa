@@ -68,3 +68,7 @@ In `.github/workflows/ci.yml`, "Export Supabase test env" step only:
   native WebSocket, which Node 20 lacks (Node 22 ships it natively). Fixed by bumping the
   `integration` job's `node-version` to `"22"` (the `validate` job stays on 20). Verification
   again = the PR's next Actions run.
+- **Third layer (run 28577924495):** on node 22 the itests RAN and ALL PASSED (1 file / 3 tests
+  passed), but the step still exited 1 — its own log-grep guard misread vitest's ANSI-colored
+  output (escape bytes between `Tests` and `3 passed` break the plain-text pattern). Fixed via
+  step-level `NO_COLOR: "1"` on the smoke step; grep patterns unchanged (correct for plain text).
