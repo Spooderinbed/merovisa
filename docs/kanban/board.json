@@ -195,14 +195,15 @@
     },
     {
       "id": "MV-11",
-      "col": "backlog",
+      "col": "done",
       "pri": "P3",
       "owner": "agent",
       "file": null,
       "title": "AI guide",
-      "summary": "Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable.",
+      "summary": "CLOSED STALE 2026-07-02 (ground-truth audit): fully superseded by MV-63 (DeepSeek client + grounded context + auth-gated route + chat UI, PR #10) hardened by MV-78 (timeout, PR #32) + MV-79 (forged-history defense, PR #33); DEEPSEEK_API_KEY set, live in prod at master 9c9fd0b. The card’s literal spec (Claude Haiku + cached-corpus RAG) would be a NEW architecture card if ever wanted — the shipped deterministic-grounding design already delivers the student outcome. Original: Claude Haiku 4.5 + cached-corpus RAG over the TS fact layer. Deferred until the deterministic core is reliable.",
       "created": "2026-06-18",
-      "entered": "2026-06-18"
+      "entered": "2026-07-02",
+      "badge": "CLOSED STALE 2026-07-02: superseded by MV-63 (+MV-78/79 hardening) — guide LIVE in prod"
     },
     {
       "id": "MV-13",
@@ -392,7 +393,7 @@
       "badge": "founder product call",
       "file": "cards/MV-27-checklist-plan-dedup-rows.md",
       "title": "Strip vs keep the mirrored visa-prep rows (checklist ↔ plan)",
-      "summary": "BACKLOG — founder product call, spun from MV-23 part (2). The per-program checklist (lib/checklist/generator.ts) and the plan generator both emit the same AU visa-prep steps (NOC, biometrics, police certificate, GS statement, translations, agent MARN). MV-23 part (1) shipped mental-model copy framing the two surfaces (checklist = per-program requirement reference; plan = single action queue) and the completion ACTION is already deduped by the plan-links design, so the worst failure mode (double-completion) is already mitigated. The remaining call: STRIP the mirrored visa-prep rows from lib/checklist/generator.ts so they live only in the plan, OR KEEP the plan-links completion-mirror. A product/UX decision, not an agent call — needs founder direction before any build. Full spec in the MV-23 dossier. Dossier: cards/MV-27-checklist-plan-dedup-rows.md.",
+      "summary": "DECISION CONTEXT UPDATE 2026-07-02: since this card was cut, MV-69 (readiness rollup) and MV-71 (reverse stage tags) shipped ON TOP of the mirrored rows — STRIP is no longer the cheap option; KEEP-with-explanation is now the low-risk default. Original: BACKLOG — founder product call, spun from MV-23 part (2). The per-program checklist (lib/checklist/generator.ts) and the plan generator both emit the same AU visa-prep steps (NOC, biometrics, police certificate, GS statement, translations, agent MARN). MV-23 part (1) shipped mental-model copy framing the two surfaces (checklist = per-program requirement reference; plan = single action queue) and the completion ACTION is already deduped by the plan-links design, so the worst failure mode (double-completion) is already mitigated. The remaining call: STRIP the mirrored visa-prep rows from lib/checklist/generator.ts so they live only in the plan, OR KEEP the plan-links completion-mirror. A product/UX decision, not an agent call — needs founder direction before any build. Full spec in the MV-23 dossier. Dossier: cards/MV-27-checklist-plan-dedup-rows.md.",
       "created": "2026-06-23",
       "entered": "2026-06-23"
     },
@@ -532,7 +533,7 @@
       "badge": "founder product decision (decide-first)",
       "file": "cards/MV-38-documents-purpose-and-next-step.md",
       "title": "Proof-of-funds as \"next step\" + what /documents is FOR",
-      "summary": "BACKLOG — founder product call. Founder #4: proof-of-funds 'looks out of place' on the home page and is 'placed as the next step', and 'uploading documents doesn't do anything for the student's actual process.' WHY IT'S THERE (verified): the plan generator emits upload-proof-of-funds whenever finance.proofUploaded is falsy (lib/plan/generator.ts:122-131; AUD 29,710 is real DHA-sourced, not a stub), and the dashboard surfaces the SINGLE top-ranked open plan item as the 'Next step' card (app/(app)/dashboard/page.tsx:30-36, selectNextStep) — so it appears whenever it's the highest-impact incomplete item, out of journey context. REAL ISSUE: /documents is STORE-ONLY (a personal locker — documents/page.tsx:27-30 'upload photos so you can pull them up'; completion = mere presence of an upload), it doesn't submit to DHA/universities or validate the amount — so 'Upload in documents' as THE next step can imply the real process advanced when it didn't. DECIDE: (a) reframe /documents as a readiness checklist (prep, not submission); (b) demote store-only uploads from the single dashboard 'next step'; (c) keep but make the value explicit + add a 'source: DHA' line (audit P3). Best resolved WITH MV-37 (in a journey, proof-of-funds lands in the financial-evidence phase). Dossier: cards/MV-38-documents-purpose-and-next-step.md.",
+      "summary": "PROSE REFRESHED 2026-07-02 (ground-truth audit): the “context-free next step” half is RESOLVED by MV-37 (2980e98 — guided A–E timeline replaces impact-ranked queue in lib/plan/select.ts); SourceLine criterion also shipped. Residual ask for the founder decision is ONLY the proof-of-funds-as-next-step framing + what /documents is FOR copy. Original: BACKLOG — founder product call. Founder #4: proof-of-funds 'looks out of place' on the home page and is 'placed as the next step', and 'uploading documents doesn't do anything for the student's actual process.' WHY IT'S THERE (verified): the plan generator emits upload-proof-of-funds whenever finance.proofUploaded is falsy (lib/plan/generator.ts:122-131; AUD 29,710 is real DHA-sourced, not a stub), and the dashboard surfaces the SINGLE top-ranked open plan item as the 'Next step' card (app/(app)/dashboard/page.tsx:30-36, selectNextStep) — so it appears whenever it's the highest-impact incomplete item, out of journey context. REAL ISSUE: /documents is STORE-ONLY (a personal locker — documents/page.tsx:27-30 'upload photos so you can pull them up'; completion = mere presence of an upload), it doesn't submit to DHA/universities or validate the amount — so 'Upload in documents' as THE next step can imply the real process advanced when it didn't. DECIDE: (a) reframe /documents as a readiness checklist (prep, not submission); (b) demote store-only uploads from the single dashboard 'next step'; (c) keep but make the value explicit + add a 'source: DHA' line (audit P3). Best resolved WITH MV-37 (in a journey, proof-of-funds lands in the financial-evidence phase). Dossier: cards/MV-38-documents-purpose-and-next-step.md.",
       "created": "2026-06-24",
       "entered": "2026-06-24"
     },
@@ -822,8 +823,8 @@
       "owner": "agent",
       "badge": "human-gate",
       "file": null,
-      "title": "Marketing imagery: two treated photos + imagery-policy.md",
-      "summary": "Phase C (audit 'AI-imagery strategy' + Phase C, P2; FOUNDER-GATED — outward-facing brand). WRITE docs/imagery-policy.md (positive/negative prompt guardrails, anchored on authentic 20-24yo Nepali students) BEFORE any photo ships. Then exactly two heavily-treated documentary photos under ONE warm-paper recipe: landing-hero 4:5 (banded beside headline, never behind text) + Australia destination-header 16:9. Product body stays imageless forever (the anti-AI-look defense). Founder approves the actual images before they go live. Spec: docs/audits/2026-06-25-design-division-polish-audit.md.",
+      "title": "Marketing imagery: two treated photos (landing-hero 4:5 + destination-header 16:9) per docs/imagery-policy.md",
+      "summary": "RESCOPED 2026-07-02 (ground-truth audit): docs/imagery-policy.md ALREADY SHIPPED in a49d8a3 (Phase A) — struck from deliverables (stale-prose trap). Remaining slice = source + treat the two marketing photos only (landing hero 4:5, Australia destination header 16:9), founder-gated at ship time. Original: Phase C (audit 'AI-imagery strategy' + Phase C, P2; FOUNDER-GATED — outward-facing brand). WRITE docs/imagery-policy.md (positive/negative prompt guardrails, anchored on authentic 20-24yo Nepali students) BEFORE any photo ships. Then exactly two heavily-treated documentary photos under ONE warm-paper recipe: landing-hero 4:5 (banded beside headline, never behind text) + Australia destination-header 16:9. Product body stays imageless forever (the anti-AI-look defense). Founder approves the actual images before they go live. Spec: docs/audits/2026-06-25-design-division-polish-audit.md.",
       "created": "2026-06-25",
       "entered": "2026-06-25"
     },
@@ -907,7 +908,7 @@
       "badge": "",
       "file": null,
       "title": "Scholarships how-to: eligibility + application-process dataset (RESEARCH-BLOCKED)",
-      "summary": "Founder ask (2026-06-26) — the RESEARCH-BLOCKED half of scholarship guidance. Full ask = per-award eligibility criteria + application steps + required docs. The honestly-shippable, LEDGER-BACKED subset was extracted & shipped 2026-06-26 as MV-58 (research-degree-only signal on UniMelb GRS + Sydney $135M pool relabel). What REMAINS here is still blocked: the brief (docs/research-briefs/2026-06-26-mv55-scholarship-eligibility.md) sourced eligibility/figure/process facts but flagged them NEEDS-REVERIFY (snippet-sourced; provider pages 403-block automated fetch) — NOT ledgered as findings, so surfacing them breaks trust-first. UNBLOCKS WHEN: a per-scholarship eligibility+application-process dataset is sourced & VERIFIED & ledgered, then expand ScholarshipsPanel with a 'Who's eligible / How to apply' block. Effort M, DATA-DEP.",
+      "summary": "RE-SHAPE NOTE 2026-07-02 (ground-truth audit): not truly externally blocked — pickup = ONE research+build slice: agent re-verifies the 4 flagged gaps against primary sources (DFAT Policy Handbook PDF, UniMelb GRS rates, Sydney RTP stipend), ledgers verified facts as J findings, then builds eligibility/how-to panel rows. Original: Founder ask (2026-06-26) — the RESEARCH-BLOCKED half of scholarship guidance. Full ask = per-award eligibility criteria + application steps + required docs. The honestly-shippable, LEDGER-BACKED subset was extracted & shipped 2026-06-26 as MV-58 (research-degree-only signal on UniMelb GRS + Sydney $135M pool relabel). What REMAINS here is still blocked: the brief (docs/research-briefs/2026-06-26-mv55-scholarship-eligibility.md) sourced eligibility/figure/process facts but flagged them NEEDS-REVERIFY (snippet-sourced; provider pages 403-block automated fetch) — NOT ledgered as findings, so surfacing them breaks trust-first. UNBLOCKS WHEN: a per-scholarship eligibility+application-process dataset is sourced & VERIFIED & ledgered, then expand ScholarshipsPanel with a 'Who's eligible / How to apply' block. Effort M, DATA-DEP.",
       "created": "2026-06-26",
       "entered": "2026-06-26"
     },
@@ -1041,6 +1042,18 @@
       "title": "Guide: neutralise client-forged assistant history (prompt-injection defense)",
       "summary": "IN REVIEW 2026-06-29 (branch mv-79-guide-untrusted-history, founder-gated merge). Codex finding #1 from the MV-78 go-live trust review (the meatiest residual). POST /api/guide/chat spread the browser history verbatim, incl. role:\"assistant\" turns -- the chat API treats those as the model's OWN authoritative prior output, so any client could forge \"Your visa is guaranteed approved\" and the guide would build on it (worst fabrication path for a trust-first guide). Fix: new pure buildSafeHistoryMessages() (lib/guide/history.ts) folds the whole transcript into ONE user-role block framed as unverified/browser-reported, authority pointed back at the server-built system context -- no client message ever reaches the provider as role:assistant. Multi-turn continuity preserved (labelled Student asked/Guide replied); current question stays the trusted final user turn; server re-grounds facts every turn anyway. TDD +4 (3 helper + 1 route injection-defense); typecheck+lint clean; suite 251 files / 1588 green.",
       "created": "2026-06-29",
+      "entered": "2026-07-02"
+    },
+    {
+      "id": "MV-80",
+      "col": "ready",
+      "pri": "P0",
+      "owner": "agent",
+      "badge": "suite red by design since 2026-07-01 — scout evidence ready",
+      "file": "cards/MV-80-fy2026-27-reverify.md",
+      "title": "FY2026-27 data re-verify: 16 overdue reverifyBy records (DHA fees, wages, ART, ATO)",
+      "summary": "The designed 1-July freshness timer FIRED: tests/data/freshness.test.ts red with 16 records at reverifyBy 2026-07-01 (AU_SUBCLASS_500_APPLICATION_CHARGE_AUD; AU_SKILLED_VISA_CHARGES[0-3]; AU_TAX_FIGURES[1-4]; AU_STUDENT_WORKER_WAGES[1-6]; NEPAL_REFUSAL_RECOVERY[11]). A 4-agent read-only scout verified every record against its authoritative live source on 2026-07-02: 12/16 CHANGED — subclass 500 AUD 2,000→2,500; skilled 189/491/186 → 6,135/6,140/6,140; 191 505→630; NMW 24.95→26.44 in force (announced→current collapse needed); Hospitality casual intro rows re-based on 25.74; ART fee 3,580→3,727; all 4 ATO tax figures unchanged. Evidence packet with per-record source URLs: docs/audits/2026-07-02-fy2026-27-reverify-scout.md. Fix = update values + lastVerified 2026-07-02 + reverifyBy 2027-07-01, open sources during the edit (never blind-copy), full suite green, branch+PR.",
+      "created": "2026-07-02",
       "entered": "2026-07-02"
     }
   ]
