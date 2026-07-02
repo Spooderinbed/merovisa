@@ -36,3 +36,10 @@ Docs-only slice: gate = `npm run typecheck && npm run lint && npm test` stay gre
 - Filed 2026-07-03 from the plan-approval session (spec committed same day; PR carries spec + Phase 0 cards).
 - Founder decisions already locked: Elevated-calm direction, global placeless brand, full palette rebrand, funnel-first, corridor theming post-onboarding (see spec Context §5).
 - After this card: MV-83 (palettes, founder pick) + MV-84 (system spec, ADR) can run in parallel off the digest; batch their founder reviews.
+
+## Progress (2026-07-03, in-flight)
+
+- Running in worktree `.claude/worktrees/mv-82-mobbin-rebrand-research`, branch `mv-82-mobbin-rebrand-research` off master `115f949`. Mobbin MCP verified live.
+- Gate baseline recorded pre-change: typecheck clean, lint 1 pre-existing warning, suite 1 failed/1588 passed — the known 1-July freshness failure owned by MV-80 (in review, zero file overlap).
+- Architecture: one research subagent per app (context economy — Mobbin returns inline images); each writes its section to `%LOCALAPPDATA%/Temp/claude/C--Users-thapa-OneDrive-Desktop-work-merovisa/98fd23f5-2f80-41fb-a498-bfe84c84f059/scratchpad/mv82-sections/NN-app.md` (01-phantom … 10-duolingo). Skeleton at `docs/design/2026-07-03-rebrand-research.md` with `<!-- PER-APP TABLES -->`, `<!-- SYNTHESIS -->`, `<!-- IMPLICATIONS -->` markers.
+- Cold-resume: if sections exist, assemble them into the skeleton (replace markers), have a synthesis agent read all 10 files and draft 5 wizard patterns + 3 premium tells (each citing ≥2 apps) + MV-83/84/85 implications (validate the three seed palettes: Night indigo / Deep blue / Dusk plum), verify acceptance criteria, board → inreview, PR vs master.
