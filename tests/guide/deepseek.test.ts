@@ -58,4 +58,19 @@ describe("deepseekChat", () => {
     );
     await expect(deepseekChat([{ role: "user", content: "hi" }])).rejects.toThrow(/no content/i);
   });
+
+  it("bounds the request with a timeout signal so a hung provider still fails fast (calm 503)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: "ok" } }] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await deepseekChat([{ role: "user", content: "hi" }]);
+
+    // Even with no caller signal, the request carries an AbortSignal — a hung
+    // DeepSeek call aborts and surfaces as the route's calm 503 rather than
+    // hanging until the platform terminates the function.
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
 });

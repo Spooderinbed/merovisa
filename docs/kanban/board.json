@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-29",
+  "updated": "2026-07-02",
   "staleDays": 7,
   "columns": [
     {
@@ -1020,8 +1020,20 @@
       "entered": "2026-06-28"
     },
     {
+      "id": "MV-78",
+      "col": "done",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "PR #32",
+      "file": "cards/MV-78-guide-go-live-hardening.md",
+      "title": "AI guide go-live trust hardening (Codex review)",
+      "summary": "Codex (gpt-5.5 xhigh) pre-go-live trust review of the now-LIVE AI guide (MV-63, key set in Vercel 2026-06-29). SHIPPED the one material, clean must-fix: a provider timeout (AbortSignal.timeout 20s) in lib/guide/deepseek.ts so a hung DeepSeek call aborts → the route serves its calm 503 instead of hanging (the calm-503 trust promise was otherwise broken). TDD +1. The system prompt + context builder are already trust-sound (scoring internals omitted, banded-only, no-draft, auth-gated). Remaining 7 Codex findings TRIAGED in the dossier for founder to prioritize: worth-doing = #1 untrusted client assistant-history (prompt-injection) + #7 per-line cost-note; SKIP/YAGNI = #2 hard output-filter (system prompt is the v1 gate); low/near-FP = #4 base-url allowlist, #5/#6 reason numbers, #8 source deferral. TDD; typecheck+lint clean.",
+      "created": "2026-06-29",
+      "entered": "2026-07-02"
+    },
+    {
       "id": "MV-79",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "PR #33",
@@ -1029,7 +1041,7 @@
       "title": "Guide: neutralise client-forged assistant history (prompt-injection defense)",
       "summary": "IN REVIEW 2026-06-29 (branch mv-79-guide-untrusted-history, founder-gated merge). Codex finding #1 from the MV-78 go-live trust review (the meatiest residual). POST /api/guide/chat spread the browser history verbatim, incl. role:\"assistant\" turns -- the chat API treats those as the model's OWN authoritative prior output, so any client could forge \"Your visa is guaranteed approved\" and the guide would build on it (worst fabrication path for a trust-first guide). Fix: new pure buildSafeHistoryMessages() (lib/guide/history.ts) folds the whole transcript into ONE user-role block framed as unverified/browser-reported, authority pointed back at the server-built system context -- no client message ever reaches the provider as role:assistant. Multi-turn continuity preserved (labelled Student asked/Guide replied); current question stays the trusted final user turn; server re-grounds facts every turn anyway. TDD +4 (3 helper + 1 route injection-defense); typecheck+lint clean; suite 251 files / 1588 green.",
       "created": "2026-06-29",
-      "entered": "2026-06-29"
+      "entered": "2026-07-02"
     }
   ]
 }
