@@ -26,9 +26,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-78** · P2 · [AI guide go-live trust hardening (Codex review)](cards/MV-78-guide-go-live-hardening.md) — _Codex (gpt-5.5 xhigh) pre-go-live trust review of the now-LIVE AI guide (MV-63, key set in Vercel 2026-06-29). SHIPPED the one material, clean must-fix: a provider timeout (AbortSignal.timeout 20s) in lib/guide/deepseek.ts so a hung DeepSeek call aborts → the route serves its calm 503 instead of hanging (the calm-503 trust promise was otherwise broken). TDD +1. The system prompt + context builder are already trust-sound (scoring internals omitted, banded-only, no-draft, auth-gated). Remaining 7 Codex findings TRIAGED in the dossier for founder to prioritize: worth-doing = #1 untrusted client assistant-history (prompt-injection) + #7 per-line cost-note; SKIP/YAGNI = #2 hard output-filter (system prompt is the v1 gate); low/near-FP = #4 base-url allowlist, #5/#6 reason numbers, #8 source deferral. TDD; typecheck+lint clean._
 
 ## Blocked — 3
 

@@ -7,6 +7,10 @@ export interface ChatMessage {
 
 const DEFAULT_BASE_URL = "https://api.deepseek.com";
 const MODEL = "deepseek-chat";
+// Bound every provider call. Without this a hung DeepSeek request never aborts,
+// so the route's calm 503 never fires and the function hangs until the platform
+// kills it — the opposite of "fail honestly, fast".
+const DEFAULT_TIMEOUT_MS = 20_000;
 
 /**
  * Minimal server-side DeepSeek client (OpenAI-compatible chat completions). `server-only`
@@ -18,11 +22,14 @@ const MODEL = "deepseek-chat";
  */
 export async function deepseekChat(
   messages: ChatMessage[],
-  opts: { temperature?: number; maxTokens?: number; signal?: AbortSignal } = {},
+  opts: { temperature?: number; maxTokens?: number; signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<string> {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) throw new Error("DEEPSEEK_API_KEY is not configured");
   const baseUrl = process.env.DEEPSEEK_BASE_URL || DEFAULT_BASE_URL;
+  // Honor a caller-supplied signal if given, else bound the call with a timeout
+  // so a hung provider aborts and surfaces as the route's calm 503.
+  const signal = opts.signal ?? AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -37,7 +44,7 @@ export async function deepseekChat(
       max_tokens: opts.maxTokens ?? 800,
       stream: false,
     }),
-    signal: opts.signal,
+    signal,
   });
 
   if (!res.ok) {
