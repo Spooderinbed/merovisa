@@ -25,9 +25,9 @@
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-81** · P1 · [CI integration job env mapping fix (renamed Supabase CLI status output)](cards/MV-81-ci-integration-env-fix.md) — _The integration job's 'Export Supabase test env' step has failed on every run for ~10 days (run 28576388321: both SUPABASE_TEST_URL/SUPABASE_TEST_SERVICE_ROLE_KEY empty in the smoke step's env) because current Supabase CLI versions emit unprefixed names (API_URL, SERVICE_ROLE_KEY, SECRET_KEY) in `supabase status -o env` output that the old fallback chains never checked. Fixed by extending both fallback chains to include the unprefixed names and adding a fail-fast guard that exits 1 with a names-only diagnostic (never values) when the mapping still misses, so a future CLI rename is a one-glance fix instead of a silent empty-env failure two steps downstream. Only the one step + its comment touched; continue-on-error preserved. Verification is the PR's own Actions run reaching the smoke step with non-empty env._
 
 ## Blocked — 3
 
