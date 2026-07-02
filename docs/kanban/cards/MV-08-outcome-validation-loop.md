@@ -1,6 +1,6 @@
 # MV-08 — Outcome-validation loop ("the moat")
 
-**Status:** BUILD IN PROGRESS (2026-06-20). Migration applied to prod (Slice 3); capture routes + applied hook shipped (Slice 4); **UI capture trigger + funnel-root fix shipped (Slice 5, `4072730`)** — a user can now mark a program Applied and the funnel is actually progressable (the 409 dead-end is closed; event-less attempts self-heal). Founder gates remain: Q3 verification-path legal gates (PIA/minor-consent, VEVO ToS) before the inbound-email/verification slices; a live UI smoke + cleanup of the smoke-test prod rows.
+**Status:** capture side SHIPPED; verification path founder/legal-gated (updated 2026-07-02 — no build work pending). Migration applied to prod (Slice 3); capture routes + applied hook shipped (Slice 4); **UI capture trigger + funnel-root fix shipped (Slice 5, `4072730`)** — a user can now mark a program Applied and the funnel is actually progressable (the 409 dead-end is closed; event-less attempts self-heal). Founder gates remain: Q3 verification-path legal gates (PIA/minor-consent, VEVO ToS) before the inbound-email/verification slices; a live UI smoke + cleanup of the smoke-test prod rows.
 **Owner:** agent · **Priority:** P2 · **Gate to build:** founder approves migration + real traffic exists.
 
 ## What this card is
