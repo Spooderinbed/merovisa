@@ -37,9 +37,12 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      # Node 22, not 20: supabase-js realtime needs native WebSocket, which Node
+      # 20 lacks — the itest fails there with "Node.js 20 detected without
+      # native WebSocket support". The fast validate lane stays on 20.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
       - run: npm ci
       # ubuntu-latest ships Docker preinstalled; `supabase start` brings up the

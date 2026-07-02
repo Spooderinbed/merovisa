@@ -56,3 +56,15 @@ In `.github/workflows/ci.yml`, "Export Supabase test env" step only:
 - This card documents the fix; it does not flip to Done until the PR's own integration run is
   observed reaching the smoke step with a populated env (founder or next agent to confirm from
   the Actions tab, then move the card).
+
+## Evidence (PR #35 run 28577528455)
+
+- **Env fix VERIFIED:** the smoke step reached with `SUPABASE_TEST_URL=http://127.0.0.1:54321`
+  and a populated service-role key; the curl health check against `/rest/v1/` passed. The
+  original root cause (unprefixed CLI env names → empty `$GITHUB_ENV`) is closed.
+- **Second layer exposed and fixed:** with the env finally populated, the itest itself failed —
+  `tests/integration/claim-path.itest.ts` → `Error: Node.js 20 detected without native
+  WebSocket support` (1 file failed, 3 tests skipped). Newer supabase-js realtime requires
+  native WebSocket, which Node 20 lacks (Node 22 ships it natively). Fixed by bumping the
+  `integration` job's `node-version` to `"22"` (the `validate` job stays on 20). Verification
+  again = the PR's next Actions run.
