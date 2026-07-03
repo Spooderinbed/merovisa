@@ -1157,7 +1157,7 @@
       "col": "inreview",
       "pri": "P2",
       "owner": "agent",
-      "badge": "",
+      "badge": "PR #50",
       "file": "cards/MV-95-honest-recap.md",
       "title": "Overhaul Phase 1: honest recap — drop the fake 3000ms Analyzing theatre (audit #18)",
       "summary": "Carves the honest-recap half of the overhaul spec's Phase-1 MV-90 (Motion v2 + honest recap); the motion-system halves stay gated on the Motion v2 ADR (PR #48). Every wizard-completer was held on a fixed 3000ms 'Analyzing your profile' timer before results, regardless of when the real /api/assess result landed — pure latency theatre at the highest-traffic funnel moment, exactly the anti-pattern a trust-first product should never ship. Fix (components/assess/profile-recap.tsx only): durationMs default 3000->600 (a genuine reveal beat, never padding — AssessFlow already gates the real transition on payload && recapElapsed, so results now appear at max(real API latency, 600ms) = honest waiting only); summary stagger i*0.5s->i*0.08s so the reveal completes within the shorter window; label 'Analyzing your profile'->'Your answers' (honest summary label, not a fake-work claim; the existing pulse dot honestly signals in-flight work). Auto-advance kept over the spec's explicit 'See my result' button (lower-friction, more honest, smaller). Orthogonal to the unsigned type/motion ADRs + pending mascot: reuses the sanctioned animate-rise keyframe, adds no motion primitive. TDD +2 (tests/assess/profile-recap-timing.test.tsx, RTL+fake-timers, red-first; locks the two objective trust invariants — short handoff window + no /analyz/i label — not the exact copy/timing, which stay founder-tunable). Blind calls flagged on the card: exact copy, 600ms/stagger feel, button-vs-auto fork.",

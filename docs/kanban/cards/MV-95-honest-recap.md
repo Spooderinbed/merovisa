@@ -69,7 +69,7 @@ The recap is behind wizard completion, so exact feel is a blind call:
 
 ## Ship
 
-**SHIPPED 2026-07-04 → PR #<TBD>** (branch `mv-95-honest-recap` off
+**SHIPPED 2026-07-04 → PR [#50](https://github.com/Spooderinbed/merovisa/pull/50)** (branch `mv-95-honest-recap` off
 `origin/master f6cada8`). In Review, founder-gated merge (never self-merged).
 Independent slice — single file `profile-recap.tsx` + new test, disjoint from the
 6 in-flight overhaul branches; board card appended at END of the array to auto-merge.
