@@ -29,9 +29,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-91** · P1 · [Overhaul Phase 1: Button loading contract — in-flight primitive + migrate the drifted loading buttons](cards/MV-91-button-loading-contract.md) — _Third of the Phase-1 "Primitive completion" trio (Card+VerdictPill shipped in MV-90; audit finding #13). components/ui/button.tsx gains a loading?:boolean + loadingLabel?:ReactNode contract: when loading the button is disabled (disabled||loading, never double-submits), sets aria-busy="true" (absent when idle), and renders {loadingLabel ?? children} followed by ONE canonical mono ellipsis (aria-hidden … in font-mono — the design-system "system is working" voice). Fixes the concrete drift in document-card.tsx (Upload said "Uploading…" but View said "Loading..." — three ASCII dots, same component) and folds assess/refresh-button.tsx, a raw <button> that re-implemented the primary/lg class string, back onto the primitive (<Button size="lg" loading={pending} loadingLabel="Refreshing">). Adds the missing aria-busy a11y signal to every loading button. Deliberately NOT touched (not loading buttons): shortlist-button optimistic toggle, plan-item-card small-pill busy actions (separate family), document-status-toggle checkbox. TDD: NEW tests/components/ui/button.test.tsx (contract) + extended document-card.test.tsx (in-flight upload disables+aria-busy). Independent branch off origin/master (targets disjoint from MV-90)._
 
 ## Blocked — 4
 
