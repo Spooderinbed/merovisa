@@ -39,12 +39,12 @@ All active work is tracked on an **in-repo kanban at `docs/kanban/` — check it
 
 ## Design Language
 
-**"Calm authority"** — warm paper, deep teal, flat surfaces, thin borders. No gradients, no shadows, no visual noise.
+**"Calm authority"** — warm paper, dusk plum, flat surfaces, thin borders. No gradients, no shadows, no visual noise.
 
 - **Fonts:** Hanken Grotesk (sans), IBM Plex Mono (mono)
-- **Primary:** `#0f5e54` (deep teal), dark mode: `#4eb39f`
-- **Background:** `#f6f5f1` (warm paper), dark mode: `#111210`
-- **Verdicts:** Strong `#1f6d4a`, Possible `#b07d22`, Reach `#b1503a`
+- **Primary:** `#6a2b57` (dusk plum), dark mode: `#c98bb4`
+- **Background:** `#f4f1ea` (warm paper), dark mode: `#141014`
+- **Verdicts:** Strong `#1f6d4a`, Possible `#8f6218`, Reach `#a4472f`
 - **Radii:** 8px (inputs), 12px (cards), 16px (panels), 999px (pills/buttons)
 - **Motion:** `cubic-bezier(.22, .61, .36, 1)` everywhere
 - **Dark mode:** Use `background-color` not `background` shorthand (CSS custom property re-resolution bug)
