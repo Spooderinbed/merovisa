@@ -1151,6 +1151,18 @@
       "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-92",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-03 → PR #46 (branch mv-92-input-primitive off origin/master f6cada8). In Review, founder-gated merge (never self-merged). Independent of MV-90 #44 / MV-91 #45; board unions at merge.",
+      "file": "cards/MV-92-input-select-primitive.md",
+      "title": "Overhaul Phase 1: Input / Select field primitive",
+      "summary": "Completes the Phase-1 primitive arc (Card/VerdictPill=MV-90, Button-loading=MV-91, form fields=this). Extracts the single most-duplicated string left in the repo — the form-field shell rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary, copied verbatim 28× across the 8 profile-editor files — into NEW components/ui/input.tsx exporting Input (<input>) + Select (<select>), sharing one fieldShell, cn()-merging any per-site className, pure passthrough (no injected attrs = DOM unchanged). Migrated all 28 field sites; the two <input type=checkbox> and the guide-chat textarea (a distinct single-site shape) left out of scope per simplicity-first; about-you w-24 preserved. Intended migrate→verify Workflow died on the account session limit (8 subagents, 0 edits) → fell back to a deterministic checkbox-safe Node transform, LF-normalised. TDD +7 (input.test.tsx red-first). Gate: tsc 0, lint 0 err, suite 1603 pass / 1 fail (pre-existing MV-80 freshness), all 8 editor suites green = behaviour-preserving.",
+      "created": "2026-07-03",
+      "entered": "2026-07-03"
     }
   ]
 }

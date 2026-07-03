@@ -29,9 +29,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-92** · P1 · [Overhaul Phase 1: Input / Select field primitive](cards/MV-92-input-select-primitive.md) — _Completes the Phase-1 primitive arc (Card/VerdictPill=MV-90, Button-loading=MV-91, form fields=this). Extracts the single most-duplicated string left in the repo — the form-field shell rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary, copied verbatim 28× across the 8 profile-editor files — into NEW components/ui/input.tsx exporting Input (<input>) + Select (<select>), sharing one fieldShell, cn()-merging any per-site className, pure passthrough (no injected attrs = DOM unchanged). Migrated all 28 field sites; the two <input type=checkbox> and the guide-chat textarea (a distinct single-site shape) left out of scope per simplicity-first; about-you w-24 preserved. Intended migrate→verify Workflow died on the account session limit (8 subagents, 0 edits) → fell back to a deterministic checkbox-safe Node transform, LF-normalised. TDD +7 (input.test.tsx red-first). Gate: tsc 0, lint 0 err, suite 1603 pass / 1 fail (pre-existing MV-80 freshness), all 8 editor suites green = behaviour-preserving._
 
 ## Blocked — 4
 
