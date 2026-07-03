@@ -29,9 +29,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-93** · P1 · [Overhaul Phase 0c (doc): Motion v2 ADR (CSS-first motion system)](cards/MV-93-motion-v2-adr.md) — _Second of the two decision docs the overhaul needs locked before Phase-2 build (companion to the MV-88 type-scale ADR; third slice carved from the over-broad 'design-system v2' bundle). Standalone doc docs/design/2026-07-03-motion-v2-adr.md (foldable into the overhaul spec on sign-off). Grounded in a 2026-07-03 audit of the app's CSS motion system: @theme has 1 easing (--ease-calm cubic-bezier .22/.61/.36/1) + 3 keyframe animations (fade/rise/settle — ALL opacity+transform, already compositor-safe; settle bakes its 0-22% hold into keyframe PHASES not animation-delay so the reduced-motion guard collapses it cleanly) + a global prefers-reduced-motion collapse; usage tally ease-calm x24, transition-colors x14, animate-pulse x14, duration-150 x9, ... transition-all x1 (a latent smell); NO framer-motion/motion in package.json. DECISION = stay CSS-FIRST, no runtime animation library (bundle discipline on a low-end-Android funnel; narrow Phase-2 escape hatch = one tree-shaken micro-primitive for a single surface only). TWO motion classes: movement = opacity+transform only (compositor); state = paint props only (color/bg/border). HARD RULES: never transition-all; one easing; never bypass reduced-motion (bake delays into keyframe phases). Vocabulary = ease-calm + fade/rise/settle + pulse(skeletons). Stagger convention = <=5 siblings / 40-60ms / nothing after ~700ms. Alternatives A(chosen)/B(framer-motion, ~30KB rejected)/C(no ADR) recorded; 3 open questions for sign-off (duration tokens?; second easing?; pre-define slide-* keyframes?). DOC-ONLY: zero source/test files touched -> no regression risk, suite unaffected; typecheck+lint green. APPLYING it (remove the 1 transition-all; optional --dur-* tokens) is a SEPARATE founder-gated slice. ID MV-93 because 90/91/92 are claimed by in-flight branches. FOUNDER GATE: ADR sign-off (batch with MV-88). Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md._
 
 ## Blocked — 4
 
