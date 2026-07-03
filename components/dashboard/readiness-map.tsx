@@ -1,4 +1,5 @@
 import { buildReadiness, type ReadinessSignals, type ReadinessBand } from "@/lib/readiness/readiness";
+import { Card } from "@/components/ui/card";
 
 // The word the band pill shows (and that the row's accessible name repeats) — colour
 // is never the sole carrier of state.
@@ -36,7 +37,7 @@ export function ReadinessMap({ signals }: { signals: ReadinessSignals }) {
       : `Based on ${completenessPct}% of your profile — add detail to sharpen this.`;
 
   return (
-    <section aria-label="Your readiness" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
+    <Card as="section" aria-label="Your readiness" padding="md" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h2 className="text-[15px] font-medium text-ink">Your readiness</h2>
         <p className="text-[13px] text-ink-faint">{headerLine}</p>
@@ -65,6 +66,6 @@ export function ReadinessMap({ signals }: { signals: ReadinessSignals }) {
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }

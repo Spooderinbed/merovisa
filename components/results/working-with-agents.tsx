@@ -1,5 +1,6 @@
 import { AU_WORKING_WITH_AGENTS } from "@/lib/data/source/au-working-with-agents";
 import type { WorkingWithAgentsFact } from "@/lib/data/types";
+import { Card } from "@/components/ui/card";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 const SECTIONS: { id: WorkingWithAgentsFact["section"]; heading: string }[] = [
@@ -21,7 +22,7 @@ const DISCLAIMER =
  */
 export function WorkingWithAgents() {
   return (
-    <aside className="flex flex-col gap-3 rounded-md border border-line bg-bg-tint p-4 text-[14px] text-ink-soft">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-[14px] text-ink-soft">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         Working with an agent (Australia)
       </span>
@@ -59,6 +60,6 @@ export function WorkingWithAgents() {
       </div>
 
       <p className="text-[12.5px] text-ink-faint">{DISCLAIMER}</p>
-    </aside>
+    </Card>
   );
 }

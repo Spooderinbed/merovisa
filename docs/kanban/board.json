@@ -1151,6 +1151,18 @@
       "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-90",
+      "col": "inreview",
+      "badge": "SHIPPED 2026-07-03: primitives + 76-site migration on branch mv-90-card-primitives; gate green (1612 pass, only red = MV-80 freshness); founder-gated merge.",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-90-card-verdictpill-primitives.md",
+      "title": "Overhaul Phase 1: Card + VerdictPill primitives — extract the 28×-copy-pasted card shell and verdict pill into components/ui",
+      "summary": "Phase 1 slice from the MV-87 umbrella (the correction from MV-42: only VERDICT_LABELS shipped; the primitives never did). Extract a shared Card shell primitive and a VerdictPill primitive into components/ui/, then migrate every copy-pasted call site to them with rendered output byte-identical (exact className strings preserved so goldens/presentational tests stay green unchanged). Closes design-division audit finding #12 (incl. the rounded-xl radius drift — folds onto the 12px card radius, render-identical in this app's scale). Scout correction: census = 69 shell sites across 7 static families (not 28), 8 pill sites + 1 unpilled label; #13 (Button loading contract), #18 (fake-loading theatre) and #26 (Meter) are separate follow-up slices, NOT here. TDD: primitive unit tests first, then site-by-site migration with the suite as the harness. Scope guard: presentational refactor only — class SET per site preserved (order normalizes shell-first); deliberate unifications: possible pills gain the contrast-tuned text-possible-ink, 2 pill outliers gain inline-flex items-center, labels all source from VERDICT_LABELS (kills 5 local dicts + 1 hardcode). Excluded: form-control shell (29 sites — future Input primitive), ternary-tone shells, near-miss singletons.",
+      "created": "2026-07-03",
+      "entered": "2026-07-03"
     }
   ]
 }

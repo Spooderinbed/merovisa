@@ -29,9 +29,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-90** · P1 · [Overhaul Phase 1: Card + VerdictPill primitives — extract the 28×-copy-pasted card shell and verdict pill into components/ui](cards/MV-90-card-verdictpill-primitives.md) — _Phase 1 slice from the MV-87 umbrella (the correction from MV-42: only VERDICT_LABELS shipped; the primitives never did). Extract a shared Card shell primitive and a VerdictPill primitive into components/ui/, then migrate every copy-pasted call site to them with rendered output byte-identical (exact className strings preserved so goldens/presentational tests stay green unchanged). Closes design-division audit finding #12 (incl. the rounded-xl radius drift — folds onto the 12px card radius, render-identical in this app's scale). Scout correction: census = 69 shell sites across 7 static families (not 28), 8 pill sites + 1 unpilled label; #13 (Button loading contract), #18 (fake-loading theatre) and #26 (Meter) are separate follow-up slices, NOT here. TDD: primitive unit tests first, then site-by-site migration with the suite as the harness. Scope guard: presentational refactor only — class SET per site preserved (order normalizes shell-first); deliberate unifications: possible pills gain the contrast-tuned text-possible-ink, 2 pill outliers gain inline-flex items-center, labels all source from VERDICT_LABELS (kills 5 local dicts + 1 hardcode). Excluded: form-control shell (29 sites — future Input primitive), ternary-tone shells, near-miss singletons._
 
 ## Blocked — 4
 

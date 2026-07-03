@@ -3,13 +3,14 @@ import { NEPAL_AU_STUDENT_VISA_GRANT_RATE } from "@/lib/data/policy/visa-outcome
 import { AU_DOCUMENT_CHECKLIST_TOOL } from "@/lib/data/policy/au-document-checklist-tool";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 import { SourceLine } from "@/components/results/source-line";
+import { Card } from "@/components/ui/card";
 
 const LIVING = AU_DHA_LIVING_CAPACITY_AUD;
 const GRANT = NEPAL_AU_STUDENT_VISA_GRANT_RATE;
 
 export function PolicyBanner() {
   return (
-    <aside className="flex flex-col gap-2 rounded-md border border-line bg-bg-tint p-4 text-[14px] text-ink-soft">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-2 text-[14px] text-ink-soft">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         Current policy (Nepal &rarr; Australia)
       </span>
@@ -59,6 +60,6 @@ export function PolicyBanner() {
           />
         </li>
       </ul>
-    </aside>
+    </Card>
   );
 }

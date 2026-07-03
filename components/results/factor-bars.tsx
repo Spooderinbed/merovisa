@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AssessmentResult, DimensionScore } from "@/lib/scoring/types";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { bandLabel } from "@/lib/scoring/band";
 import { humanizeFactorDetail } from "@/lib/results/factor-copy";
@@ -49,7 +50,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
           </>
         );
         return (
-          <div key={key} className="rounded-md border border-line bg-surface">
+          <Card key={key} radius="card">
             {expandable ? (
               <button
                 type="button"
@@ -73,7 +74,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
                 ))}
               </ul>
             ) : null}
-          </div>
+          </Card>
         );
       })}
     </section>
