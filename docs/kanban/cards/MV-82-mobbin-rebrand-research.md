@@ -36,3 +36,18 @@ Docs-only slice: gate = `npm run typecheck && npm run lint && npm test` stay gre
 - Filed 2026-07-03 from the plan-approval session (spec committed same day; PR carries spec + Phase 0 cards).
 - Founder decisions already locked: Elevated-calm direction, global placeless brand, full palette rebrand, funnel-first, corridor theming post-onboarding (see spec Context §5).
 - After this card: MV-83 (palettes, founder pick) + MV-84 (system spec, ADR) can run in parallel off the digest; batch their founder reviews.
+
+## Progress (2026-07-03, in-flight)
+
+- Running in worktree `.claude/worktrees/mv-82-mobbin-rebrand-research`, branch `mv-82-mobbin-rebrand-research` off master `115f949`. Mobbin MCP verified live.
+- Gate baseline recorded pre-change: typecheck clean, lint 1 pre-existing warning, suite 1 failed/1588 passed — the known 1-July freshness failure owned by MV-80 (in review, zero file overlap).
+- Architecture: one research subagent per app (context economy — Mobbin returns inline images); each writes its section to `%LOCALAPPDATA%/Temp/claude/C--Users-thapa-OneDrive-Desktop-work-merovisa/98fd23f5-2f80-41fb-a498-bfe84c84f059/scratchpad/mv82-sections/NN-app.md` (01-phantom … 10-duolingo). Skeleton at `docs/design/2026-07-03-rebrand-research.md` with `<!-- PER-APP TABLES -->`, `<!-- SYNTHESIS -->`, `<!-- IMPLICATIONS -->` markers.
+- Cold-resume: if sections exist, assemble them into the skeleton (replace markers), have a synthesis agent read all 10 files and draft 5 wizard patterns + 3 premium tells (each citing ≥2 apps) + MV-83/84/85 implications (validate the three seed palettes: Night indigo / Deep blue / Dusk plum), verify acceptance criteria, board → inreview, PR vs master.
+## Evidence (2026-07-03, shipped)
+
+- **Digest:** `docs/design/2026-07-03-rebrand-research.md` — 229KB / 724 lines. Body = 10 web per-app sections (~950 Mobbin citations doc-wide), web synthesis (5 named wizard patterns + 3 premium tells, every item citing ≥2 source apps), implications for MV-83/84/85 incl. validation of all three seed palettes (Night indigo / Deep blue / Dusk plum). Appendix = 9 iOS sections + superseded iOS synthesis/implications, quarantined per the founder's web-first directive.
+- **Acceptance criteria:** table completed 9/10 web apps (Cleo = honest nil — Mobbin indexes no Cleo web surfaces; documented in its section) + 9 iOS tables in appendix; Duolingo = mechanics-only, style-leak scan clean; synthesis patterns each cite ≥2 apps (verified programmatically); hand-off section present; no product code touched.
+- **Gate (docs-only, matches pre-change baseline):** typecheck clean · lint 1 pre-existing warning · suite 1 failed/1588 passed — the single failure is the known 1-July freshness timer owned by MV-80 (in review, zero file overlap).
+- **Method note:** research ran as 20 per-app subagent sweeps (10 iOS round-1, 9 web round-2 + Linear carried over) + 2 synthesis agents; every observation cites its Mobbin screen/flow/section URL.
+
+- **2026-07-03 platform pivot (founder directive):** research must target **web**, not mobile — MyVisa ships as a website; mobile research parked for later. iOS pass (complete, incl. synthesis `11/12`) demoted to a quarantined appendix. Web re-sweep running into `scratchpad\mv82-sections-web\` (same 01–10 numbering; 02-linear carried over — already web). Web synthesis lands as `11-synthesis.md`/`12-implications.md` in the SAME web dir. Skeleton now has 6 markers (web tables/synthesis/implications + ios tables/synthesis/implications); `scratchpad\assemble-digest.mjs` fills all six. Memory: `web-first-design-research.md`.
