@@ -25,13 +25,13 @@
 
 - **MV-80** · undefined · [FY2026-27 data re-verify: 16 overdue reverifyBy records (DHA fees, wages, ART, ATO)](cards/MV-80-fy2026-27-reverify.md) — _The designed 1-July freshness timer FIRED: tests/data/freshness.test.ts red with 16 records at reverifyBy 2026-07-01 (AU_SUBCLASS_500_APPLICATION_CHARGE_AUD; AU_SKILLED_VISA_CHARGES[0-3]; AU_TAX_FIGURES[1-4]; AU_STUDENT_WORKER_WAGES[1-6]; NEPAL_REFUSAL_RECOVERY[11]). A 4-agent read-only scout verified every record against its authoritative live source on 2026-07-02: 12/16 CHANGED — subclass 500 AUD 2,000→2,500; skilled 189/491/186 → 6,135/6,140/6,140; 191 505→630; NMW 24.95→26.44 in force (announced→current collapse needed); Hospitality casual intro rows re-based on 25.74; ART fee 3,580→3,727; all 4 ATO tax figures unchanged. Evidence packet with per-record source URLs: docs/audits/2026-07-02-fy2026-27-reverify-scout.md. Fix = update values + lastVerified 2026-07-02 + reverifyBy 2027-07-01, open sources during the edit (never blind-copy), full suite green, branch+PR._
 
-## In progress (WIP 1) — 1
-
-- **MV-83** · P1 · [Overhaul Phase 0b: palette candidates (full rebrand, contrast-proven)](cards/MV-83-palette-candidates.md) — _2-3 candidate palettes, each = all 23 semantic tokens x light+dark with exact hexes + full WCAG matrix (AA 4.5:1 text / 3:1 UI). Placeless names; seeds: Night indigo / Deep blue / Dusk plum — validated against MV-82 findings. Verdict trio stays green/amber/red semantic space with possible-ink-style companions; token NAMES frozen (rebrand = values-only swap). Deliverables: docs/design/2026-07-XX-palette-candidates.md + scripts/contrast-check.mjs + 3 throwaway preview branches (globals.css swap only) for Vercel previews. FOUNDER GATE: palette pick. Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-83** · P1 · [Overhaul Phase 0b: palette candidates (full rebrand, contrast-proven)](cards/MV-83-palette-candidates.md) — _2-3 candidate palettes, each = all 23 semantic tokens x light+dark with exact hexes + full WCAG matrix (AA 4.5:1 text / 3:1 UI). Placeless names; seeds: Night indigo / Deep blue / Dusk plum — validated against MV-82 findings. Verdict trio stays green/amber/red semantic space with possible-ink-style companions; token NAMES frozen (rebrand = values-only swap). Deliverables: docs/design/2026-07-XX-palette-candidates.md + scripts/contrast-check.mjs + 3 throwaway preview branches (globals.css swap only) for Vercel previews. FOUNDER GATE: palette pick. Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md._
 
 ## Blocked — 3
 

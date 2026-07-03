@@ -33,6 +33,16 @@ Each token gets a light value (`:root`) and a dark value (`.dark`). Rebrand = va
 
 Gate = `npm run typecheck && npm run lint && npm test` stay green (untouched — this slice adds only `scripts/*.mjs` + a doc) AND `node scripts/contrast-check.mjs` exits 0. Board regenerated. NOTE: master CI currently red on the 1-July freshness timer owned by MV-80 (PR #36, zero overlap) — the inherited 1 failing test is expected until MV-80 lands; this slice must not add any new failure.
 
+## Evidence (2026-07-03, shipped → In Review)
+
+- **Deliverables:** `scripts/palette-candidates.data.mjs` (single source of truth — 3 candidates × 23 tokens × light+dark + pairing spec), `scripts/contrast-check.mjs` (pure-Node WCAG 2.1 harness), `docs/design/2026-07-04-palette-candidates.md` (26KB — all 3 candidates with rationale + 23-token tables + verbatim WCAG matrices + recommendation + founder-preview instructions + MV-84 handoff).
+- **`node scripts/contrast-check.mjs` exits 0** — 162 checks (27 pairs × 3 candidates × 2 themes), 0 failing.
+- **Token names frozen:** all 3 candidates carry exactly the 23 semantic names (verified programmatically).
+- **Gate:** typecheck clean · lint 1 pre-existing warning (unrelated `'done'` unused var) · suite 1 failed/1588 passed — the 1 failure is the known 1-July freshness timer owned by MV-80 (PR #36), zero overlap; this slice adds no new failure.
+- **Tuning done by the harness (documented):** 6 light-mode `ink-faint`/`possible` values deepened to clear AA with margin; the "white on primary (dark)" pair was proven numerically unsatisfiable and corrected to the `on-primary` token per the pairing spec's own note (relationship preserved, not deleted). Full list in the workflow return + doc.
+- **Built via background Workflow** (`wf_fca7fc3d-2ea`, 9 agents): gather (tokens+MV-82 guidance+real component pairings) → generate 3 → harness build+iterate-to-green → doc → adversarial critic (pass, 0 defects). NOTE: `args.worktree` came through undefined so agents wrote to the main checkout at correct relative paths; artifacts were relocated into this worktree and re-verified (exit 0) before commit.
+- **MERGE IS FOUNDER-GATED (palette pick).** PR opened; do not self-merge.
+
 ## Resume notes
 
 - Built in worktree `.claude/worktrees/mv-83-palette-candidates`, branch off master `d173c2a` (MV-82 digest merged). Deps installed.

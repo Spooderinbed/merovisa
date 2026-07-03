@@ -1070,10 +1070,10 @@
     },
     {
       "id": "MV-83",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "building 3 candidates + contrast-check harness",
+      "badge": "3 candidates contrast-proven (162/162), PR open — founder pick",
       "file": "cards/MV-83-palette-candidates.md",
       "title": "Overhaul Phase 0b: palette candidates (full rebrand, contrast-proven)",
       "summary": "2-3 candidate palettes, each = all 23 semantic tokens x light+dark with exact hexes + full WCAG matrix (AA 4.5:1 text / 3:1 UI). Placeless names; seeds: Night indigo / Deep blue / Dusk plum — validated against MV-82 findings. Verdict trio stays green/amber/red semantic space with possible-ink-style companions; token NAMES frozen (rebrand = values-only swap). Deliverables: docs/design/2026-07-XX-palette-candidates.md + scripts/contrast-check.mjs + 3 throwaway preview branches (globals.css swap only) for Vercel previews. FOUNDER GATE: palette pick. Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
