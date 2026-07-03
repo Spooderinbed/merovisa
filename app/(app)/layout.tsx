@@ -6,6 +6,7 @@ import { AppBar } from "@/components/layout/app-bar";
 import { Footer } from "@/components/layout/footer";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { IdentifyUser } from "@/components/analytics/identify-user";
+import { DEFAULT_CORRIDOR } from "@/lib/theme/corridor";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -19,13 +20,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <IdentifyUser userId={data.user.id} />
-      <AppBar variant="app" user={data.user} />
-      {/* Padded below md so the fixed tab bar never covers content or footer. */}
-      <div className="pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
-        <main>{children}</main>
-        <Footer />
+      {/* Corridor scope (MV-96): signed-in = corridor known, always-on. Chrome
+          included so Phase-2 surfaces can consume corridor accents without
+          re-wiring. `contents` = token carrier only, no layout box. */}
+      <div className="contents" data-corridor={DEFAULT_CORRIDOR}>
+        <AppBar variant="app" user={data.user} />
+        {/* Padded below md so the fixed tab bar never covers content or footer. */}
+        <div className="pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
+          <main>{children}</main>
+          <Footer />
+        </div>
+        <MobileTabBar />
       </div>
-      <MobileTabBar />
     </>
   );
 }

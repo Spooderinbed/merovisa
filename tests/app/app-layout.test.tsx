@@ -47,6 +47,20 @@ describe("(app) layout", () => {
     expect(screen.getByTestId("mobile-tab-bar")).toBeInTheDocument();
   });
 
+  it("activates the np-au corridor on the signed-in shell (MVP: every user is Nepal → Australia)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    const ui = await AppLayout({ children: <div data-testid="kid">kid</div> });
+    const { container } = render(ui);
+    const scope = container.querySelector('[data-corridor="np-au"]');
+    expect(scope).not.toBeNull();
+    // Chrome and content both live inside the corridor scope, so Phase-2
+    // surfaces can consume corridor accents without re-wiring the shell.
+    expect(scope!.querySelector('[data-testid="appbar"]')).not.toBeNull();
+    expect(scope!.querySelector("main")).not.toBeNull();
+    // Token carrier only — must not generate a layout box.
+    expect((scope as HTMLElement).className).toContain("contents");
+  });
+
   it("pads the content area below md so the tab bar never covers it", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     const ui = await AppLayout({ children: <div data-testid="kid">kid</div> });

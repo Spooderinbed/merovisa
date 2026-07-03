@@ -139,6 +139,24 @@
   --reach-tint: #d8775f20;
 }
 
+/* Corridor theming (MV-96 = overhaul spec MV-91): the post-onboarding
+   personalization layer. Accents ONLY — the base palette stays globally neutral
+   so pre-onboarding surfaces never read as country-specific. The attribute rides
+   inner wrappers (results flow, signed-in shell) rendered from known state, and
+   marketing routes never carry it — both invariants guarded by
+   tests/styles/corridor-tokens.test.ts, which also WCAG-proves these values.
+   np-au accent = danphe teal-blue (Himalayan monal), lifted for dark mode the
+   same way primary is. */
+[data-corridor="np-au"] {
+  --accent: #15687a;
+  --accent-tint: #15687a18;
+}
+
+[data-theme="dark"] [data-corridor="np-au"] {
+  --accent: #7cc4d4;
+  --accent-tint: #7cc4d422;
+}
+
 /* Element resets must live in @layer base: unlayered rules outrank EVERY
    Tailwind layer (utilities included) and silently disable utility classes
    on these elements. Guarded by tests/styles/globals-layering.test.ts. */

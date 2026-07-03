@@ -29,9 +29,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-96** · P2 · [Overhaul Phase 1: corridor theme provider (np-au, expansion-ready)](cards/MV-96-corridor-provider.md) — _Ships the post-onboarding corridor personalization ARCHITECTURE (spec MV-91) — the last Phase-1 slice not gated on the type-scale ADR (#47), Motion v2 ADR (#48), or the mascot (MV-85): (1) new lib/theme/corridor.ts registry (np-au → label + danphe mascotVariant; corridorForHomeCountry case-insensitive 'nepal' → np-au, else null = neutral brand; DEFAULT_CORRIDOR for the signed-in MVP, same Nepal assumption lib/scoring/from-sections.ts:42 already pins). (2) globals.css [data-corridor=np-au] light+dark blocks overriding ONLY --accent/--accent-tint (danphe teal-blue #15687a/#7cc4d4 — flagged founder call; WCAG AA-proved 5.47–13.2 both themes; zero blast radius: no component consumes accent yet). (3) AssessFlow results phase wraps Results in a display:contents data-corridor carrier from profile.homeCountry (anon activation = results onward; unknown country → no attribute). (4) (app) shell layout wraps chrome+content in the same carrier (signed-in always-on, Phase-2-ready; no DB read added). Server-safe/no-flash by construction — attribute renders from known state, no pre-hydration script. TDD red-first +11 tests incl. NEW permanent guard tests/styles/corridor-tokens.test.ts (accents-only invariant + WCAG re-proof + marketing-sources-never-carry-data-corridor scan). Registry omits copy-nods until a consumer exists. First consumers: spec-MV-94 results accents, Phase-2 shell, mascot variant resolution._
 
 ## Blocked — 4
 

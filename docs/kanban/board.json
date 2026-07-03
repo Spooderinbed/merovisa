@@ -1151,6 +1151,18 @@
       "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-96",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "",
+      "file": "cards/MV-96-corridor-provider.md",
+      "title": "Overhaul Phase 1: corridor theme provider (np-au, expansion-ready)",
+      "summary": "Ships the post-onboarding corridor personalization ARCHITECTURE (spec MV-91) — the last Phase-1 slice not gated on the type-scale ADR (#47), Motion v2 ADR (#48), or the mascot (MV-85): (1) new lib/theme/corridor.ts registry (np-au → label + danphe mascotVariant; corridorForHomeCountry case-insensitive 'nepal' → np-au, else null = neutral brand; DEFAULT_CORRIDOR for the signed-in MVP, same Nepal assumption lib/scoring/from-sections.ts:42 already pins). (2) globals.css [data-corridor=np-au] light+dark blocks overriding ONLY --accent/--accent-tint (danphe teal-blue #15687a/#7cc4d4 — flagged founder call; WCAG AA-proved 5.47–13.2 both themes; zero blast radius: no component consumes accent yet). (3) AssessFlow results phase wraps Results in a display:contents data-corridor carrier from profile.homeCountry (anon activation = results onward; unknown country → no attribute). (4) (app) shell layout wraps chrome+content in the same carrier (signed-in always-on, Phase-2-ready; no DB read added). Server-safe/no-flash by construction — attribute renders from known state, no pre-hydration script. TDD red-first +11 tests incl. NEW permanent guard tests/styles/corridor-tokens.test.ts (accents-only invariant + WCAG re-proof + marketing-sources-never-carry-data-corridor scan). Registry omits copy-nods until a consumer exists. First consumers: spec-MV-94 results accents, Phase-2 shell, mascot variant resolution.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
