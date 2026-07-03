@@ -61,7 +61,7 @@ ADR + kanban card + board), suite unaffected. Gate = typecheck + lint green.
 
 ## Ship
 
-**SHIPPED 2026-07-03 → PR #__** (branch `mv-93-motion-v2-adr` off
+**SHIPPED 2026-07-03 → PR [#48](https://github.com/Spooderinbed/merovisa/pull/48)** (branch `mv-93-motion-v2-adr` off
 `origin/master f6cada8`). In Review, founder-gated merge + ADR sign-off (never
 self-merged). Independent doc slice; ID MV-93 chosen because 90/91/92 are claimed
 by in-flight branches (this branch's board tops out at MV-89).
