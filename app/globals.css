@@ -82,51 +82,52 @@
 
 :root,
 [data-theme="light"] {
-  --bg: #f6f5f1;
-  --bg-tint: #efeee8;
-  --surface: #fffefb;
-  --surface-2: #faf9f5;
-  --ink: #1d1c19;
-  --ink-soft: #56544d;
-  --ink-faint: #8a877d;
-  --line: #1d1c190f;
-  --line-2: #1d1c191a;
-  --primary: #0f5e54;
-  --primary-ink: #0c4a42;
-  --primary-tint: #0f5e5414;
-  --primary-tint-2: #0f5e5424;
-  --on-primary: #fcfdfb;
-  --accent: #b07d22;
-  --accent-tint: #b07d2218;
+  --bg: #f4f1ea;
+  --bg-tint: #ece7dc;
+  --surface: #fffdf8;
+  --surface-2: #f9f6ef;
+  --ink: #211a20;
+  --ink-soft: #5c5058;
+  --ink-faint: #6b5f68;
+  --line: #211a200f;
+  --line-2: #211a2033;
+  --primary: #6a2b57;
+  --primary-ink: #542044;
+  --primary-tint: #6a2b5714;
+  --primary-tint-2: #6a2b5724;
+  --on-primary: #fdf7fb;
+  --accent: #8f621b;
+  --accent-tint: #8f621b18;
   --strong: #1f6d4a;
   --strong-tint: #1f6d4a16;
-  --possible: #b07d22;
-  /* Amber FILL (above) clears ~3.6:1 as text on warm paper — fine for bands/borders,
-     fails WCAG AA for small text. This darker ink (~5.0:1 on #f6f5f1) is the text
-     companion; use it wherever amber is type, not fill. */
-  --possible-ink: #8a6212;
+  --possible: #8f6218;
+  /* Amber, tuned dark enough to clear WCAG AA as text — not only as a band/border
+     fill. This marginally-darker ink is the higher-contrast companion for amber
+     type; both are proven by scripts/contrast-check.mjs. Use it wherever amber is
+     type, not fill. */
+  --possible-ink: #836011;
   --possible-tint: #b07d2216;
-  --reach: #b1503a;
-  --reach-tint: #b1503a16;
+  --reach: #a4472f;
+  --reach-tint: #a4472f16;
 }
 
 [data-theme="dark"] {
-  --bg: #111210;
-  --bg-tint: #181915;
-  --surface: #1a1b17;
-  --surface-2: #201f1b;
-  --ink: #ece9e0;
-  --ink-soft: #a8a59b;
-  --ink-faint: #76736a;
+  --bg: #141014;
+  --bg-tint: #1c161b;
+  --surface: #1e181d;
+  --surface-2: #251e24;
+  --ink: #ece4ea;
+  --ink-soft: #aaa0a8;
+  --ink-faint: #8f858d;
   --line: #ffffff12;
-  --line-2: #ffffff20;
-  --primary: #4eb39f;
-  --primary-ink: #6fc4b2;
-  --primary-tint: #4eb39f1f;
-  --primary-tint-2: #4eb39f30;
-  --on-primary: #08231f;
-  --accent: #d6a24a;
-  --accent-tint: #d6a24a22;
+  --line-2: #ffffff33;
+  --primary: #c98bb4;
+  --primary-ink: #d9a6c8;
+  --primary-tint: #c98bb41f;
+  --primary-tint-2: #c98bb430;
+  --on-primary: #241020;
+  --accent: #d9a24e;
+  --accent-tint: #d9a24e22;
   --strong: #5bbd8c;
   --strong-tint: #5bbd8c20;
   --possible: #d6a24a;

@@ -60,7 +60,7 @@ describe("app/globals.css accessibility rules", () => {
     const css = readGlobalsCss();
     expect(css).toMatch(/--color-possible-ink:\s*var\(--possible-ink\)/);
     // light theme ink is the darker AA value, separate from the amber fill.
-    expect(css).toMatch(/--possible-ink:\s*#8a6212/);
-    expect(css).toMatch(/--possible:\s*#b07d22/);
+    expect(css).toMatch(/--possible-ink:\s*#836011/);
+    expect(css).toMatch(/--possible:\s*#8f6218/);
   });
 });

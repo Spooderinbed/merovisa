@@ -1082,13 +1082,13 @@
     },
     {
       "id": "MV-84",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "",
-      "file": null,
-      "title": "Overhaul Phase 0c: design-system v2 spec (type scale + Motion v2 ADR)",
-      "summary": "docs/design/2026-07-XX-design-system-v2.md: ~9-step --text-* scale replacing arbitrary text-[Npx]; Motion v2 vocabulary (rise-sm, slide-fwd/back, --ease-out-emphatic, stagger conventions <=5 siblings / 40-60ms / nothing after 700ms); hard rule animate opacity/transform only; primitive contracts (Card, VerdictPill, Button loading); CSS-first ADR — NO framer-motion (~30KB on a low-end-Android funnel), escape hatch motion/mini only if Phase 2 chat demands. FOUNDER GATE: ADR sign-off (batch review with MV-83). Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
+      "badge": "SHIPPED 2026-07-03 → PR (branch mv-84-dusk-plum-tokens); founder-gated merge. Dusk plum live in globals.css; unblocks every Phase 1 surface.",
+      "file": "cards/MV-84-dusk-plum-tokens.md",
+      "title": "Overhaul Phase 0c: rebrand token swap — Dusk plum values into app/globals.css (names frozen)",
+      "summary": "Direct hand-off from the MV-83 palette pick (founder picked Dusk plum). Swapped all 23 semantic design tokens x light+dark from teal-era values to Dusk plum in app/globals.css — token NAMES frozen (components reference names only, so this is a values-only rebrand); values copied verbatim from the WCAG-proven single source of truth scripts/palette-candidates.data.mjs (dusk-plum). Light: primary #0f5e54->#6a2b57 (deep plum), warm paper #f6f5f1->#f4f1ea, reach warm-nudged #b1503a->#a4472f (plum-adjacency gate), possible darkened #b07d22->#8f6218 so amber clears AA even as text. Dark: primary orchid re-hue #4eb39f->#c98bb4, warm near-black bg #111210->#141014; verdict-trio dark values unchanged (already the palette's shared dark set). Rewrote the stale light possible/possible-ink comment (dropped #f6f5f1/ratio literals, points to the harness); dark comment still accurate, kept. Deterministic transcription check: all 46 values == canon, 0 mismatches/leaks/extras. Updated the only hardcoded-hex test (tests/styles/globals-a11y.test.ts #10). Gate green: scripts/contrast-check.mjs exit 0 (162 checks pass), typecheck clean, lint 0 errors (1 pre-existing build.mjs warning), full suite 1588 passed / 250 files — only failure = pre-existing tests/data/freshness.test.ts (deferred MV-80 1-July timer, untouched). Goldens byte-identical (no component/class changes). BOARD NOTE: this MV-84 was re-pointed from the old provisional 'design-system v2 spec (ADR)' scope, which is re-filed as MV-88, to match the founder's live intent + the MV-83 hand-off. Founder-owed: Vercel-preview browser sweep (results/dashboard auth-gated; spacing a blind call) + merge PR -> Done. Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
     },
@@ -1125,6 +1125,18 @@
       "file": null,
       "title": "Overhaul Phases 1-2 UMBRELLA: funnel + shell (carve per-slice cards after Phase 0 gates)",
       "summary": "Umbrella for the execution phases of the Elevated-calm overhaul — DO NOT build from this card; carve slices with next-free IDs when Phase 0 (MV-82..86) gates clear. Phase 1 funnel: rebrand token swap (+token-contrast.test.ts permanent guard, themeColor meta, favicon), type scale, Card/VerdictPill primitives + Button loading (finishes MV-42 slices 2-3), Motion v2 + honest recap (kills 3s fake analyzing), corridor theme provider (data-corridor attr + lib/theme/corridor.ts registry, np-au only), landing (neutral mascot hero; folds MV-49 flag-pill half — NP-home-nod half KILLED by neutral-brand decision), wizard, results (first corridor-accented surface), auth, mascot slots. Phase 2 shell: dashboard, matches/plan/checklist/documents (reshapes MV-50), profile, guide avatar, chrome+OG. Full detail incl. sequencing, verification, risks: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
+      "created": "2026-07-03",
+      "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-88",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "re-filed from MV-84 (2026-07-03) when that ID was re-pointed to the Dusk-plum token swap",
+      "file": null,
+      "title": "Overhaul Phase 0c (doc): design-system v2 spec — type scale + Motion v2 ADR",
+      "summary": "Displaced from the old provisional MV-84 when that ID was re-pointed to the Dusk-plum globals.css token swap (founder's live intent + the MV-83 hand-off). docs/design/2026-07-XX-design-system-v2.md: ~9-step --text-* scale replacing arbitrary text-[Npx]; Motion v2 vocabulary (rise-sm, slide-fwd/back, --ease-out-emphatic, stagger conventions <=5 siblings / 40-60ms / nothing after 700ms); hard rule animate opacity/transform only; primitive contracts (Card, VerdictPill, Button loading); CSS-first ADR — NO framer-motion (~30KB on a low-end-Android funnel), escape hatch motion/mini only if Phase 2 chat demands. NOTE: much of this content already lives in the overhaul spec (docs/design/2026-07-03-elevated-calm-overhaul-spec.md) — founder to decide whether a standalone consolidated doc is still wanted or it folds into the umbrella. FOUNDER GATE: ADR sign-off (batch review with MV-83). Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
     }
