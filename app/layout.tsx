@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme/theme-init";
@@ -16,6 +16,16 @@ const mono = IBM_Plex_Mono({
   display: "swap",
   variable: "--font-ibm-plex-mono",
 });
+
+// Browser-chrome tint = --bg per scheme (tests/styles/brand-surfaces.test.ts pins
+// these to globals.css). The app follows the OS scheme pre-hydration (MV-43), so
+// the media-query themeColor matches the theme actually served.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f1ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#141014" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "MyVisa — Honest answers for studying abroad",

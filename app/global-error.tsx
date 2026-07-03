@@ -24,15 +24,15 @@ export default function GlobalError({
     <html lang="en">
       <body
         style={{
-          backgroundColor: "#f6f5f1",
-          color: "#23231f",
+          backgroundColor: "#f4f1ea",
+          color: "#211a20",
           fontFamily: "system-ui, -apple-system, sans-serif",
           margin: 0,
         }}
       >
         <main style={{ maxWidth: 520, margin: "0 auto", padding: "80px 20px" }}>
           <h1 style={{ fontSize: 24, lineHeight: 1.3, margin: 0 }}>Something went wrong</h1>
-          <p style={{ fontSize: 15, color: "#55554e", marginTop: 12 }}>
+          <p style={{ fontSize: 15, color: "#5c5058", marginTop: 12 }}>
             We hit an unexpected error loading MyVisa. This is usually temporary — please try again.
           </p>
           <button
@@ -42,8 +42,8 @@ export default function GlobalError({
               marginTop: 20,
               borderRadius: 999,
               border: 0,
-              backgroundColor: "#0f5e54",
-              color: "#ffffff",
+              backgroundColor: "#6a2b57",
+              color: "#fdf7fb",
               padding: "12px 24px",
               fontSize: 16,
               cursor: "pointer",

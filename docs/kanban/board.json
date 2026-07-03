@@ -1139,6 +1139,18 @@
       "summary": "Displaced from the old provisional MV-84 when that ID was re-pointed to the Dusk-plum globals.css token swap (founder's live intent + the MV-83 hand-off). docs/design/2026-07-XX-design-system-v2.md: ~9-step --text-* scale replacing arbitrary text-[Npx]; Motion v2 vocabulary (rise-sm, slide-fwd/back, --ease-out-emphatic, stagger conventions <=5 siblings / 40-60ms / nothing after 700ms); hard rule animate opacity/transform only; primitive contracts (Card, VerdictPill, Button loading); CSS-first ADR — NO framer-motion (~30KB on a low-end-Android funnel), escape hatch motion/mini only if Phase 2 chat demands. NOTE: much of this content already lives in the overhaul spec (docs/design/2026-07-03-elevated-calm-overhaul-spec.md) — founder to decide whether a standalone consolidated doc is still wanted or it folds into the umbrella. FOUNDER GATE: ADR sign-off (batch review with MV-83). Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-89",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-03 → PR (branch mv-89-rebrand-completion, stacked on mv-84); founder-gated merge after PR #41.",
+      "file": "cards/MV-89-rebrand-completion.md",
+      "title": "Overhaul Phase 0c-2: rebrand completion — off-globals brand surfaces to Dusk plum + permanent token-contrast guard",
+      "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
+      "created": "2026-07-03",
+      "entered": "2026-07-03"
     }
   ]
 }
