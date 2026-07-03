@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/input";
 import { SaveFeedback, useSectionSave } from "./section-save";
 
 export interface ImmigrationInitial {
@@ -32,13 +33,12 @@ export function ImmigrationEditor({ initial }: { initial: ImmigrationInitial }) 
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <label htmlFor="ie-refusals" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Prior visa refusals</label>
-        <select id="ie-refusals" value={refusals} onChange={(e) => setRefusals(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
+        <Select id="ie-refusals" value={refusals} onChange={(e) => setRefusals(e.target.value)}>
           <option value="">Select an option</option>
           {REFUSALS.map((r) => (
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <label className="flex items-center gap-2 text-[14px] text-ink">
         <input type="checkbox" checked={travelled} onChange={(e) => setTravelled(e.target.checked)} />
