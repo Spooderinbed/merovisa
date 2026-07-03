@@ -1151,6 +1151,18 @@
       "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-94",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "PR #49",
+      "file": "cards/MV-94-drop-transition-all.md",
+      "title": "Overhaul Phase 1 (apply): drop the last transition-all (Motion v2 ADR item 1)",
+      "summary": "First apply-slice off the locked Motion v2 ADR (MV-93). The ADR's hard rule is never transition-all — name the properties. The audit left exactly 1 site: components/ui/progress-dots.tsx, where the active-step pill used transition-all to animate its width grow (w-1.5→w-6) + colour (bg-bg-tint→bg-primary). Replaced with the explicit transition-[width,background-color] (matches the codebase style, e.g. button.tsx transition-[background-color,transform]; width is the sanctioned intentional-pill-grow pattern also used by accuracy-meter/factor-bars, not layout thrash). Rendered behaviour byte-identical — the two props already animated under transition-all; this only names them. TDD red-first: new class-assertion test locks transition-[width,background-color] present + transition-all absent (mirrors completeness-ring.test.tsx). Audit: 0 transition-all remaining in components/+app/ after. Uncontroversial + orthogonal to the ADR's open questions, so safe ahead of full sign-off. Suite 1598 (1597 pass, +1 new test; the 1 red = pre-existing MV-80 freshness timer, unrelated). Independent slice; ID MV-94 because board tops out at MV-89 and 90-93 are claimed by in-flight branches.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }

@@ -29,9 +29,9 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-94** · P2 · [Overhaul Phase 1 (apply): drop the last transition-all (Motion v2 ADR item 1)](cards/MV-94-drop-transition-all.md) — _First apply-slice off the locked Motion v2 ADR (MV-93). The ADR's hard rule is never transition-all — name the properties. The audit left exactly 1 site: components/ui/progress-dots.tsx, where the active-step pill used transition-all to animate its width grow (w-1.5→w-6) + colour (bg-bg-tint→bg-primary). Replaced with the explicit transition-[width,background-color] (matches the codebase style, e.g. button.tsx transition-[background-color,transform]; width is the sanctioned intentional-pill-grow pattern also used by accuracy-meter/factor-bars, not layout thrash). Rendered behaviour byte-identical — the two props already animated under transition-all; this only names them. TDD red-first: new class-assertion test locks transition-[width,background-color] present + transition-all absent (mirrors completeness-ring.test.tsx). Audit: 0 transition-all remaining in components/+app/ after. Uncontroversial + orthogonal to the ADR's open questions, so safe ahead of full sign-off. Suite 1598 (1597 pass, +1 new test; the 1 red = pre-existing MV-80 freshness timer, unrelated). Independent slice; ID MV-94 because board tops out at MV-89 and 90-93 are claimed by in-flight branches._
 
 ## Blocked — 4
 
