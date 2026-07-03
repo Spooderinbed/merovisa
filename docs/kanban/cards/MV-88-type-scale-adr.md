@@ -66,7 +66,7 @@ regression via typecheck + lint.
 
 ## Ship
 
-**SHIPPED 2026-07-03 → PR #__** (branch `mv-88-type-scale-adr` off
+**SHIPPED 2026-07-03 → PR [#47](https://github.com/Spooderinbed/merovisa/pull/47)** (branch `mv-88-type-scale-adr` off
 `origin/master f6cada8`). In Review, founder-gated merge + ADR sign-off (never
 self-merged). Independent doc slice — no overlap with any open code PR.
 
