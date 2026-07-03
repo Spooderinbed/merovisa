@@ -39,10 +39,15 @@ export function recapLines(p: StudentProfile): string[] {
   return lines;
 }
 
+// Honest reveal window: long enough to play the summary stagger as a genuine
+// confirmation beat, short enough that it never pads the wait. The real
+// transition in AssessFlow is gated on `payload && recapElapsed`, so results
+// appear at max(real API latency, this window) — honest waiting only, never the
+// old fixed 3000ms "Analyzing" theatre that held a ready result for 3 seconds.
 export function ProfileRecap({
   profile,
   onDone,
-  durationMs = 3000,
+  durationMs = 600,
 }: {
   profile: StudentProfile;
   onDone?: () => void;
@@ -58,10 +63,10 @@ export function ProfileRecap({
     <div className="grid min-h-[70vh] place-items-center px-5">
       <div className="flex w-full max-w-narrow flex-col items-center gap-3 text-center">
         <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
-          Analyzing your profile
+          Your answers
         </span>
         {lines.map((line, i) => (
-          <p key={i} className="animate-rise text-[19px] text-ink" style={{ animationDelay: `${i * 0.5}s` }}>
+          <p key={i} className="animate-rise text-[19px] text-ink" style={{ animationDelay: `${i * 0.08}s` }}>
             {line}
           </p>
         ))}
