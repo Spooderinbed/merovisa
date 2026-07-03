@@ -1130,13 +1130,13 @@
     },
     {
       "id": "MV-88",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "re-filed from MV-84 (2026-07-03) when that ID was re-pointed to the Dusk-plum token swap",
-      "file": null,
-      "title": "Overhaul Phase 0c (doc): design-system v2 spec — type scale + Motion v2 ADR",
-      "summary": "Displaced from the old provisional MV-84 when that ID was re-pointed to the Dusk-plum globals.css token swap (founder's live intent + the MV-83 hand-off). docs/design/2026-07-XX-design-system-v2.md: ~9-step --text-* scale replacing arbitrary text-[Npx]; Motion v2 vocabulary (rise-sm, slide-fwd/back, --ease-out-emphatic, stagger conventions <=5 siblings / 40-60ms / nothing after 700ms); hard rule animate opacity/transform only; primitive contracts (Card, VerdictPill, Button loading); CSS-first ADR — NO framer-motion (~30KB on a low-end-Android funnel), escape hatch motion/mini only if Phase 2 chat demands. NOTE: much of this content already lives in the overhaul spec (docs/design/2026-07-03-elevated-calm-overhaul-spec.md) — founder to decide whether a standalone consolidated doc is still wanted or it folds into the umbrella. FOUNDER GATE: ADR sign-off (batch review with MV-83). Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
+      "badge": "SHIPPED 2026-07-03 → PR #__ (doc-only ADR; founder sign-off gate)",
+      "file": "cards/MV-88-type-scale-adr.md",
+      "title": "Overhaul Phase 0c (doc): type-scale ADR (--text-* scale)",
+      "summary": "RESCOPED from the over-broad 'design-system v2' bundle to the TYPE SCALE ONLY (simplicity-first) — Motion v2, primitive contracts, and the no-framer-motion call are deferred to their own future ADRs. Standalone decision doc docs/design/2026-07-03-type-scale-adr.md (foldable into the overhaul umbrella spec on sign-off). Grounded in a 2026-07-03 audit: 273 text-[Npx] occurrences across components/+app/, 15 distinct sizes 10-26px (15px x77 workhorse, 14/13 x37, 17 x30, ... 26 x1). DECISION = a named 9-step @theme scale: caption 11 / small 13 / meta 14 / body 15 / control 16 / lead 17 / title 20 / headline 21 / display 24 — FAITHFUL (anchored to the app's high-frequency sizes) so migration is ~90% a 1:1 rename; only 27 sites snap (each <=2px: 10->11, 12->13, 18/19->20, 22/26->24). Reconciles the inherited body base = 17px (globals.css:189) as 'lead'. Alternatives A(chosen)/B(disciplined 6-step, more churn)/C(lint allow-list)/D(Tailwind defaults) recorded; 3 open questions for sign-off (20/21 merge?; adopt B instead?; line-height). DOC-ONLY: zero source/test files touched -> no regression risk, suite unaffected; typecheck+lint green. APPLYING the scale (add @theme block, rename 273 sites, 3 primitives, add no-arbitrary-text-size lint) is a SEPARATE founder-gated slice. FOUNDER GATE: ADR sign-off (batch review with MV-83). Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
     },
