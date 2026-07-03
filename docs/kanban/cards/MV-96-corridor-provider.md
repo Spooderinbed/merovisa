@@ -82,7 +82,7 @@ anon restore) — no pre-hydration script needed, unlike `data-theme`.
 
 ## Ship
 
-**SHIPPED 2026-07-04 → PR (number backfilled on create)** (branch
+**SHIPPED 2026-07-04 → PR [#51](https://github.com/Spooderinbed/merovisa/pull/51)** (branch
 `mv-96-corridor-provider` off `origin/master f6cada8`). In Review, founder-gated
 merge (never self-merged).
 Disjoint from the 6 other in-flight overhaul branches except `board.json`
