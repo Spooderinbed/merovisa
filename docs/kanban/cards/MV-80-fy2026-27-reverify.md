@@ -36,3 +36,37 @@ with per-record source URLs. **12/16 changed.**
 - Note that the DHA rises (~25%) are large and student-visible — the subclass 500 charge is a
   headline cost number; treat copy that cites it as in-scope for drift.
 - ATO figures confirmed unchanged — the work there is dates-only, still per-record verified.
+
+## DEFERRED 2026-07-03 (founder decision — resume after the design sprint)
+
+**Status: parked (board `col: blocked`), NOT abandoned.** The founder chose to prioritise the
+elevated-calm design overhaul (MV-82 → MV-83 → MV-84 …) and consciously defer this data re-verify
+until that sprint concludes. This card is the single source of truth for picking it back up.
+
+**Where it stands (partial work is real and on the branch):**
+- Branch `mv-80-fy2026-27-reverify`, **PR [#36](https://github.com/Spooderinbed/merovisa/pull/36)** — OPEN, `CONFLICTING`/`DIRTY`.
+- Commit `9847b9d` landed **12 of the 16 records** ("12/16 figures updated; subclass 500 → 2,500;
+  NMW 26.44 in force; ART 3,727"). **4 records remain** — reconcile against the scope table above
+  and the scout packet to confirm exactly which 4 (the ATO dates-only rows + any wage row not yet
+  re-based are the likely remainder).
+- The main working checkout is currently sitting on this branch with **uncommitted WIP**
+  (`components/plan/plan-list.tsx`, `tests/components/plan/plan-list.test.tsx`) — that is the
+  downstream copy-drift work (headline cost figures in plan copy). Do not discard it; it is part
+  of this card's "check for downstream drift" acceptance criterion.
+
+**Accepted consequence while deferred:** the 1-July freshness test (`tests/data/freshness.test.ts`)
+stays **red**, which reddens CI master-wide (suite: 1 failed / 1588 passed). This is *by design* —
+the failing test is the reminder and must not be silenced by deleting the deadline. Any PR opened
+during the sprint (e.g. MV-83) inherits this one known failure with **zero file overlap**; reviewers
+treat that single freshness failure as MV-80-owned, not a regression.
+
+**Resume checklist (cold-start after the design sprint):**
+1. `git checkout mv-80-fy2026-27-reverify` in the main checkout (the WIP is already there); or
+   re-derive from PR #36.
+2. Finish the remaining 4 records per the Acceptance criteria (open each live source during the
+   edit — never blind-copy the scout doc).
+3. Resolve the PR #36 merge conflict against current `master` (it has drifted since the branch
+   was cut — includes the merged design work).
+4. Land the plan-copy drift edits (the WIP files) so no stale headline figure survives.
+5. Gate green (freshness test now passes) → PR → **founder-gated merge**. Landing this is what
+   un-reds CI.

@@ -43,6 +43,16 @@ Gate = `npm run typecheck && npm run lint && npm test` stay green (untouched —
 - **Built via background Workflow** (`wf_fca7fc3d-2ea`, 9 agents): gather (tokens+MV-82 guidance+real component pairings) → generate 3 → harness build+iterate-to-green → doc → adversarial critic (pass, 0 defects). NOTE: `args.worktree` came through undefined so agents wrote to the main checkout at correct relative paths; artifacts were relocated into this worktree and re-verified (exit 0) before commit.
 - **MERGE IS FOUNDER-GATED (palette pick).** PR opened; do not self-merge.
 
+## Founder decision (2026-07-03) → DONE
+
+- **Palette picked: Dusk plum** (the doc's recommendation — deep plum/berry primary + warm sand
+  paper; the open, most-ownable hue lane and the cleanest chromatic break from the current teal).
+  Runner-up on file = Night indigo; Deep blue explicitly not chosen (corporate-generic per MV-82).
+- PR [#40](https://github.com/Spooderinbed/merovisa/pull/40) merged to master on founder go; board `col: done`.
+- **Hand-off to MV-84:** swap Dusk plum's 23 Light/Dark values into `app/globals.css` (token names
+  frozen), keep `node scripts/contrast-check.mjs` green. The candidate token tables + WCAG matrix in
+  `docs/design/2026-07-04-palette-candidates.md` are the source of truth for the swap.
+
 ## Resume notes
 
 - Built in worktree `.claude/worktrees/mv-83-palette-candidates`, branch off master `d173c2a` (MV-82 digest merged). Deps installed.
