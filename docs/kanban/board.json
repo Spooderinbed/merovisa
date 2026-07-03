@@ -1151,6 +1151,18 @@
       "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-95",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "",
+      "file": "cards/MV-95-honest-recap.md",
+      "title": "Overhaul Phase 1: honest recap — drop the fake 3000ms Analyzing theatre (audit #18)",
+      "summary": "Carves the honest-recap half of the overhaul spec's Phase-1 MV-90 (Motion v2 + honest recap); the motion-system halves stay gated on the Motion v2 ADR (PR #48). Every wizard-completer was held on a fixed 3000ms 'Analyzing your profile' timer before results, regardless of when the real /api/assess result landed — pure latency theatre at the highest-traffic funnel moment, exactly the anti-pattern a trust-first product should never ship. Fix (components/assess/profile-recap.tsx only): durationMs default 3000->600 (a genuine reveal beat, never padding — AssessFlow already gates the real transition on payload && recapElapsed, so results now appear at max(real API latency, 600ms) = honest waiting only); summary stagger i*0.5s->i*0.08s so the reveal completes within the shorter window; label 'Analyzing your profile'->'Your answers' (honest summary label, not a fake-work claim; the existing pulse dot honestly signals in-flight work). Auto-advance kept over the spec's explicit 'See my result' button (lower-friction, more honest, smaller). Orthogonal to the unsigned type/motion ADRs + pending mascot: reuses the sanctioned animate-rise keyframe, adds no motion primitive. TDD +2 (tests/assess/profile-recap-timing.test.tsx, RTL+fake-timers, red-first; locks the two objective trust invariants — short handoff window + no /analyz/i label — not the exact copy/timing, which stay founder-tunable). Blind calls flagged on the card: exact copy, 600ms/stagger feel, button-vs-auto fork.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
