@@ -7,6 +7,7 @@ import { Wizard } from "@/components/wizard/wizard";
 import { WIZARD_STORAGE_KEY } from "@/components/wizard/use-wizard-state";
 import { ProfileRecap } from "./profile-recap";
 import { Results } from "@/components/results/results";
+import { corridorForHomeCountry } from "@/lib/theme/corridor";
 import { track } from "@/lib/analytics/events";
 
 type Phase = "wizard" | "recap" | "results";
@@ -117,17 +118,23 @@ export function AssessFlow({
   };
 
   if (phase === "results" && payload && profile) {
+    // Corridor activation point for the funnel (MV-96): the wizard just revealed
+    // the home country, so results onward carry the corridor accent scope.
+    // `contents` = token carrier only, no layout box.
+    const corridor = corridorForHomeCountry(profile.homeCountry);
     return (
-      <Results
-        payload={payload}
-        destination={profile.destination}
-        mode={signedIn ? "owned" : "anonymous"}
-        assessmentId={assessmentId}
-        // Persist-miss recovery is anonymous-only — signed-in users save server-side.
-        // Re-POSTs the in-memory answers in place; the wizard is never re-run.
-        onRetrySave={signedIn ? undefined : () => void save(profile)}
-        retryingSave={retryingSave}
-      />
+      <div className="contents" data-corridor={corridor ?? undefined}>
+        <Results
+          payload={payload}
+          destination={profile.destination}
+          mode={signedIn ? "owned" : "anonymous"}
+          assessmentId={assessmentId}
+          // Persist-miss recovery is anonymous-only — signed-in users save server-side.
+          // Re-POSTs the in-memory answers in place; the wizard is never re-run.
+          onRetrySave={signedIn ? undefined : () => void save(profile)}
+          retryingSave={retryingSave}
+        />
+      </div>
     );
   }
 
