@@ -1,6 +1,7 @@
 "use client";
 
 import type { EnglishStatus, EnglishTest } from "@/lib/scoring/types";
+import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
 import { Card } from "@/components/ui/card";
 import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
@@ -76,9 +77,18 @@ export function EnglishStep({ profile, setField, callouts, eyebrow }: StepProps)
               value={score}
               onChange={(v) => setField({ englishScore: v })}
             />
+            {test !== "ielts" ? (
+              <span className="text-[13px] text-ink-soft">
+                ≈ IELTS {toIeltsEquivalent(score, test).toFixed(1)} equivalent
+              </span>
+            ) : null}
           </div>
         </Card>
-      ) : null}
+      ) : (
+        <p className="mt-2 text-[13px] text-ink-soft">
+          Until you test, we&apos;ll assume a provisional IELTS 6.0.
+        </p>
+      )}
     </StepShell>
   );
 }

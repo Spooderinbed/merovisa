@@ -46,6 +46,8 @@
      guard (which only zeroes duration) still collapses it to the final state with
      no blank flash. */
   --animate-settle: settle 0.55s var(--ease-calm) both;
+  --animate-slide-fwd: slide-fwd 0.4s var(--ease-calm) both;
+  --animate-slide-back: slide-back 0.4s var(--ease-calm) both;
 }
 
 @keyframes fade {
@@ -75,6 +77,28 @@
     transform: translateY(6px);
   }
   100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slide-fwd {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slide-back {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
     opacity: 1;
     transform: none;
   }

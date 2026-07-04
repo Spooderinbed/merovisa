@@ -1,21 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
 import type { Currency, FundingSource } from "@/lib/scoring/types";
 import { Card } from "@/components/ui/card";
 import { OptionCard } from "@/components/ui/option-card";
 import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { StepShell } from "@/components/wizard/step-shell";
-import { formatNpr, formatUsd } from "@/lib/utils";
+import { formatAud, formatNpr } from "@/lib/utils";
+import { FX_RATES, toAud } from "@/lib/data/policy/fx-rates";
 import type { StepProps } from "./types";
 
-const NPR_PER_USD = 135;
-
-type WizardCurrency = "NPR" | "USD";
+type WizardCurrency = "NPR" | "AUD";
 
 const RANGES: Record<WizardCurrency, { min: number; max: number; step: number; default: number }> = {
   NPR: { min: 1_000_000, max: 10_000_000, step: 100_000, default: 4_500_000 },
-  USD: { min: 8_000, max: 80_000, step: 1_000, default: 33_000 },
+  AUD: { min: 15_000, max: 120_000, step: 1_000, default: 50_000 },
 };
 
 const FUNDING: Array<{ value: FundingSource; label: string }> = [
@@ -38,16 +38,27 @@ const FAMILY_OPTIONS: Array<{ value: FamilyMode; label: string }> = [
 
 export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) {
   const stored = profile.budgetCurrency;
-  const currency: WizardCurrency = stored === "USD" ? "USD" : "NPR";
+  const currency: WizardCurrency = stored === "AUD" ? "AUD" : "NPR";
   const range = RANGES[currency];
   const budget = profile.budget ?? range.default;
+  const nprPerAud = FX_RATES.NPR!.value / FX_RATES.AUD!.value;
   const converted =
-    currency === "NPR" ? formatUsd(Math.round(budget / NPR_PER_USD)) : formatNpr(Math.round(budget * NPR_PER_USD));
+    currency === "NPR" ? formatAud(toAud(budget, "NPR")) : formatNpr(Math.round(budget * nprPerAud));
 
   const onCurrency = (next: WizardCurrency) => {
     const nextRange = RANGES[next];
     setField({ budgetCurrency: next as Currency, budget: nextRange.default });
   };
+
+  // Migrate a persisted older session that stored a currency other than the
+  // two the wizard now supports (e.g. a stale "USD" value) back to the NPR
+  // default, once, on mount.
+  useEffect(() => {
+    if (stored !== "NPR" && stored !== "AUD") {
+      setField({ budgetCurrency: "NPR", budget: RANGES.NPR.default });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Dependents raise the DHA financial-capacity floor — relevant only for the
   // Australia gate, so the control only shows for that destination.
@@ -77,7 +88,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
         ariaLabel="Budget currency"
         options={[
           { value: "NPR", label: "NPR" },
-          { value: "USD", label: "USD" },
+          { value: "AUD", label: "AUD" },
         ]}
         value={currency}
         onChange={onCurrency}
@@ -85,7 +96,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
       <Card radius="card" padding="sm" className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
           <span className="font-mono text-[17px] text-ink">
-            {currency === "NPR" ? formatNpr(budget) : formatUsd(budget)}
+            {currency === "NPR" ? formatNpr(budget) : formatAud(budget)}
           </span>
           <span className="text-[15px] text-ink-soft">≈ {converted}</span>
         </div>
@@ -97,6 +108,9 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
           value={budget}
           onChange={(v) => setField({ budget: v })}
         />
+        <span className="text-[13px] text-ink-faint">
+          Indicative rate: NPR {Math.round(nprPerAud)} ≈ A$1
+        </span>
       </Card>
       <div role="radiogroup" aria-label="Funding source" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {FUNDING.map((f) => (
