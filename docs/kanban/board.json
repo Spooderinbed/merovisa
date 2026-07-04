@@ -1247,6 +1247,18 @@
       "summary": "First apply-slice off the locked Motion v2 ADR (MV-93). The ADR's hard rule is never transition-all — name the properties. The audit left exactly 1 site: components/ui/progress-dots.tsx, where the active-step pill used transition-all to animate its width grow (w-1.5→w-6) + colour (bg-bg-tint→bg-primary). Replaced with the explicit transition-[width,background-color] (matches the codebase style, e.g. button.tsx transition-[background-color,transform]; width is the sanctioned intentional-pill-grow pattern also used by accuracy-meter/factor-bars, not layout thrash). Rendered behaviour byte-identical — the two props already animated under transition-all; this only names them. TDD red-first: new class-assertion test locks transition-[width,background-color] present + transition-all absent (mirrors completeness-ring.test.tsx). Audit: 0 transition-all remaining in components/+app/ after. Uncontroversial + orthogonal to the ADR's open questions, so safe ahead of full sign-off. Suite 1598 (1597 pass, +1 new test; the 1 red = pre-existing MV-80 freshness timer, unrelated). Independent slice; ID MV-94 because board tops out at MV-89 and 90-93 are claimed by in-flight branches.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-95",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "PR #50",
+      "file": "cards/MV-95-honest-recap.md",
+      "title": "Overhaul Phase 1: honest recap — drop the fake 3000ms Analyzing theatre (audit #18)",
+      "summary": "Carves the honest-recap half of the overhaul spec's Phase-1 MV-90 (Motion v2 + honest recap); the motion-system halves stay gated on the Motion v2 ADR (PR #48). Every wizard-completer was held on a fixed 3000ms 'Analyzing your profile' timer before results, regardless of when the real /api/assess result landed — pure latency theatre at the highest-traffic funnel moment, exactly the anti-pattern a trust-first product should never ship. Fix (components/assess/profile-recap.tsx only): durationMs default 3000->600 (a genuine reveal beat, never padding — AssessFlow already gates the real transition on payload && recapElapsed, so results now appear at max(real API latency, 600ms) = honest waiting only); summary stagger i*0.5s->i*0.08s so the reveal completes within the shorter window; label 'Analyzing your profile'->'Your answers' (honest summary label, not a fake-work claim; the existing pulse dot honestly signals in-flight work). Auto-advance kept over the spec's explicit 'See my result' button (lower-friction, more honest, smaller). Orthogonal to the unsigned type/motion ADRs + pending mascot: reuses the sanctioned animate-rise keyframe, adds no motion primitive. TDD +2 (tests/assess/profile-recap-timing.test.tsx, RTL+fake-timers, red-first; locks the two objective trust invariants — short handoff window + no /analyz/i label — not the exact copy/timing, which stay founder-tunable). Blind calls flagged on the card: exact copy, 600ms/stagger feel, button-vs-auto fork.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
