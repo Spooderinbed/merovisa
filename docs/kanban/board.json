@@ -1223,6 +1223,18 @@
       "summary": "Completes the Phase-1 primitive arc (Card/VerdictPill=MV-90, Button-loading=MV-91, form fields=this). Extracts the single most-duplicated string left in the repo — the form-field shell rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary, copied verbatim 28× across the 8 profile-editor files — into NEW components/ui/input.tsx exporting Input (<input>) + Select (<select>), sharing one fieldShell, cn()-merging any per-site className, pure passthrough (no injected attrs = DOM unchanged). Migrated all 28 field sites; the two <input type=checkbox> and the guide-chat textarea (a distinct single-site shape) left out of scope per simplicity-first; about-you w-24 preserved. Intended migrate→verify Workflow died on the account session limit (8 subagents, 0 edits) → fell back to a deterministic checkbox-safe Node transform, LF-normalised. TDD +7 (input.test.tsx red-first). Gate: tsc 0, lint 0 err, suite 1603 pass / 1 fail (pre-existing MV-80 freshness), all 8 editor suites green = behaviour-preserving.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-93",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-03 → PR #48 (doc-only ADR; founder sign-off gate)",
+      "file": "cards/MV-93-motion-v2-adr.md",
+      "title": "Overhaul Phase 0c (doc): Motion v2 ADR (CSS-first motion system)",
+      "summary": "Second of the two decision docs the overhaul needs locked before Phase-2 build (companion to the MV-88 type-scale ADR; third slice carved from the over-broad 'design-system v2' bundle). Standalone doc docs/design/2026-07-03-motion-v2-adr.md (foldable into the overhaul spec on sign-off). Grounded in a 2026-07-03 audit of the app's CSS motion system: @theme has 1 easing (--ease-calm cubic-bezier .22/.61/.36/1) + 3 keyframe animations (fade/rise/settle — ALL opacity+transform, already compositor-safe; settle bakes its 0-22% hold into keyframe PHASES not animation-delay so the reduced-motion guard collapses it cleanly) + a global prefers-reduced-motion collapse; usage tally ease-calm x24, transition-colors x14, animate-pulse x14, duration-150 x9, ... transition-all x1 (a latent smell); NO framer-motion/motion in package.json. DECISION = stay CSS-FIRST, no runtime animation library (bundle discipline on a low-end-Android funnel; narrow Phase-2 escape hatch = one tree-shaken micro-primitive for a single surface only). TWO motion classes: movement = opacity+transform only (compositor); state = paint props only (color/bg/border). HARD RULES: never transition-all; one easing; never bypass reduced-motion (bake delays into keyframe phases). Vocabulary = ease-calm + fade/rise/settle + pulse(skeletons). Stagger convention = <=5 siblings / 40-60ms / nothing after ~700ms. Alternatives A(chosen)/B(framer-motion, ~30KB rejected)/C(no ADR) recorded; 3 open questions for sign-off (duration tokens?; second easing?; pre-define slide-* keyframes?). DOC-ONLY: zero source/test files touched -> no regression risk, suite unaffected; typecheck+lint green. APPLYING it (remove the 1 transition-all; optional --dur-* tokens) is a SEPARATE founder-gated slice. ID MV-93 because 90/91/92 are claimed by in-flight branches. FOUNDER GATE: ADR sign-off (batch with MV-88). Spec: docs/design/2026-07-03-elevated-calm-overhaul-spec.md.",
+      "created": "2026-07-03",
+      "entered": "2026-07-03"
     }
   ]
 }
