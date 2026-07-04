@@ -1,6 +1,7 @@
 import type { AssessmentResult } from "@/lib/scoring/types";
 import type { MatchResult, PreferenceNote } from "@/lib/matches/types";
 import type { IntakeTiming } from "@/lib/timing/intake";
+import type { FieldCompetitivenessNote } from "@/lib/scoring/field-note";
 import type { ProfileAccuracy } from "./accuracy";
 
 export interface AssessmentPayload {
@@ -15,4 +16,6 @@ export interface AssessmentPayload {
   rulesStale?: boolean;
   /** How the chosen goal shaped the match order. Absent on legacy stored payloads. */
   preferenceNote?: PreferenceNote | null;
+  /** Honest context when an "also considering" field's admission bar differs materially from the primary the verdict was scored on (MV-101). Never changes the score. Absent on legacy stored payloads. */
+  competitivenessNote?: FieldCompetitivenessNote | null;
 }

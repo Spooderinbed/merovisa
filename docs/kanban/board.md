@@ -29,9 +29,10 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 1
+## In review (WIP 3) — 2
 
 - **MV-99** · P1 · [Step 4 multi-subject: primary field owns the verdict + up to 2 'also considering' fields (broaden matches, exploratory label, honest competitiveness note)](cards/MV-99-step4-multi-subject.md) — _Founder ask (2): let students pick multiple subjects without breaking the honest single verdict. Decision (mine + Codex): Option A -- one primary fieldOfStudy owns the verdict + scoring baseline exactly as today, plus up to 2 additive alsoConsidering fields that only broaden which programs surface. Scope win: scoring engine untouched, all golden scores byte-identical (proven inert). Codex guardrail built: also-considering programs carry an explicitly exploratory match reason so a student never reads the primary verdict onto them. New pure modules lib/wizard/also-considering.ts + lib/scoring/field-note.ts (honest 'less/more competitive admit' note). Matching = 3-tier soft sort (primary->also->rest). Additive types + Zod (disjoint/dedupe refine), wizard multi-select (cap 2, primary excluded, disabled at cap), profile-editor parity, recap 'also considering' line, JSONB persistence (no migration). Deferred: per-field verdicts (Option C) + results-page note surfacing._
+- **MV-101** · P1 · [Results-page competitiveness note: surface MV-99 honest also-considering line near the verdict (not just in the wizard)](cards/MV-101-results-competitiveness-note.md) — _MV-99 follow-up. The honest "Business is a less competitive admit than Computer Science" line only showed in the wizard at point-of-choice; a student reviewing results never saw it. Compute competitivenessNote(primary, alsoConsidering) in assembleAssessment (where the profile is in scope) and carry it on AssessmentPayload -- same pattern as preferenceNote -- then render a calm CompetitivenessNote callout under the VerdictCard on the results page. Verdict stays scored on the primary field alone; the note is presentational context only. Additive optional payload field (no migration). Depends on MV-99 (alsoConsidering + field-note.ts) -- stacked PR on the MV-99 branch. TDD +4._
 
 ## Blocked — 4
 
