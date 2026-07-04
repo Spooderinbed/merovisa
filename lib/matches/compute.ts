@@ -169,12 +169,14 @@ function computeOne(
     (inputs.alsoFields ?? []).includes(p.field) &&
     p.field !== inputs.userField
   ) {
-    // The honesty guardrail: an "also considering" program is shown for breadth,
-    // but the verdict was NOT computed for this field — say so plainly so a student
-    // never reads their primary verdict onto it. Neutral (positive: false ⇒ muted).
+    // The honesty guardrail: an "also considering" program is shown for breadth. The
+    // primary verdict card is still scored on the primary field, so say plainly this
+    // isn't it. (MV-102 now gives each also-considering field its own real band on the
+    // results page, so the old "not covered by your verdict" clause would be false.)
+    // Neutral (positive: false ⇒ muted).
     reasons.push({
       kind: "field-exploring",
-      text: `In a field you're also considering — not covered by your verdict.`,
+      text: `In a field you're also considering — not your primary field.`,
       positive: false,
     });
   }
