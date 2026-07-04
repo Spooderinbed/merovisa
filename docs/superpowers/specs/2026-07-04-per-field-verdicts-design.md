@@ -2,6 +2,11 @@
 
 **Card:** MV-102 · **Branch:** `mv-102-per-field-verdicts` (off `origin/master`) · **Date:** 2026-07-04
 
+> **Rev 2 (2026-07-04):** revised after a Claude-5 (xhigh) 3-lens review. Changes: signed-in
+> data-flow path fixed (blocker), matches-page label reconciled in-slice (blocker), validation gap
+> closed, subordination/framing tightened, pivot copy softened, determinism boundary named, tests
+> added. See "Review resolutions" at the end.
+
 ## Problem
 
 MV-99 lets a student pick a **primary** field plus up to two **also-considering** fields. Today
@@ -20,12 +25,13 @@ the student sees their standing in each field and can make an informed pivot the
 
 - **(A) Primary anchors, secondaries are compact bands.** The main `VerdictCard` is unchanged — it
   is still the verdict, scored on the primary field alone. Each also-considering field gets its own
-  **compact** banded verdict (Strong / Possible / Reach) beneath it, visibly secondary.
-- **Scope: results page only.** Matches, plan, recap, and the wizard are out of scope for this slice.
-  (Matches already carry the `field-exploring` exploratory label from MV-99; that stays.)
+  **compact** banded verdict (Strong / Possible / Reach) beneath it, visibly secondary and clearly
+  labelled as conditional on switching field (see Display).
+- **Scope: results page only, plus the two integrity fixes this slice's existence forces** (the
+  signed-in data-flow gap and the matches-page label — see below). Plan and wizard stay as-is.
 - **Pivot callout.** When an also-considering field's band strictly **outranks** the primary's, show
-  one honest, encouraging callout naming the stronger option — never a "give up" message; an *added*
-  realistic path, framed as the student's choice.
+  one honest, low-pressure callout naming the stronger option — an *added* option framed as the
+  student's choice, never "give up" and never an over-promise.
 - **Principles.** Verdicts come from **real re-scores** (`runAssessment` with `fieldOfStudy` swapped),
   never a heuristic. The primary path is **byte-identical** (goldens unchanged). **No DB / no
   migration** — everything is derived server-side at assembly time.
@@ -36,9 +42,16 @@ rework (over-scoped — this slice is results-page-only).
 ## Why re-scoring per field is valid
 
 `fieldOfStudy` feeds **only** the academic dimension, via `FIELD_COMPETITIVENESS` (the admission
-baseline the student's grade is measured against). Every other dimension — financial, visa,
-profileStrength — is field-independent. So `runAssessment({ ...profile, fieldOfStudy: X })` is a
-correct, self-consistent verdict for "this same student, in field X." No dimension is left stale.
+baseline the student's grade is measured against). **No other dimension's scoring logic branches on
+`fieldOfStudy`** — verified against `lib/scoring/{financial,visa,profile-strength}.ts` (zero
+references). So `runAssessment({ ...profile, fieldOfStudy: X })` is a correct, self-consistent verdict
+for "this same student, in field X."
+
+Honest caveat (do **not** over-claim in copy): the financial dimension's DHA-capacity gate uses one
+flat representative tuition figure (`AU_REPRESENTATIVE_TUITION_AUD`) for all fields, even though real
+tuition varies by field. So a field swap moves the **academic baseline** — it does **not** re-cost the
+student. The pivot copy must therefore speak only to the band/standing, never imply the whole
+financial or visa picture improves with a switch.
 
 ## Architecture
 
@@ -48,7 +61,7 @@ correct, self-consistent verdict for "this same student, in field X." No dimensi
 export interface SecondaryVerdict {
   field: FieldOfStudy;
   label: string;            // FIELD_LABELS[field]
-  verdict: Verdict;         // band from the re-score
+  verdict: Verdict;         // ONLY the band is kept from the re-score (see determinism)
   outranksPrimary: boolean; // strictly stronger band than the primary
 }
 
@@ -64,14 +77,22 @@ export function computeSecondaryVerdicts(
 ```
 
 Behaviour:
-- `alsoConsidering` empty/undefined → returns `null` (nothing rendered; primary path untouched).
-- For each extra field, re-score `runAssessment({ ...profile, fieldOfStudy: field })` and take
-  `.verdict`. Preserve the student's chosen order in `items`.
+- **Defensive input hygiene (load-bearing):** filter `profile.alsoConsidering` to exclude the primary
+  `fieldOfStudy` and dedupe, *inside this function*, before doing anything. This is the load-bearing
+  guard because not every write path validates disjointness (the signed-in `IntendedStudyPatch`
+  doesn't — see Error handling). After filtering, empty/undefined → return `null`.
+- For each remaining extra field, re-score `runAssessment({ ...profile, fieldOfStudy: field })` and
+  keep **only** `.verdict`. Preserve the student's chosen order in `items`.
+- **Determinism:** `runAssessment` stamps `computedAt: new Date().toISOString()`; this function keeps
+  only `.verdict` per re-score, so its output is deterministic and never leaks `weighted`,
+  `dimensions`, or `computedAt`. A test asserts `SecondaryVerdict` carries no numeric score (keeps the
+  no-raw-scores rule airtight at the type level).
 - Band rank via the existing `VERDICTS` index (`strong` 0 → `reach` 2; lower is better).
   `outranksPrimary = rank(extra) < rank(primaryResult.verdict)`.
 - `pivot` = the single **best-ranked** field among those that outrank the primary (ties → first in the
-  student's order). `null` when none outrank — most students won't get a callout, only a band list.
-- Pure and deterministic: no `Date.now`, no I/O. At most two re-scores (cap is 2 extras).
+  student's order). `null` when none outrank — which, per the band distribution, is the common case:
+  most students get a band list with **no** callout.
+- Pure: at most two extra `runAssessment` calls, no I/O.
 
 ### Assembly — `lib/results/assemble.ts`
 
@@ -83,9 +104,22 @@ const result = runAssessment(scored);           // was inline as `result: runAss
 // ...return { result, ..., secondaryVerdicts: computeSecondaryVerdicts(scored, result) }
 ```
 
-This hoist is behaviour-preserving (same single call). Because `computeSecondaryVerdicts`
-short-circuits to `null` when there are no extras, the primary-only path does **zero** extra scoring
-and the payload for a single-field student is unchanged in spirit (new key present but `null`).
+Behaviour-preserving (same single primary call). For a single-field student `computeSecondaryVerdicts`
+short-circuits to `null` → zero extra scoring, payload unchanged in spirit (new key present but null).
+
+### Both data-flow paths must carry `alsoConsidering`
+
+`assembleAssessment` is fed a `StudentProfile` from **two** builders, and the feature is only live if
+both carry the extras:
+
+1. **Anonymous wizard** → `lib/profiles/from-assessment.ts` — already forwards `alsoConsidering`
+   (MV-99). ✔
+2. **Signed-in re-score** → `lib/scoring/from-sections.ts` `sectionsToStudentProfile` →
+   `lib/assessments/re-score.ts` `reScoreAssessment` (used by `/api/assess`, `/api/assess/refresh`,
+   `/api/profile/section`). **Currently drops it:** `from-sections.ts:47` maps `study?.field` but
+   never `study?.alsoConsidering`. **Fix:** add `alsoConsidering: study?.alsoConsidering` to the
+   returned object. (This also un-darks MV-99's existing `competitivenessNote` for signed-in users — a
+   latent gap this slice closes.)
 
 ### Payload type — `lib/results/types.ts`
 
@@ -97,47 +131,71 @@ secondaryVerdicts?: SecondaryVerdicts | null;
 
 ### Display — new `components/results/secondary-verdicts.tsx` (presentational)
 
-Renders nothing when `data` is null/empty. Otherwise a compact, flat block that slots **in place of**
-the current `<CompetitivenessNote>` at `results.tsx:77` (see "Relationship to competitivenessNote"):
+Prop type mirrors the sibling `CompetitivenessNote` (three states):
+`{ data: SecondaryVerdicts | null | undefined }` — renders nothing for null/undefined/empty. This
+slots **in place of** `<CompetitivenessNote>` at `results.tsx:77`.
 
-- A small mono-up label: *"Your standing in other fields you're considering"*.
-- One compact row per `items` entry: field label + a band pill reusing the exact verdict colour
-  classes already in `verdict-card.tsx` (`bg-strong-tint text-strong`, `bg-possible-tint
-  text-possible-ink`, `bg-reach-tint text-reach`) and `VERDICT_LABELS[verdict].label` for the word.
-  Compact = clearly subordinate to the main `VerdictCard` (smaller pill, no headline line, no
-  disclaimer of its own — the primary card's disclaimer covers the readout).
-- When `pivot` is set, one honest callout line below the rows, e.g.
-  *"You're a Possible for Business — a stronger standing than your Reach for Computer science. If
-  you're open to it, Business may be the more realistic path."* Encouraging, additive, never
-  "give up on Computer science." Verdict **words** (not numbers) only — the no-raw-scores rule holds.
-- Same design language: warm paper surface, thin border, no gradient/shadow, sentence case.
+When populated, a compact flat block, clearly subordinate to the primary `VerdictCard`:
+
+- **Conditional framing is mandatory, not implied.** The section label states the hypothetical
+  outright — e.g. *"Your standing if you applied under a different field"* — and **each row restates
+  the conditional in the same visual unit as the pill**, not a bare "Business — Possible". Format:
+  *"If you applied under Business instead — Possible."* This is what stops a student reading a
+  secondary Strong/Possible pill next to a primary Reach card as their *actual* standing. The shared
+  `VerdictDisclaimer` is generic and does **not** carry this distinction, so the label/rows must.
+- Band pill reuses the exact verdict colour classes from `verdict-card.tsx` (`bg-strong-tint
+  text-strong`, `bg-possible-tint text-possible-ink`, `bg-reach-tint text-reach`) and
+  `VERDICT_LABELS[verdict].label` for the word. **Words only — no numeric score.**
+- **Static reveal:** secondary pills render **without** `animate-rise`/`animate-settle`, so the
+  primary card keeps its deliberate two-beat motion emphasis (audit #25) and the hierarchy holds.
+- When `pivot` is set, one honest, low-pressure callout below the rows. Copy names the band difference
+  **without an editorial recommendation** — e.g. *"You'd be a Possible under Business — a stronger
+  band than your Reach under Computer science. Worth exploring if a switch appeals to you."* No "the
+  more realistic path", no implication the cost/visa picture changes. Verdict **words** only.
+- Design language: warm paper surface, thin border, no gradient/shadow, sentence case.
+
+> Visual weight can't be fully judged from prose — a wireframe/screenshot check during build (results
+> is auth-gated, so verify via a fixture render/RTL snapshot) before finalising the subordination.
+
+### Matches-page label reconciliation (in-slice — blocker)
+
+`lib/matches/compute.ts:177` renders the `field-exploring` reason as
+*"In a field you're also considering — not covered by your verdict."* Once MV-102 gives that field a
+real band on results, "not covered by your verdict" becomes **false** — a direct cross-surface trust
+contradiction. Because this slice *causes* the regression, it fixes it here: reword the string to drop
+the false clause while keeping the honest "this isn't your primary field" signal, e.g.
+*"In a field you're also considering — not your primary field."* (No renderer change; the reason
+renders `reason.text`.)
 
 ### Relationship to `competitivenessNote`
 
-The secondary bands **subsume** the standalone text note on the results page: the pivot callout
-carries the same "stronger chances there" honesty, now grounded in an actual band rather than an
-admission-bar comparison. So on `results.tsx` we **replace** `<CompetitivenessNote>` with
-`<SecondaryVerdicts>` (net UX is an upgrade, not two overlapping lines).
-
-`lib/scoring/field-note.ts` (`competitivenessNote`) and the `payload.competitivenessNote` field are
-**retained** — they are still valid, tested, and may back a live wizard hint later — but are simply no
-longer rendered on the results page. Optionally, `computeSecondaryVerdicts` may fold the
-`competitivenessNote` text into the pivot callout as the "why" clause; kept optional to avoid coupling.
+On the results page we **replace** `<CompetitivenessNote>` with `<SecondaryVerdicts>`. Honest
+trade-off (not a pure superset): `competitivenessNote` fires on any competitiveness-weight gap
+≥ 10 points **regardless of band** — it can speak even when both fields land in the *same* band —
+whereas the pivot callout fires only when a band is *strictly* outranked. So for same-band extras the
+old "easier/tougher admit" line disappears with nothing replacing it. We accept this consciously: a
+real re-scored band is a higher-trust signal than a raw weight heuristic, and the per-row band list
+still shows the standing for every extra. `lib/scoring/field-note.ts` and the
+`payload.competitivenessNote` field are **retained** (still tested; may back a wizard hint later),
+just no longer rendered on results.
 
 ## Data flow
 
-`StudentProfile` (already carries `alsoConsidering` from MV-99) → `assembleAssessment` re-scores each
-extra → `payload.secondaryVerdicts` → `<Results>` → `<SecondaryVerdicts>`. No client scoring, no new
-API, no DB. The engine is never modified.
+`StudentProfile` (carrying `alsoConsidering` from **either** builder above) → `assembleAssessment`
+re-scores each extra → `payload.secondaryVerdicts` → `<Results>` → `<SecondaryVerdicts>`. No client
+scoring, no new API, no DB. The engine is never modified.
 
 ## Error handling / edge cases
 
-- No extras → `null` → nothing renders (the common case).
+- No extras (after defensive filtering) → `null` → nothing renders (the common case).
 - Legacy stored payloads (no `secondaryVerdicts` key) → optional field, renders nothing. No migration.
 - An extra equal to or weaker than the primary → its band still shows (honest), just no pivot.
 - Multiple outrank the primary → one callout for the strongest only (no wall of callouts).
-- `alsoConsidering` is already validated (≤2, excludes primary, deduped) upstream in MV-99's Zod —
-  no re-validation here.
+- **Validation gap:** the wizard's `ProfileSchema` enforces disjoint + no-dupes via `.refine`, but the
+  signed-in `IntendedStudyPatch` (`lib/validation/profile-section.ts:41`) has only `.max(2)`. Primary
+  defense is the **in-function filter** in `computeSecondaryVerdicts` (covers every path). We **also**
+  add the matching disjoint/dedup `.refine` to `IntendedStudyPatch` for write-path parity, so bad data
+  never persists in the first place.
 
 ## Testing (TDD — write failing first)
 
@@ -145,13 +203,26 @@ API, no DB. The engine is never modified.
   assertion that a payload for a single-field profile has `secondaryVerdicts === null`.
 - `computeSecondaryVerdicts`:
   - empty/undefined `alsoConsidering` → `null`.
-  - each extra's band equals `runAssessment` with that field swapped (drive with a fixture whose
-    primary and an extra land in different bands).
+  - **defensive filter:** an extra equal to the primary, or a duplicate, is dropped before scoring.
+  - each extra's band equals `runAssessment` with that field swapped (fixture where primary and an
+    extra land in different bands).
   - `outranksPrimary` true only when strictly stronger; order preserved.
-  - `pivot` picks the strongest outranking field; `null` when none outrank; ties → first.
-- `<SecondaryVerdicts>`: renders nothing for null; renders one pill per item with the right band
-  class/word; renders the callout only when `pivot` set; band words come from `VERDICT_LABELS`.
-- `<Results>`: `competitivenessNote` render is gone, `SecondaryVerdicts` present; primary `VerdictCard`
+  - **common case (named explicitly):** two extras, *neither* outranking → `items` fully populated,
+    `pivot === null`.
+  - `pivot` picks the strongest outranking field; `null` when none; ties → first.
+  - **boundary-straddle:** primary and an extra sit just either side of a verdict cutoff (small
+    underlying gap) → band differs but the type still carries only `.verdict`; confirms the callout
+    can't overstate a marginal difference.
+  - **no-leak:** `SecondaryVerdict` never carries `weighted` / `dimensions` / `computedAt`.
+- **Signed-in mapping:** `sectionsToStudentProfile` forwards `alsoConsidering` — round-trip test
+  mirroring the existing dependents-mapping tests in `tests/scoring/from-sections.test.ts`.
+- **Validation:** `IntendedStudyPatch` rejects an `alsoConsidering` containing the primary / a
+  duplicate; accepts a valid disjoint pair.
+- `<SecondaryVerdicts>`: renders nothing for null/undefined; one row per item with the right band
+  class/word and the conditional framing; callout only when `pivot` set; words from `VERDICT_LABELS`.
+- **Matches label:** the `field-exploring` reason text no longer contains "not covered by your
+  verdict" (guards the reconciliation from regressing).
+- `<Results>`: `CompetitivenessNote` render gone, `SecondaryVerdicts` present; primary `VerdictCard`
   untouched.
 - Gate: `npm run typecheck` + `npm run lint` + `npm test` green.
 
@@ -159,28 +230,53 @@ API, no DB. The engine is never modified.
 
 `npm run dev` → complete `/assess` with a primary that lands **Reach** and an also-considering field
 known to be an easier admit (e.g. primary Computer science, extra Business) on a mid profile → results
-shows the primary Reach card unchanged, a compact "Business — Possible" band beneath it, and the pivot
-callout. Re-run with a single field → no secondary block, verdict identical to before.
+shows the primary Reach card unchanged, a compact "If you applied under Business instead — Possible"
+row beneath it, and the pivot callout. Re-run with a single field → no secondary block, verdict
+identical. Signed-in: set an also-considering field in the profile editor, re-score → the bands appear
+(proves the `from-sections` path). Click through to matches → the exploring label no longer says "not
+covered by your verdict".
 
 ## Files
 
 - New: `lib/results/secondary-verdicts.ts`, `components/results/secondary-verdicts.tsx`
-- Edit: `lib/results/assemble.ts` (attach field), `lib/results/types.ts` (payload key),
-  `components/results/results.tsx` (swap `<CompetitivenessNote>` → `<SecondaryVerdicts>`)
+- Edit: `lib/results/assemble.ts` (hoist + attach), `lib/results/types.ts` (payload key),
+  `components/results/results.tsx` (swap `<CompetitivenessNote>` → `<SecondaryVerdicts>`),
+  `lib/scoring/from-sections.ts` (forward `alsoConsidering`),
+  `lib/matches/compute.ts` (reword `field-exploring` text),
+  `lib/validation/profile-section.ts` (disjoint/dedup `.refine` on `IntendedStudyPatch`)
 - Tests: `tests/results/secondary-verdicts.test.ts`,
-  `tests/components/results/secondary-verdicts.test.tsx`, plus the characterization assertion.
+  `tests/components/results/secondary-verdicts.test.tsx`, additions to
+  `tests/scoring/from-sections.test.ts`, `tests/scoring/characterization.test.ts`, a matches-label
+  assertion, and a `profile-section` validation test.
 
 ## Bookkeeping
 
 - Kanban card **MV-102** created on this branch (branch cut **before** editing `board.json`, per the
   branch-hygiene lesson). Regenerate views with `npm run board`.
-- **Fold the board reconciliation into this branch:** flip MV-80 / MV-99 / MV-100 / MV-101 from
-  `inreview` → `done` in the same `board.json` edit, so the already-merged cards reconcile when this
-  PR merges — avoiding a separate founder-gated master push for pure bookkeeping.
+- **Fold the board reconciliation into this branch:** flip the already-merged cards from `inreview`
+  → `done` in the same `board.json` edit. Reconcile the exact id set against `board.json` first (the
+  review flagged MV-100 may not have a board entry despite a card file existing) — flip only ids that
+  are actually present and `inreview`: MV-80, MV-99, MV-101, and MV-100 if present.
 - Merge to master is **founder-gated**: build + push branch + open PR, leave the merge.
 
 ## Deferred (future slices)
 
 Per-field **match sections** or a field switcher; per-field **plan** guidance; promoting the primary
-itself to a chooser. This slice is results-page verdicts only — the smallest honest promotion of the
-also-considering fields.
+itself to a chooser; field-accurate tuition in the financial dimension. This slice is results-page
+verdicts + the two integrity fixes it forces — the smallest honest promotion of the also-considering
+fields.
+
+## Review resolutions (Claude-5 xhigh, 3-lens)
+
+| # | Severity | Finding | Resolution |
+|---|----------|---------|------------|
+| 1 | blocker | Signed-in re-score drops `alsoConsidering` (feature ships dark) | `from-sections.ts` forwards it; data-flow section + round-trip test added |
+| 2 | blocker | Matches `field-exploring` label "not covered by your verdict" becomes false | Reworded in-slice to "not your primary field"; guard test added |
+| 3 | should-fix | `IntendedStudyPatch` lacks disjoint/dedup validation | In-function defensive filter (primary) + parity `.refine` added |
+| 4 | should-fix | Subordination/framing only in prose | Mandatory per-row conditional framing + explicit label; wireframe check |
+| 5 | should-fix | Pivot copy overstates a marginal, cutoff-adjacent difference | Softened to band-only ("worth exploring"), no "realistic path"; boundary test |
+| 6 | should-fix | "No dimension left stale" overstates (flat tuition) | Reworded to "no scoring logic branches on field"; copy caveat added |
+| 7 | opt | Replace loses same-band easier/harder signal | Documented as a conscious trade-off (not a superset) |
+| 8 | opt | Determinism relies on discarding `computedAt` | Named as load-bearing; no-leak test added |
+| 9 | opt | Secondary pills could dilute primary motion | Render static (no `animate-*`) |
+| 10 | opt | Common no-pivot case untested | Added as an explicit named test |
