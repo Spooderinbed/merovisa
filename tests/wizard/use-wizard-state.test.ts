@@ -75,6 +75,17 @@ describe("useWizardState", () => {
     expect(result.current.stepEyebrow).toBe("Step 6");
   });
 
+  it("tracks navigation direction for the step slide transition (fwd on next, back on back)", () => {
+    const { result } = renderHook(() => useWizardState());
+    expect(result.current.direction).toBe("fwd");
+    act(() => void result.current.next());
+    expect(result.current.direction).toBe("fwd");
+    act(() => result.current.back());
+    expect(result.current.direction).toBe("back");
+    act(() => void result.current.next());
+    expect(result.current.direction).toBe("fwd");
+  });
+
   it("reports done on the final step", () => {
     const { result } = renderHook(() => useWizardState());
     for (let i = 0; i < 7; i++) act(() => void result.current.next());

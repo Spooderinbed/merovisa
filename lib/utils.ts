@@ -23,6 +23,14 @@ export function formatUsd(amount: number): string {
   return `USD ${amount}`;
 }
 
+export function formatAud(amount: number): string {
+  if (amount >= 1000) {
+    const k = Math.round(amount / 1000);
+    return `A$${k}k`;
+  }
+  return `A$${amount}`;
+}
+
 export function yearsBetween(pastYear: number, reference?: number): number {
   const ref = reference ?? new Date().getFullYear();
   return Math.max(0, ref - pastYear);

@@ -17,6 +17,38 @@ const renderStep = (profile: Partial<StudentProfile>) => {
   return { setField };
 };
 
+describe("BudgetStep — AUD corridor currency (MV-97)", () => {
+  it("offers NPR and AUD — never USD, which is nobody's currency on this corridor", () => {
+    renderStep(auProfile);
+    const group = screen.getByRole("radiogroup", { name: /Budget currency/i });
+    expect(within(group).getByRole("radio", { name: "NPR" })).toBeInTheDocument();
+    expect(within(group).getByRole("radio", { name: "AUD" })).toBeInTheDocument();
+    expect(within(group).queryByRole("radio", { name: "USD" })).toBeNull();
+  });
+
+  it("converts an NPR budget to its AUD equivalent from the single FX source", () => {
+    renderStep(auProfile);
+    // 4,500,000 NPR at NPR 90 ≈ A$1 (FX_RATES: 135 NPR/USD ÷ 1.5 AUD/USD) → A$50k.
+    expect(screen.getByText(/≈ A\$50k/)).toBeInTheDocument();
+  });
+
+  it("shows the honest indicative rate caption", () => {
+    renderStep(auProfile);
+    expect(screen.getByText(/NPR 90 ≈ A\$1/)).toBeInTheDocument();
+  });
+
+  it("switches to the AUD scale with its own default when AUD is chosen", async () => {
+    const { setField } = renderStep(auProfile);
+    await userEvent.click(screen.getByRole("radio", { name: "AUD" }));
+    expect(setField).toHaveBeenCalledWith({ budgetCurrency: "AUD", budget: 50_000 });
+  });
+
+  it("migrates a persisted USD budget from an older session back to NPR", () => {
+    const { setField } = renderStep({ ...auProfile, budgetCurrency: "USD", budget: 33_000 });
+    expect(setField).toHaveBeenCalledWith({ budgetCurrency: "NPR", budget: 4_500_000 });
+  });
+});
+
 describe("BudgetStep — dependents control (B2)", () => {
   it("shows the family control for Australia, defaulting to 'Just me'", () => {
     renderStep(auProfile);

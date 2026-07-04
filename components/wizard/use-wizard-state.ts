@@ -88,6 +88,8 @@ export interface WizardState {
   stepEyebrow: string;
   isFirst: boolean;
   isLast: boolean;
+  /** Navigation direction for the step slide transition: "fwd" on next, "back" on back. */
+  direction: "fwd" | "back";
   setField: (patch: Partial<StudentProfile>) => void;
   next: () => { done: boolean };
   back: () => void;
@@ -102,6 +104,7 @@ export function useWizardState(
   const restored = persist ? readPersistedWizard() : null;
   const [profile, setProfile] = useState<Partial<StudentProfile>>(restored?.profile ?? initial);
   const [index, setIndex] = useState(restored?.index ?? 0);
+  const [direction, setDirection] = useState<"fwd" | "back">("fwd");
 
   useEffect(() => {
     if (!persist) return;
@@ -119,13 +122,17 @@ export function useWizardState(
   }, []);
 
   const next = useCallback(() => {
+    setDirection("fwd");
     const steps = visibleStepsFor(profile);
     const atEnd = clampedIndex >= steps.length - 1;
     if (!atEnd) setIndex(clampedIndex + 1);
     return { done: atEnd };
   }, [profile, clampedIndex]);
 
-  const back = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
+  const back = useCallback(() => {
+    setDirection("back");
+    setIndex((i) => Math.max(0, i - 1));
+  }, []);
 
   return {
     profile,
@@ -136,6 +143,7 @@ export function useWizardState(
     stepEyebrow: `Step ${stepNumber}`,
     isFirst: clampedIndex === 0,
     isLast: clampedIndex === visible.length - 1,
+    direction,
     setField,
     next,
     back,
