@@ -7,6 +7,8 @@
  * agent/lawyer). The /privacy + /terms pages it points to are a separate MV-05
  * sub-slice (pending founder D3); this component is the placement mechanism.
  */
+import { Card } from "@/components/ui/card";
+
 export const NOT_ADVICE_DISCLAIMER =
   "This is a rules-based estimate, not immigration advice. Your result comes from published rules and can change — it is not a guarantee of any visa or admission outcome. The relevant decision-makers decide your case under the rules that apply at the time — the Department of Home Affairs for your visa, and each institution for its own admission. For advice on your own application, see a registered migration agent (OMARA) or a lawyer.";
 
@@ -18,11 +20,13 @@ export function VerdictDisclaimer({
   className?: string;
 }) {
   return (
-    <p
+    <Card
+      as="p"
       role="note"
-      className={`rounded-md border border-line bg-surface px-3 py-2 text-[12.5px] text-ink-soft ${className}`.trim()}
+      radius="card"
+      className={`px-3 py-2 text-[12.5px] text-ink-soft ${className}`.trim()}
     >
       {message}
-    </p>
+    </Card>
   );
 }

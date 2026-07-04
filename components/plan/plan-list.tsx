@@ -1,6 +1,7 @@
 import type { PlanItemRow } from "@/lib/plan/types";
 import { PlanItemCard } from "./plan-item-card";
 import { groupByPhase } from "@/lib/plan/select";
+import { Card } from "@/components/ui/card";
 
 export function PlanList({
   items,
@@ -25,12 +26,12 @@ export function PlanList({
     return (
       <div className="flex flex-col gap-4">
         {intro}
-        <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-6 text-center">
+        <Card padding="lg" className="flex flex-col gap-2 text-center">
           <h2 className="text-[20px]">All caught up</h2>
           <p className="text-[15px] text-ink-soft">
             When you change your profile or rerun your assessment, new actions land here.
           </p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -53,7 +54,7 @@ export function PlanList({
       ))}
 
       {closed.length > 0 ? (
-        <details className="rounded-lg border border-line bg-surface p-4">
+        <Card as="details" padding="sm">
           <summary className="cursor-pointer font-mono text-[12.5px] uppercase tracking-wide text-ink-faint">
             Closed ({closed.length})
           </summary>
@@ -62,7 +63,7 @@ export function PlanList({
               <PlanItemCard key={i.id} item={i} onChanged={onChanged} />
             ))}
           </div>
-        </details>
+        </Card>
       ) : null}
     </div>
   );

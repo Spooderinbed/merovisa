@@ -1,5 +1,6 @@
 import { AU_GENUINE_STUDENT } from "@/lib/data/source/au-genuine-student";
 import type { GenuineStudentFact } from "@/lib/data/types";
+import { Card } from "@/components/ui/card";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 const SECTIONS: { id: GenuineStudentFact["section"]; heading: string }[] = [
@@ -20,7 +21,7 @@ const DISCLAIMER = "General context for the Australian Genuine Student requireme
  */
 export function GenuineStudent() {
   return (
-    <aside className="flex flex-col gap-3 rounded-md border border-line bg-bg-tint p-4 text-[14px] text-ink-soft">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-[14px] text-ink-soft">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         The Genuine Student test (Australia)
       </span>
@@ -65,6 +66,6 @@ export function GenuineStudent() {
       </div>
 
       <p className="text-[12.5px] text-ink-faint">{DISCLAIMER}</p>
-    </aside>
+    </Card>
   );
 }

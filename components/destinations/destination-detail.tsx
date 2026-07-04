@@ -1,12 +1,8 @@
 import Link from "next/link";
 import type { MarketingDestination } from "@/lib/marketing/destinations";
+import { Card } from "@/components/ui/card";
+import { VerdictPill } from "@/components/ui/verdict-pill";
 import { Fact } from "./fact";
-
-const VERDICT_STYLE = {
-  strong:   { label: "Strong match", cls: "bg-strong-tint text-strong" },
-  possible: { label: "Possible",     cls: "bg-possible-tint text-possible" },
-  reach:    { label: "Reach",        cls: "bg-reach-tint text-reach" },
-} as const;
 
 const RISK_STYLE = {
   calm:    "bg-strong-tint text-strong",
@@ -15,7 +11,6 @@ const RISK_STYLE = {
 } as const;
 
 export function DestinationDetail({ destination: c }: { destination: MarketingDestination }) {
-  const v = VERDICT_STYLE[c.match];
   const sourceHost = c.source.replace(/^https?:\/\//, "").split("/")[0];
 
   return (
@@ -34,9 +29,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
         </span>
         <h1 className="text-[clamp(36px,4.6vw,52px)] leading-[1.05]">{c.name}</h1>
         {c.supported ? (
-          <span className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[13px] ${v.cls}`}>
-            {v.label}
-          </span>
+          <VerdictPill verdict={c.match} size="lg" className="text-[13px]" />
         ) : (
           <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-3 py-1 font-mono text-[13px] text-ink-soft">
             Not yet available
@@ -55,7 +48,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
       </span>
 
       {/* risk */}
-      <div className="mt-6 overflow-hidden rounded-lg border border-line bg-surface">
+      <Card className="mt-6 overflow-hidden">
         <div className={`flex items-center gap-2 border-b border-line px-5 py-3 ${RISK_STYLE[c.risk.level]}`}>
           <svg aria-hidden viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
@@ -66,7 +59,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
           <span className="font-medium">{c.risk.title}</span>
           <p className="text-[15px] text-ink-soft">{c.risk.body}</p>
         </div>
-      </div>
+      </Card>
 
       {/* facts */}
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -79,7 +72,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
       </div>
 
       {/* docs */}
-      <div className="mt-4 flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
+      <Card padding="lg" className="mt-4 flex flex-col gap-3">
         <h3 className="text-[20px]">What you&apos;ll need</h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {c.docs.map((d) => (
@@ -89,7 +82,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* CTA */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-transparent bg-primary-tint p-6">
