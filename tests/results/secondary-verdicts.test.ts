@@ -69,6 +69,13 @@ describe("computeSecondaryVerdicts", () => {
     ]);
   });
 
+  it("carries the primary field's own label and band as the anchor for the rows", () => {
+    const profile = withExtras("computer-science", ["business"]);
+    const primary = primaryOf(profile);
+    const result = computeSecondaryVerdicts(profile, primary)!;
+    expect(result.primary).toEqual({ label: "Computer Science", verdict: primary.verdict });
+  });
+
   it("carries the field label and preserves the student's chosen order", () => {
     const profile = withExtras("computer-science", ["data-science", "business"]);
     const result = computeSecondaryVerdicts(profile, primaryOf(profile))!;

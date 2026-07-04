@@ -15,6 +15,10 @@ export interface SecondaryVerdict {
 }
 
 export interface SecondaryVerdicts {
+  /** The primary field's own band + label — the anchor every row is conditional against.
+   *  Carried here (not just on the result) so the pivot callout can name the difference
+   *  in words without threading the profile through the presentational component. */
+  primary: { label: string; verdict: Verdict };
   /** One per also-considering field, in the student's chosen order. */
   items: SecondaryVerdict[];
   /** The strongest field that outranks the primary (drives the pivot callout); null when none. */
@@ -67,5 +71,9 @@ export function computeSecondaryVerdicts(
     if (pivot === null || rank(item.verdict) < rank(pivot.verdict)) pivot = item;
   }
 
-  return { items, pivot };
+  return {
+    primary: { label: FIELD_LABELS[profile.fieldOfStudy], verdict: primaryResult.verdict },
+    items,
+    pivot,
+  };
 }
