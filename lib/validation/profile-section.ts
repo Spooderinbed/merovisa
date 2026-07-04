@@ -38,6 +38,7 @@ const AcademicPatch = z
 const IntendedStudyPatch = z.object({
   level: z.enum(EDUCATION_LEVELS).optional(),
   field: z.enum(FIELDS_OF_STUDY).optional(),
+  alsoConsidering: z.array(z.enum(FIELDS_OF_STUDY)).max(2).optional(),
   specialisation: z.string().min(1).max(160).optional(),
 });
 const EnglishPatch = z.object({

@@ -4,7 +4,7 @@ import type { NepalEvidenceLevel } from "@/lib/data/source/au-nepal-evidence-lev
 export type MatchVerdict = "strong" | "possible" | "reach";
 
 export interface MatchReason {
-  kind: "academic" | "english" | "english-band" | "tuition" | "policy" | "field";
+  kind: "academic" | "english" | "english-band" | "tuition" | "policy" | "field" | "field-exploring";
   text: string;
   positive: boolean;
 }
@@ -54,8 +54,15 @@ export interface MatchInputs {
   userEnglishBand: number | null;
   /** User budget converted to AUD per year */
   userBudgetAud: number | null;
-  /** Intended study field — from profile.intended-study.field */
+  /** Intended study field (the PRIMARY, verdict-owning field) — from profile.intended-study.field */
   userField: string | null;
+  /**
+   * Extra "also considering" fields (never the primary). A SOFT signal only:
+   * programs in these fields sort below the primary-field programs but above the
+   * rest, and carry an explicitly exploratory reason so a student never reads the
+   * primary verdict onto them. Omitted ⇒ none.
+   */
+  alsoFields?: string[];
   /**
    * Target program level the user is eligible to apply for — from
    * profile.intended-study.level, else mapped from current academic.degree

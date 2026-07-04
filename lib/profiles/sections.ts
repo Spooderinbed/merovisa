@@ -20,7 +20,7 @@ export interface ProfileSections {
   personal?:        { name?: string; age?: number; intakeIso?: string };
   destination?:     { primary?: Destination; alternates?: Destination[] };
   academic?:        { institution?: string; degree?: EducationLevel; gradePercent?: number; gradeSystem?: GradeSystem };
-  "intended-study"?: { level?: EducationLevel; field?: FieldOfStudy; specialisation?: string };
+  "intended-study"?: { level?: EducationLevel; field?: FieldOfStudy; alsoConsidering?: FieldOfStudy[]; specialisation?: string };
   english?:         { test?: "ielts" | "pte" | "toefl"; overall?: number; listening?: number; reading?: number; writing?: number; speaking?: number; reportUploaded?: boolean };
   gap?:             { years?: number; reasons?: GapReason[]; evidence?: string[] };
   work?:            { title?: string; years?: number; relevance?: "directly-related" | "related" | "unrelated"; docs?: boolean };

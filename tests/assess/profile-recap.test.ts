@@ -34,4 +34,13 @@ describe("recapLines", () => {
     const fresh = { ...aarav, graduationYear: new Date().getFullYear(), gapReasons: [] as StudentProfile["gapReasons"] };
     expect(recapLines(fresh).some((l) => /gap/.test(l))).toBe(false);
   });
+
+  it("shows an also-considering line only when extra fields are present", () => {
+    expect(recapLines(aarav).some((l) => /also considering/i.test(l))).toBe(false);
+    const withExtras = recapLines({ ...aarav, alsoConsidering: ["business", "data-science"] });
+    const line = withExtras.find((l) => /also considering/i.test(l));
+    expect(line).toBeDefined();
+    expect(line).toContain("Business");
+    expect(line).toContain("Data Science");
+  });
 });

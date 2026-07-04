@@ -29,9 +29,10 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 1
+## In review (WIP 3) — 2
 
 - **MV-80** · undefined · [FY2026-27 data re-verify: 16 overdue reverifyBy records (DHA fees, wages, ART, ATO)](cards/MV-80-fy2026-27-reverify.md) — _The designed 1-July freshness timer FIRED: tests/data/freshness.test.ts red with 16 records at reverifyBy 2026-07-01 (AU_SUBCLASS_500_APPLICATION_CHARGE_AUD; AU_SKILLED_VISA_CHARGES[0-3]; AU_TAX_FIGURES[1-4]; AU_STUDENT_WORKER_WAGES[1-6]; NEPAL_REFUSAL_RECOVERY[11]). A 4-agent read-only scout verified every record against its authoritative live source on 2026-07-02: 12/16 CHANGED — subclass 500 AUD 2,000→2,500; skilled 189/491/186 → 6,135/6,140/6,140; 191 505→630; NMW 24.95→26.44 in force (announced→current collapse needed); Hospitality casual intro rows re-based on 25.74; ART fee 3,580→3,727; all 4 ATO tax figures unchanged. Evidence packet with per-record source URLs: docs/audits/2026-07-02-fy2026-27-reverify-scout.md. Fix = update values + lastVerified 2026-07-02 + reverifyBy 2027-07-01, open sources during the edit (never blind-copy), full suite green, branch+PR._
+- **MV-99** · P1 · [Step 4 multi-subject: primary field owns the verdict + up to 2 'also considering' fields (broaden matches, exploratory label, honest competitiveness note)](cards/MV-99-step4-multi-subject.md) — _Founder ask (2): let students pick multiple subjects without breaking the honest single verdict. Decision (mine + Codex): Option A -- one primary fieldOfStudy owns the verdict + scoring baseline exactly as today, plus up to 2 additive alsoConsidering fields that only broaden which programs surface. Scope win: scoring engine untouched, all golden scores byte-identical (proven inert). Codex guardrail built: also-considering programs carry an explicitly exploratory match reason so a student never reads the primary verdict onto them. New pure modules lib/wizard/also-considering.ts + lib/scoring/field-note.ts (honest 'less/more competitive admit' note). Matching = 3-tier soft sort (primary->also->rest). Additive types + Zod (disjoint/dedupe refine), wizard multi-select (cap 2, primary excluded, disabled at cap), profile-editor parity, recap 'also considering' line, JSONB persistence (no migration). Deferred: per-field verdicts (Option C) + results-page note surfacing._
 
 ## Blocked — 3
 
