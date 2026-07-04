@@ -1259,6 +1259,18 @@
       "summary": "Carves the honest-recap half of the overhaul spec's Phase-1 MV-90 (Motion v2 + honest recap); the motion-system halves stay gated on the Motion v2 ADR (PR #48). Every wizard-completer was held on a fixed 3000ms 'Analyzing your profile' timer before results, regardless of when the real /api/assess result landed — pure latency theatre at the highest-traffic funnel moment, exactly the anti-pattern a trust-first product should never ship. Fix (components/assess/profile-recap.tsx only): durationMs default 3000->600 (a genuine reveal beat, never padding — AssessFlow already gates the real transition on payload && recapElapsed, so results now appear at max(real API latency, 600ms) = honest waiting only); summary stagger i*0.5s->i*0.08s so the reveal completes within the shorter window; label 'Analyzing your profile'->'Your answers' (honest summary label, not a fake-work claim; the existing pulse dot honestly signals in-flight work). Auto-advance kept over the spec's explicit 'See my result' button (lower-friction, more honest, smaller). Orthogonal to the unsigned type/motion ADRs + pending mascot: reuses the sanctioned animate-rise keyframe, adds no motion primitive. TDD +2 (tests/assess/profile-recap-timing.test.tsx, RTL+fake-timers, red-first; locks the two objective trust invariants — short handoff window + no /analyz/i label — not the exact copy/timing, which stay founder-tunable). Blind calls flagged on the card: exact copy, 600ms/stagger feel, button-vs-auto fork.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-96",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "PR #51",
+      "file": "cards/MV-96-corridor-provider.md",
+      "title": "Overhaul Phase 1: corridor theme provider (np-au, expansion-ready)",
+      "summary": "Ships the post-onboarding corridor personalization ARCHITECTURE (spec MV-91) — the last Phase-1 slice not gated on the type-scale ADR (#47), Motion v2 ADR (#48), or the mascot (MV-85): (1) new lib/theme/corridor.ts registry (np-au → label + danphe mascotVariant; corridorForHomeCountry case-insensitive 'nepal' → np-au, else null = neutral brand; DEFAULT_CORRIDOR for the signed-in MVP, same Nepal assumption lib/scoring/from-sections.ts:42 already pins). (2) globals.css [data-corridor=np-au] light+dark blocks overriding ONLY --accent/--accent-tint (danphe teal-blue #15687a/#7cc4d4 — flagged founder call; WCAG AA-proved 5.47–13.2 both themes; zero blast radius: no component consumes accent yet). (3) AssessFlow results phase wraps Results in a display:contents data-corridor carrier from profile.homeCountry (anon activation = results onward; unknown country → no attribute). (4) (app) shell layout wraps chrome+content in the same carrier (signed-in always-on, Phase-2-ready; no DB read added). Server-safe/no-flash by construction — attribute renders from known state, no pre-hydration script. TDD red-first +11 tests incl. NEW permanent guard tests/styles/corridor-tokens.test.ts (accents-only invariant + WCAG re-proof + marketing-sources-never-carry-data-corridor scan). Registry omits copy-nods until a consumer exists. First consumers: spec-MV-94 results accents, Phase-2 shell, mascot variant resolution.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
