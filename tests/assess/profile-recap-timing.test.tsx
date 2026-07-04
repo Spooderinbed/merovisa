@@ -36,9 +36,11 @@ describe("ProfileRecap — honest waiting (no fake 3s theatre)", () => {
     const onDone = vi.fn();
     render(<ProfileRecap profile={aarav} onDone={onDone} />);
 
-    // Well short of the old 3000ms theatre floor.
+    // Ceiling raised from 800ms to 2500ms: founder feedback that the cascade felt
+    // "too quick and not smooth" moved the honest reveal window to ~2000ms so the
+    // full word stagger can play out — still well short of the old 3000ms floor.
     act(() => {
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(2500);
     });
 
     expect(onDone).toHaveBeenCalledTimes(1);

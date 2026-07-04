@@ -45,15 +45,16 @@ export function recapLines(p: StudentProfile): string[] {
   return lines;
 }
 
-// Honest reveal window: long enough to play the summary stagger as a genuine
-// confirmation beat, short enough that it never pads the wait. The real
-// transition in AssessFlow is gated on `payload && recapElapsed`, so results
-// appear at max(real API latency, this window) — honest waiting only, never the
-// old fixed 3000ms "Analyzing" theatre that held a ready result for 3 seconds.
+// Honest reveal window: a deliberate ~2s beat that lets the word cascade play
+// out in full over the user's REAL answers — a smooth confirmation, not padding
+// and never fake "analyzing" work. The real transition in AssessFlow is gated on
+// `payload && recapElapsed`, so results appear at max(real API latency, this
+// window) — honest waiting only, never the old fixed 3000ms "Analyzing" theatre
+// that held a ready result for 3 seconds regardless of what was on screen.
 export function ProfileRecap({
   profile,
   onDone,
-  durationMs = 600,
+  durationMs = 2000,
 }: {
   profile: StudentProfile;
   onDone?: () => void;
@@ -77,7 +78,7 @@ export function ProfileRecap({
           return (
             <p key={i} className="text-[19px] text-ink">
               {words.map((word, j) => {
-                const delay = Math.min(globalWordIndex * 0.04, 0.5);
+                const delay = Math.min(globalWordIndex * 0.07, 1.2);
                 globalWordIndex += 1;
                 return (
                   <span
