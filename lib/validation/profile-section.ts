@@ -10,6 +10,7 @@ import {
   DESTINATIONS,
 } from "@/lib/scoring/types";
 import { normalizeAcademicPatch } from "@/lib/profiles/normalize-academic";
+import { ALSO_CONSIDERING_CAP } from "@/lib/wizard/also-considering";
 
 const PersonalPatch = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -35,11 +36,28 @@ const AcademicPatch = z
     gradeSystem: z.enum(GRADE_SYSTEMS).optional(),
   })
   .transform(normalizeAcademicPatch);
-const IntendedStudyPatch = z.object({
-  level: z.enum(EDUCATION_LEVELS).optional(),
-  field: z.enum(FIELDS_OF_STUDY).optional(),
-  specialisation: z.string().min(1).max(160).optional(),
-});
+const IntendedStudyPatch = z
+  .object({
+    level: z.enum(EDUCATION_LEVELS).optional(),
+    field: z.enum(FIELDS_OF_STUDY).optional(),
+    alsoConsidering: z.array(z.enum(FIELDS_OF_STUDY)).max(ALSO_CONSIDERING_CAP).optional(),
+    specialisation: z.string().min(1).max(160).optional(),
+  })
+  .refine(
+    (data) => {
+      const also = data.alsoConsidering;
+      if (!also || also.length === 0) return true;
+      // Carry no duplicates; and when the primary field is set in the same patch,
+      // stay disjoint from it. (Disjointness can only be checked when `field` is present.)
+      if (new Set(also).size !== also.length) return false;
+      if (data.field && also.includes(data.field)) return false;
+      return true;
+    },
+    {
+      message: "alsoConsidering must exclude the primary field and contain no duplicates",
+      path: ["alsoConsidering"],
+    },
+  );
 const EnglishPatch = z.object({
   test: z.enum(["ielts","pte","toefl"]).optional(),
   // `overall` is the score in the chosen test's own scale (IELTS ≤9, PTE ≤90,

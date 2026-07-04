@@ -86,6 +86,33 @@ describe("ProfileSectionPatchBodySchema — other sections", () => {
   }
 });
 
+describe("IntendedStudyPatch — alsoConsidering disjoint/dedup (MV-102)", () => {
+  const parse = (patch: unknown) =>
+    ProfileSectionPatchBodySchema.safeParse({ section: "intended-study", patch }).success;
+
+  it("rejects an also-considering list that contains the primary field", () => {
+    expect(parse({ field: "computer-science", alsoConsidering: ["computer-science"] })).toBe(false);
+  });
+
+  it("rejects a duplicate in the also-considering list", () => {
+    expect(parse({ alsoConsidering: ["business", "business"] })).toBe(false);
+  });
+
+  it("accepts a valid disjoint pair alongside the primary", () => {
+    expect(parse({ field: "computer-science", alsoConsidering: ["business", "nursing"] })).toBe(true);
+  });
+
+  it("accepts a disjoint dedup list when no field is present in the same patch", () => {
+    // Disjointness can only be checked when the primary is in the same patch;
+    // with no field, only dedup + cap apply.
+    expect(parse({ alsoConsidering: ["business", "nursing"] })).toBe(true);
+  });
+
+  it("rejects more than the cap of two also-considering fields", () => {
+    expect(parse({ alsoConsidering: ["business", "nursing", "engineering"] })).toBe(false);
+  });
+});
+
 describe("FamilyPatch — child count", () => {
   it("preserves an in-range child count through the envelope (not stripped)", () => {
     const r = ProfileSectionPatchBodySchema.safeParse({

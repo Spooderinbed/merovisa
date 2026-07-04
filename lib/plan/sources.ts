@@ -77,7 +77,7 @@ const SOURCES: Record<string, PlanSource[]> = {
   "get-coe": [{ url: "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool", lastVerified: "2026-06-05" }],
   "arrange-oshc": [{ url: "https://immi.homeaffairs.gov.au/visas/web-evidentiary-tool", lastVerified: "2026-06-05" }],
   "lodge-subclass-500": [
-    { url: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500", lastVerified: "2026-06-07" },
+    { url: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500", lastVerified: "2026-07-02" },
   ],
   "track-visa-decision": [
     {

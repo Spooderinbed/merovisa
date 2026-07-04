@@ -13,6 +13,7 @@ import {
 } from "@/lib/scoring/types";
 import type { StudentProfile } from "@/lib/scoring/types";
 import { computeGapYears, GAP_REQUIRES_REASON_THRESHOLD } from "@/lib/scoring/gap";
+import { ALSO_CONSIDERING_CAP } from "@/lib/wizard/also-considering";
 
 export const ProfileSchema = z
   .object({
@@ -21,6 +22,7 @@ export const ProfileSchema = z
     gradeSystem: z.enum(GRADE_SYSTEMS),
     grade: z.number().min(0).max(100),
     fieldOfStudy: z.enum(FIELDS_OF_STUDY),
+    alsoConsidering: z.array(z.enum(FIELDS_OF_STUDY)).max(ALSO_CONSIDERING_CAP).optional(),
     graduationYear: z.number().int().min(2010).max(new Date().getFullYear() + 5),
     gapReasons: z.array(z.enum(GAP_REASONS)),
     englishStatus: z.enum(ENGLISH_STATUSES),
@@ -46,6 +48,20 @@ export const ProfileSchema = z
     {
       message: "gapReasons required when graduation year implies a gap",
       path: ["gapReasons"],
+    },
+  )
+  .refine(
+    (data) => {
+      const also = data.alsoConsidering;
+      if (!also || also.length === 0) return true;
+      // Must stay disjoint from the primary and carry no duplicates.
+      if (also.includes(data.fieldOfStudy)) return false;
+      if (new Set(also).size !== also.length) return false;
+      return true;
+    },
+    {
+      message: "alsoConsidering must exclude the primary field and contain no duplicates",
+      path: ["alsoConsidering"],
     },
   )
   .refine(

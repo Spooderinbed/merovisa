@@ -40,6 +40,7 @@ export function profileToMatchInputs(profile: StudentProfile): MatchInputs {
     userEnglishBand: english,
     userBudgetAud: budgetToAud(profile.budget, profile.budgetCurrency),
     userField: profile.fieldOfStudy,
+    alsoFields: profile.alsoConsidering ?? [],
     userTargetLevel: TARGET_LEVEL_BY_CURRENT_EDUCATION[profile.educationLevel],
     policy: { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL },
   };

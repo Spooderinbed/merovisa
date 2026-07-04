@@ -159,6 +159,64 @@ describe("computeMatches verdict", () => {
     expect(m.reasons.some((r) => r.kind === "field" && r.positive)).toBe(true);
   });
 
+  it("sorts also-considering programs below the primary field but above the rest (three-tier soft sort)", () => {
+    const csProgram = p({ id: "cs", field: "computer-science" });
+    const bizProgram = p({ id: "biz", field: "business" });
+    const artsProgram = p({ id: "arts", field: "arts" });
+    const uniB: University = { ...uni, id: "u2" };
+    const uniC: University = { ...uni, id: "u3" };
+    const ordered = computeMatches(
+      {
+        userGradePercent: 72,
+        userEnglishOverall: 7,
+        userEnglishBand: 7,
+        userBudgetAud: 45000,
+        userField: "computer-science",
+        alsoFields: ["business"],
+        userTargetLevel: "masters",
+        policy,
+      },
+      // Deliberately out of order: rest, extra, primary.
+      [
+        p({ id: "arts", field: "arts", universityId: "u3" }),
+        p({ id: "biz", field: "business", universityId: "u2" }),
+        p({ id: "cs", field: "computer-science" }),
+      ],
+      [uni, uniB, uniC],
+    );
+    expect(ordered.map((m) => m.program.id)).toEqual(["cs", "biz", "arts"]);
+    void csProgram;
+    void bizProgram;
+    void artsProgram;
+  });
+
+  it("labels an also-considering program as exploratory (not the primary field)", () => {
+    const uniB: University = { ...uni, id: "u2" };
+    const m = computeMatches(
+      {
+        userGradePercent: 72,
+        userEnglishOverall: 7,
+        userEnglishBand: 7,
+        userBudgetAud: 45000,
+        userField: "computer-science",
+        alsoFields: ["business"],
+        userTargetLevel: "masters",
+        policy,
+      },
+      [p({ id: "biz", field: "business", universityId: "u2" })],
+      [uniB],
+    )[0]!;
+    const exploring = m.reasons.find((r) => r.kind === "field-exploring");
+    expect(exploring).toBeDefined();
+    expect(exploring!.text).toMatch(/also considering/i);
+    // MV-102 gives each also-considering field a real band on results, so the old
+    // "not covered by your verdict" clause is now false and must be gone.
+    expect(exploring!.text).toMatch(/not your primary field/i);
+    expect(exploring!.text).not.toMatch(/not covered by your verdict/i);
+    // It must NOT also claim a positive primary-field alignment.
+    expect(m.reasons.some((r) => r.kind === "field")).toBe(false);
+  });
+
   it("reasons include the AL3 policy note when nepalAssessmentLevel = L3", () => {
     const m = computeMatches(
       {
