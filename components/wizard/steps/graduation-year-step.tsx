@@ -2,6 +2,7 @@
 
 import { OptionCard } from "@/components/ui/option-card";
 import { StepShell } from "@/components/wizard/step-shell";
+import { computeGapYears, GAP_REQUIRES_REASON_THRESHOLD } from "@/lib/scoring/gap";
 import type { StepProps } from "./types";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -10,6 +11,8 @@ const RECENT_YEARS = Array.from({ length: 7 }, (_, i) => CURRENT_YEAR - i);
 export function GraduationYearStep({ profile, setField, callouts, eyebrow }: StepProps) {
   const selected = profile.graduationYear;
   const isEarlier = typeof selected === "number" && !RECENT_YEARS.includes(selected);
+  const gap = typeof selected === "number" ? computeGapYears(selected) : 0;
+  const showGapPreview = typeof selected === "number" && gap > GAP_REQUIRES_REASON_THRESHOLD;
   return (
     <StepShell
       eyebrow={eyebrow}
@@ -44,6 +47,11 @@ export function GraduationYearStep({ profile, setField, callouts, eyebrow }: Ste
             className="rounded-sm border border-line-2 bg-surface px-3 py-2 text-ink focus:border-primary"
           />
         </label>
+      ) : null}
+      {showGapPreview ? (
+        <p className="mt-2 text-[15px] text-accent">
+          That&rsquo;s a {gap}-year gap — we&rsquo;ll ask what you were doing; explaining it well strengthens your case.
+        </p>
       ) : null}
     </StepShell>
   );

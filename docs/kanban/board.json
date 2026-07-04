@@ -1273,6 +1273,18 @@
       "entered": "2026-07-04"
     },
     {
+      "id": "MV-97",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-04 (branch mv-97-wizard-funnel-overhaul off design-stack); tsc clean, suite 1661 pass / 1 fail = pre-existing MV-80 freshness; founder-gated merge.",
+      "file": "cards/MV-97-wizard-funnel-overhaul.md",
+      "title": "Overhaul Phase 1: wizard funnel — CGPA step-3 input, AUD step-7 corridor, English equivalents, gap preview, direction-aware slide + word-cascade recap",
+      "summary": "Carved from the MV-87 umbrella wizard slice. Step 3 gains a Percentage/GPA-4.0 grade-system toggle (new lib/scoring/grade-scale.ts converts across scales via the engine normalizer; honest percentage-equivalent caption; scale-aware slider) — CGPA flows end-to-end since scoring already normalizes CGPA to a percentage. Step 7 replaces USD with AUD (NPR to AUD, live A$ conversion from the single fx-rates source, indicative NPR-per-AUD caption, persisted-USD sessions auto-migrate; new formatAud). English step shows the live IELTS equivalent for PTE/TOEFL plus a provisional-6.0 note. Steps 5/6 get a positive gap-preview note so the conditional gap screen is never a surprise. Motion: direction-aware slide-fwd/slide-back between steps plus a staggered step-shell reveal; post-wizard recap assembles word-by-word (reduced-motion safe, no fake analyzing text). Opacity/transform only per the Motion v2 ADR. TDD +16 across education/budget/english/graduation/use-wizard-state/recap. DEFERRED to their own slices: step-4 multi-subject (single-select enum to array is a data-model change touching Zod/scoring/matches/persistence), matches-page progressive disclosure, footer CLS/perf.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
+    },
+    {
       "id": "MV-98",
       "col": "inreview",
       "pri": "P1",

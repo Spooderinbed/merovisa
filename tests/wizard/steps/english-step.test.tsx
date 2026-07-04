@@ -26,4 +26,35 @@ describe("EnglishStep", () => {
     fireEvent.change(screen.getByRole("slider", { name: "IELTS band" }), { target: { value: "7" } });
     expect(setField).toHaveBeenCalledWith({ englishScore: 7 });
   });
+
+  it("shows the live IELTS equivalent for a PTE score — the same mapping scoring uses", () => {
+    render(
+      <EnglishStep
+        profile={{ englishStatus: "taken", englishTest: "pte", englishScore: 58 }}
+        setField={vi.fn()}
+        callouts={null}
+        eyebrow="Step 1"
+      />,
+    );
+    expect(screen.getByText(/≈ IELTS 6\.5 equivalent/)).toBeInTheDocument();
+  });
+
+  it("shows no equivalent line for IELTS itself", () => {
+    render(
+      <EnglishStep
+        profile={{ englishStatus: "taken", englishTest: "ielts", englishScore: 6.5 }}
+        setField={vi.fn()}
+        callouts={null}
+        eyebrow="Step 1"
+      />,
+    );
+    expect(screen.queryByText(/equivalent/i)).toBeNull();
+  });
+
+  it("is transparent about the provisional baseline when no test is taken yet", () => {
+    render(
+      <EnglishStep profile={{ englishStatus: "not-taken" }} setField={vi.fn()} callouts={null} eyebrow="Step 1" />,
+    );
+    expect(screen.getByText(/6\.0/)).toBeInTheDocument();
+  });
 });
