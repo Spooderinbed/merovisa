@@ -1,6 +1,7 @@
 "use client";
 
 import type { EducationLevel } from "@/lib/scoring/types";
+import { Card } from "@/components/ui/card";
 import { OptionCard } from "@/components/ui/option-card";
 import { Slider } from "@/components/ui/slider";
 import { StepShell } from "@/components/wizard/step-shell";
@@ -31,7 +32,7 @@ export function EducationStep({ profile, setField, callouts, eyebrow }: StepProp
           />
         ))}
       </div>
-      <div className="mt-2 flex flex-col gap-2 rounded-md border border-line bg-surface p-4">
+      <Card radius="card" padding="sm" className="mt-2 flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
           <span className="text-[15px] text-ink-soft">Your grade</span>
           <span className="font-mono text-[15px] text-ink">{grade}%</span>
@@ -44,7 +45,7 @@ export function EducationStep({ profile, setField, callouts, eyebrow }: StepProp
           value={grade}
           onChange={(v) => setField({ grade: v })}
         />
-      </div>
+      </Card>
     </StepShell>
   );
 }

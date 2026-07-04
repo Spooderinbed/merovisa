@@ -2,23 +2,13 @@
 
 import type { MatchResult } from "@/lib/matches/types";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { VerdictPill } from "@/components/ui/verdict-pill";
 import { SourceLine } from "@/components/results/source-line";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
-import { cn } from "@/lib/utils";
+import { VERDICT_LABELS } from "@/lib/scoring/verdict-labels";
 import { track } from "@/lib/analytics/events";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
-
-const LEVEL_CLS = {
-  strong: "bg-strong-tint text-strong",
-  possible: "bg-possible-tint text-possible",
-  reach: "bg-reach-tint text-reach",
-} as const;
-
-const LEVEL_LABEL = {
-  strong: "Strong match",
-  possible: "Possible",
-  reach: "Reach",
-} as const;
 
 function tuition(p: MatchResult["program"]): string | null {
   if (p.tuitionMin == null) return null;
@@ -30,7 +20,7 @@ function MatchCard({ m }: { m: MatchResult }) {
   const { program: p, university: u, verdict, reasons, preferenceChip, evidence } = m;
   const fee = tuition(p);
   return (
-    <article className="rounded-md border border-line bg-surface p-4">
+    <Card as="article" radius="card" padding="sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
           <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
@@ -44,9 +34,7 @@ function MatchCard({ m }: { m: MatchResult }) {
               {preferenceChip.text}
             </span>
           ) : null}
-          <span className={cn("rounded-pill px-2.5 py-0.5 font-mono text-[11.5px]", LEVEL_CLS[verdict])}>
-            {LEVEL_LABEL[verdict]}
-          </span>
+          <VerdictPill verdict={verdict} size="md" />
         </div>
       </div>
       {fee ? <p className="mt-1 text-[15px] text-ink-soft">{fee}</p> : null}
@@ -58,13 +46,13 @@ function MatchCard({ m }: { m: MatchResult }) {
         ))}
       </ul>
       {p.notes ? (
-        <p className="mt-2 rounded-md border border-line bg-bg-tint px-3 py-2 text-[13px] text-ink-soft">
+        <Card as="p" radius="card" tone="tint" className="mt-2 px-3 py-2 text-[13px] text-ink-soft">
           <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
             Good to know
           </span>
           <br />
           {p.notes}
-        </p>
+        </Card>
       ) : null}
       {evidence ? (
         <SourceAnchor
@@ -77,7 +65,7 @@ function MatchCard({ m }: { m: MatchResult }) {
         </SourceAnchor>
       ) : null}
       <SourceLine url={p.source} lastVerified={p.lastVerified} surface="matches" />
-    </article>
+    </Card>
   );
 }
 
@@ -118,12 +106,12 @@ export function UniversityMatches({
           ))}
           {locked.length > 0 ? (
             // >3 matches: peek-through blur over the remaining rows, unlock overlaid.
-            <div className="relative overflow-hidden rounded-md border border-line bg-surface">
+            <Card radius="card" className="relative overflow-hidden">
               <div className="flex flex-col gap-3 p-4 blur-[6px] select-none" aria-hidden>
                 {locked.slice(0, 3).map((m) => (
                   <div key={m.program.id} className="flex items-center justify-between">
                     <span className="text-ink">{m.program.name}</span>
-                    <span className="font-mono text-[11.5px] text-ink-faint">{LEVEL_LABEL[m.verdict]}</span>
+                    <span className="font-mono text-[11.5px] text-ink-faint">{VERDICT_LABELS[m.verdict].label}</span>
                   </div>
                 ))}
               </div>
@@ -132,14 +120,14 @@ export function UniversityMatches({
                   Unlock all {total} matches →
                 </Button>
               </div>
-            </div>
+            </Card>
           ) : (
             // ≤3 matches: nothing to blur, but anonymous users still need a way in.
-            <div className="rounded-md border border-line bg-surface p-4 text-center">
+            <Card radius="card" padding="sm" className="text-center">
               <Button onClick={unlock} disabled={!assessmentId}>
                 Sign in to save your matches →
               </Button>
-            </div>
+            </Card>
           )}
         </>
       )}

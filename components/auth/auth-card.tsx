@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface AuthCardProps {
@@ -34,7 +35,7 @@ export function AuthCard({ nextPath }: AuthCardProps) {
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
+      <Card padding="lg" className="flex flex-col gap-3">
         <Button size="lg" onClick={continueWithGoogle} className="w-full">
           Continue with Google
         </Button>
@@ -60,7 +61,7 @@ export function AuthCard({ nextPath }: AuthCardProps) {
             Email sign-in isn&apos;t ready yet — Google is the only way to sign in for now.
           </p>
         ) : null}
-      </div>
+      </Card>
     </div>
   );
 }
