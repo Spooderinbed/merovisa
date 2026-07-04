@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import { track } from "@/lib/analytics/events";
 
 // Tease only deliverables that actually exist. Scholarship matching isn't built, so it
@@ -21,27 +22,30 @@ export function GatedTeasers({ onUnlock, unlocked = false }: { onUnlock: () => v
       <h3 className="text-[21px]">Your full roadmap</h3>
       {unlocked ? (
         TEASERS.map((t) => (
-          <div key={t.title} className="rounded-md border border-line bg-surface p-4">
+          <Card key={t.title} radius="card" padding="sm">
             <span className="block text-ink">{t.title}</span>
             <span className="mt-1 block text-[15px] text-ink-soft">{t.peek}</span>
-          </div>
+          </Card>
         ))
       ) : (
         TEASERS.map((t) => (
-          <button
+          <Card
+            as="button"
             key={t.title}
             type="button"
             onClick={() => {
               track("gate_cta_clicked");
               onUnlock();
             }}
-            className="overflow-hidden rounded-md border border-line bg-surface p-4 text-left"
+            radius="card"
+            padding="sm"
+            className="overflow-hidden text-left"
           >
             <span className="block text-ink">{t.title}</span>
             <span className="mt-1 block text-[15px] text-ink-soft blur-[4px] select-none" aria-hidden>
               {t.peek}
             </span>
-          </button>
+          </Card>
         ))
       )}
     </section>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { PlanItemRow } from "@/lib/plan/types";
+import { Card } from "@/components/ui/card";
 import { completionFor } from "@/lib/plan/completion";
 import { track } from "@/lib/analytics/events";
 
@@ -31,7 +32,7 @@ function Eyebrow({ tone }: { tone: "dark" | "light" }) {
 export function PromptCard({ prompt }: { prompt: PromptState }) {
   if (prompt.kind === "caught-up") {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-6">
+      <Card padding="lg" className="flex flex-col gap-2">
         <Eyebrow tone="light" />
         <h3 className="text-[21px] text-ink">All caught up</h3>
         <p className="text-[15px] text-ink-soft">
@@ -45,13 +46,13 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
         >
           See your plan →
         </Link>
-      </div>
+      </Card>
     );
   }
 
   if (prompt.kind === "waiting") {
     return (
-      <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-6">
+      <Card padding="lg" className="flex flex-col gap-2">
         <Eyebrow tone="light" />
         <h3 className="text-[21px] text-ink">Everything is underway</h3>
         <p className="text-[15px] text-ink-soft">
@@ -65,14 +66,14 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
         >
           Open your plan →
         </Link>
-      </div>
+      </Card>
     );
   }
 
   if (prompt.kind === "next") {
     const meta = completionFor(prompt.item.kind);
     return (
-      <div className="flex flex-col gap-3 rounded-lg border border-transparent bg-primary p-6 text-on-primary">
+      <Card tone="primary" border="transparent" padding="lg" className="flex flex-col gap-3">
         <Eyebrow tone="dark" />
         <h3 className="text-[21px]">{prompt.item.title}</h3>
         {prompt.item.body ? (
@@ -85,12 +86,12 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
         >
           {meta.cta}
         </Link>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-transparent bg-primary p-6 text-on-primary">
+    <Card tone="primary" border="transparent" padding="lg" className="flex flex-col gap-3">
       <Eyebrow tone="dark" />
       <h3 className="text-[21px]">Your next best step</h3>
       <p className="text-[15px] opacity-90">
@@ -103,6 +104,6 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
       >
         Add details →
       </Link>
-    </div>
+    </Card>
   );
 }

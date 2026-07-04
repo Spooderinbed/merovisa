@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { Destination } from "@/lib/scoring/types";
+import { Card } from "@/components/ui/card";
 import { DESTINATION_LABELS } from "@/lib/labels";
 
 /** Full-page honest stop: we don't cover this corridor — no Australia fallback. */
 export function UnsupportedDestinationNotice({ destination }: { destination: Destination }) {
   const country = DESTINATION_LABELS[destination];
   return (
-    <section className="rounded-lg border border-line-2 bg-surface p-6">
+    <Card as="section" border="line-2" padding="lg">
       <p className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         Destination coverage
       </p>
@@ -23,19 +24,19 @@ export function UnsupportedDestinationNotice({ destination }: { destination: Des
       >
         See where you stand for Australia →
       </Link>
-    </section>
+    </Card>
   );
 }
 
 /** Framing line for "not sure yet" — we resolved the delegation to Australia, say so. */
 export function NotSureFramingNotice() {
   return (
-    <section className="rounded-lg border border-line-2 bg-surface px-5 py-4">
+    <Card as="section" border="line-2" className="px-5 py-4">
       <p className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Destination</p>
       <p className="mt-1 text-ink-soft">
         You asked us to suggest a destination. Australia is the only corridor we fully cover
         today, so this readout shows where you stand for Nepal → Australia.
       </p>
-    </section>
+    </Card>
   );
 }

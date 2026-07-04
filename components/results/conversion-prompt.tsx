@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { track } from "@/lib/analytics/events";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
@@ -25,7 +26,7 @@ export function ConversionPrompt({
   // wipes the wizard and results; we offer an in-place retry of the same answers.
   if (!assessmentId) {
     return (
-      <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+      <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[15px] text-ink-soft">
           We couldn&apos;t save this — your results are still here. Try again.
         </p>
@@ -37,12 +38,12 @@ export function ConversionPrompt({
         >
           {retryingSave ? "Saving…" : "Try saving again"}
         </button>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+    <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-[15px] text-ink-soft">
         Keep this assessment and get updates as visa rules change.
       </p>
@@ -55,6 +56,6 @@ export function ConversionPrompt({
       >
         Continue with Google
       </Button>
-    </section>
+    </Card>
   );
 }

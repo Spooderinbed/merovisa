@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
 import type { User } from "@supabase/supabase-js";
 
 function initialsFrom(user: User): string {
@@ -27,13 +28,13 @@ export function UserPill({ user }: { user: User }) {
         {initials}
       </button>
       {open ? (
-        <div className="absolute right-0 z-10 mt-2 w-44 overflow-hidden rounded-md border border-line bg-surface shadow-sm">
+        <Card radius="card" className="absolute right-0 z-10 mt-2 w-44 overflow-hidden shadow-sm">
           <Link href="/dashboard" className="block px-4 py-2 text-[15px] text-ink hover:bg-bg-tint">Dashboard</Link>
           <Link href="/profile" className="block px-4 py-2 text-[15px] text-ink hover:bg-bg-tint">Profile</Link>
           <form data-testid="signout-form" action="/auth/signout" method="post" className="border-t border-line">
             <button type="submit" className="block w-full px-4 py-2 text-left text-[15px] text-ink hover:bg-bg-tint">Sign out</button>
           </form>
-        </div>
+        </Card>
       ) : null}
     </div>
   );

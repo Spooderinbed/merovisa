@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 /**
  * MV-17: triggers an in-place re-score of the signed-in user's primary assessment
@@ -39,13 +40,8 @@ export function RefreshButton({ assessmentId }: { assessmentId: string }) {
   };
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending}
-      className="inline-flex rounded-pill bg-primary px-7 py-[15px] text-[17px] font-medium text-on-primary hover:bg-primary-ink disabled:opacity-60"
-    >
-      {pending ? "Refreshing…" : "Refresh assessment"}
-    </button>
+    <Button size="lg" onClick={onClick} loading={pending} loadingLabel="Refreshing">
+      Refresh assessment
+    </Button>
   );
 }

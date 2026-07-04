@@ -1,11 +1,12 @@
 import type { ProfileAccuracy } from "@/lib/results/accuracy";
+import { Card } from "@/components/ui/card";
 
 export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
   // Band the fill to discrete quartile steps so the bar reads as coarse
   // progress, never a raw completeness percentage leaking to the user.
   const banded = Math.max(25, Math.floor(accuracy.completeness / 25) * 25);
   return (
-    <section className="rounded-lg border border-line bg-surface p-6">
+    <Card as="section" padding="lg">
       <div className="flex items-baseline justify-between">
         <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Profile accuracy</span>
         <span className="font-mono text-[12.5px] text-ink-soft">
@@ -28,6 +29,6 @@ export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
           </li>
         ))}
       </ul>
-    </section>
+    </Card>
   );
 }

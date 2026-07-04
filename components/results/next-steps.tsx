@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
 
 const LINKS = [
   {
@@ -23,14 +24,16 @@ export function NextSteps() {
     <section className="flex flex-col gap-3">
       <h3 className="text-[21px]">What&apos;s next</h3>
       {LINKS.map((l) => (
-        <Link
+        <Card
+          as={Link}
           key={l.href}
           href={l.href}
-          className="group flex flex-col gap-1 rounded-lg border border-line bg-surface p-5 transition-colors duration-150 ease-calm hover:border-primary"
+          padding="md"
+          className="group flex flex-col gap-1 transition-colors duration-150 ease-calm hover:border-primary"
         >
           <span className="text-[17px] text-ink group-hover:text-primary">{l.title}</span>
           <span className="text-[15px] text-ink-soft">{l.description}</span>
-        </Link>
+        </Card>
       ))}
     </section>
   );

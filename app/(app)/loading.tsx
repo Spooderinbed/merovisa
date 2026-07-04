@@ -1,3 +1,5 @@
+import { Card } from "@/components/ui/card";
+
 /**
  * Navigation loading state for signed-in routes. Their server components read live
  * Supabase data; while that resolves, Next streams this calm skeleton instead of a
@@ -14,10 +16,10 @@ export default function AppLoading() {
       <span className="sr-only">Loading…</span>
       <div className="h-8 w-48 animate-pulse rounded-md bg-bg-tint" />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <div className="h-40 animate-pulse rounded-lg border border-line bg-surface" />
-        <div className="h-40 animate-pulse rounded-lg border border-line bg-surface" />
+        <Card className="h-40 animate-pulse" />
+        <Card className="h-40 animate-pulse" />
       </div>
-      <div className="h-24 animate-pulse rounded-lg border border-line bg-surface" />
+      <Card className="h-24 animate-pulse" />
     </div>
   );
 }

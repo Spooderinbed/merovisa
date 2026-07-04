@@ -125,13 +125,20 @@ export function DocumentCard({
             size="sm"
             variant={doc ? "ghost" : "primary"}
             onClick={() => inputRef.current?.click()}
-            disabled={uploading}
+            loading={uploading}
+            loadingLabel="Uploading"
           >
-            {uploading ? "Uploading…" : doc ? "Re-upload" : "Upload"}
+            {doc ? "Re-upload" : "Upload"}
           </Button>
           {doc && (
-            <Button size="sm" variant="ghost" onClick={handleView} disabled={fetchingUrl}>
-              {fetchingUrl ? "Loading..." : "View"}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleView}
+              loading={fetchingUrl}
+              loadingLabel="Loading"
+            >
+              View
             </Button>
           )}
           {doc && (

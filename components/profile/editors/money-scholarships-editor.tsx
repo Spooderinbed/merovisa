@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/input";
 import { BankLoanPanel } from "./bank-loan-panel";
 import { ChipInput } from "./chip-input";
 import { SaveFeedback, useGroupSave, type GroupSaveEntry } from "./section-save";
@@ -84,28 +85,25 @@ export function MoneyScholarshipsEditor({ initial }: { initial: MoneyScholarship
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <label htmlFor="fe-total" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Total funds available</label>
-        <input id="fe-total" type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
+        <Input id="fe-total" type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)} />
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="fe-currency" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Currency</label>
-        <select id="fe-currency" value={currency} onChange={(e) => setCurrency(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
+        <Select id="fe-currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
           <option value="">Select a currency</option>
           {CURRENCIES.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="fe-source" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Source of funds</label>
-        <select id="fe-source" value={source} onChange={(e) => setSource(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
+        <Select id="fe-source" value={source} onChange={(e) => setSource(e.target.value)}>
           <option value="">Select a source</option>
           {SOURCES.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
-        </select>
+        </Select>
       </div>
       {source === "education-loan" ? <BankLoanPanel /> : null}
       <p className="text-[13px] text-ink-soft">

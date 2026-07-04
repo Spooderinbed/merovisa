@@ -1,5 +1,6 @@
 import type { IntakeTiming } from "@/lib/timing/intake";
 import { buildIntakeTimeline } from "@/lib/timing/intake";
+import { Card } from "@/components/ui/card";
 
 const STATUS_CLS = {
   open: "text-strong",
@@ -17,7 +18,7 @@ const TICK_CLS = {
 export function IntakeTimingCard({ intake }: { intake: IntakeTiming }) {
   const timeline = buildIntakeTimeline(intake);
   return (
-    <section className="rounded-lg border border-line bg-surface p-6">
+    <Card as="section" padding="lg">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Intake timing</span>
       {/* A calendar-proportioned tick-timeline: `now` anchors the start, intake ticks
           sit at their real distance ahead, coloured by how open the window is. The
@@ -64,6 +65,6 @@ export function IntakeTimingCard({ intake }: { intake: IntakeTiming }) {
           ))}
         </ul>
       ) : null}
-    </section>
+    </Card>
   );
 }
