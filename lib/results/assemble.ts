@@ -7,6 +7,7 @@ import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/prefer
 import { attachNepalEvidence } from "@/lib/matches/evidence";
 import { computeIntakeTiming } from "@/lib/timing/intake";
 import { competitivenessNote } from "@/lib/scoring/field-note";
+import { computeSecondaryVerdicts } from "./secondary-verdicts";
 import { computeProfileAccuracy } from "./accuracy";
 import { AUSTRALIA } from "@/lib/data/destination/australia";
 import { CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
@@ -42,8 +43,11 @@ export function assembleAssessment(
   // Surface each provider's DHA Nepal evidence level on the match (server-side, so
   // the harvested directory/evidence datasets never reach the client bundle).
   const matches = attachNepalEvidence(ranked);
+  // Compute the primary verdict once (was inline as `result:`), so it is reused
+  // by the secondary re-scores without recomputing — behaviour-preserving.
+  const result = runAssessment(scored);
   return {
-    result: runAssessment(scored),
+    result,
     matches,
     matchedCount: matches.length,
     intake: computeIntakeTiming(scored, AUSTRALIA, now),
@@ -56,5 +60,8 @@ export function assembleAssessment(
     // results page can show it near the verdict. The verdict itself stays scored on the
     // primary field alone (competitivenessNote never touches the score).
     competitivenessNote: competitivenessNote(scored.fieldOfStudy, scored.alsoConsidering),
+    // Real banded verdicts for each also-considering field (Option C / MV-102). The
+    // primary verdict above is passed in and never recomputed; null when no extras.
+    secondaryVerdicts: computeSecondaryVerdicts(scored, result),
   };
 }
