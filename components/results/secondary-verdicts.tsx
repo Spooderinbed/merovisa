@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import type { Verdict } from "@/lib/scoring/types";
 import { VERDICT_LABELS } from "@/lib/scoring/verdict-labels";
 import type { SecondaryVerdicts as SecondaryVerdictsData } from "@/lib/results/secondary-verdicts";
@@ -37,7 +38,7 @@ export function SecondaryVerdicts({
   const { items, pivot, primary } = data;
 
   return (
-    <aside className="rounded-md border border-line bg-surface px-4 py-3">
+    <Card as="aside" radius="card" className="px-4 py-3">
       <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
         Your standing if you applied under a different field
       </p>
@@ -61,6 +62,6 @@ export function SecondaryVerdicts({
           {BAND_WORD[primary.verdict]} under {primary.label}. Worth exploring if a switch appeals to you.
         </p>
       ) : null}
-    </aside>
+    </Card>
   );
 }

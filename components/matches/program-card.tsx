@@ -1,20 +1,11 @@
 import type { MatchResult } from "@/lib/matches/types";
 import { ShortlistButton, type Status } from "./shortlist-button";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
+import { Card } from "@/components/ui/card";
+import { VerdictPill } from "@/components/ui/verdict-pill";
 import { cricosCodeForUniversity } from "@/lib/data/cricos-lookup";
 import { nepalEvidenceLevel } from "@/lib/data/nepal-evidence-lookup";
 import { AU_NEPAL_EVIDENCE_SOURCE } from "@/lib/data/source/au-nepal-evidence-levels";
-
-const VERDICT_CLS = {
-  strong: "bg-strong-tint text-strong",
-  possible: "bg-possible-tint text-possible",
-  reach: "bg-reach-tint text-reach",
-} as const;
-const VERDICT_LABEL = {
-  strong: "Strong match",
-  possible: "Possible",
-  reach: "Reach",
-} as const;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -55,7 +46,7 @@ export function ProgramCard({
   const cricos = cricosCodeForUniversity(u.id);
   const evidence = cricos ? nepalEvidenceLevel(cricos.cricosCode) : null;
   return (
-    <article className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
+    <Card as="article" padding="md" className="flex flex-col gap-3">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
@@ -69,11 +60,7 @@ export function ProgramCard({
               {preferenceChip.text}
             </span>
           ) : null}
-          <span
-            className={`inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12px] ${VERDICT_CLS[verdict]}`}
-          >
-            {VERDICT_LABEL[verdict]}
-          </span>
+          <VerdictPill verdict={verdict} size="lg" className="text-[12px]" />
         </div>
       </header>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink-soft">
@@ -107,13 +94,13 @@ export function ProgramCard({
         ))}
       </ul>
       {p.notes ? (
-        <p className="rounded-md border border-line bg-bg-tint px-3 py-2 text-[13px] text-ink-soft">
+        <Card as="p" radius="card" tone="tint" className="px-3 py-2 text-[13px] text-ink-soft">
           <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
             Good to know
           </span>
           <br />
           {p.notes}
-        </p>
+        </Card>
       ) : null}
       <footer className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-col gap-0.5">
@@ -156,6 +143,6 @@ export function ProgramCard({
         </div>
         <ShortlistButton programId={p.id} initialStatus={initialStatus} />
       </footer>
-    </article>
+    </Card>
   );
 }

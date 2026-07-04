@@ -1,3 +1,5 @@
+import { Card } from "@/components/ui/card";
+
 const STEPS = [
   ["1", "Tell us about you", "Where you're from, your grades in your own grade system, your budget. One question at a time."],
   ["2", "See where you stand", "A banded verdict with the factors that drove it — academic fit, budget, and how your gap reads."],
@@ -6,7 +8,7 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-surface">
+    <Card className="overflow-hidden">
       <div className="grid grid-cols-1 md:grid-cols-3">
         {STEPS.map(([n, t, b], i) => (
           <div
@@ -22,6 +24,6 @@ export function HowItWorks() {
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

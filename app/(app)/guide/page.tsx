@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { Eyebrow } from "@/components/marketing/eyebrow";
 import { GuideChat } from "@/components/guide/guide-chat";
+import { Card } from "@/components/ui/card";
 
 export default async function GuidePage() {
   const supabase = await createSupabaseServerClient();
@@ -25,14 +26,14 @@ export default async function GuidePage() {
       </header>
 
       {!hasAssessment ? (
-        <div className="rounded-lg border border-line bg-surface p-4 text-[14px] text-ink-soft">
+        <Card padding="sm" className="text-[14px] text-ink-soft">
           You haven&apos;t run an assessment yet, so the guide can only answer general questions about
           applying from Nepal.{" "}
           <Link href="/assess" className="text-primary underline-offset-2 hover:underline">
             Run your assessment
           </Link>{" "}
           to get answers grounded in your own profile.
-        </div>
+        </Card>
       ) : null}
 
       <GuideChat />
