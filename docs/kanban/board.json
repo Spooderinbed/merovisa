@@ -1211,6 +1211,18 @@
       "summary": "Third of the Phase-1 \"Primitive completion\" trio (Card+VerdictPill shipped in MV-90; audit finding #13). components/ui/button.tsx gains a loading?:boolean + loadingLabel?:ReactNode contract: when loading the button is disabled (disabled||loading, never double-submits), sets aria-busy=\"true\" (absent when idle), and renders {loadingLabel ?? children} followed by ONE canonical mono ellipsis (aria-hidden … in font-mono — the design-system \"system is working\" voice). Fixes the concrete drift in document-card.tsx (Upload said \"Uploading…\" but View said \"Loading...\" — three ASCII dots, same component) and folds assess/refresh-button.tsx, a raw <button> that re-implemented the primary/lg class string, back onto the primitive (<Button size=\"lg\" loading={pending} loadingLabel=\"Refreshing\">). Adds the missing aria-busy a11y signal to every loading button. Deliberately NOT touched (not loading buttons): shortlist-button optimistic toggle, plan-item-card small-pill busy actions (separate family), document-status-toggle checkbox. TDD: NEW tests/components/ui/button.test.tsx (contract) + extended document-card.test.tsx (in-flight upload disables+aria-busy). Independent branch off origin/master (targets disjoint from MV-90).",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-92",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-03 → PR #46 (branch mv-92-input-primitive off origin/master f6cada8). In Review, founder-gated merge (never self-merged). Independent of MV-90 #44 / MV-91 #45; board unions at merge.",
+      "file": "cards/MV-92-input-select-primitive.md",
+      "title": "Overhaul Phase 1: Input / Select field primitive",
+      "summary": "Completes the Phase-1 primitive arc (Card/VerdictPill=MV-90, Button-loading=MV-91, form fields=this). Extracts the single most-duplicated string left in the repo — the form-field shell rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary, copied verbatim 28× across the 8 profile-editor files — into NEW components/ui/input.tsx exporting Input (<input>) + Select (<select>), sharing one fieldShell, cn()-merging any per-site className, pure passthrough (no injected attrs = DOM unchanged). Migrated all 28 field sites; the two <input type=checkbox> and the guide-chat textarea (a distinct single-site shape) left out of scope per simplicity-first; about-you w-24 preserved. Intended migrate→verify Workflow died on the account session limit (8 subagents, 0 edits) → fell back to a deterministic checkbox-safe Node transform, LF-normalised. TDD +7 (input.test.tsx red-first). Gate: tsc 0, lint 0 err, suite 1603 pass / 1 fail (pre-existing MV-80 freshness), all 8 editor suites green = behaviour-preserving.",
+      "created": "2026-07-03",
+      "entered": "2026-07-03"
     }
   ]
 }
