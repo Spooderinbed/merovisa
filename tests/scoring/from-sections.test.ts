@@ -27,6 +27,22 @@ describe("sectionsToStudentProfile", () => {
     expect(result.fieldOfStudy).toBe("computer-science");
   });
 
+  // MV-102 — the signed-in re-score path must carry the also-considering fields so
+  // the per-field verdicts feature is live for signed-in users, not just anonymous.
+  test("forwards alsoConsidering from the intended-study section", () => {
+    const result = sectionsToStudentProfile({
+      "intended-study": { field: "computer-science", alsoConsidering: ["business"] },
+    });
+    expect(result.alsoConsidering).toEqual(["business"]);
+  });
+
+  test("leaves alsoConsidering undefined when the section omits it", () => {
+    const result = sectionsToStudentProfile({
+      "intended-study": { field: "computer-science" },
+    });
+    expect(result.alsoConsidering).toBeUndefined();
+  });
+
   test("returns sensible defaults for empty sections", () => {
     const result = sectionsToStudentProfile({});
     expect(result.homeCountry).toBe("nepal");

@@ -45,6 +45,7 @@ export function sectionsToStudentProfile(sections: ProfileSections): StudentProf
     gradeSystem: academic?.gradeSystem ?? "percentage-nepal",
     grade: academic?.gradePercent ?? 0,
     fieldOfStudy: study?.field ?? "other",
+    alsoConsidering: study?.alsoConsidering,
     graduationYear,
     gapReasons: gap?.reasons ?? [],
     englishStatus: hasScore ? "taken" : hasTest ? "booked" : "not-taken",
