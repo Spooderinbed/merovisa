@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buildJourney, type JourneySignals, type JourneyStage } from "@/lib/journey/journey";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 // Calm flat dots, reusing the MV-73 funnel-rail language: a reached stage fills
@@ -29,7 +30,7 @@ function labelCls(stage: JourneyStage): string {
 export function JourneyRail({ signals }: { signals: JourneySignals }) {
   const journey = buildJourney(signals);
   return (
-    <section aria-label="Your journey" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
+    <Card as="section" aria-label="Your journey" padding="md" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h2 className="text-[15px] font-medium text-ink">Your journey</h2>
         <p className="text-[13px] text-ink-faint">Where you are on the path to studying in Australia.</p>
@@ -60,6 +61,6 @@ export function JourneyRail({ signals }: { signals: JourneySignals }) {
           </li>
         ))}
       </ol>
-    </section>
+    </Card>
   );
 }

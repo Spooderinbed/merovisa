@@ -93,10 +93,11 @@ describe("VerdictCard verdict wording source (MV-42)", () => {
   it("renders the singular pill label and sources it from the central VERDICT_LABELS map", () => {
     render(<VerdictCard verdict="strong" />);
     expect(screen.getByText("Strong match")).toBeInTheDocument();
-    // The wording is no longer hand-rolled in the component — it comes from the
-    // one shared map both verdict surfaces read, so it can't drift between them.
+    // The wording is no longer hand-rolled in the component — it renders through
+    // the shared VerdictPill primitive, which sources the one VERDICT_LABELS map
+    // both verdict surfaces read, so it can't drift between them.
     const src = readFileSync(join(process.cwd(), "components/results/verdict-card.tsx"), "utf8");
-    expect(src).toMatch(/VERDICT_LABELS/);
+    expect(src).toMatch(/VerdictPill/);
   });
 });
 

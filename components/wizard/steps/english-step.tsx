@@ -1,6 +1,7 @@
 "use client";
 
 import type { EnglishStatus, EnglishTest } from "@/lib/scoring/types";
+import { Card } from "@/components/ui/card";
 import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { StepShell } from "@/components/wizard/step-shell";
@@ -55,7 +56,7 @@ export function EnglishStep({ profile, setField, callouts, eyebrow }: StepProps)
     >
       <Segmented ariaLabel="English status" options={STATUSES} value={status} onChange={onStatus} />
       {status === "taken" ? (
-        <div className="mt-2 flex flex-col gap-3 rounded-md border border-line bg-surface p-4">
+        <Card radius="card" padding="sm" className="mt-2 flex flex-col gap-3">
           <div className="flex flex-col gap-2">
             <span className="text-[13px] text-ink-soft">Which test?</span>
             <Segmented ariaLabel="English test" options={TESTS} value={test} onChange={onTest} />
@@ -76,7 +77,7 @@ export function EnglishStep({ profile, setField, callouts, eyebrow }: StepProps)
               onChange={(v) => setField({ englishScore: v })}
             />
           </div>
-        </div>
+        </Card>
       ) : null}
     </StepShell>
   );

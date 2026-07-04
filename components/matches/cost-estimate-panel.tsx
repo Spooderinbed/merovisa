@@ -2,6 +2,7 @@ import { selectCostEstimate } from "@/lib/data/cost-estimate";
 import type { CostLine } from "@/lib/data/cost-to-apply";
 import { AU_OSHC_PREMIUMS } from "@/lib/data/source/au-oshc-premiums";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
+import { Card } from "@/components/ui/card";
 
 const isHttp = (s: string) => /^https?:\/\//.test(s);
 
@@ -26,7 +27,7 @@ export function CostEstimatePanel() {
   const { lines, totalMin, totalMax, note, currency } = selectCostEstimate();
 
   return (
-    <aside className="flex flex-col gap-3 rounded-md border border-line bg-bg-tint p-4 text-[14px] text-ink-soft">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-[14px] text-ink-soft">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         First-year cost estimate (Nepal &rarr; Australia)
       </span>
@@ -92,6 +93,6 @@ export function CostEstimatePanel() {
       </div>
 
       <p className="text-[12.5px] text-ink-faint">{note}</p>
-    </aside>
+    </Card>
   );
 }

@@ -32,6 +32,24 @@ describe("DocumentViewerModal", () => {
   });
 });
 
+describe("DocumentCard upload loading state (MV-91)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("puts the Upload button in the Button loading contract (disabled + aria-busy) while in flight", async () => {
+    // A fetch that never resolves so the in-flight state stays observable.
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    const { container } = render(<DocumentCard meta={meta} initial={null} />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, new File(["x"], "passport.png", { type: "image/png" }));
+
+    const uploadBtn = screen.getByRole("button", { name: /uploading/i });
+    expect(uploadBtn).toBeDisabled();
+    expect(uploadBtn).toHaveAttribute("aria-busy", "true");
+  });
+});
+
 describe("DocumentCard delete", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

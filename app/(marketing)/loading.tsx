@@ -1,3 +1,5 @@
+import { Card } from "@/components/ui/card";
+
 /**
  * Navigation loading state for the (marketing) pages. Their server components read
  * live Supabase data (the session probe); while the page below the marketing chrome
@@ -17,9 +19,9 @@ export default function MarketingLoading() {
       <div className="h-10 w-64 animate-pulse rounded-md bg-bg-tint" />
       <div className="h-24 w-full max-w-[640px] animate-pulse rounded-md bg-bg-tint" />
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        <div className="h-40 animate-pulse rounded-lg border border-line bg-surface" />
-        <div className="h-40 animate-pulse rounded-lg border border-line bg-surface" />
-        <div className="h-40 animate-pulse rounded-lg border border-line bg-surface" />
+        <Card className="h-40 animate-pulse" />
+        <Card className="h-40 animate-pulse" />
+        <Card className="h-40 animate-pulse" />
       </div>
     </div>
   );

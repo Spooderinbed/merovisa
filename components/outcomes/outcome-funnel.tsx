@@ -1,14 +1,17 @@
 import type { FunnelStage, OutcomeFunnelRow, RailStep } from "@/lib/outcomes/funnel";
 import { buildOutcomeRail } from "@/lib/outcomes/funnel";
 import type { EventType } from "@/lib/outcomes/types";
+import { VERDICTS, type Verdict } from "@/lib/scoring/types";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { VerdictPill } from "@/components/ui/verdict-pill";
 import { OutcomeSelfReport } from "./outcome-self-report";
 
-const VERDICT_CHIP: Record<string, { label: string; cls: string }> = {
-  strong: { label: "Strong match", cls: "bg-strong-tint text-strong" },
-  possible: { label: "Possible", cls: "bg-possible-tint text-possible" },
-  reach: { label: "Reach", cls: "bg-reach-tint text-reach" },
-};
+// A row's frozen verdict comes back from the DB as a plain string; render the chip
+// only for a recognised verdict (an unknown value renders nothing, never a crash).
+function isVerdict(value: string): value is Verdict {
+  return (VERDICTS as readonly string[]).includes(value);
+}
 
 const STAGE_META: Record<FunnelStage, { label: string; cls: string }> = {
   applied: { label: "Applied", cls: "border border-line text-ink-soft" },
@@ -73,10 +76,9 @@ function OutcomeRailView({ events }: { events: EventType[] }) {
 }
 
 function OutcomeRow({ row }: { row: OutcomeFunnelRow }) {
-  const verdict = VERDICT_CHIP[row.verdict];
   const stage = STAGE_META[row.stage];
   return (
-    <article className="rounded-md border border-line bg-surface p-4">
+    <Card as="article" radius="card" padding="sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
           {row.universityName ? (
@@ -92,16 +94,12 @@ function OutcomeRow({ row }: { row: OutcomeFunnelRow }) {
       </div>
       <OutcomeRailView events={row.events} />
       <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-soft">
-        {verdict ? (
-          <span className={cn("rounded-pill px-2 py-0.5 font-mono text-[11px]", verdict.cls)}>
-            {verdict.label}
-          </span>
-        ) : null}
+        {isVerdict(row.verdict) ? <VerdictPill verdict={row.verdict} size="sm" /> : null}
         {row.intake ? <span>Intake {row.intake}</span> : null}
         {row.lastUpdated ? <span>· Updated {updatedLabel(row.lastUpdated)}</span> : null}
       </div>
       <OutcomeSelfReport attemptId={row.attemptId} nextEvents={row.nextEvents} />
-    </article>
+    </Card>
   );
 }
 

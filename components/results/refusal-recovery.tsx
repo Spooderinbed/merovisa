@@ -1,5 +1,6 @@
 import { NEPAL_REFUSAL_RECOVERY } from "@/lib/data/source/nepal-refusal-recovery";
 import type { NepalRefusalRecovery } from "@/lib/data/types";
+import { Card } from "@/components/ui/card";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 const SECTIONS: { kind: NepalRefusalRecovery["kind"]; heading: string }[] = [
@@ -29,7 +30,7 @@ function rowClass(r: NepalRefusalRecovery): string {
  */
 export function RefusalRecovery() {
   return (
-    <aside className="flex flex-col gap-3 rounded-md border border-line bg-bg-tint p-4 text-[14px] text-ink-soft">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-[14px] text-ink-soft">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         Refusal risk &amp; recovery (Nepal &rarr; Australia)
       </span>
@@ -63,6 +64,6 @@ export function RefusalRecovery() {
       </div>
 
       <p className="text-[12.5px] text-ink-faint">{DISCLAIMER}</p>
-    </aside>
+    </Card>
   );
 }

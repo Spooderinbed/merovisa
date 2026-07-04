@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const CONFIRM_WORD = "DELETE";
 
@@ -37,7 +38,7 @@ export function DeleteAccountSection() {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6 lg:col-span-2">
+    <Card as="section" padding="lg" className="flex flex-col gap-3 lg:col-span-2">
       <h2 className="text-[18px] font-medium text-reach">Delete your account</h2>
       <p className="max-w-[64ch] text-[15px] text-ink-soft">
         This permanently removes your profile, assessments, plan, and every uploaded
@@ -59,6 +60,6 @@ export function DeleteAccountSection() {
           {busy ? "Deleting…" : "Delete my account permanently"}
         </Button>
       </div>
-    </section>
+    </Card>
   );
 }
