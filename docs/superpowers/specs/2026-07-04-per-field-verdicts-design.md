@@ -6,6 +6,10 @@
 > data-flow path fixed (blocker), matches-page label reconciled in-slice (blocker), validation gap
 > closed, subordination/framing tightened, pivot copy softened, determinism boundary named, tests
 > added. See "Review resolutions" at the end.
+>
+> **Rev 3 (2026-07-04):** revised after an independent Codex (GPT-5.5 xhigh) review of rev 2. Three
+> more must-fixes folded (signed-in stale-extras clear bug, AI-guide grounding gap, pivot cutoff-margin
+> honesty) plus build details. See "Rev 3 — Codex review additions".
 
 ## Problem
 
@@ -265,6 +269,60 @@ Per-field **match sections** or a field switcher; per-field **plan** guidance; p
 itself to a chooser; field-accurate tuition in the financial dimension. This slice is results-page
 verdicts + the two integrity fixes it forces — the smallest honest promotion of the also-considering
 fields.
+
+## Rev 3 — Codex (GPT-5.5 xhigh) review additions
+
+Codex confirmed the design is technically sound and the byte-identical-goldens claim is true, but
+surfaced three more must-fixes (all trust/correctness, none in rev 2) plus build details. Folded in:
+
+### Must-fix
+
+**M1. Signed-in extras can't be cleared (stale bands).** `components/profile/editors/study-career-editor.tsx:80`
+only sends `alsoConsidering` when non-empty, and `lib/profiles/repo.ts:56` shallow-merges the patch —
+so a student who removes all extras never actually clears them, and MV-102 would show secondary bands
+for fields they dropped. **Fix:** the editor **always** sends `alsoConsidering` (an empty array when
+none) whenever it saves the intended-study section, so the merge clears it. Regression test: a full
+clear removes the extras from persisted sections and the next `reScoreAssessment` yields
+`secondaryVerdicts === null`. (Pairs with the rev-2 `from-sections` forward — both are required for the
+signed-in path to work end-to-end.)
+
+**M2. AI guide would be blind to the new bands.** `lib/guide/context.ts:91` emits overall standing,
+factors, and top matches but not secondary verdicts, so the live guide could contradict a band the
+student sees on the page. **Fix:** add `payload.secondaryVerdicts` to `buildGuideContext` as
+**field-label + band-word only** (no raw scores — consistent with the no-scores rule). Test asserts the
+guide context carries them.
+
+**M3. Pivot callout must not overstate a knife-edge flip.** `lib/scoring/verdict.ts:12` uses strict
+cutoffs with no margin, and `tests/scoring/characterization.test.ts:493` pins a one-point band flip —
+so a pivot could fire on a substantively tiny difference. **Resolution (default):** the row-level bands
+**always render** (honest facts); the pivot **callout copy explicitly frames it as a rules-based band
+comparison that can shift near our thresholds** and drops any "more realistic path" phrasing. If that
+framing reads as too hedged during build, the fallback is to gate the callout on a small internal
+`weighted` margin beyond the cutoff (computed inside `computeSecondaryVerdicts`, never shown). Add a
+TDD case at a cutoff boundary.
+
+### Build details (lower-priority, folded)
+
+- The matches reword **breaks** `tests/matches/compute.test.ts:193,212` (they assert
+  `/not covered by your verdict/i`) — update those assertions to the new wording as part of the reword.
+- Put the new payload assertions in `tests/results/assemble.test.ts` (not characterization).
+- Reuse the existing `ALSO_CONSIDERING_CAP` constant (`lib/validation/profile.ts:16`) for the
+  `IntendedStudyPatch` cap + refine — no new magic `.max(2)`.
+- The pivot callout uses `role="note"` (matching `components/ui/verdict-disclaimer.tsx:21`) and is
+  non-colour-reliant (the word label carries the meaning, not the tint alone).
+
+**Files added to scope by rev 3:** `components/profile/editors/study-career-editor.tsx`,
+`lib/guide/context.ts` (+ their tests). `lib/profiles/repo.ts` is not edited — the clear is fixed at
+the editor boundary.
+
+### Out of scope — pre-existing, surfaced for separate tracking
+
+- **Anonymous expiry copy lies after session restore:** `components/results/conversion-paths.tsx`
+  recomputes "now + 3 days" instead of using the stored `expiresAt` (`components/assess/assess-flow.tsx:19`).
+  A real trust bug, but pre-existing and unrelated to MV-102 — filed as its own task, not bundled.
+- Catalogue `Program.field` is a plain string matched by exact equality, with seeded fields
+  (`project-management`, `pharmacy`, `social-work`) that don't map to the profile field enum — a
+  pre-existing matching-looseness note, informational only.
 
 ## Review resolutions (Claude-5 xhigh, 3-lens)
 
