@@ -1283,6 +1283,18 @@
       "summary": "Carved from the MV-87 umbrella wizard slice. Step 3 gains a Percentage/GPA-4.0 grade-system toggle (new lib/scoring/grade-scale.ts converts across scales via the engine normalizer; honest percentage-equivalent caption; scale-aware slider) — CGPA flows end-to-end since scoring already normalizes CGPA to a percentage. Step 7 replaces USD with AUD (NPR to AUD, live A$ conversion from the single fx-rates source, indicative NPR-per-AUD caption, persisted-USD sessions auto-migrate; new formatAud). English step shows the live IELTS equivalent for PTE/TOEFL plus a provisional-6.0 note. Steps 5/6 get a positive gap-preview note so the conditional gap screen is never a surprise. Motion: direction-aware slide-fwd/slide-back between steps plus a staggered step-shell reveal; post-wizard recap assembles word-by-word (reduced-motion safe, no fake analyzing text). Opacity/transform only per the Motion v2 ADR. TDD +16 across education/budget/english/graduation/use-wizard-state/recap. DEFERRED to their own slices: step-4 multi-subject (single-select enum to array is a data-model change touching Zod/scoring/matches/persistence), matches-page progressive disclosure, footer CLS/perf.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-98",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-04 (branch mv-98-layout-cls-perf off design-stack; commit b96852a) -> PR #53; tsc/eslint clean, suite 1645 pass / 1 fail = pre-existing MV-80 freshness; founder-gated merge.",
+      "file": "cards/MV-98-layout-cls-perf.md",
+      "title": "Footer-first CLS fix + perf: pin footer (min-h-dvh flex), reserve loading height, lazy-load posthog",
+      "summary": "Fixes the founder-reported footer-first flash. Root cause: route-group shells put <main> and <Footer> as plain siblings with no min-height / full-height column, so during streaming the short loading.tsx fallback let the footer paint high, then the taller real page shoved it down. Fix: (app)/(marketing)/(focused) layouts become flex min-h-dvh flex-col with a flex-1 <main> (footer pinned to viewport bottom); (app)/(marketing) loading skeletons reserve min-h-[60vh]; analytics-provider lazy-loads posthog via dynamic import inside the effect after the key check (off the initial bundle for anon visitors). Corridor/data-corridor, AppBar, MobileTabBar, auth redirects preserved. New source-level ratchet tests/styles/layout-cls-ratchet.test.ts. Deferred: duplicate auth.getUser() dedup (auth-touching, own slice); browser-verify the streaming no-jump under throttled network.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }

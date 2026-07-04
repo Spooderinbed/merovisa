@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 export default function MarketingLoading() {
   return (
     <div
-      className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-16"
+      className="mx-auto flex min-h-[60vh] w-full max-w-[1120px] flex-col gap-6 px-5 py-16"
       aria-busy="true"
       aria-live="polite"
     >
