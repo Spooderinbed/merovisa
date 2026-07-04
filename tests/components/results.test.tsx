@@ -49,7 +49,7 @@ describe("Results", () => {
     const payload = assemble(aarav, new Date("2026-06-03"));
     render(<Results payload={payload} destination="australia" />);
     expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /AUD 2,000/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /AUD 2,500/ })).toBeInTheDocument();
   });
 
   it("folds the government-reference panels into a collapsed 'Know before you go' disclosure", () => {

@@ -30,7 +30,7 @@ describe("RefusalRecovery", () => {
 
   it("shows a recovery row with the ART fee and a scam warning", () => {
     render(<RefusalRecovery />);
-    expect(screen.getByText(/AUD 3,580/)).toBeInTheDocument();
+    expect(screen.getByText(/AUD 3,727/)).toBeInTheDocument();
     expect(screen.getByText(/not a normal appeal path/i)).toBeInTheDocument();
     expect(screen.getByText(/Australia issues no work permits/i)).toBeInTheDocument();
   });
