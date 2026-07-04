@@ -1,6 +1,9 @@
+import { Card } from "@/components/ui/card";
+import { VerdictPill } from "@/components/ui/verdict-pill";
+
 export function HeroPreview() {
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-surface">
+    <Card className="overflow-hidden">
       {/* header */}
       <div className="flex items-center justify-between border-b border-line bg-surface-2 px-5 py-3">
         <span className="inline-flex items-center gap-2 text-[15px] font-medium text-ink">
@@ -27,27 +30,25 @@ export function HeroPreview() {
               Add your IELTS report to unlock 3 more matches and sharpen your Australia verdict.
             </p>
           </div>
-          <div className="flex flex-col gap-2 rounded-md border border-line bg-surface p-4">
+          <Card radius="card" padding="sm" className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-2 text-[15px] font-medium text-ink">🇦🇺 Visa update</span>
-              <span className="inline-flex items-center rounded-pill bg-strong-tint px-2.5 py-0.5 font-mono text-[11.5px] text-strong">
-                Strong match
-              </span>
+              <VerdictPill verdict="strong" size="md" />
             </div>
             <p className="text-[15px] text-ink-soft">
               Australia&apos;s Genuine Student rules — your work gap is an asset here, not a liability.
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* guide */}
         <div className="flex flex-col gap-3 bg-surface-2 p-5">
           <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Your guide</span>
-          <div className="rounded-md border border-line bg-surface p-4">
+          <Card radius="card" padding="sm">
             <p className="text-[15px] text-ink">
               You&apos;re in good shape for Australia. The highest-impact thing right now is documenting your work gap — want to do it together?
             </p>
-          </div>
+          </Card>
           <div className="flex flex-col gap-2">
             {["Is my gap a problem?", "How much must I show?"].map((q) => (
               <span
@@ -60,6 +61,6 @@ export function HeroPreview() {
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

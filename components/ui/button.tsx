@@ -24,8 +24,44 @@ const sizes: Record<Size, string> = {
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** In-flight state: disables the button, sets aria-busy, and appends a mono ellipsis. */
+  loading?: boolean;
+  /** Copy shown while loading (e.g. "Uploading"). Falls back to children; the ellipsis is the primitive's. */
+  loadingLabel?: string;
 }
 
-export function Button({ variant = "primary", size = "md", className, type = "button", ...props }: ButtonProps) {
-  return <button type={type} className={cn(base, variants[variant], sizes[size], className)} {...props} />;
+export function Button({
+  variant = "primary",
+  size = "md",
+  loading = false,
+  loadingLabel,
+  className,
+  type = "button",
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      type={type}
+      className={cn(base, variants[variant], sizes[size], className)}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      {...props}
+    >
+      {loading ? (
+        // One flex child so the base `gap-2` never splits the label from its
+        // ellipsis; the ellipsis is mono (the "system is working" voice) and
+        // aria-hidden so the accessible name stays the label alone.
+        <span>
+          {loadingLabel ?? children}
+          <span aria-hidden="true" className="font-mono">
+            …
+          </span>
+        </span>
+      ) : (
+        children
+      )}
+    </button>
+  );
 }

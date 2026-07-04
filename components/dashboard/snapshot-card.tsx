@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { AssessmentPayload } from "@/lib/results/types";
+import { Card } from "@/components/ui/card";
 import { VerdictCard } from "@/components/results/verdict-card";
 import { FactorBars } from "@/components/results/factor-bars";
 import { scoringRulesStale } from "@/lib/data/scoring-freshness";
@@ -13,7 +14,7 @@ export function SnapshotCard({
 }) {
   if (!primary) {
     return (
-      <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
+      <Card padding="lg" className="flex flex-col gap-3">
         <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Snapshot</span>
         <h2 className="text-[22px]">Run your first assessment</h2>
         <p className="text-[15px] text-ink-soft">9 quick questions, no questions skipped. We&apos;ll show where you stand.</p>
@@ -23,11 +24,11 @@ export function SnapshotCard({
         >
           Check eligibility →
         </Link>
-      </div>
+      </Card>
     );
   }
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+    <Card padding="lg" className="flex flex-col gap-4">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         Your standing for {destinationLabel ?? "your destination"}
       </span>
@@ -40,6 +41,6 @@ export function SnapshotCard({
         rulesStale={scoringRulesStale()}
       />
       <FactorBars dimensions={primary.result.dimensions} />
-    </div>
+    </Card>
   );
 }
