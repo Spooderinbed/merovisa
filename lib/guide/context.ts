@@ -62,6 +62,16 @@ function matchLines(payload: AssessmentPayload): string[] {
   });
 }
 
+function secondaryVerdictLines(payload: AssessmentPayload): string[] {
+  const sv = payload.secondaryVerdicts;
+  if (!sv || sv.items.length === 0) return [];
+  // Field label + band WORD only — never a numeric score. Matches what the student
+  // sees on the results page so the guide can't contradict a secondary band.
+  return sv.items.map(
+    (item) => `- If they applied under ${item.label} instead: ${VERDICT_LABEL[item.verdict] ?? item.verdict}`,
+  );
+}
+
 function planLines(planItems: PlanItemRow[]): string[] {
   return planItems.slice(0, MAX_PLAN).map((p) => `- ${p.title} (${p.impact} impact)${p.body ? `: ${p.body}` : ""}`);
 }
@@ -95,6 +105,16 @@ export function buildGuideContext({ payload, planItems }: GuideContextInput): st
 
     const matches = matchLines(payload);
     if (matches.length) sections.push(["Top program matches:", ...matches].join("\n"));
+
+    const secondary = secondaryVerdictLines(payload);
+    if (secondary.length) {
+      sections.push(
+        [
+          "Fields they are also considering (banded standing only — the primary verdict above is unchanged):",
+          ...secondary,
+        ].join("\n"),
+      );
+    }
   }
 
   const plan = planLines(planItems);

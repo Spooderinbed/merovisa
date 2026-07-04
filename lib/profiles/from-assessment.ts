@@ -53,7 +53,13 @@ export function profileSectionsFromAssessment(
 
   // intended study
   const field = get<FieldOfStudy>("fieldOfStudy");
-  if (field) out["intended-study"] = { field };
+  if (field) {
+    const alsoConsidering = get<FieldOfStudy[]>("alsoConsidering");
+    out["intended-study"] = {
+      field,
+      ...(alsoConsidering && alsoConsidering.length > 0 ? { alsoConsidering } : {}),
+    };
+  }
 
   // english
   const score = get<number>("englishScore");
