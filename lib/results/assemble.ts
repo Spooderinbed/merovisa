@@ -6,6 +6,7 @@ import { profileToMatchInputs } from "@/lib/matches/from-student-profile";
 import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/preference";
 import { attachNepalEvidence } from "@/lib/matches/evidence";
 import { computeIntakeTiming } from "@/lib/timing/intake";
+import { competitivenessNote } from "@/lib/scoring/field-note";
 import { computeProfileAccuracy } from "./accuracy";
 import { AUSTRALIA } from "@/lib/data/destination/australia";
 import { CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
@@ -50,5 +51,10 @@ export function assembleAssessment(
     rulesVerified: CONFIG_RULES_VERIFIED,
     rulesStale: scoringRulesStale(now),
     preferenceNote,
+    // Honest context for any "also considering" field whose admission bar differs
+    // materially from the primary — carried on the payload like preferenceNote, so the
+    // results page can show it near the verdict. The verdict itself stays scored on the
+    // primary field alone (competitivenessNote never touches the score).
+    competitivenessNote: competitivenessNote(scored.fieldOfStudy, scored.alsoConsidering),
   };
 }
