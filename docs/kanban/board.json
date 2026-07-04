@@ -1151,6 +1151,18 @@
       "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-100",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "BUILT 2026-07-04 (branch mv-100-matches-progressive-disclosure off origin/master; founder-picked Top-N-per-band + show-more). tsc/eslint clean; suite 1601 pass / 1 fail = pre-existing MV-80 1-July freshness; +5 tests. Founder-gated merge.",
+      "file": "cards/MV-100-matches-progressive-disclosure.md",
+      "title": "Matches progressive disclosure (signed-in): top N per band + show-more, Reach collapsed, hidden cards unmounted for perf",
+      "summary": "Founder ask (6): the signed-in /matches page mounted every card in every verdict band (~86) at once -- a wall that buried the Strong picks and dragged perf. Founder picked Top-N-per-band + show-more (over accordion / sort-filter bar; rejected sort-filter for cutting against verdict-first honesty). VerdictGroup is now a client component with an initialVisible prop (default 3) + a show-more/show-fewer toggle; hidden cards are NOT mounted until expanded (real perf win). Reach passes initialVisible=0 so the stretch schools collapse behind their count. A11y: real button, aria-expanded/aria-controls, singular/plural noun, no toggle when the band fits. ProgramCard + data flow untouched; verdict wording still from central VERDICT_LABELS. Anon results page already discloses -- untouched.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
