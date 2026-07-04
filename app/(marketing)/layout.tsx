@@ -20,10 +20,13 @@ export default async function MarketingLayout({ children }: { children: React.Re
   }
   const variant = user ? "marketing-signed-in" : "marketing";
   return (
-    <>
+    // Full-height flex column pins the footer to the viewport bottom, so a short
+    // streamed loading fallback doesn't paint the footer high and then jump it down
+    // when the taller real page streams in (MV-98 CLS fix).
+    <div className="flex min-h-dvh flex-col">
       <AppBar variant={variant} user={user} />
-      <main>{children}</main>
+      <main className="flex-1">{children}</main>
       <Footer />
-    </>
+    </div>
   );
 }
