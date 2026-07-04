@@ -1235,6 +1235,18 @@
       "summary": "Ships the post-onboarding corridor personalization ARCHITECTURE (spec MV-91) — the last Phase-1 slice not gated on the type-scale ADR (#47), Motion v2 ADR (#48), or the mascot (MV-85): (1) new lib/theme/corridor.ts registry (np-au → label + danphe mascotVariant; corridorForHomeCountry case-insensitive 'nepal' → np-au, else null = neutral brand; DEFAULT_CORRIDOR for the signed-in MVP, same Nepal assumption lib/scoring/from-sections.ts:42 already pins). (2) globals.css [data-corridor=np-au] light+dark blocks overriding ONLY --accent/--accent-tint (danphe teal-blue #15687a/#7cc4d4 — flagged founder call; WCAG AA-proved 5.47–13.2 both themes; zero blast radius: no component consumes accent yet). (3) AssessFlow results phase wraps Results in a display:contents data-corridor carrier from profile.homeCountry (anon activation = results onward; unknown country → no attribute). (4) (app) shell layout wraps chrome+content in the same carrier (signed-in always-on, Phase-2-ready; no DB read added). Server-safe/no-flash by construction — attribute renders from known state, no pre-hydration script. TDD red-first +11 tests incl. NEW permanent guard tests/styles/corridor-tokens.test.ts (accents-only invariant + WCAG re-proof + marketing-sources-never-carry-data-corridor scan). Registry omits copy-nods until a consumer exists. First consumers: spec-MV-94 results accents, Phase-2 shell, mascot variant resolution.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-97",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-04 (branch mv-97-wizard-funnel-overhaul off design-stack); tsc clean, suite 1661 pass / 1 fail = pre-existing MV-80 freshness; founder-gated merge.",
+      "file": "cards/MV-97-wizard-funnel-overhaul.md",
+      "title": "Overhaul Phase 1: wizard funnel — CGPA step-3 input, AUD step-7 corridor, English equivalents, gap preview, direction-aware slide + word-cascade recap",
+      "summary": "Carved from the MV-87 umbrella wizard slice. Step 3 gains a Percentage/GPA-4.0 grade-system toggle (new lib/scoring/grade-scale.ts converts across scales via the engine normalizer; honest percentage-equivalent caption; scale-aware slider) — CGPA flows end-to-end since scoring already normalizes CGPA to a percentage. Step 7 replaces USD with AUD (NPR to AUD, live A$ conversion from the single fx-rates source, indicative NPR-per-AUD caption, persisted-USD sessions auto-migrate; new formatAud). English step shows the live IELTS equivalent for PTE/TOEFL plus a provisional-6.0 note. Steps 5/6 get a positive gap-preview note so the conditional gap screen is never a surprise. Motion: direction-aware slide-fwd/slide-back between steps plus a staggered step-shell reveal; post-wizard recap assembles word-by-word (reduced-motion safe, no fake analyzing text). Opacity/transform only per the Motion v2 ADR. TDD +16 across education/budget/english/graduation/use-wizard-state/recap. DEFERRED to their own slices: step-4 multi-subject (single-select enum to array is a data-model change touching Zod/scoring/matches/persistence), matches-page progressive disclosure, footer CLS/perf.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
