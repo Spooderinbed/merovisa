@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { StudyCareerEditor } from "@/components/profile/editors/study-career-editor";
+import {
+  StudyCareerEditor,
+  buildIntendedStudyPatch,
+} from "@/components/profile/editors/study-career-editor";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
@@ -74,6 +77,47 @@ describe("StudyCareerEditor", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(bodies(fetchMock).map((b) => b.section)).toEqual(["intended-study", "career"]);
     expect(await screen.findAllByText("Saved")).toHaveLength(1);
+  });
+
+  // MV-102 M1 — the intended-study patch must ALWAYS carry alsoConsidering (an
+  // empty array when none), so the shallow-merge in repo.ts clears dropped extras.
+  // An omitted key would leave stale secondary bands persisted forever.
+  describe("buildIntendedStudyPatch always sends alsoConsidering (clears stale extras)", () => {
+    it("sends an empty array when no extras are selected", () => {
+      const patch = buildIntendedStudyPatch({
+        level: "masters",
+        field: "computer-science",
+        alsoConsidering: [],
+        specialisation: "",
+      });
+      expect(patch.alsoConsidering).toEqual([]);
+    });
+
+    it("sends the selected extras when present", () => {
+      const patch = buildIntendedStudyPatch({
+        level: "",
+        field: "computer-science",
+        alsoConsidering: ["business"],
+        specialisation: "",
+      });
+      expect(patch.alsoConsidering).toEqual(["business"]);
+    });
+  });
+
+  it("clears also-considering on save when the last extra is removed (empty array persisted)", async () => {
+    const fetchMock = okFetch();
+    render(
+      <StudyCareerEditor
+        initial={{ "intended-study": { field: "computer-science", alsoConsidering: ["business"] } }}
+      />,
+    );
+    // Untick the only extra, then save.
+    await userEvent.click(screen.getByRole("checkbox", { name: /Business/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Save/i }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [body] = bodies(fetchMock);
+    expect(body.section).toBe("intended-study");
+    expect(body.patch.alsoConsidering).toEqual([]);
   });
 
   it("shows an error notice on non-200", async () => {
