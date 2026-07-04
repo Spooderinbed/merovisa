@@ -1235,6 +1235,18 @@
       "summary": "Ships the post-onboarding corridor personalization ARCHITECTURE (spec MV-91) — the last Phase-1 slice not gated on the type-scale ADR (#47), Motion v2 ADR (#48), or the mascot (MV-85): (1) new lib/theme/corridor.ts registry (np-au → label + danphe mascotVariant; corridorForHomeCountry case-insensitive 'nepal' → np-au, else null = neutral brand; DEFAULT_CORRIDOR for the signed-in MVP, same Nepal assumption lib/scoring/from-sections.ts:42 already pins). (2) globals.css [data-corridor=np-au] light+dark blocks overriding ONLY --accent/--accent-tint (danphe teal-blue #15687a/#7cc4d4 — flagged founder call; WCAG AA-proved 5.47–13.2 both themes; zero blast radius: no component consumes accent yet). (3) AssessFlow results phase wraps Results in a display:contents data-corridor carrier from profile.homeCountry (anon activation = results onward; unknown country → no attribute). (4) (app) shell layout wraps chrome+content in the same carrier (signed-in always-on, Phase-2-ready; no DB read added). Server-safe/no-flash by construction — attribute renders from known state, no pre-hydration script. TDD red-first +11 tests incl. NEW permanent guard tests/styles/corridor-tokens.test.ts (accents-only invariant + WCAG re-proof + marketing-sources-never-carry-data-corridor scan). Registry omits copy-nods until a consumer exists. First consumers: spec-MV-94 results accents, Phase-2 shell, mascot variant resolution.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-98",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "SHIPPED 2026-07-04 (branch mv-98-layout-cls-perf off design-stack; commit b96852a) -> PR #53; tsc/eslint clean, suite 1645 pass / 1 fail = pre-existing MV-80 freshness; founder-gated merge.",
+      "file": "cards/MV-98-layout-cls-perf.md",
+      "title": "Footer-first CLS fix + perf: pin footer (min-h-dvh flex), reserve loading height, lazy-load posthog",
+      "summary": "Fixes the founder-reported footer-first flash. Root cause: route-group shells put <main> and <Footer> as plain siblings with no min-height / full-height column, so during streaming the short loading.tsx fallback let the footer paint high, then the taller real page shoved it down. Fix: (app)/(marketing)/(focused) layouts become flex min-h-dvh flex-col with a flex-1 <main> (footer pinned to viewport bottom); (app)/(marketing) loading skeletons reserve min-h-[60vh]; analytics-provider lazy-loads posthog via dynamic import inside the effect after the key check (off the initial bundle for anon visitors). Corridor/data-corridor, AppBar, MobileTabBar, auth redirects preserved. New source-level ratchet tests/styles/layout-cls-ratchet.test.ts. Deferred: duplicate auth.getUser() dedup (auth-touching, own slice); browser-verify the streaming no-jump under throttled network.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
