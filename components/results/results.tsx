@@ -7,7 +7,7 @@ import { isDestinationSupported } from "@/lib/scoring/types";
 import { track } from "@/lib/analytics/events";
 import { UnsupportedDestinationNotice, NotSureFramingNotice } from "./destination-notice";
 import { VerdictCard } from "./verdict-card";
-import { CompetitivenessNote } from "./competitiveness-note";
+import { SecondaryVerdicts } from "./secondary-verdicts";
 import { FactorBars } from "./factor-bars";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { CostToApply } from "./cost-to-apply";
@@ -71,10 +71,11 @@ export function Results({
         rulesVerified={payload.rulesVerified}
         rulesStale={payload.rulesStale}
       />
-      {/* Honest context for an "also considering" field (MV-99/101): the verdict is
-          scored on the primary field, so this line tells the student where a secondary
-          pick may be an easier/tougher admit — surfaced here, not just in the wizard. */}
-      <CompetitivenessNote note={payload.competitivenessNote} />
+      {/* Real banded verdicts for each "also considering" field (MV-102): the primary
+          VerdictCard above is unchanged (scored on the primary field alone); these compact,
+          clearly-conditional bands show the student's standing if they applied under each
+          other field, plus a low-pressure pivot callout when one strictly outranks. */}
+      <SecondaryVerdicts data={payload.secondaryVerdicts} />
       <FactorBars dimensions={payload.result.dimensions} />
       {/* Capture the conversion moment while the verdict is still on screen —
           anonymous only; signed-in users already own the assessment. The full
