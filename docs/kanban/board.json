@@ -1046,7 +1046,7 @@
     },
     {
       "id": "MV-80",
-      "col": "inreview",
+      "col": "done",
       "pri": "P0",
       "owner": "agent",
       "badge": "DONE 2026-07-04 — all 16 records re-verified (13/15 figures live-reconfirmed today; 491 primary-sourced via DHA API, hospitality Sat/Sun/PH exact arithmetic), rebased clean on master, freshness test green, full suite 1597 green; PR founder-gated",
@@ -1154,7 +1154,7 @@
     },
     {
       "id": "MV-99",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "BUILT 2026-07-04 (branch mv-99-step4-multi-subject off origin/master; Option A primary + also-considering, Codex-validated). tsc/eslint clean; suite 1620 pass / 1 fail = pre-existing MV-80 1-July freshness; +23 tests. Founder-gated merge.",
@@ -1166,13 +1166,25 @@
     },
     {
       "id": "MV-101",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "BUILT 2026-07-04 (branch mv-101-results-competitiveness-note, STACKED on MV-99/#54). Surfaces MV-99 competitiveness note on the results page via assemble payload. tsc/eslint clean; suite 1624 pass / 1 fail = pre-existing MV-80 1-July freshness; +4 tests. Founder-gated merge; merge MV-99 first.",
       "file": "cards/MV-101-results-competitiveness-note.md",
       "title": "Results-page competitiveness note: surface MV-99 honest also-considering line near the verdict (not just in the wizard)",
       "summary": "MV-99 follow-up. The honest \"Business is a less competitive admit than Computer Science\" line only showed in the wizard at point-of-choice; a student reviewing results never saw it. Compute competitivenessNote(primary, alsoConsidering) in assembleAssessment (where the profile is in scope) and carry it on AssessmentPayload -- same pattern as preferenceNote -- then render a calm CompetitivenessNote callout under the VerdictCard on the results page. Verdict stays scored on the primary field alone; the note is presentational context only. Additive optional payload field (no migration). Depends on MV-99 (alsoConsidering + field-note.ts) -- stacked PR on the MV-99 branch. TDD +4.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-102",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "BUILT 2026-07-04 (branch mv-102-per-field-verdicts off origin/master). Promotes MV-99's also-considering fields into real banded verdicts (Strong/Possible/Reach) on the results page via server-side re-scores; low-pressure pivot callout only when a secondary strictly outranks the primary. Primary verdict byte-identical (goldens unchanged), no DB/migration. Also folds in two integrity fixes the slice forces (signed-in from-sections forward + matches exploring-label reword) and Codex must-fixes (editor clears stale extras, guide grounding). tsc/eslint clean; +N tests. Founder-gated merge.",
+      "file": "cards/MV-102-per-field-verdicts.md",
+      "title": "Per-field verdicts (Option C): promote 'also considering' fields to real banded verdicts on results",
+      "summary": "MV-99/101 follow-up. The also-considering fields only earned a muted competitiveness line; a student who is Reach for their primary but Possible for a secondary could never see that concrete pivot -- a self-serve dead-end. Option C re-scores the SAME student in each also-considering field (runAssessment with only fieldOfStudy swapped), keeping ONLY the band, and renders compact clearly-conditional secondary bands beneath the unchanged primary VerdictCard, with an honest low-pressure pivot callout when a secondary strictly outranks the primary. New pure module lib/results/secondary-verdicts.ts + presentational components/results/secondary-verdicts.tsx (replaces the results render of CompetitivenessNote). Primary path byte-identical (goldens unchanged), no DB/migration. Forced integrity fixes: from-sections forwards alsoConsidering (signed-in path), matches exploring-label reworded off 'not covered by your verdict', IntendedStudyPatch disjoint/dedup refine. Codex must-fixes: editor always sends alsoConsidering (clears stale extras), AI-guide context carries the secondary bands (word-only). Spec docs/superpowers/specs/2026-07-04-per-field-verdicts-design.md rev 3.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
     }
