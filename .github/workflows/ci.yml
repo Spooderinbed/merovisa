@@ -37,9 +37,12 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      # Node 22, not 20: supabase-js realtime needs native WebSocket, which Node
+      # 20 lacks — the itest fails there with "Node.js 20 detected without
+      # native WebSocket support". The fast validate lane stays on 20.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
       - run: npm ci
       # ubuntu-latest ships Docker preinstalled; `supabase start` brings up the
@@ -48,7 +51,11 @@ jobs:
         run: npx supabase start
       # Export the local stack's URL + service-role key as the env vars the smoke
       # reads. Source the emitted env file and handle both the new and legacy key
-      # names so a CLI rename can't silently leave the vars unset.
+      # names — including the unprefixed names newer `supabase status -o env`
+      # versions emit (e.g. API_URL, SERVICE_ROLE_KEY, SECRET_KEY) — so a CLI
+      # rename can't silently leave the vars unset. If every fallback still
+      # misses, fail fast with the names actually present instead of letting an
+      # empty env limp downstream into the smoke step.
       - name: Export Supabase test env
         shell: bash
         run: |
@@ -56,15 +63,28 @@ jobs:
           set -a
           . ./supabase.env
           set +a
+          url="${SUPABASE_URL:-${SUPABASE_API_URL:-${API_URL:-}}}"
+          key="${SUPABASE_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}}}"
+          if [ -z "$url" ] || [ -z "$key" ]; then
+            echo "::error::Export Supabase test env: could not map URL/key from" \
+              "'supabase status -o env' output — the CLI likely renamed its" \
+              "variable names again. Names present in supabase.env (values omitted):"
+            cut -d= -f1 supabase.env | sort
+            exit 1
+          fi
           {
-            echo "SUPABASE_TEST_URL=${SUPABASE_URL:-${SUPABASE_API_URL:-}}"
-            echo "SUPABASE_TEST_SERVICE_ROLE_KEY=${SUPABASE_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-}}"
+            echo "SUPABASE_TEST_URL=$url"
+            echo "SUPABASE_TEST_SERVICE_ROLE_KEY=$key"
           } >> "$GITHUB_ENV"
       # The smoke `skipIf`s when its env vars are absent, so a silent export
       # failure would green CI having tested nothing. Assert the vars are set, the
       # stack answers, and that the run actually executed (>0 passed, 0 skipped).
+      # NO_COLOR: the greps below parse the log, so vitest's ANSI color codes
+      # must be off or the escape bytes break the pattern match.
       - name: Run integration smoke
         shell: bash
+        env:
+          NO_COLOR: "1"
         run: |
           test -n "$SUPABASE_TEST_URL"
           test -n "$SUPABASE_TEST_SERVICE_ROLE_KEY"

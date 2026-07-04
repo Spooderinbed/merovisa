@@ -1295,6 +1295,18 @@
       "summary": "Fixes the founder-reported footer-first flash. Root cause: route-group shells put <main> and <Footer> as plain siblings with no min-height / full-height column, so during streaming the short loading.tsx fallback let the footer paint high, then the taller real page shoved it down. Fix: (app)/(marketing)/(focused) layouts become flex min-h-dvh flex-col with a flex-1 <main> (footer pinned to viewport bottom); (app)/(marketing) loading skeletons reserve min-h-[60vh]; analytics-provider lazy-loads posthog via dynamic import inside the effect after the key check (off the initial bundle for anon visitors). Corridor/data-corridor, AppBar, MobileTabBar, auth redirects preserved. New source-level ratchet tests/styles/layout-cls-ratchet.test.ts. Deferred: duplicate auth.getUser() dedup (auth-touching, own slice); browser-verify the streaming no-jump under throttled network.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-81",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "",
+      "file": "cards/MV-81-ci-integration-env-fix.md",
+      "title": "CI integration job env mapping fix (renamed Supabase CLI status output)",
+      "summary": "The integration job's 'Export Supabase test env' step has failed on every run for ~10 days (run 28576388321: both SUPABASE_TEST_URL/SUPABASE_TEST_SERVICE_ROLE_KEY empty in the smoke step's env) because current Supabase CLI versions emit unprefixed names (API_URL, SERVICE_ROLE_KEY, SECRET_KEY) in `supabase status -o env` output that the old fallback chains never checked. Fixed by extending both fallback chains to include the unprefixed names and adding a fail-fast guard that exits 1 with a names-only diagnostic (never values) when the mapping still misses, so a future CLI rename is a one-glance fix instead of a silent empty-env failure two steps downstream. Only the one step + its comment touched; continue-on-error preserved. Verification is the PR's own Actions run reaching the smoke step with non-empty env.",
+      "created": "2026-07-02",
+      "entered": "2026-07-02"
     }
   ]
 }
