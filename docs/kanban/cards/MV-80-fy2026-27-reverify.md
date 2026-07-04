@@ -70,3 +70,37 @@ treat that single freshness failure as MV-80-owned, not a regression.
 4. Land the plan-copy drift edits (the WIP files) so no stale headline figure survives.
 5. Gate green (freshness test now passes) → PR → **founder-gated merge**. Landing this is what
    un-reds CI.
+
+## RESUMED + COMPLETED 2026-07-04 (→ In Review)
+
+Rebuilt the branch **clean on current `origin/master` (f6cada8)** instead of untangling PR #36's
+conflict: the design sprint touched *only* the board files, zero divergence on any code/data/test/
+findings file `9847b9d` changed — so I reset the branch to master and re-applied `9847b9d`'s 15
+non-board files verbatim, then regenerated the board off current master. No rebase conflict.
+
+**Reconciliation of the "4 remaining" estimate:** `9847b9d` was actually complete — it resolved all
+16 in-scope records (values + `lastVerified: 2026-07-02` + `reverifyBy: 2027-07-01`), collapsed the
+NMW `announced`/`current` pair into one 26.44 `current` record, and updated the downstream plan copy
+(`lib/plan/generator.ts`, `lib/plan/sources.ts`) + 7 test files. The two rows still stamped
+`2026-06-05` (`tfn-mail-turnaround`, `super-guarantee-rate`) carry **no `reverifyBy`** — stable
+procedural facts, correctly outside the freshness scope, not part of the 16.
+
+**Live re-verification (2026-07-04, per the "never blind-copy" criterion):** an independent agent
+re-checked every figure against its authoritative source today. **13/15 re-confirmed live**; the
+other 2 stand on stronger evidence than a fresh cross-check: subclass 491 = 6,140 was read off the
+DHA GetPriceList **API directly** by the 2026-07-02 scout (today's agent could only reach JS-rendered
+secondary sources), and hospitality Sat/Sun/PH (38.61/45.05/64.35) are **exact arithmetic** from the
+confirmed introductory base 25.74 × 1.50/1.75/2.50. No figure contradicts what shipped; nothing
+changed from the scout values.
+
+**Gate:** `tests/data/freshness.test.ts` green; full suite **253 files / 1597 tests green**;
+`tsc` clean; `eslint` clean (1 pre-existing unrelated `docs/kanban/build.mjs` warning). No stray old
+figure survives in student-facing copy (grep: only the new records' own "was AUD 3,580 / prior 24.95"
+changelog notes + a coincidental `03580F` CRICOS code remain).
+
+- [x] Every changed value = live-source figure; units/streams match.
+- [x] NMW pair collapsed to one in-force 26.44 `current` record; no stale "announced" row.
+- [x] All 16 records `lastVerified: 2026-07-02`; annual ones `reverifyBy: 2027-07-01`; no deadline deleted.
+- [x] 189=6,135 vs 491/186=6,140 preserved.
+- [x] `tests/data/freshness.test.ts` green; full suite green; typecheck + lint clean.
+- [x] Branch `mv-80-fy2026-27-reverify` → PR; **founder-gated merge** (leaves CI-un-redding to the founder).

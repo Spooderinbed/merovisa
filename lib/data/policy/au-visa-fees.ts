@@ -17,13 +17,13 @@ const DHA_STUDENT_500_SOURCE =
   "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500";
 
 export const AU_SUBCLASS_500_APPLICATION_CHARGE_AUD: Sourced<number> = {
-  value: 2_000,
+  value: 2_500,
   provenance: {
     findingRefs: ["A.001", "B.001", "E.001"],
     volatility: "annual",
-    reverifyBy: "2026-07-01",
+    reverifyBy: "2027-07-01",
     source: DHA_STUDENT_500_SOURCE,
-    lastVerified: "2026-06-07",
-    note: "DHA Subclass 500 base visa application charge for the primary applicant (AUD).",
+    lastVerified: "2026-07-02",
+    note: "DHA Subclass 500 base visa application charge for the primary applicant (AUD). Rose from AUD 2,000 to AUD 2,500 effective 1 July 2026.",
   },
 };

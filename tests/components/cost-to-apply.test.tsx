@@ -5,7 +5,7 @@ import { CostToApply } from "@/components/results/cost-to-apply";
 describe("CostToApply", () => {
   it("shows the DHA visa charge as an AUD figure linked to its government source", () => {
     render(<CostToApply />);
-    const link = screen.getByRole("link", { name: /AUD 2,000/ });
+    const link = screen.getByRole("link", { name: /AUD 2,500/ });
     expect(link).toHaveAttribute("href", expect.stringContaining("immi.homeaffairs.gov.au"));
   });
 

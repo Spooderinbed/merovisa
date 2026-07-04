@@ -19,7 +19,7 @@ describe("selectCostEstimate", () => {
     expect(living.amount).toBe(29_710);
     expect(living.source).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
     const visa = est.lines.find((l) => /visa charge/i.test(l.label))!;
-    expect(visa.amount).toBe(2_000);
+    expect(visa.amount).toBe(2_500);
     expect(visa.source).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
   });
 
@@ -32,8 +32,8 @@ describe("selectCostEstimate", () => {
   });
 
   it("totals the fixed lines plus the OSHC range into a min–max band", () => {
-    expect(est.totalMin).toBe(76_890); // 44500 + 29710 + 2000 + 680
-    expect(est.totalMax).toBe(77_159); // 44500 + 29710 + 2000 + 949
+    expect(est.totalMin).toBe(77_390); // 44500 + 29710 + 2500 + 680
+    expect(est.totalMax).toBe(77_659); // 44500 + 29710 + 2500 + 949
     expect(est.totalMax).toBeGreaterThan(est.totalMin);
   });
 
