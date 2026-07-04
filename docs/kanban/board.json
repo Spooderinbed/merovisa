@@ -1046,15 +1046,15 @@
     },
     {
       "id": "MV-80",
-      "col": "blocked",
+      "col": "done",
       "pri": "P0",
       "owner": "agent",
-      "badge": "DEFERRED to after the design sprint (founder call 2026-07-03) — 12/16 done, PR #36 conflicting; keeps CI red by design",
+      "badge": "DONE 2026-07-04 — all 16 records re-verified (13/15 figures live-reconfirmed today; 491 primary-sourced via DHA API, hospitality Sat/Sun/PH exact arithmetic), rebased clean on master, freshness test green, full suite 1597 green; PR founder-gated",
       "file": "cards/MV-80-fy2026-27-reverify.md",
       "title": "FY2026-27 data re-verify: 16 overdue reverifyBy records (DHA fees, wages, ART, ATO)",
       "summary": "The designed 1-July freshness timer FIRED: tests/data/freshness.test.ts red with 16 records at reverifyBy 2026-07-01 (AU_SUBCLASS_500_APPLICATION_CHARGE_AUD; AU_SKILLED_VISA_CHARGES[0-3]; AU_TAX_FIGURES[1-4]; AU_STUDENT_WORKER_WAGES[1-6]; NEPAL_REFUSAL_RECOVERY[11]). A 4-agent read-only scout verified every record against its authoritative live source on 2026-07-02: 12/16 CHANGED — subclass 500 AUD 2,000→2,500; skilled 189/491/186 → 6,135/6,140/6,140; 191 505→630; NMW 24.95→26.44 in force (announced→current collapse needed); Hospitality casual intro rows re-based on 25.74; ART fee 3,580→3,727; all 4 ATO tax figures unchanged. Evidence packet with per-record source URLs: docs/audits/2026-07-02-fy2026-27-reverify-scout.md. Fix = update values + lastVerified 2026-07-02 + reverifyBy 2027-07-01, open sources during the edit (never blind-copy), full suite green, branch+PR.",
       "created": "2026-07-02",
-      "entered": "2026-07-02"
+      "entered": "2026-07-04"
     },
     {
       "id": "MV-82",
@@ -1151,6 +1151,42 @@
       "summary": "First slice carved from the MV-87 umbrella after MV-84: every brand surface that CANNOT read CSS custom properties, swapped to Dusk plum, plus the permanent WCAG guard. (1) app/global-error.tsx 5 inline hexes (renders when CSS itself may have failed) → #f4f1ea/#211a20/#5c5058/#6a2b57 CTA + #fdf7fb (now on-primary, was literal #ffffff). (2) app/layout.tsx gains a viewport themeColor export (there was NONE — browser chrome had no brand tint): --bg per prefers-color-scheme (#f4f1ea light / #141014 dark; matches served theme since MV-43 follows the OS). (3) Icons: new app/icon.svg provisional mark (plum rounded square + on-primary M strokes; superseded when the MV-85 Wayfinder mascot lands) + app/favicon.ico REGENERATED as PNG-in-ICO 16/32px via new re-runnable scripts/generate-favicon.mjs (zero-dependency rasteriser; evidence: sampled interior pixel = #6a2b57 exactly). (4) CLAUDE.md Design-Language hexes → plum era. (5) NEW permanent guard tests/styles/token-contrast.test.ts: re-proves every component fg/bg pair (imports the pair policy from scripts/palette-candidates.data.mjs so guard and harness can never disagree) against the LIVE app/globals.css on every test run, both themes, WCAG 2.1 math identical to contrast-check.mjs (float composite, 1e-9 epsilon) + 23-token names-frozen count assertion — a future values-only rebrand can no longer merge with a contrast regression. NEW guard tests/styles/brand-surfaces.test.ts pins all off-globals surfaces to plum + asserts the retired teal set absent. TDD (brand-surfaces red-first). Stacked on mv-84-dusk-plum-tokens — merge AFTER PR #41.",
       "created": "2026-07-03",
       "entered": "2026-07-03"
+    },
+    {
+      "id": "MV-99",
+      "col": "done",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "BUILT 2026-07-04 (branch mv-99-step4-multi-subject off origin/master; Option A primary + also-considering, Codex-validated). tsc/eslint clean; suite 1620 pass / 1 fail = pre-existing MV-80 1-July freshness; +23 tests. Founder-gated merge.",
+      "file": "cards/MV-99-step4-multi-subject.md",
+      "title": "Step 4 multi-subject: primary field owns the verdict + up to 2 'also considering' fields (broaden matches, exploratory label, honest competitiveness note)",
+      "summary": "Founder ask (2): let students pick multiple subjects without breaking the honest single verdict. Decision (mine + Codex): Option A -- one primary fieldOfStudy owns the verdict + scoring baseline exactly as today, plus up to 2 additive alsoConsidering fields that only broaden which programs surface. Scope win: scoring engine untouched, all golden scores byte-identical (proven inert). Codex guardrail built: also-considering programs carry an explicitly exploratory match reason so a student never reads the primary verdict onto them. New pure modules lib/wizard/also-considering.ts + lib/scoring/field-note.ts (honest 'less/more competitive admit' note). Matching = 3-tier soft sort (primary->also->rest). Additive types + Zod (disjoint/dedupe refine), wizard multi-select (cap 2, primary excluded, disabled at cap), profile-editor parity, recap 'also considering' line, JSONB persistence (no migration). Deferred: per-field verdicts (Option C) + results-page note surfacing.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-101",
+      "col": "done",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "BUILT 2026-07-04 (branch mv-101-results-competitiveness-note, STACKED on MV-99/#54). Surfaces MV-99 competitiveness note on the results page via assemble payload. tsc/eslint clean; suite 1624 pass / 1 fail = pre-existing MV-80 1-July freshness; +4 tests. Founder-gated merge; merge MV-99 first.",
+      "file": "cards/MV-101-results-competitiveness-note.md",
+      "title": "Results-page competitiveness note: surface MV-99 honest also-considering line near the verdict (not just in the wizard)",
+      "summary": "MV-99 follow-up. The honest \"Business is a less competitive admit than Computer Science\" line only showed in the wizard at point-of-choice; a student reviewing results never saw it. Compute competitivenessNote(primary, alsoConsidering) in assembleAssessment (where the profile is in scope) and carry it on AssessmentPayload -- same pattern as preferenceNote -- then render a calm CompetitivenessNote callout under the VerdictCard on the results page. Verdict stays scored on the primary field alone; the note is presentational context only. Additive optional payload field (no migration). Depends on MV-99 (alsoConsidering + field-note.ts) -- stacked PR on the MV-99 branch. TDD +4.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-102",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "BUILT 2026-07-04 (branch mv-102-per-field-verdicts off origin/master). Promotes MV-99's also-considering fields into real banded verdicts (Strong/Possible/Reach) on the results page via server-side re-scores; low-pressure pivot callout only when a secondary strictly outranks the primary. Primary verdict byte-identical (goldens unchanged), no DB/migration. Also folds in two integrity fixes the slice forces (signed-in from-sections forward + matches exploring-label reword) and Codex must-fixes (editor clears stale extras, guide grounding). tsc/eslint clean; +N tests. Founder-gated merge.",
+      "file": "cards/MV-102-per-field-verdicts.md",
+      "title": "Per-field verdicts (Option C): promote 'also considering' fields to real banded verdicts on results",
+      "summary": "MV-99/101 follow-up. The also-considering fields only earned a muted competitiveness line; a student who is Reach for their primary but Possible for a secondary could never see that concrete pivot -- a self-serve dead-end. Option C re-scores the SAME student in each also-considering field (runAssessment with only fieldOfStudy swapped), keeping ONLY the band, and renders compact clearly-conditional secondary bands beneath the unchanged primary VerdictCard, with an honest low-pressure pivot callout when a secondary strictly outranks the primary. New pure module lib/results/secondary-verdicts.ts + presentational components/results/secondary-verdicts.tsx (replaces the results render of CompetitivenessNote). Primary path byte-identical (goldens unchanged), no DB/migration. Forced integrity fixes: from-sections forwards alsoConsidering (signed-in path), matches exploring-label reworded off 'not covered by your verdict', IntendedStudyPatch disjoint/dedup refine. Codex must-fixes: editor always sends alsoConsidering (clears stale extras), AI-guide context carries the secondary bands (word-only). Spec docs/superpowers/specs/2026-07-04-per-field-verdicts-design.md rev 3.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
     }
   ]
 }
