@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
 
 export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; name: string }[] }) {
   return (
@@ -11,9 +12,13 @@ export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; n
         </p>
       </header>
 
-      <Link
+      <Card
+        as={Link}
         href="/checklist/all"
-        className="flex items-center justify-between rounded-xl border border-line bg-bg-tint p-4 hover:border-primary"
+        radius="card"
+        tone="tint"
+        padding="sm"
+        className="flex items-center justify-between hover:border-primary"
       >
         <span className="flex flex-col gap-0.5">
           <span className="text-[15px] text-ink">Your overall document checklist</span>
@@ -22,29 +27,31 @@ export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; n
           </span>
         </span>
         <span className="ml-4 shrink-0 text-[13px] text-primary">Open →</span>
-      </Link>
+      </Card>
 
       {shortlisted.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {shortlisted.map((p) => (
             <li key={p.id}>
-              <a
+              <Card
+                as="a"
                 href={`/checklist/${p.id}`}
-                className="flex items-center justify-between rounded-lg border border-line bg-surface p-4 hover:border-primary"
+                padding="sm"
+                className="flex items-center justify-between hover:border-primary"
               >
                 <span className="text-[15px] text-ink">{p.name}</span>
                 <span className="text-[13px] text-primary">View checklist →</span>
-              </a>
+              </Card>
             </li>
           ))}
         </ul>
       ) : (
-        <div className="flex flex-col items-start gap-3 rounded-xl border border-line bg-bg-tint p-5">
+        <Card radius="card" tone="tint" padding="md" className="flex flex-col items-start gap-3">
           <p className="text-[15px] text-ink">You haven&apos;t shortlisted any programs yet.</p>
           <a href="/matches" className="rounded-pill bg-primary px-4 py-2 text-[14px] text-white hover:opacity-90">
             Browse matches
           </a>
-        </div>
+        </Card>
       )}
 
       <a href="/documents" className="text-[13px] text-primary hover:underline">

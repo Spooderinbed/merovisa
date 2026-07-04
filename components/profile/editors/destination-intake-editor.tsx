@@ -5,6 +5,7 @@ import { DESTINATIONS, isDestinationSupported, type Destination } from "@/lib/sc
 import { humanize } from "@/lib/text/humanize";
 import { normalizeStoredDestination } from "@/components/profile/groups";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { OptionCard } from "@/components/ui/option-card";
 import { ChipInput } from "./chip-input";
 import { SaveFeedback, useGroupSave, type GroupSaveEntry } from "./section-save";
@@ -137,8 +138,7 @@ export function DestinationIntakeEditor({ initial }: { initial: DestinationIntak
       </div>
       <div className="flex flex-col gap-2 border-t border-line pt-4">
         <label htmlFor="pe-intake" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Intake</label>
-        <input id="pe-intake" type="date" value={intake} onChange={(e) => setIntake(e.target.value)}
-          className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary" />
+        <Input id="pe-intake" type="date" value={intake} onChange={(e) => setIntake(e.target.value)} />
         <span className="text-[12px] text-ink-soft">When you plan to start studying.</span>
       </div>
       <div className="flex flex-col gap-2 border-t border-line pt-4">

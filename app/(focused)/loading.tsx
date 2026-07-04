@@ -1,3 +1,5 @@
+import { Card } from "@/components/ui/card";
+
 /**
  * Navigation loading state for the focused (results) routes. The assessment/[id]
  * server component reads live Supabase data (the recovered assessment, plus a
@@ -15,9 +17,9 @@ export default function FocusedLoading() {
     >
       <span className="sr-only">Loading…</span>
       <div className="h-6 w-40 animate-pulse rounded-md bg-bg-tint" />
-      <div className="h-44 animate-pulse rounded-lg border border-line bg-surface" />
-      <div className="h-28 animate-pulse rounded-lg border border-line bg-surface" />
-      <div className="h-28 animate-pulse rounded-lg border border-line bg-surface" />
+      <Card className="h-44 animate-pulse" />
+      <Card className="h-28 animate-pulse" />
+      <Card className="h-28 animate-pulse" />
     </div>
   );
 }

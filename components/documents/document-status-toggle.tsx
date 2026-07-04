@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DocumentKind } from "@/lib/documents/types";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,9 +48,11 @@ export function DocumentStatusToggle({
   }
 
   return (
-    <label
+    <Card
+      as="label"
+      padding="sm"
       className={cn(
-        "flex cursor-pointer items-center gap-3 rounded-lg border border-line bg-surface p-4 transition-colors",
+        "flex cursor-pointer items-center gap-3 transition-colors",
         "hover:border-ink-faint",
         obtained && "border-primary",
       )}
@@ -67,6 +70,6 @@ export function DocumentStatusToggle({
       ) : (
         <span className="ml-auto text-[12.5px] text-ink-faint">Not yet</span>
       )}
-    </label>
+    </Card>
   );
 }
