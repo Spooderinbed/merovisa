@@ -3,9 +3,15 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SaveFeedback, useGroupSave, type GroupSaveEntry } from "./section-save";
+import {
+  reconcileAlsoConsidering,
+  toggleAlsoConsidering,
+  ALSO_CONSIDERING_CAP,
+} from "@/lib/wizard/also-considering";
+import type { FieldOfStudy } from "@/lib/scoring/types";
 
 export interface StudyCareerInitial {
-  "intended-study"?: { level?: string; field?: string; specialisation?: string };
+  "intended-study"?: { level?: string; field?: string; alsoConsidering?: string[]; specialisation?: string };
   career?: {
     goal?:
       | "permanent-residency"
@@ -52,15 +58,30 @@ const GOALS = [
 export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) {
   const [level, setLevel] = useState(initial["intended-study"]?.level ?? "");
   const [field, setField] = useState(initial["intended-study"]?.field ?? "");
+  const [alsoConsidering, setAlsoConsidering] = useState<string[]>(
+    initial["intended-study"]?.alsoConsidering ?? [],
+  );
   const [specialisation, setSpecialisation] = useState(initial["intended-study"]?.specialisation ?? "");
   const [goal, setGoal] = useState<string>(initial.career?.goal ?? "");
   const [targetRole, setTargetRole] = useState<string>(initial.career?.targetRole ?? "");
   const { status, saveSections } = useGroupSave();
 
+  // Changing the primary keeps the two selections disjoint (drops the new primary
+  // from the extras).
+  const chooseField = (next: string) => {
+    setField(next);
+    setAlsoConsidering(reconcileAlsoConsidering(next as FieldOfStudy, alsoConsidering as FieldOfStudy[]));
+  };
+  const toggleExtra = (value: string) =>
+    setAlsoConsidering(
+      toggleAlsoConsidering(alsoConsidering as FieldOfStudy[], value as FieldOfStudy, field as FieldOfStudy),
+    );
+
   const buildStudy = () => {
     const patch: Record<string, unknown> = {};
     if (level) patch.level = level;
     if (field) patch.field = field;
+    if (alsoConsidering.length) patch.alsoConsidering = alsoConsidering;
     if (specialisation.trim()) patch.specialisation = specialisation.trim();
     return patch;
   };
@@ -103,7 +124,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="ise-field" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Field</label>
-        <select id="ise-field" value={field} onChange={(e) => setField(e.target.value)}
+        <select id="ise-field" value={field} onChange={(e) => chooseField(e.target.value)}
           className="rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary">
           <option value="">Select a field</option>
           {FIELDS.map((f) => (
@@ -111,6 +132,36 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
           ))}
         </select>
       </div>
+      {field ? (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+            Also considering (optional — up to {ALSO_CONSIDERING_CAP})
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {FIELDS.filter((f) => f.value !== field).map((f) => {
+              const selected = alsoConsidering.includes(f.value);
+              const atCap = alsoConsidering.length >= ALSO_CONSIDERING_CAP;
+              return (
+                <label
+                  key={f.value}
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-pill border px-3 py-1 text-[14px] ${
+                    selected ? "border-primary bg-primary-tint text-ink" : "border-line-2 text-ink-soft"
+                  } ${!selected && atCap ? "cursor-not-allowed opacity-50" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={selected}
+                    disabled={!selected && atCap}
+                    onChange={() => toggleExtra(f.value)}
+                  />
+                  {f.label}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      ) : null}
       <div className="flex flex-col gap-2">
         <label htmlFor="ise-spec" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Specialisation</label>
         <input id="ise-spec" value={specialisation} onChange={(e) => setSpecialisation(e.target.value)}

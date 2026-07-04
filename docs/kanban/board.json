@@ -1046,15 +1046,15 @@
     },
     {
       "id": "MV-80",
-      "col": "blocked",
+      "col": "inreview",
       "pri": "P0",
       "owner": "agent",
-      "badge": "DEFERRED to after the design sprint (founder call 2026-07-03) — 12/16 done, PR #36 conflicting; keeps CI red by design",
+      "badge": "DONE 2026-07-04 — all 16 records re-verified (13/15 figures live-reconfirmed today; 491 primary-sourced via DHA API, hospitality Sat/Sun/PH exact arithmetic), rebased clean on master, freshness test green, full suite 1597 green; PR founder-gated",
       "file": "cards/MV-80-fy2026-27-reverify.md",
       "title": "FY2026-27 data re-verify: 16 overdue reverifyBy records (DHA fees, wages, ART, ATO)",
       "summary": "The designed 1-July freshness timer FIRED: tests/data/freshness.test.ts red with 16 records at reverifyBy 2026-07-01 (AU_SUBCLASS_500_APPLICATION_CHARGE_AUD; AU_SKILLED_VISA_CHARGES[0-3]; AU_TAX_FIGURES[1-4]; AU_STUDENT_WORKER_WAGES[1-6]; NEPAL_REFUSAL_RECOVERY[11]). A 4-agent read-only scout verified every record against its authoritative live source on 2026-07-02: 12/16 CHANGED — subclass 500 AUD 2,000→2,500; skilled 189/491/186 → 6,135/6,140/6,140; 191 505→630; NMW 24.95→26.44 in force (announced→current collapse needed); Hospitality casual intro rows re-based on 25.74; ART fee 3,580→3,727; all 4 ATO tax figures unchanged. Evidence packet with per-record source URLs: docs/audits/2026-07-02-fy2026-27-reverify-scout.md. Fix = update values + lastVerified 2026-07-02 + reverifyBy 2027-07-01, open sources during the edit (never blind-copy), full suite green, branch+PR.",
       "created": "2026-07-02",
-      "entered": "2026-07-02"
+      "entered": "2026-07-04"
     },
     {
       "id": "MV-82",
@@ -1153,14 +1153,26 @@
       "entered": "2026-07-03"
     },
     {
-      "id": "MV-100",
+      "id": "MV-99",
       "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "BUILT 2026-07-04 (branch mv-100-matches-progressive-disclosure off origin/master; founder-picked Top-N-per-band + show-more). tsc/eslint clean; suite 1601 pass / 1 fail = pre-existing MV-80 1-July freshness; +5 tests. Founder-gated merge.",
-      "file": "cards/MV-100-matches-progressive-disclosure.md",
-      "title": "Matches progressive disclosure (signed-in): top N per band + show-more, Reach collapsed, hidden cards unmounted for perf",
-      "summary": "Founder ask (6): the signed-in /matches page mounted every card in every verdict band (~86) at once -- a wall that buried the Strong picks and dragged perf. Founder picked Top-N-per-band + show-more (over accordion / sort-filter bar; rejected sort-filter for cutting against verdict-first honesty). VerdictGroup is now a client component with an initialVisible prop (default 3) + a show-more/show-fewer toggle; hidden cards are NOT mounted until expanded (real perf win). Reach passes initialVisible=0 so the stretch schools collapse behind their count. A11y: real button, aria-expanded/aria-controls, singular/plural noun, no toggle when the band fits. ProgramCard + data flow untouched; verdict wording still from central VERDICT_LABELS. Anon results page already discloses -- untouched.",
+      "badge": "BUILT 2026-07-04 (branch mv-99-step4-multi-subject off origin/master; Option A primary + also-considering, Codex-validated). tsc/eslint clean; suite 1620 pass / 1 fail = pre-existing MV-80 1-July freshness; +23 tests. Founder-gated merge.",
+      "file": "cards/MV-99-step4-multi-subject.md",
+      "title": "Step 4 multi-subject: primary field owns the verdict + up to 2 'also considering' fields (broaden matches, exploratory label, honest competitiveness note)",
+      "summary": "Founder ask (2): let students pick multiple subjects without breaking the honest single verdict. Decision (mine + Codex): Option A -- one primary fieldOfStudy owns the verdict + scoring baseline exactly as today, plus up to 2 additive alsoConsidering fields that only broaden which programs surface. Scope win: scoring engine untouched, all golden scores byte-identical (proven inert). Codex guardrail built: also-considering programs carry an explicitly exploratory match reason so a student never reads the primary verdict onto them. New pure modules lib/wizard/also-considering.ts + lib/scoring/field-note.ts (honest 'less/more competitive admit' note). Matching = 3-tier soft sort (primary->also->rest). Additive types + Zod (disjoint/dedupe refine), wizard multi-select (cap 2, primary excluded, disabled at cap), profile-editor parity, recap 'also considering' line, JSONB persistence (no migration). Deferred: per-field verdicts (Option C) + results-page note surfacing.",
+      "created": "2026-07-04",
+      "entered": "2026-07-04"
+    },
+    {
+      "id": "MV-101",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "BUILT 2026-07-04 (branch mv-101-results-competitiveness-note, STACKED on MV-99/#54). Surfaces MV-99 competitiveness note on the results page via assemble payload. tsc/eslint clean; suite 1624 pass / 1 fail = pre-existing MV-80 1-July freshness; +4 tests. Founder-gated merge; merge MV-99 first.",
+      "file": "cards/MV-101-results-competitiveness-note.md",
+      "title": "Results-page competitiveness note: surface MV-99 honest also-considering line near the verdict (not just in the wizard)",
+      "summary": "MV-99 follow-up. The honest \"Business is a less competitive admit than Computer Science\" line only showed in the wizard at point-of-choice; a student reviewing results never saw it. Compute competitivenessNote(primary, alsoConsidering) in assembleAssessment (where the profile is in scope) and carry it on AssessmentPayload -- same pattern as preferenceNote -- then render a calm CompetitivenessNote callout under the VerdictCard on the results page. Verdict stays scored on the primary field alone; the note is presentational context only. Additive optional payload field (no migration). Depends on MV-99 (alsoConsidering + field-note.ts) -- stacked PR on the MV-99 branch. TDD +4.",
       "created": "2026-07-04",
       "entered": "2026-07-04"
     }

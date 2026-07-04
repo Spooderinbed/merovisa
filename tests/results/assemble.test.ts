@@ -71,6 +71,20 @@ describe("assembleAssessment", () => {
     expect(payload.preferenceNote?.kind).toBe("pr-context");
   });
 
+  it("derives an honest competitiveness note for a materially different also-considering field (MV-101)", () => {
+    // CS (primary, ~0.95) vs Arts (~0.70) is a clear tier apart → an "easier admit" note,
+    // surfaced on the results page, not just at point-of-choice in the wizard.
+    const payload = assemble({ ...aarav, alsoConsidering: ["arts"] }, new Date("2026-06-03"));
+    expect(payload.competitivenessNote?.direction).toBe("easier");
+    expect(payload.competitivenessNote?.text).toContain("Arts");
+    expect(payload.competitivenessNote?.text).toContain("Computer Science");
+  });
+
+  it("carries no competitiveness note when nothing else is being considered", () => {
+    const payload = assemble(aarav, new Date("2026-06-03"));
+    expect(payload.competitivenessNote ?? null).toBeNull();
+  });
+
   it("ranks by lowest cost when that goal is chosen and chips the cheaper universities", () => {
     const payload = assemble({ ...aarav, goal: "lowest-cost" }, new Date("2026-06-03"));
     expect(payload.preferenceNote).toEqual({

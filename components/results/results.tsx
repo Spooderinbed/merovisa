@@ -7,6 +7,7 @@ import { isDestinationSupported } from "@/lib/scoring/types";
 import { track } from "@/lib/analytics/events";
 import { UnsupportedDestinationNotice, NotSureFramingNotice } from "./destination-notice";
 import { VerdictCard } from "./verdict-card";
+import { CompetitivenessNote } from "./competitiveness-note";
 import { FactorBars } from "./factor-bars";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { CostToApply } from "./cost-to-apply";
@@ -70,6 +71,10 @@ export function Results({
         rulesVerified={payload.rulesVerified}
         rulesStale={payload.rulesStale}
       />
+      {/* Honest context for an "also considering" field (MV-99/101): the verdict is
+          scored on the primary field, so this line tells the student where a secondary
+          pick may be an easier/tougher admit — surfaced here, not just in the wizard. */}
+      <CompetitivenessNote note={payload.competitivenessNote} />
       <FactorBars dimensions={payload.result.dimensions} />
       {/* Capture the conversion moment while the verdict is still on screen —
           anonymous only; signed-in users already own the assessment. The full

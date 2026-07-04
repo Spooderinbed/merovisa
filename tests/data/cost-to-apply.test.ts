@@ -11,9 +11,9 @@ describe("selectCostToApply", () => {
     expect(australia).toBeDefined();
   });
 
-  it("anchors the Australia side on the DHA student-visa charge (AUD 2,000), sourced to immi.homeaffairs.gov.au", () => {
+  it("anchors the Australia side on the DHA student-visa charge (AUD 2,500), sourced to immi.homeaffairs.gov.au", () => {
     const visa = australia!.lines.find((l) => /visa charge/i.test(l.label));
-    expect(visa?.amount).toBe(2_000);
+    expect(visa?.amount).toBe(2_500);
     expect(visa?.source).toMatch(/^https:\/\/immi\.homeaffairs\.gov\.au/);
   });
 

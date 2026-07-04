@@ -8,7 +8,7 @@ export function computeMatches(
 ): MatchResult[] {
   const uniById = new Map(universities.map((u) => [u.id, u]));
   const eligible = filterByLevel(programs, inputs.userTargetLevel);
-  return rankByField(eligible, inputs.userField)
+  return rankByField(eligible, inputs.userField, inputs.alsoFields ?? [])
     .map((p) => computeOne(inputs, p, uniById.get(p.universityId)))
     .filter((m): m is MatchResult => m !== null);
 }
@@ -27,17 +27,25 @@ function filterByLevel(programs: Program[], target: MatchInputs["userTargetLevel
 }
 
 /**
- * Field is a SOFT rule: same-field programs sort first, everything else keeps its
- * original relative order. We do not hard-filter by field — only 6 fields exist in
- * the catalogue and several field×level cells are empty, so a hard filter would
- * empty the list for many users. This guarantees a non-empty, field-relevant list.
+ * Field is a SOFT rule and now a three-tier one: the PRIMARY field's programs sort
+ * first, then "also considering" fields, then everything else — each tier keeping
+ * its original relative order. We still do not hard-filter by field (only ~6 fields
+ * exist in the catalogue and several field×level cells are empty, so a hard filter
+ * would empty many students' lists). Keeping the primary tier on top means the free
+ * top-of-list slots stay the verdict-assessed field, and the exploratory extras sit
+ * below — never displacing the field the verdict actually speaks to.
  */
-function rankByField(programs: Program[], field: MatchInputs["userField"]): Program[] {
+function rankByField(
+  programs: Program[],
+  field: MatchInputs["userField"],
+  alsoFields: string[],
+): Program[] {
   if (!field) return programs;
-  // Stable partition: same-field first, preserving input order within each group.
-  const sameField = programs.filter((p) => p.field === field);
-  const rest = programs.filter((p) => p.field !== field);
-  return [...sameField, ...rest];
+  const extras = new Set(alsoFields.filter((f) => f !== field));
+  const primary = programs.filter((p) => p.field === field);
+  const secondary = extras.size > 0 ? programs.filter((p) => p.field !== field && extras.has(p.field)) : [];
+  const rest = programs.filter((p) => p.field !== field && !extras.has(p.field));
+  return [...primary, ...secondary, ...rest];
 }
 
 /**
@@ -155,6 +163,19 @@ function computeOne(
       kind: "field",
       text: `Aligned with your intended field (${inputs.userField}).`,
       positive: true,
+    });
+  } else if (
+    inputs.userField &&
+    (inputs.alsoFields ?? []).includes(p.field) &&
+    p.field !== inputs.userField
+  ) {
+    // The honesty guardrail: an "also considering" program is shown for breadth,
+    // but the verdict was NOT computed for this field — say so plainly so a student
+    // never reads their primary verdict onto it. Neutral (positive: false ⇒ muted).
+    reasons.push({
+      kind: "field-exploring",
+      text: `In a field you're also considering — not covered by your verdict.`,
+      positive: false,
     });
   }
 
