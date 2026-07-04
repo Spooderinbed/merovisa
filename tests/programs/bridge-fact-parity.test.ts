@@ -90,6 +90,7 @@ type FactRow = {
   durationYears: number | null;
   minGrade: number | null;
   minEnglish: number | null;
+  minEnglishBand: number | null;
   findingRefs: string[];
 };
 
@@ -105,7 +106,8 @@ function rmitRows(): FactRow[] {
     tuition: p.tuitionAudPerYear,
     durationYears: p.durationYears,
     minGrade: p.entryMinAveragePct ?? null,
-    minEnglish: null, // RMIT fact layer carries no English data
+    minEnglish: p.overallMin ?? null, // MV-21: 5 RMIT rows now carry sourced IELTS
+    minEnglishBand: p.perBandMin ?? null,
     findingRefs: p.provenance.findingRefs,
   }));
 }
@@ -125,6 +127,7 @@ function uniRows(): FactRow[] {
       durationYears: p.durationYears ?? null,
       minGrade: null,
       minEnglish: p.overallMin ?? null,
+      minEnglishBand: p.perBandMin ?? null,
       findingRefs: p.provenance.findingRefs,
     };
   });
@@ -156,6 +159,7 @@ describe("MV-13 bridge ↔ fact-layer parity", () => {
       expect(row.durationYears).toBe(f.durationYears);
       expect(row.minGrade).toBe(f.minGrade);
       expect(row.minEnglish).toBe(f.minEnglish);
+      expect(row.minEnglishBand).toBe(f.minEnglishBand);
       expect(row.findingRefs).toEqual(f.findingRefs);
       expect(row.dataQuality).toBe("primary");
       expect(row.generated).toBe(true);

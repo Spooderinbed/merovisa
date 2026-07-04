@@ -311,15 +311,15 @@
     },
     {
       "id": "MV-21",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P3",
       "owner": "founder+agent",
       "badge": "founder DB gate (prod migration)",
       "file": "cards/MV-21-program-english-enrichment.md",
       "title": "Surface verified program English requirements (RMIT + Deakin)",
-      "summary": "BACKLOG (founder-DB-gated). The MV-13 follow-on scoped out by MV-20: 9 Category-E ready findings hold verified program-level IELTS for programs ALREADY in the live bridged catalogue (Deakin Master of Data Science 6.5/6.0; RMIT B-Computer-Science 6.5/6.0, B-Nursing 7.0 + intake, B-Education 7.5, B-Pharmacy-Hons 7.0/6.5, M-Social-Work 7.0/7.0), but those cards currently show 'English requirement not listed — confirm with provider'. Surfacing them is a slice not a copy edit: the RMIT TS module has NO English field (needs a type-field add + 5 rows); bridge-fact-parity + seed-migration-parity force module->seed->a NEW prod-UPDATE migration (founder-gated, MV-13's is already applied). Possible goldens impact (min_english may feed match eligibility) is a build-time design question. Flip to used is automatic once cited (findingRefs + FLIP_STATUS). E.050 (Deakin) is the cleanest minimal first increment (uni module already has the field shape). Do NOT start without founder approval of the prod migration. Dossier: cards/MV-21-program-english-enrichment.md.",
+      "summary": "PRE-BUILT, PR open (founder-DB-gated at merge + prod-apply only). The MV-13 follow-on scoped out by MV-20: 9 Category-E findings (E.044/E.050/E.086/E.094/E.112/E.113/E.119/E.120/E.169) hold verified program-level IELTS for programs ALREADY in the live bridged catalogue. RMIT TS module gained overallMin/perBandMin (type+schema), 5 RMIT rows + the Deakin row populated with sourced IELTS, seed.ts updated (Deakin 6.5/6.0, RMIT B-Computer-Science 6.5/6.0, B-Nursing 7.0/7.0 + AHPRA+July-intake note, B-Education 7.5, B-Pharmacy-Hons 7.0/6.5, M-Social-Work 7.0/7.0), a new idempotent upsert migration (20260702000000) touches only min_english/min_english_band/notes/finding_refs on the 6 already-bridged ids, bridge-fact-parity + seed-migration-parity extended, 9 findings flipped used (FLIP_STATUS). Gate green: 1588 passing / 1 pre-existing freshness failure (PR #36 fixes, untouched). Goldens byte-identical (no scoring-goldens path touched). Founder-gated: review PR + apply_migration/get_advisors to prod + merge. Dossier: cards/MV-21-program-english-enrichment.md.",
       "created": "2026-06-21",
-      "entered": "2026-06-21"
+      "entered": "2026-07-02"
     },
     {
       "id": "MV-22",

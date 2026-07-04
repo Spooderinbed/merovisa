@@ -60,11 +60,14 @@ export const AU_UNIVERSITY_PROGRAMS: AuUniversityProgram[] = [
     level: "master",
     firstYearTuitionAud: 34400,
     fieldOfStudy: "Data science",
+    test: "IELTS",
+    overallMin: 6.5,
+    perBandMin: 6.0,
     source: "https://www.deakin.edu.au/course/master-data-science",
     lastVerified: "2026-06-07",
     provenance: {
-      findingRefs: ["E.049"],
-      note: "Estimated AUD 34,400 for one year full-time (2026).",
+      findingRefs: ["E.049", "E.050"],
+      note: "Estimated AUD 34,400 for one year full-time (2026). IELTS 6.5/6.0 (E.050) is sourced from Deakin's international-variant course page (master-data-science-global-international), a different URL than the tuition finding's course page — same program, two Deakin listings.",
     },
   },
 

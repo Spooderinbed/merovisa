@@ -59,14 +59,72 @@ verified IELTS vs. an honest-absence placeholder).
 
 ## Acceptance criteria
 
-- [ ] Founder approves the prod-UPDATE migration (and the RMIT type-field change).
-- [ ] 9 findings flipped `used` via registered-module `findingRefs` (machine-derived); reconcile green.
-- [ ] Live cards show the verified IELTS (+ intake notes for B-Nursing) instead of the placeholder.
-- [ ] Goldens impact resolved (byte-identical or deliberately regenerated + reviewed).
+- [ ] Founder approves the prod-UPDATE migration (and the RMIT type-field change). **PRE-BUILT on branch
+      `mv-21-program-english-enrichment` / PR — awaiting founder review + `apply_migration` to prod. Not
+      applied to any live Supabase project by this agent (out of scope per task constraints).**
+- [x] 9 findings flipped `used` via registered-module `findingRefs` (machine-derived); reconcile green.
+      `FLIP_STATUS=1 npx vitest run tests/data/flip-status.run.test.ts` promoted E.044/E.050/E.086/E.094/
+      E.112/E.113/E.119/E.120/E.169 pending→used with correct `used_by`; value/value_type/value_status
+      populated per the reconcile value-fidelity check (8 numeric IELTS findings → `structured`; E.169
+      red-flag/intake-note → `prose-only`, matching the existing E.013 precedent). reconcile-modules.test.ts
+      + reconcile.test.ts + flip-status.run.test.ts all green.
+- [x] Live cards show the verified IELTS (+ intake notes for B-Nursing) instead of the placeholder — true
+      in `lib/programs/seed.ts` (the TS parity source) and the pre-built migration; **not yet true on the
+      live site**, since the migration hasn't been applied to prod (founder-gated).
+- [x] Goldens impact resolved: byte-identical. `tests/scoring/__fixtures__/golden-assessments.json`
+      unchanged (71/71 scoring + matches + checklist tests green) — the scoring goldens fixture doesn't
+      exercise the `/matches` per-program `minEnglish` eligibility path these 6 rows feed, so no diff
+      surfaced. No regeneration needed or performed.
 
 ## Resume notes (cold agent)
 
 - Do NOT start without founder approval of the prod migration (Supabase prod writes are founder-gated).
-- The 8 RMIT findings are the bulk of the work (type change + 5 rows); **E.050 (Deakin) is the cleanest
-  single one** (uni module already has the field shape — only a value + ref + migration row) and could
-  ship as a minimal first increment if the founder wants to validate the path before the RMIT type change.
+- **2026-07-02: fully pre-built and PR'd.** All agent-buildable work is done: RMIT type/schema field add,
+  5 RMIT rows + the Deakin row populated with sourced IELTS (all traced to E.044/E.050/E.086/E.094/E.112/
+  E.113/E.119/E.120/E.169), `seed.ts` updated, a new idempotent upsert migration
+  (`supabase/migrations/20260702000000_enrich_program_english_requirements.sql`) that only touches
+  `min_english`/`min_english_band`/`notes`/`finding_refs` on the 6 already-bridged ids (no new columns, no
+  new rows), `bridge-fact-parity` + `seed-migration-parity` extended to cover it, 9 findings flipped to
+  `used`. Full gate green (typecheck/lint/test — see Done evidence). **What remains founder-gated:**
+  reviewing the PR, then applying the migration to the live Supabase project (`apply_migration` +
+  `get_advisors`) — this agent did not touch any prod/live Supabase project per its task constraints.
+- Deviation from the dossier's literal plan: the dossier suggested a plain `UPDATE … WHERE id IN (...)`
+  migration; built instead as an `insert … on conflict (id) do update set` targeting only the 4 changed
+  columns, mirroring the MV-13 bridge migration's own idempotent upsert idiom (which
+  `tests/programs/parse-seed-migration.ts` already knows how to parse — avoids writing a second, bespoke
+  UPDATE-statement SQL parser for one migration). `seed-migration-parity.test.ts`'s `finalSqlPrograms()`
+  now overlays 3 migrations (seed → bridge → English), each upsert winning on id.
+
+## Done evidence (2026-07-02, agent pre-build)
+
+- **Branch:** `mv-21-program-english-enrichment` off `master` (`42d95a2`). PR opened against `master`.
+- **Files changed:** `lib/data/types.ts` (AuRmitProgram gains optional `test`/`overallMin`/`perBandMin`),
+  `lib/data/schema/au-rmit-programs.schema.ts` (matching Zod fields), `lib/data/source/au-rmit-programs.ts`
+  (5 rows populated + findingRefs), `lib/data/source/au-university-programs.ts` (Deakin row + E.050 ref),
+  `lib/programs/seed.ts` (6 rows' minEnglish/minEnglishBand/notes/findingRefs), new migration
+  `supabase/migrations/20260702000000_enrich_program_english_requirements.sql`,
+  `tests/programs/bridge-fact-parity.test.ts` + `tests/programs/seed-migration-parity.test.ts` (extended),
+  `docs/research-briefs/findings/E.jsonl` (9 findings pending→used via `FLIP_STATUS=1`, value/value_type/
+  value_status populated for reconcile fidelity).
+- **TDD:** RED confirmed via `npm run typecheck` (`TS2339: overallMin does not exist on AuRmitProgram`)
+  before the type change; RED confirmed via `bridge-fact-parity.test.ts` assertion failure before `seed.ts`
+  update; RED confirmed via `reconcile-modules.test.ts`/`flip-status.run.test.ts` before running
+  `FLIP_STATUS=1`. Each fixed to green before moving on.
+- **Gate:**
+  - `npm run typecheck` — clean, 0 errors.
+  - `npm run lint` — 0 errors, 1 pre-existing unrelated warning in `docs/kanban/build.mjs` (untouched by
+    this change, confirmed via `git diff origin/master -- docs/kanban/build.mjs` = empty).
+  - `npm test` — **1588 passing, 1 pre-existing failure** (`tests/data/freshness.test.ts`, 16 unrelated
+    AU fee/tax/wage records dated 2026-07-01, fixed by open PR #36 — not touched by this card).
+  - Targeted re-checks: `bridge-fact-parity.test.ts` (5/5), `seed-migration-parity.test.ts` (3/3),
+    `reconcile-modules.test.ts` + `reconcile.test.ts` + `flip-status.run.test.ts` (13/13),
+    `tests/scoring/characterization.test.ts` + `tests/matches/*` (71/71, goldens byte-identical),
+    `tests/checklist/*` + `tests/programs/*` (114/114).
+- **Sanity-verified rendered values** (ad-hoc test, removed after use): all 6 rows carry the dossier's
+  table values exactly — rmit-bachelor-computer-science 6.5/6.0, rmit-bachelor-nursing 7.0/7.0 + combined
+  AHPRA + July-intake-restriction note, rmit-bachelor-pharmacy-honours 7.0/6.5,
+  rmit-bachelor-education-primary-early-childhood 7.5 (no per-band given by the source),
+  rmit-master-social-work 7.0/7.0, deakin-master-of-data-science 6.5/6.0.
+- **Founder-gated (not done by this agent):** applying the migration to the live Supabase project
+  (`apply_migration` + `get_advisors` + founder GO, the MV-13 D5 pattern) and merging the PR. No prod/live
+  Supabase project was touched.

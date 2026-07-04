@@ -405,6 +405,9 @@ export interface AuRmitProgram extends Provenanced {
   durationYears: number; // standard full-time duration, years
   fieldOfStudy?: string; // free-form discipline label (NOT the scoring FieldOfStudy enum)
   entryMinAveragePct?: number; // RMIT-stated minimum average entry score, percent (where given)
+  test?: "IELTS"; // English test, where RMIT's guide states an inline requirement (MV-21)
+  overallMin?: number; // IELTS overall band (MV-21)
+  perBandMin?: number; // IELTS per-subtest floor, where RMIT states one (MV-21)
   source: string; // RMIT international guide URL
   lastVerified?: string; // ISO date
 }

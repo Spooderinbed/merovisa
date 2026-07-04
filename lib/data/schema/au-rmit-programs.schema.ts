@@ -6,6 +6,8 @@ import { ProvenanceSchema, HttpUrl, IsoDate } from "./common";
  * source URL, ISO dates, the RMIT provider literal, the level enum, positive
  * annual tuition and duration, unique ids, and provenance (>=1 findingRef) on
  * every program — so no program can ship without tracing to `used` findings.
+ * MV-21 adds an optional inline IELTS requirement (overall + per-band floor),
+ * mirroring au-university-programs.schema.ts.
  */
 const AuRmitProgramSchema = z.object({
   id: z.string().min(1),
@@ -16,6 +18,9 @@ const AuRmitProgramSchema = z.object({
   durationYears: z.number().positive(),
   fieldOfStudy: z.string().min(1).optional(),
   entryMinAveragePct: z.number().positive().max(100).optional(),
+  test: z.literal("IELTS").optional(),
+  overallMin: z.number().positive().optional(),
+  perBandMin: z.number().positive().optional(),
   source: HttpUrl,
   lastVerified: IsoDate.optional(),
   provenance: ProvenanceSchema,

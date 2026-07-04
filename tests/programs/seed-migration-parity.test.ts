@@ -11,10 +11,12 @@ import { parseInsertBlock, type SqlValue } from "./parse-seed-migration";
 // TS copy consumed only by the seed test. Nothing else keeps them in sync — so this
 // guard fails the moment the two diverge. The live program catalogue is the seed
 // migration overlaid by the MV-13 bridge migration (which adds columns, enriches 3
-// rows in place, and upserts 19 verified programs), so parity is checked against the
-// merged final state.
+// rows in place, and upserts 19 verified programs) overlaid by the MV-21 English
+// migration (which upserts min_english/min_english_band/notes/finding_refs on 6
+// already-bridged ids), so parity is checked against the merged final state.
 const SEED_MIGRATION = "20260604120000_seed_universities_and_programs.sql";
 const BRIDGE_MIGRATION = "20260619000000_bridge_fact_layer_programs.sql";
+const ENGLISH_MIGRATION = "20260702000000_enrich_program_english_requirements.sql";
 
 function readMigration(file: string): string {
   const here = dirname(fileURLToPath(import.meta.url)); // tests/programs
@@ -83,12 +85,28 @@ const seedProgramShape = (p: Program) => ({
   generated: p.generated ?? false,
 });
 
-// Final DB program state = seed migration (base) overlaid by bridge migration (upserts win on id).
+// Final DB program state = seed migration (base) overlaid by bridge migration
+// overlaid by the MV-21 English migration (each upsert wins on id).
 const finalSqlPrograms = () => {
   const base = parseInsertBlock(readMigration(SEED_MIGRATION), "public.programs").map(mapSqlProgram);
   const bridge = parseInsertBlock(readMigration(BRIDGE_MIGRATION), "public.programs").map(mapSqlProgram);
+  const english = parseInsertBlock(readMigration(ENGLISH_MIGRATION), "public.programs").map(mapSqlProgram);
   const merged = new Map(base.map((r) => [r.id, r]));
   for (const r of bridge) merged.set(r.id as string, r);
+  for (const r of english) {
+    const prev = merged.get(r.id);
+    // The English migration's insert row only upserts a subset of columns
+    // (min_english/min_english_band/notes/finding_refs) — merge onto the prior
+    // row rather than replacing it, mirroring the migration's own `on conflict
+    // do update set` column list.
+    merged.set(r.id, {
+      ...(prev ?? r),
+      minEnglish: r.minEnglish,
+      minEnglishBand: r.minEnglishBand,
+      notes: r.notes,
+      findingRefs: r.findingRefs,
+    });
+  }
   return [...merged.values()];
 };
 
