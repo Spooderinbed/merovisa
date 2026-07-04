@@ -69,7 +69,12 @@ export function ProfileRecap({
   }, [onDone, durationMs]);
 
   const lines = recapLines(profile);
-  let globalWordIndex = 0;
+  // Each line's starting global word index, summed from earlier lines' word
+  // counts — keeps the cascade delay global without reassigning a counter
+  // during render (react-hooks/immutability).
+  const lineStart = lines.map((_, i) =>
+    lines.slice(0, i).reduce((sum, line) => sum + line.split(" ").length, 0),
+  );
   return (
     <div className="grid min-h-[70vh] place-items-center px-5">
       <div className="flex w-full max-w-narrow flex-col items-center gap-3 text-center">
@@ -81,8 +86,7 @@ export function ProfileRecap({
           return (
             <p key={i} className="text-[19px] text-ink">
               {words.map((word, j) => {
-                const delay = Math.min(globalWordIndex * 0.04, 0.5);
-                globalWordIndex += 1;
+                const delay = Math.min(((lineStart[i] ?? 0) + j) * 0.04, 0.5);
                 return (
                   <span
                     key={j}
