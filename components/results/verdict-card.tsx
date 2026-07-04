@@ -1,22 +1,19 @@
 import type { Verdict } from "@/lib/scoring/types";
-import { VERDICT_LABELS } from "@/lib/scoring/verdict-labels";
+import { Card } from "@/components/ui/card";
 import { VerdictDisclaimer } from "@/components/ui/verdict-disclaimer";
+import { VerdictPill } from "@/components/ui/verdict-pill";
 
-// The pill label is sourced from VERDICT_LABELS (shared with the matches list);
-// only the results-card-specific copy (the headline line) and the pill's colour
-// classes live here.
-const VERDICT_META: Record<Verdict, { line: string; cls: string }> = {
+// The pill (label + colour classes) is the shared VerdictPill primitive; only
+// the results-card-specific copy (the headline line) lives here.
+const VERDICT_META: Record<Verdict, { line: string }> = {
   strong: {
     line: "You have a realistic shot, with strong fundamentals.",
-    cls: "bg-strong-tint text-strong",
   },
   possible: {
     line: "You have a realistic shot, with a few areas to strengthen.",
-    cls: "bg-possible-tint text-possible-ink",
   },
   reach: {
     line: "This is ambitious — focus on strengthening a few key areas.",
-    cls: "bg-reach-tint text-reach",
   },
 };
 
@@ -58,10 +55,8 @@ export function VerdictCard({
     // settles ~120ms later (beat 2) so the verdict carries more weight than a
     // sibling card. Only the word-label pill is staggered — the never-shown score
     // is never animated, so the motion can't imply a computed number.
-    <section className="animate-rise rounded-lg border border-line bg-surface p-6">
-      <span className={`animate-settle inline-flex items-center rounded-pill px-3 py-1 font-mono text-[12.5px] ${meta.cls}`}>
-        {VERDICT_LABELS[verdict].label}
-      </span>
+    <Card as="section" padding="lg" className="animate-rise">
+      <VerdictPill verdict={verdict} size="lg" className="animate-settle" />
       <h2 className="mt-4 text-[clamp(24px,3vw,32px)]">{line}</h2>
       {/* When a scoring rule is overdue for re-verification, warn + lower confidence
           rather than show the calm "verified {date}" line — a stale verdict must
@@ -78,6 +73,6 @@ export function VerdictCard({
         </p>
       ) : null}
       <VerdictDisclaimer className="mt-4" />
-    </section>
+    </Card>
   );
 }

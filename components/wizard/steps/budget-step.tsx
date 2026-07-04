@@ -1,6 +1,7 @@
 "use client";
 
 import type { Currency, FundingSource } from "@/lib/scoring/types";
+import { Card } from "@/components/ui/card";
 import { OptionCard } from "@/components/ui/option-card";
 import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
@@ -81,7 +82,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
         value={currency}
         onChange={onCurrency}
       />
-      <div className="flex flex-col gap-2 rounded-md border border-line bg-surface p-4">
+      <Card radius="card" padding="sm" className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
           <span className="font-mono text-[17px] text-ink">
             {currency === "NPR" ? formatNpr(budget) : formatUsd(budget)}
@@ -96,7 +97,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
           value={budget}
           onChange={(v) => setField({ budget: v })}
         />
-      </div>
+      </Card>
       <div role="radiogroup" aria-label="Funding source" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {FUNDING.map((f) => (
           <OptionCard

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,7 +31,7 @@ export function Disclosure({
   const panelId = useId();
 
   return (
-    <section className={cn("overflow-hidden rounded-lg border border-line bg-surface", className)}>
+    <Card as="section" className={cn("overflow-hidden", className)}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -60,6 +61,6 @@ export function Disclosure({
           {children}
         </div>
       ) : null}
-    </section>
+    </Card>
   );
 }

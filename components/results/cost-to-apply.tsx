@@ -1,4 +1,5 @@
 import { selectCostToApply, type CostLine } from "@/lib/data/cost-to-apply";
+import { Card } from "@/components/ui/card";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 
 function formatAmount(line: CostLine): string {
@@ -17,7 +18,7 @@ export function CostToApply() {
   const { groups, note } = selectCostToApply();
 
   return (
-    <aside className="flex flex-col gap-3 rounded-md border border-line bg-bg-tint p-4 text-[14px] text-ink-soft">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-[14px] text-ink-soft">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
         What it costs to apply (Nepal &rarr; Australia)
       </span>
@@ -59,6 +60,6 @@ export function CostToApply() {
       </div>
 
       <p className="text-[12.5px] text-ink-faint">{note}</p>
-    </aside>
+    </Card>
   );
 }

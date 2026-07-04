@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { ASSESSMENT_TTL_DAYS } from "@/lib/assessments/expiry";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
@@ -27,7 +28,7 @@ export function ConversionPaths({
   if (!assessmentId) {
     return (
       <section className="flex flex-col gap-4">
-        <div className="rounded-lg border border-line bg-surface p-6">
+        <Card padding="lg">
           <h3 className="text-[21px]">We couldn&apos;t save this assessment</h3>
           <p className="mt-2 text-[15px] text-ink-soft">
             Your results above are accurate — they just weren&apos;t saved. Try again;
@@ -43,7 +44,7 @@ export function ConversionPaths({
               {retryingSave ? "Saving…" : "Try saving again"}
             </button>
           </div>
-        </div>
+        </Card>
       </section>
     );
   }
@@ -52,7 +53,7 @@ export function ConversionPaths({
   // there is no email-delivery or anonymous-retrieval path, so we don't imply one.
   return (
     <section className="flex flex-col gap-4">
-      <div className="rounded-lg border border-line bg-surface p-6">
+      <Card padding="lg">
         <h3 className="text-[21px]">Keep your assessment</h3>
         <p className="mt-2 text-[15px] text-ink-soft">
           Your assessment expires in 3 days (by {expiryDate()}). Create a free account with Google to keep it and
@@ -63,7 +64,7 @@ export function ConversionPaths({
             Continue with Google
           </Button>
         </div>
-      </div>
+      </Card>
     </section>
   );
 }

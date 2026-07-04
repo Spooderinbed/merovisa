@@ -1,4 +1,5 @@
 import { bandLabel } from "@/lib/scoring/band";
+import { Card } from "@/components/ui/card";
 
 export function CompletenessRing({
   pct, complete, partial, empty,
@@ -7,7 +8,7 @@ export function CompletenessRing({
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - Math.min(100, Math.max(0, pct)) / 100);
   return (
-    <aside className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
+    <Card as="aside" padding="lg" className="flex flex-col gap-3">
       <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Completeness</span>
       <div className="flex items-center gap-4">
         <svg viewBox="0 0 100 100" width="96" height="96" aria-hidden>
@@ -26,6 +27,6 @@ export function CompletenessRing({
           <li>{empty} not started</li>
         </ul>
       </div>
-    </aside>
+    </Card>
   );
 }
