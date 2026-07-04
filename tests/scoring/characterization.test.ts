@@ -473,6 +473,14 @@ describe("scoring characterization goldens", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  it("keeps secondaryVerdicts off the engine result (single-field payload is null; MV-102)", () => {
+    // MV-102 attaches secondary verdicts to the assembled *payload*, never to the
+    // engine's AssessmentResult — so the goldens above stay byte-identical. A raw
+    // single-field re-score carries no secondaryVerdicts key at all.
+    const result = ACTUAL["strong-clear"]!;
+    expect((result as Record<string, unknown>).secondaryVerdicts).toBeUndefined();
+  });
+
   it("matches the committed golden for every profile (and no orphan goldens)", () => {
     if (WRITE) return;
     const golden: Record<string, GoldenOutput> = JSON.parse(readFileSync(GOLDEN_PATH, "utf8"));

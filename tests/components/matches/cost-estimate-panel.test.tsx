@@ -11,7 +11,7 @@ describe("CostEstimatePanel", () => {
 
   it("shows the student visa charge linked to its government source", () => {
     render(<CostEstimatePanel />);
-    const link = screen.getByRole("link", { name: "AUD 2,000" });
+    const link = screen.getByRole("link", { name: "AUD 2,500" });
     expect(link).toHaveAttribute("href", expect.stringContaining("immi.homeaffairs.gov.au"));
   });
 
@@ -30,7 +30,7 @@ describe("CostEstimatePanel", () => {
 
   it("shows the indicative first-year total band", () => {
     render(<CostEstimatePanel />);
-    expect(screen.getByText(/AUD 76,890–77,159/)).toBeInTheDocument();
+    expect(screen.getByText(/AUD 77,390–77,659/)).toBeInTheDocument();
   });
 
   it("lists OSHC across multiple providers — three priced, two quote-only", () => {
