@@ -7,6 +7,7 @@ import { isDestinationSupported } from "@/lib/scoring/types";
 import { track } from "@/lib/analytics/events";
 import { UnsupportedDestinationNotice, NotSureFramingNotice } from "./destination-notice";
 import { VerdictCard } from "./verdict-card";
+import { SecondaryVerdicts } from "./secondary-verdicts";
 import { FactorBars } from "./factor-bars";
 import { PolicyBanner } from "@/components/matches/policy-banner";
 import { CostToApply } from "./cost-to-apply";
@@ -70,6 +71,11 @@ export function Results({
         rulesVerified={payload.rulesVerified}
         rulesStale={payload.rulesStale}
       />
+      {/* Real banded verdicts for each "also considering" field (MV-102): the primary
+          VerdictCard above is unchanged (scored on the primary field alone); these compact,
+          clearly-conditional bands show the student's standing if they applied under each
+          other field, plus a low-pressure pivot callout when one strictly outranks. */}
+      <SecondaryVerdicts data={payload.secondaryVerdicts} />
       <FactorBars dimensions={payload.result.dimensions} />
       {/* Capture the conversion moment while the verdict is still on screen —
           anonymous only; signed-in users already own the assessment. The full

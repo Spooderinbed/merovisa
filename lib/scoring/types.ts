@@ -99,6 +99,15 @@ export interface StudentProfile {
   gradeSystem: GradeSystem;
   grade: number;
   fieldOfStudy: FieldOfStudy;
+  /**
+   * Extra fields the student is also weighing, beyond their primary `fieldOfStudy`
+   * (max 2, disjoint from the primary). Purely additive: the verdict and every
+   * scoring rule read ONLY `fieldOfStudy`, so these never move a score — they only
+   * broaden which programs the matcher surfaces (see lib/matches/compute.ts) and
+   * drive an honest competitiveness note (lib/scoring/field-note.ts).
+   * Omitted/undefined = considering the primary alone.
+   */
+  alsoConsidering?: FieldOfStudy[];
   graduationYear: number;
   gapReasons: GapReason[];
   englishStatus: EnglishStatus;

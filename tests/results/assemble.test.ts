@@ -71,6 +71,49 @@ describe("assembleAssessment", () => {
     expect(payload.preferenceNote?.kind).toBe("pr-context");
   });
 
+  it("derives an honest competitiveness note for a materially different also-considering field (MV-101)", () => {
+    // CS (primary, ~0.95) vs Arts (~0.70) is a clear tier apart → an "easier admit" note,
+    // surfaced on the results page, not just at point-of-choice in the wizard.
+    const payload = assemble({ ...aarav, alsoConsidering: ["arts"] }, new Date("2026-06-03"));
+    expect(payload.competitivenessNote?.direction).toBe("easier");
+    expect(payload.competitivenessNote?.text).toContain("Arts");
+    expect(payload.competitivenessNote?.text).toContain("Computer Science");
+  });
+
+  it("carries no competitiveness note when nothing else is being considered", () => {
+    const payload = assemble(aarav, new Date("2026-06-03"));
+    expect(payload.competitivenessNote ?? null).toBeNull();
+  });
+
+  it("carries no secondary verdicts for a single-field profile (MV-102)", () => {
+    const payload = assemble(aarav, new Date("2026-06-03"));
+    expect(payload.secondaryVerdicts).toBeNull();
+  });
+
+  it("attaches secondary verdicts for each also-considering field without moving the primary (MV-102)", () => {
+    // A well-funded, strong-English profile at grade 68 so the FIELD baseline is what
+    // moves the band: primary CS lands Possible, Business lands Strong (engine-derived).
+    const strong: StudentProfile = {
+      ...aarav,
+      grade: 68,
+      graduationYear: new Date().getFullYear(),
+      gapReasons: [],
+      englishScore: 8,
+      budget: 90_000,
+      budgetCurrency: "AUD",
+      fundingSource: "parents-family",
+    };
+    const singleField = assemble(strong, new Date("2026-06-03"));
+    const withExtra = assemble({ ...strong, alsoConsidering: ["business"] }, new Date("2026-06-03"));
+
+    expect(withExtra.secondaryVerdicts?.items).toHaveLength(1);
+    expect(withExtra.secondaryVerdicts?.items[0]?.field).toBe("business");
+    expect(withExtra.secondaryVerdicts?.items[0]?.verdict).toBe("strong");
+    expect(withExtra.secondaryVerdicts?.pivot?.field).toBe("business");
+    // The primary verdict is untouched by the also-considering field.
+    expect(withExtra.result.verdict).toBe(singleField.result.verdict);
+  });
+
   it("ranks by lowest cost when that goal is chosen and chips the cheaper universities", () => {
     const payload = assemble({ ...aarav, goal: "lowest-cost" }, new Date("2026-06-03"));
     expect(payload.preferenceNote).toEqual({

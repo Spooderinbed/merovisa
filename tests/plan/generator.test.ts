@@ -422,12 +422,12 @@ describe("generatePlan", () => {
         expect(oshc.body).toContain("OSHC");
       });
 
-      it("lodge-subclass-500 carries the ImmiAccount route, the AUD 2,000 figure, and the 'currently … confirm' fee hedge, with high impact", () => {
+      it("lodge-subclass-500 carries the ImmiAccount route, the AUD 2,500 figure, and the 'currently … confirm' fee hedge, with high impact", () => {
         const items = generatePlan({ sections: {}, primaryDestinationId: "australia", matches: [], policy });
         const lodge = items.find((i) => i.kind === "lodge-subclass-500")!;
         expect(lodge.impact).toBe("high");
         expect(lodge.body).toContain("ImmiAccount");
-        expect(lodge.body).toMatch(/AUD 2,000/);
+        expect(lodge.body).toMatch(/AUD 2,500/);
         expect(lodge.body).toContain("currently");
         expect(lodge.body).toContain("confirm the current amount");
       });

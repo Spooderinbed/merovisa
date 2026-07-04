@@ -68,7 +68,9 @@ export default async function MatchesPage() {
           <PreferenceNote note={preferenceNote} />
           <VerdictGroup verdict="strong" matches={strong} statusById={statusById} />
           <VerdictGroup verdict="possible" matches={possible} statusById={statusById} />
-          <VerdictGroup verdict="reach" matches={reach} statusById={statusById} />
+          {/* Reach = the stretch schools; collapse them by default so the page opens on
+              realistic picks. The count stays visible and they're one click away. */}
+          <VerdictGroup verdict="reach" matches={reach} statusById={statusById} initialVisible={0} />
           {matches.length === 0 ? (
             <p className="text-[15px] text-ink-soft">
               No programs found yet. Complete your profile to surface matches.
