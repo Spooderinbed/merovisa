@@ -63,6 +63,7 @@ export function sectionsToMatchInputs(
     userEnglishBand: minBand != null && minBand > 0 ? minBand : null,
     userBudgetAud: budgetToAud(sections.finance?.total ?? null, sections.finance?.currency ?? null),
     userField: sections["intended-study"]?.field ?? null,
+    alsoFields: sections["intended-study"]?.alsoConsidering ?? [],
     userTargetLevel: targetLevel(sections),
     policy,
   };
