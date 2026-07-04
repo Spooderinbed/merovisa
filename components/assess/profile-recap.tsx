@@ -17,6 +17,10 @@ export function recapLines(p: StudentProfile): string[] {
   const lines: string[] = [];
   lines.push([p.homeCountry, EDUCATION_LABELS[p.educationLevel], FIELD_LABELS[p.fieldOfStudy]].join(" · "));
 
+  if (p.alsoConsidering && p.alsoConsidering.length > 0) {
+    lines.push(`also considering: ${p.alsoConsidering.map((f) => FIELD_LABELS[f]).join(", ")}`);
+  }
+
   const english =
     p.englishStatus === "taken" && typeof p.englishScore === "number"
       ? `IELTS ${p.englishScore.toFixed(1)}`

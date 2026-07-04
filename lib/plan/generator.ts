@@ -69,7 +69,7 @@ const PASSPORT_CENTRAL_DAYS = NEPAL_DOCUMENT_PROCESSING_TIMES.find((r) => r.id =
 // MV-57 journey-spine: the sourced Subclass 500 charge figure. The CoE/OSHC facts are
 // composed into locked prose from the human-verified coe/oshc requirement rows (their URLs
 // are pinned by the plan-source drift guard); the volatile fee rides this sourced constant.
-const SUBCLASS_500_CHARGE_AUD = AU_SUBCLASS_500_APPLICATION_CHARGE_AUD.value; // AUD 2,000 (re-verify 2026-07-01)
+const SUBCLASS_500_CHARGE_AUD = AU_SUBCLASS_500_APPLICATION_CHARGE_AUD.value; // AUD 2,500 (re-verify 2027-07-01)
 
 export function generatePlan(inputs: GeneratorInputs): PlanItem[] {
   const out: PlanItem[] = [];

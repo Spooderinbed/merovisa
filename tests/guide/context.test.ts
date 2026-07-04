@@ -106,6 +106,33 @@ describe("buildGuideContext", () => {
     expect(out).toMatch(/Cost to apply[\s\S]*source:/);
   });
 
+  // MV-102 M2 — the guide must know the secondary per-field bands the student sees
+  // on results, or it could contradict a band on the page. Field label + band WORD
+  // only (no numeric score, consistent with the no-scores rule).
+  it("grounds on the secondary per-field verdicts as field label + band word", () => {
+    const p = payload();
+    p.secondaryVerdicts = {
+      primary: { label: "Computer Science", verdict: "possible" },
+      items: [
+        { field: "business", label: "Business", verdict: "strong", outranksPrimary: true },
+        { field: "data-science", label: "Data Science", verdict: "possible", outranksPrimary: false },
+      ],
+      pivot: { field: "business", label: "Business", verdict: "strong", outranksPrimary: true },
+    };
+    const out = buildGuideContext({ payload: p, planItems: [] });
+    expect(out).toContain("Business");
+    expect(out).toContain("Data Science");
+    // Band words present; still no raw scores anywhere in the block.
+    expect(out).toMatch(/Business[^\n]*Strong/);
+    expect(out).not.toContain("73.42");
+    expect(out).not.toContain("88.17");
+  });
+
+  it("omits the secondary-verdicts block when there are no also-considering fields", () => {
+    const out = buildGuideContext({ payload: payload(), planItems: [] });
+    expect(out).not.toMatch(/also considering/i);
+  });
+
   it("does not fabricate a verdict when the student has no assessment yet", () => {
     const out = buildGuideContext({ payload: null, planItems: [] });
     expect(out).toMatch(/has not completed an assessment/i);
