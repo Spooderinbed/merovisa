@@ -311,7 +311,7 @@
     },
     {
       "id": "MV-21",
-      "col": "inreview",
+      "col": "done",
       "pri": "P3",
       "owner": "founder+agent",
       "badge": "founder DB gate (prod migration)",
@@ -1130,7 +1130,7 @@
     },
     {
       "id": "MV-88",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-07-03 → PR #47 (doc-only ADR; founder sign-off gate)",
@@ -1178,7 +1178,7 @@
     },
     {
       "id": "MV-102",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "BUILT 2026-07-04 (branch mv-102-per-field-verdicts off origin/master). Promotes MV-99's also-considering fields into real banded verdicts (Strong/Possible/Reach) on the results page via server-side re-scores; low-pressure pivot callout only when a secondary strictly outranks the primary. Primary verdict byte-identical (goldens unchanged), no DB/migration. Also folds in two integrity fixes the slice forces (signed-in from-sections forward + matches exploring-label reword) and Codex must-fixes (editor clears stale extras, guide grounding). tsc/eslint clean; +N tests. Founder-gated merge.",
@@ -1190,7 +1190,7 @@
     },
     {
       "id": "MV-90",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-07-03: primitives + 76-site migration on branch mv-90-card-primitives; gate green (1612 pass, only red = MV-80 freshness); founder-gated merge.",
@@ -1202,7 +1202,7 @@
     },
     {
       "id": "MV-91",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-07-03 → PR #45 (branch mv-91-button-loading off origin/master f6cada8). Button loading contract + migrated document-card (Uploading/View) + refresh-button onto the primitive; gate green (tsc/lint 0, suite 1604 pass / 1 fail = MV-80 freshness only, +8 tests); live idle render verified. Founder-gated merge; independent of MV-90 (#44).",
@@ -1214,7 +1214,7 @@
     },
     {
       "id": "MV-92",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-07-03 → PR #46 (branch mv-92-input-primitive off origin/master f6cada8). In Review, founder-gated merge (never self-merged). Independent of MV-90 #44 / MV-91 #45; board unions at merge.",
@@ -1226,7 +1226,7 @@
     },
     {
       "id": "MV-93",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-07-03 → PR #48 (doc-only ADR; founder sign-off gate)",
@@ -1238,7 +1238,7 @@
     },
     {
       "id": "MV-94",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "PR #49",
@@ -1250,7 +1250,7 @@
     },
     {
       "id": "MV-95",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "PR #50",
@@ -1262,7 +1262,7 @@
     },
     {
       "id": "MV-96",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "PR #51",
@@ -1274,7 +1274,7 @@
     },
     {
       "id": "MV-97",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-07-04 (branch mv-97-wizard-funnel-overhaul off design-stack); tsc clean, suite 1661 pass / 1 fail = pre-existing MV-80 freshness; founder-gated merge.",
@@ -1286,7 +1286,7 @@
     },
     {
       "id": "MV-98",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "SHIPPED 2026-07-04 (branch mv-98-layout-cls-perf off design-stack; commit b96852a) -> PR #53; tsc/eslint clean, suite 1645 pass / 1 fail = pre-existing MV-80 freshness; founder-gated merge.",
@@ -1298,7 +1298,7 @@
     },
     {
       "id": "MV-81",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "",
