@@ -96,4 +96,32 @@ describe("Results", () => {
     expect(screen.queryByRole("button", { name: /Continue with Google/i })).toBeNull();
     expect(screen.queryByText(/expires in 3 days/i)).toBeNull();
   });
+
+  // MV-102 — the results page renders real per-field bands in place of the muted
+  // competitiveness-note line; the primary VerdictCard is untouched.
+  it("renders secondary per-field verdicts instead of the competitiveness note", () => {
+    // Well-funded, strong-English profile at grade 68: primary CS lands Possible,
+    // Business lands Strong — an engine-derived band split that drives a pivot.
+    const strong: StudentProfile = {
+      ...aarav,
+      grade: 68,
+      graduationYear: new Date().getFullYear(),
+      gapReasons: [],
+      englishScore: 8,
+      budget: 90_000,
+      budgetCurrency: "AUD",
+      fundingSource: "parents-family",
+      alsoConsidering: ["business"],
+    };
+    const payload = assemble(strong, new Date("2026-06-03"));
+    render(<Results payload={payload} destination="australia" />);
+
+    // The new secondary-verdicts block is present with its conditional framing.
+    expect(screen.getByText(/Your standing if you applied under a different field/i)).toBeInTheDocument();
+    expect(screen.getByText(/If you applied under Business instead/i)).toBeInTheDocument();
+    // The old muted competitiveness-note copy is gone from the results page.
+    expect(screen.queryByText(/less competitive admit/i)).toBeNull();
+    // The primary verdict word is still on the page, unchanged by the swap.
+    expect(screen.getByText("Possible")).toBeInTheDocument();
+  });
 });

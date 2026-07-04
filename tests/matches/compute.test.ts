@@ -190,7 +190,7 @@ describe("computeMatches verdict", () => {
     void artsProgram;
   });
 
-  it("labels an also-considering program as exploratory (not covered by the verdict)", () => {
+  it("labels an also-considering program as exploratory (not the primary field)", () => {
     const uniB: University = { ...uni, id: "u2" };
     const m = computeMatches(
       {
@@ -209,7 +209,10 @@ describe("computeMatches verdict", () => {
     const exploring = m.reasons.find((r) => r.kind === "field-exploring");
     expect(exploring).toBeDefined();
     expect(exploring!.text).toMatch(/also considering/i);
-    expect(exploring!.text).toMatch(/not covered by your verdict/i);
+    // MV-102 gives each also-considering field a real band on results, so the old
+    // "not covered by your verdict" clause is now false and must be gone.
+    expect(exploring!.text).toMatch(/not your primary field/i);
+    expect(exploring!.text).not.toMatch(/not covered by your verdict/i);
     // It must NOT also claim a positive primary-field alignment.
     expect(m.reasons.some((r) => r.kind === "field")).toBe(false);
   });

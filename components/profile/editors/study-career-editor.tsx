@@ -54,6 +54,26 @@ const GOALS = [
   { value: "research", label: "Research" },
 ];
 
+/**
+ * Assemble the intended-study PATCH from editor state. `alsoConsidering` is ALWAYS
+ * sent (an empty array when none) — the API shallow-merges the patch onto the stored
+ * section (lib/profiles/repo.ts), so an omitted key would never clear extras the
+ * student just removed, leaving stale per-field verdicts (MV-102 M1). The other
+ * fields stay omit-when-empty (their absence is not a clear signal here).
+ */
+export function buildIntendedStudyPatch(state: {
+  level: string;
+  field: string;
+  alsoConsidering: string[];
+  specialisation: string;
+}): Record<string, unknown> {
+  const patch: Record<string, unknown> = { alsoConsidering: state.alsoConsidering };
+  if (state.level) patch.level = state.level;
+  if (state.field) patch.field = state.field;
+  if (state.specialisation.trim()) patch.specialisation = state.specialisation.trim();
+  return patch;
+}
+
 /** "Study & career goals" group: intended-study + career. */
 export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) {
   const [level, setLevel] = useState(initial["intended-study"]?.level ?? "");
@@ -77,14 +97,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       toggleAlsoConsidering(alsoConsidering as FieldOfStudy[], value as FieldOfStudy, field as FieldOfStudy),
     );
 
-  const buildStudy = () => {
-    const patch: Record<string, unknown> = {};
-    if (level) patch.level = level;
-    if (field) patch.field = field;
-    if (alsoConsidering.length) patch.alsoConsidering = alsoConsidering;
-    if (specialisation.trim()) patch.specialisation = specialisation.trim();
-    return patch;
-  };
+  const buildStudy = () => buildIntendedStudyPatch({ level, field, alsoConsidering, specialisation });
 
   const buildCareer = () => {
     const patch: Record<string, unknown> = {};
