@@ -26,6 +26,9 @@ export function GapStep({ profile, setField, callouts, eyebrow }: StepProps) {
       subtext="Pick all that apply. Explaining this well actually strengthens your visa case."
       callouts={callouts}
     >
+      <p className="mb-1 text-[15px] text-ink-soft">
+        A gap is normal — most applicants have one. What matters is that it&rsquo;s explained.
+      </p>
       <div role="group" aria-label="Gap reasons" className="flex flex-col gap-3">
         {REASONS.map((r) => (
           <OptionCard

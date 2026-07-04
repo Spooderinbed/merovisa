@@ -69,7 +69,10 @@ export function Wizard({
         <span className="font-mono text-[12.5px] text-ink-faint">{w.stepLabel}</span>
       </div>
 
-      <div key={w.stepKey} className="flex-1">
+      <div
+        key={w.stepKey}
+        className={`flex-1 ${w.direction === "back" ? "animate-slide-back" : "animate-slide-fwd"}`}
+      >
         <StepComponent
           profile={w.profile}
           setField={w.setField}
