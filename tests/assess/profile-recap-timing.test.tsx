@@ -27,20 +27,27 @@ afterEach(() => {
 
 // The recap used to hold every user on a fixed 3000ms "Analyzing your profile"
 // timer regardless of when the real result was ready — fake latency theatre in
-// the highest-traffic funnel moment. Honest waiting: advance on a short reveal
-// window (the real API response gates the *actual* transition in AssessFlow), and
-// never dress a sub-second summary reveal up as multi-second "analysis".
-describe("ProfileRecap — honest waiting (no fake 3s theatre)", () => {
-  it("hands off within a short honest reveal window, not a 3s floor", () => {
+// the highest-traffic funnel moment. Honest waiting: hold a *deliberate* ~2s beat
+// so the word cascade plays over the student's real answers as a genuine
+// confirmation (founder feedback: the earlier sub-second reveal felt too fast),
+// but stay under the retired 3000ms theatre and let the real API response gate the
+// *actual* transition in AssessFlow — never dress the reveal up as "analysis".
+describe("ProfileRecap — deliberate but honest reveal window (no fake 3s theatre)", () => {
+  it("holds a deliberate beat, then hands off — still under the old 3s floor", () => {
     vi.useFakeTimers();
     const onDone = vi.fn();
     render(<ProfileRecap profile={aarav} onDone={onDone} />);
 
-    // Well short of the old 3000ms theatre floor.
+    // A deliberate confirmation beat — it must NOT snap away in a few hundred ms.
     act(() => {
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(1000);
     });
+    expect(onDone).not.toHaveBeenCalled();
 
+    // …but it still hands off well under the retired 3000ms "Analyzing" floor.
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 

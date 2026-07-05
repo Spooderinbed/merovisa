@@ -1307,6 +1307,30 @@
       "summary": "The integration job's 'Export Supabase test env' step has failed on every run for ~10 days (run 28576388321: both SUPABASE_TEST_URL/SUPABASE_TEST_SERVICE_ROLE_KEY empty in the smoke step's env) because current Supabase CLI versions emit unprefixed names (API_URL, SERVICE_ROLE_KEY, SECRET_KEY) in `supabase status -o env` output that the old fallback chains never checked. Fixed by extending both fallback chains to include the unprefixed names and adding a fail-fast guard that exits 1 with a names-only diagnostic (never values) when the mapping still misses, so a future CLI rename is a one-glance fix instead of a silent empty-env failure two steps downstream. Only the one step + its comment touched; continue-on-error preserved. Verification is the PR's own Actions run reaching the smoke step with non-empty env.",
       "created": "2026-07-02",
       "entered": "2026-07-02"
+    },
+    {
+      "id": "MV-104",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "In Review on branch mv-104-wizard-funnel-fixes (PR, founder-gated merge). Gate green: typecheck + lint 0 + vitest 272 files/1739. Two founder-testing bugs fixed: step-7 AUD living-cost callout (toAud + sourced A$29,710, no more /135 AUD-as-NPR mis-fire) + recap slowdown (600->2000ms window, 0.04->0.07 stagger).",
+      "file": "MV-104-wizard-funnel-fixes.md",
+      "title": "Wizard funnel follow-ups (founder testing): AUD living-cost callout + recap loading slowdown",
+      "summary": "Two defects the founder hit in local testing after MV-97 landed. (A) STEP-7 CALLOUT: the budget step still warned Australian living costs alone are ~USD 14k-22k/yr and, worse, its threshold divided any non-USD budget by 135 (the NPR rate), so a post-MV-97 AUD budget was read as NPR and the warn mis-fired for EVERY Australia-bound student. Rewired to the canonical toAud() converter + the sourced AU_DHA_LIVING_CAPACITY_AUD figure (A$29,710/yr, DHA Subclass 500, findingRefs A.015/B.002); message and threshold now reference the same sourced number so the copy is literally true and freshness-tracked. (C) LOADING TOO FAST: the answers recap word-cascade played in ~0.5s and handed off on a 600ms window; re-landed the mv-97 8307ea9 intent onto master (durationMs 600->2000, per-word stagger 0.04->0.07 capped 0.5s->1.2s) so the confirmation beat plays deliberately over the student's real answers. Still honest: under the retired 3000ms analyzing theatre, gated on the real API in AssessFlow, never labels itself analyzing. TDD: +budget-tight-au callout test (AUD fires below / not above, message is A$ not USD, A$40k no longer mis-fires) + updated profile-recap-timing to the ~2s honest window. No scorer/DB/migration; no golden surface.",
+      "created": "2026-07-05",
+      "entered": "2026-07-05"
+    },
+    {
+      "id": "MV-105",
+      "col": "backlog",
+      "pri": "P3",
+      "owner": "agent",
+      "badge": "Deferred by founder 2026-07-05 (keep the card, do not build yet). Needs its own brainstorm->spec->plan like MV-99.",
+      "file": "MV-105-step8-multi-goal.md",
+      "title": "Wizard step 8: multi-select goals (primary + secondary, e.g. PR + high-ranked uni)",
+      "summary": "Founder wants step 8 (goal) to allow more than one motivation, e.g. I want PR but also a high-ranked uni. goal is single-select today (permanent-residency / high-ranked-uni / etc in lib/scoring/types.ts + GOAL_LABELS) and drives verdict framing + plan + preference-fit, so naive multi-select makes the verdict incoherent when goals conflict (PR-friendliness and top ranking often pull apart). RECOMMENDED SHAPE (mine, Codex-triangulate before building): mirror MV-99 Option A -- keep ONE primary goal that owns the verdict + plan (unambiguous), add optional secondary goals that only broaden matches and surface an honest goals can pull apart trade-off callout when a secondary conflicts with the primary. Additive, no scoring rewrite. Touches preference-fit/scoring -> run superpowers brainstorming->spec->writing-plans->TDD like MV-99 did. DEFERRED per founder: filed as a card, not started this session.",
+      "created": "2026-07-05",
+      "entered": "2026-07-05"
     }
   ]
 }

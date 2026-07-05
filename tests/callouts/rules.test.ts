@@ -69,3 +69,32 @@ describe("evaluateWizardCallouts", () => {
     expect(callouts.some((c) => /compare/i.test(c.message))).toBe(true);
   });
 });
+
+describe("budget-tight-au callout (AUD corridor)", () => {
+  it("warns with the sourced A$ living-cost figure — never USD — when an AUD budget falls below it", () => {
+    const callouts = evaluateWizardCallouts(
+      partial({ destination: "australia", budget: 20_000, budgetCurrency: "AUD" }) as StudentProfile,
+      "budget",
+    );
+    const warn = callouts.find((c) => c.id === "budget-tight-au");
+    expect(warn).toBeDefined();
+    expect(warn!.message).toContain("A$29,710");
+    expect(warn!.message).not.toMatch(/USD/);
+  });
+
+  it("does NOT mis-fire for a comfortable AUD budget (the old /135 bug read AUD as NPR and warned everyone)", () => {
+    const callouts = evaluateWizardCallouts(
+      partial({ destination: "australia", budget: 40_000, budgetCurrency: "AUD" }) as StudentProfile,
+      "budget",
+    );
+    expect(callouts.some((c) => c.id === "budget-tight-au")).toBe(false);
+  });
+
+  it("still warns a genuinely tight NPR budget (converted via the canonical FX table)", () => {
+    const callouts = evaluateWizardCallouts(
+      partial({ destination: "australia", budget: 1_000_000, budgetCurrency: "NPR" }) as StudentProfile,
+      "budget",
+    );
+    expect(callouts.some((c) => c.id === "budget-tight-au")).toBe(true);
+  });
+});
