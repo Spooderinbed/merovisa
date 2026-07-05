@@ -1309,14 +1309,26 @@
       "entered": "2026-07-02"
     },
     {
+      "id": "MV-103",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "In Review on branch mv-103-journey-marker (PR, founder-gated merge). Part 2 of the global journey-rail spec (Part 1 = MV-77 dashboard rail).",
+      "file": "MV-103-journey-marker.md",
+      "title": "Persistent \"where am I\" journey marker in the signed-in chrome (MV-45 #3b)",
+      "summary": "BUILT 2026-07-05 on branch mv-103-journey-marker off origin/master (founder merges to master to close -> Done). Second half of docs/superpowers/specs/2026-06-28-global-journey-rail-design.md: MV-77 shipped the six-step Your journey rail as a DASHBOARD panel, but the orientation disappears on /matches, /plan, /documents -- exactly where what-next nudges toward a consultancy. Added a slim persistent marker in the (app) chrome under the AppBar: mini six-dot rail + current-label . step N of 6 + chevron, one link to /dashboard, returns null on /dashboard (usePathname) where the rich rail already lives; dots hide below md, text carries. New lib/journey/signals.ts getJourneySignals reuses the SAME six repos + deriveJourneySignals as the dashboard so marker and rail can never disagree and trust predicates stay in one place; layout wraps it in try/catch so a signals failure degrades to no marker, never a broken page. Reuses buildJourney verbatim + shipped strong-token dot vocabulary (reconciled from the older teal spec); never reach-red. TDD RED->GREEN +8 (6 component + 2 layout incl. degrade-on-failure); existing 4 layout tests untouched. Gate green: typecheck clean, lint 0 errors (1 pre-existing build.mjs warning), full vitest 273 files / 1744 tests (was 271 / 1736). No scorer/DB/migration; no golden surface. Founder-owed: merge PR -> Done; visual spacing is a blind call -- signed-in shell is auth-gated, cannot browser-verify headlessly.",
+      "created": "2026-07-05",
+      "entered": "2026-07-05"
+    },
+    {
       "id": "MV-104",
       "col": "inreview",
       "pri": "P2",
       "owner": "agent",
-      "badge": "In Review on branch mv-104-wizard-funnel-fixes (PR, founder-gated merge). Gate green: typecheck + lint 0 + vitest 272 files/1739. Two founder-testing bugs fixed: step-7 AUD living-cost callout (toAud + sourced A$29,710, no more /135 AUD-as-NPR mis-fire) + recap slowdown (600->2000ms window, 0.04->0.07 stagger).",
+      "badge": "In Review on branch mv-104-wizard-funnel-fixes (PR #61, founder-gated merge). Gate green: typecheck + lint 0 + vitest 272 files/1739. Two founder-testing bugs fixed: step-7 AUD living-cost callout (toAud + sourced A$29,710, no more /135 AUD-as-NPR mis-fire) + recap slowdown (600->2000ms window, 0.04->0.07 stagger).",
       "file": "MV-104-wizard-funnel-fixes.md",
       "title": "Wizard funnel follow-ups (founder testing): AUD living-cost callout + recap loading slowdown",
-      "summary": "Two defects the founder hit in local testing after MV-97 landed. (A) STEP-7 CALLOUT: the budget step still warned Australian living costs alone are ~USD 14k-22k/yr and, worse, its threshold divided any non-USD budget by 135 (the NPR rate), so a post-MV-97 AUD budget was read as NPR and the warn mis-fired for EVERY Australia-bound student. Rewired to the canonical toAud() converter + the sourced AU_DHA_LIVING_CAPACITY_AUD figure (A$29,710/yr, DHA Subclass 500, findingRefs A.015/B.002); message and threshold now reference the same sourced number so the copy is literally true and freshness-tracked. (C) LOADING TOO FAST: the answers recap word-cascade played in ~0.5s and handed off on a 600ms window; re-landed the mv-97 8307ea9 intent onto master (durationMs 600->2000, per-word stagger 0.04->0.07 capped 0.5s->1.2s) so the confirmation beat plays deliberately over the student's real answers. Still honest: under the retired 3000ms analyzing theatre, gated on the real API in AssessFlow, never labels itself analyzing. TDD: +budget-tight-au callout test (AUD fires below / not above, message is A$ not USD, A$40k no longer mis-fires) + updated profile-recap-timing to the ~2s honest window. No scorer/DB/migration; no golden surface.",
+      "summary": "Two defects the founder hit in local testing after MV-97 landed. (A) STEP-7 CALLOUT: warned Australian living costs alone are ~USD 14k-22k/yr and its threshold divided any non-USD budget by 135 (the NPR rate), so a post-MV-97 AUD budget was read as NPR and the warn mis-fired for EVERY Australia-bound student. Rewired to the canonical toAud() converter + the sourced AU_DHA_LIVING_CAPACITY_AUD figure (A$29,710/yr, DHA Subclass 500, findingRefs A.015/B.002); message and threshold now reference the same sourced number. (C) LOADING TOO FAST: re-landed the mv-97 8307ea9 intent onto master (durationMs 600->2000, per-word stagger 0.04->0.07 capped 0.5s->1.2s). TDD +3 callout tests + updated recap timing. No scorer/DB/migration; no golden surface.",
       "created": "2026-07-05",
       "entered": "2026-07-05"
     },
@@ -1328,7 +1340,7 @@
       "badge": "Deferred by founder 2026-07-05 (keep the card, do not build yet). Needs its own brainstorm->spec->plan like MV-99.",
       "file": "MV-105-step8-multi-goal.md",
       "title": "Wizard step 8: multi-select goals (primary + secondary, e.g. PR + high-ranked uni)",
-      "summary": "Founder wants step 8 (goal) to allow more than one motivation, e.g. I want PR but also a high-ranked uni. goal is single-select today (permanent-residency / high-ranked-uni / etc in lib/scoring/types.ts + GOAL_LABELS) and drives verdict framing + plan + preference-fit, so naive multi-select makes the verdict incoherent when goals conflict (PR-friendliness and top ranking often pull apart). RECOMMENDED SHAPE (mine, Codex-triangulate before building): mirror MV-99 Option A -- keep ONE primary goal that owns the verdict + plan (unambiguous), add optional secondary goals that only broaden matches and surface an honest goals can pull apart trade-off callout when a secondary conflicts with the primary. Additive, no scoring rewrite. Touches preference-fit/scoring -> run superpowers brainstorming->spec->writing-plans->TDD like MV-99 did. DEFERRED per founder: filed as a card, not started this session.",
+      "summary": "Founder wants step 8 (goal) to allow more than one motivation. goal is single-select today and drives verdict + plan + preference-fit, so naive multi-select makes the verdict incoherent when goals conflict. RECOMMENDED SHAPE (mine, Codex-triangulate before building): mirror MV-99 Option A -- keep ONE primary goal that owns verdict+plan, add optional secondary goals that only broaden matches + surface an honest goals-can-pull-apart trade-off callout on conflict. Additive, no scoring rewrite. Run superpowers brainstorming->spec->writing-plans->TDD. DEFERRED per founder: filed as a card, not started.",
       "created": "2026-07-05",
       "entered": "2026-07-05"
     }
