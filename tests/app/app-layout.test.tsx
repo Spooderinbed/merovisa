@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { getUser, redirect } = vi.hoisted(() => ({
+const { getUser, redirect, getJourneySignals } = vi.hoisted(() => ({
   getUser: vi.fn(),
   redirect: vi.fn(() => { throw new Error("REDIRECT"); }),
+  getJourneySignals: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -22,13 +23,29 @@ vi.mock("@/components/layout/footer", () => ({
 vi.mock("@/components/layout/mobile-tab-bar", () => ({
   MobileTabBar: () => <div data-testid="mobile-tab-bar">tabs</div>,
 }));
+vi.mock("@/lib/journey/signals", () => ({ getJourneySignals }));
+vi.mock("@/components/journey/journey-marker", () => ({
+  JourneyMarker: () => <div data-testid="journey-marker">marker</div>,
+}));
 
 import AppLayout from "@/app/(app)/layout";
+
+const okSignals = {
+  hasAssessment: true,
+  profilePct: 0,
+  shortlistCount: 0,
+  planEngaged: false,
+  documentCount: 0,
+  applyAttempted: false,
+  applyGranted: false,
+};
 
 describe("(app) layout", () => {
   beforeEach(() => {
     getUser.mockReset();
     redirect.mockClear();
+    getJourneySignals.mockReset();
+    getJourneySignals.mockResolvedValue(okSignals);
   });
 
   it("redirects to /auth?next=%2Fdashboard when no user", async () => {
@@ -68,5 +85,22 @@ describe("(app) layout", () => {
     const wrapper = container.querySelector("main")!.parentElement!;
     expect(wrapper.className).toContain("pb-[calc(56px+env(safe-area-inset-bottom))]");
     expect(wrapper.className).toContain("md:pb-0");
+  });
+
+  it("mounts the persistent journey marker in the signed-in chrome", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    const ui = await AppLayout({ children: <div>kid</div> });
+    render(ui);
+    expect(screen.getByTestId("journey-marker")).toBeInTheDocument();
+  });
+
+  it("degrades to no marker (never breaks the page) when journey signals fail", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getJourneySignals.mockRejectedValue(new Error("db down"));
+    const ui = await AppLayout({ children: <div data-testid="kid">kid</div> });
+    render(ui);
+    expect(screen.queryByTestId("journey-marker")).toBeNull();
+    expect(screen.getByTestId("kid")).toBeInTheDocument();
+    expect(screen.getByTestId("appbar")).toBeInTheDocument();
   });
 });
