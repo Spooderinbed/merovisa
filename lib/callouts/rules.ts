@@ -1,5 +1,7 @@
 import type { StudentProfile } from "@/lib/scoring/types";
 import { computeGapYears } from "@/lib/scoring/gap";
+import { toAud } from "@/lib/data/policy/fx-rates";
+import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
 import type { Callout, CalloutStep } from "./types";
 
 export function evaluateWizardCallouts(
@@ -98,15 +100,17 @@ export function evaluateWizardCallouts(
       });
     }
     if (profile.budget !== undefined && profile.destination === "australia") {
-      const budgetUsd =
-        profile.budgetCurrency === "USD" ? profile.budget : profile.budget / 135;
-      if (budgetUsd < 26000) {
+      // Convert the stated budget to AUD via the single FX source of truth, then
+      // compare to the sourced DHA living-capacity figure (A.015/B.002). The old
+      // code divided any non-USD budget by 135 (the NPR rate), so a post-MV-97 AUD
+      // budget was read as rupees and this warning mis-fired for every student.
+      const budgetAud = toAud(profile.budget, profile.budgetCurrency ?? null);
+      if (budgetAud < AU_DHA_LIVING_CAPACITY_AUD.value) {
         callouts.push({
           id: "budget-tight-au",
           step,
           tone: "warn",
-          message:
-            "Australian living costs alone are ~USD 14k–22k/yr. Consider scholarships or loan support.",
+          message: `Australian living costs alone are about A$${AU_DHA_LIVING_CAPACITY_AUD.value.toLocaleString()}/yr (the DHA financial-capacity figure), before tuition. Consider scholarships or loan support.`,
         });
       }
     }
