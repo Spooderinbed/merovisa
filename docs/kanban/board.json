@@ -1310,7 +1310,7 @@
     },
     {
       "id": "MV-103",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "In Review on branch mv-103-journey-marker (PR, founder-gated merge). Part 2 of the global journey-rail spec (Part 1 = MV-77 dashboard rail).",
@@ -1322,7 +1322,7 @@
     },
     {
       "id": "MV-104",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "In Review on branch mv-104-wizard-funnel-fixes (PR #61, founder-gated merge). Gate green: typecheck + lint 0 + vitest 272 files/1739. Two founder-testing bugs fixed: step-7 AUD living-cost callout (toAud + sourced A$29,710, no more /135 AUD-as-NPR mis-fire) + recap slowdown (600->2000ms window, 0.04->0.07 stagger).",
