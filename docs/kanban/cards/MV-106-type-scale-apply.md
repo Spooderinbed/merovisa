@@ -42,7 +42,7 @@ Font sizes were baked as Tailwind arbitrary values — `text-[15px]`, `text-[11.
 
 ## Ship
 
-**SHIPPED 2026-07-06 → PR #NN** (branch `mv-106-type-scale-apply` off `origin/master 92a5c77`). In Review, founder-gated merge (never self-merged). Board disjoint from any other branch except `board.json` (append-at-end).
+**SHIPPED 2026-07-06 → PR [#62](https://github.com/Spooderinbed/merovisa/pull/62)** (branch `mv-106-type-scale-apply` off `origin/master 92a5c77`). In Review, founder-gated merge (never self-merged). Board disjoint from any other branch except `board.json` (append-at-end).
 
 ## Resume notes (cold start)
 
