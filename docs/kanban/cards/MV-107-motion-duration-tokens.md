@@ -89,7 +89,7 @@ The Motion v2 ADR mapped four unresolved motion smells. A2 closes three of them:
 
 ## Ship
 
-**SHIPPED 2026-07-07 → PR #TBD** (branch `mv-107-motion-duration-tokens` off
+**SHIPPED 2026-07-07 → PR [#63](https://github.com/Spooderinbed/merovisa/pull/63)** (branch `mv-107-motion-duration-tokens` off
 `origin/master 92a5c77`). In Review, founder-gated merge (never self-merged).
 Disjoint from other branches except `app/globals.css` `@theme` (additive union
 with MV-106's `--text-*`) and `board.json` (append-at-end).
