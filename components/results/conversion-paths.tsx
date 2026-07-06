@@ -29,8 +29,8 @@ export function ConversionPaths({
     return (
       <section className="flex flex-col gap-4">
         <Card padding="lg">
-          <h3 className="text-[21px]">We couldn&apos;t save this assessment</h3>
-          <p className="mt-2 text-[15px] text-ink-soft">
+          <h3 className="text-headline">We couldn&apos;t save this assessment</h3>
+          <p className="mt-2 text-body text-ink-soft">
             Your results above are accurate — they just weren&apos;t saved. Try again;
             there&apos;s no need to redo any of your answers.
           </p>
@@ -39,7 +39,7 @@ export function ConversionPaths({
               type="button"
               onClick={onRetrySave}
               disabled={retryingSave}
-              className="inline-flex items-center rounded-pill bg-primary px-7 py-[15px] text-[17px] font-medium text-on-primary hover:bg-primary-ink disabled:opacity-60"
+              className="inline-flex items-center rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink disabled:opacity-60"
             >
               {retryingSave ? "Saving…" : "Try saving again"}
             </button>
@@ -54,8 +54,8 @@ export function ConversionPaths({
   return (
     <section className="flex flex-col gap-4">
       <Card padding="lg">
-        <h3 className="text-[21px]">Keep your assessment</h3>
-        <p className="mt-2 text-[15px] text-ink-soft">
+        <h3 className="text-headline">Keep your assessment</h3>
+        <p className="mt-2 text-body text-ink-soft">
           Your assessment expires in 3 days (by {expiryDate()}). Create a free account with Google to keep it and
           get updates as visa rules change.
         </p>

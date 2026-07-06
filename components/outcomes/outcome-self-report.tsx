@@ -84,7 +84,7 @@ export function OutcomeSelfReport({
 
   return (
     <div className="mt-3 flex flex-col gap-1.5 border-t border-line pt-3">
-      <span className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide text-ink-faint">
+      <span className="flex items-center gap-2 font-mono text-caption uppercase tracking-wide text-ink-faint">
         Report an update
         {confirmed ? (
           // Eases in promptly (no front hold) so a fast router.refresh can't clear
@@ -100,7 +100,7 @@ export function OutcomeSelfReport({
             disabled={pending !== null}
             onClick={() => report(eventType)}
             className={cn(
-              "rounded-pill border border-line px-2.5 py-1 text-[12.5px] text-ink-soft transition-colors",
+              "rounded-pill border border-line px-2.5 py-1 text-small text-ink-soft transition-colors",
               "hover:border-ink-faint hover:text-ink disabled:opacity-50",
             )}
           >
@@ -108,7 +108,7 @@ export function OutcomeSelfReport({
           </button>
         ))}
       </div>
-      {error ? <span className="text-[12.5px] text-reach">{error}</span> : null}
+      {error ? <span className="text-small text-reach">{error}</span> : null}
     </div>
   );
 }

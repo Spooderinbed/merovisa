@@ -69,16 +69,16 @@ export function AboutYouEditor({ initial }: { initial: AboutYouInitial }) {
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="pe-name" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Name</label>
+        <label htmlFor="pe-name" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Name</label>
         <Input id="pe-name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="pe-age" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Age</label>
+        <label htmlFor="pe-age" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Age</label>
         <Input id="pe-age" type="number" value={age} onChange={(e) => setAge(e.target.value)} min={15} max={80} />
       </div>
       <div className="flex flex-col gap-4 border-t border-line pt-4">
         <div className="flex flex-col gap-2">
-          <label htmlFor="fme-situation" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Family situation</label>
+          <label htmlFor="fme-situation" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Family situation</label>
           <Select id="fme-situation" value={situation} onChange={(e) => setSituation(e.target.value)}>
             <option value="">Select a situation</option>
             {SITUATIONS.map((s) => (
@@ -88,7 +88,7 @@ export function AboutYouEditor({ initial }: { initial: AboutYouInitial }) {
         </div>
         {hasKids ? (
           <div className="flex flex-col gap-2">
-            <label htmlFor="fme-children" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Number of children</label>
+            <label htmlFor="fme-children" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Number of children</label>
             <Input id="fme-children" type="number" min={1} max={MAX_CHILDREN} value={children}
               onChange={(e) => setChildren(Number(e.target.value))}
               className="w-24" />

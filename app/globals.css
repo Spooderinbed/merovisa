@@ -4,6 +4,22 @@
   --font-sans: var(--font-hanken-grotesk), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-ibm-plex-mono), ui-monospace, "SF Mono", monospace;
 
+  /* Type scale — the only sanctioned source of font sizes (MV-106).
+     See docs/design/2026-07-03-type-scale-adr.md. A named 9-step scale: each
+     step is a ROLE, not a literal, so body copy is `text-body` (not
+     `text-[15px]`) and the size is retuned here in one line. Anchored to the
+     app's high-frequency sizes, so migrating was overwhelmingly a 1:1 rename.
+     Line-height stays per-site (`leading-*`) — out of scope for v1. */
+  --text-caption: 11px;
+  --text-small: 13px;
+  --text-meta: 14px;
+  --text-body: 15px;
+  --text-control: 16px;
+  --text-lead: 17px;
+  --text-title: 20px;
+  --text-headline: 21px;
+  --text-display: 24px;
+
   --color-bg: var(--bg);
   --color-bg-tint: var(--bg-tint);
   --color-surface: var(--surface);

@@ -8,7 +8,7 @@ export default function HowItWorksPage() {
       <h1 className="mt-3 text-[clamp(32px,4vw,46px)] leading-[1.1]">
         Where the numbers come from
       </h1>
-      <p className="mt-4 text-[17px] text-ink-soft">
+      <p className="mt-4 text-lead text-ink-soft">
         Every verdict on this platform is traceable to a published threshold. Nothing is estimated without telling you
         it is an estimate. Here is how the four scoring dimensions are built and what changes when you upload
         documents.
@@ -17,10 +17,10 @@ export default function HowItWorksPage() {
       <div className="mt-12 space-y-10">
         {/* Section 1 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             Data sources
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             Visa rules come directly from the Department of Home Affairs at immi.homeaffairs.gov.au — the Genuine
             Student requirement and the financial-capacity rules (AUD 29,710 per year for living costs, plus travel
             and first-year tuition evidence). We do
@@ -35,10 +35,10 @@ export default function HowItWorksPage() {
 
         {/* Section 2 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             The four scoring dimensions
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             Academic fit compares your Nepal TU percentage directly against each
             program&apos;s published entry minimum. Financial readiness compares your declared budget and funding
             source against the DHA expected costs for the duration of your course — living costs plus tuition, not
@@ -53,10 +53,10 @@ export default function HowItWorksPage() {
 
         {/* Section 3 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             How match verdicts work
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             Each program has a published grade minimum and an English requirement. We compare your inputs to
             those thresholds directly. Strong means you meet every published requirement. Possible means a small
             gap — typically one academic band or slightly below the English floor. Reach means a significant
@@ -70,10 +70,10 @@ export default function HowItWorksPage() {
 
         {/* Section 4 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             How document uploads work today
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             Your verdict and match scores are computed from the values you declare. Uploading an IELTS
             scorecard, academic transcript, or bank statement keeps your documents organized for your
             application checklist and plan — we store them so you can track what you&apos;ve gathered. We
@@ -86,7 +86,7 @@ export default function HowItWorksPage() {
       <div className="mt-12">
         <Link
           href="/assess"
-          className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-[15px] text-[17px] font-medium text-on-primary hover:bg-primary-ink"
+          className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink"
         >
           Check your eligibility →
         </Link>

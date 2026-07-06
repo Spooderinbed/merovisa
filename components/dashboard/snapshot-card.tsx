@@ -15,12 +15,12 @@ export function SnapshotCard({
   if (!primary) {
     return (
       <Card padding="lg" className="flex flex-col gap-3">
-        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Snapshot</span>
-        <h2 className="text-[22px]">Run your first assessment</h2>
-        <p className="text-[15px] text-ink-soft">9 quick questions, no questions skipped. We&apos;ll show where you stand.</p>
+        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Snapshot</span>
+        <h2 className="text-display">Run your first assessment</h2>
+        <p className="text-body text-ink-soft">9 quick questions, no questions skipped. We&apos;ll show where you stand.</p>
         <Link
           href="/assess"
-          className="mt-2 inline-flex w-fit items-center rounded-pill bg-primary px-5 py-2 text-[15px] font-medium text-on-primary hover:bg-primary-ink"
+          className="mt-2 inline-flex w-fit items-center rounded-pill bg-primary px-5 py-2 text-body font-medium text-on-primary hover:bg-primary-ink"
         >
           Check eligibility →
         </Link>
@@ -29,7 +29,7 @@ export function SnapshotCard({
   }
   return (
     <Card padding="lg" className="flex flex-col gap-4">
-      <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         Your standing for {destinationLabel ?? "your destination"}
       </span>
       {/* Recompute staleness live (server component): a stored verdict can age past

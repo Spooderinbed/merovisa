@@ -54,7 +54,7 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="ee-test" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Test</label>
+        <label htmlFor="ee-test" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Test</label>
         <Select id="ee-test" value={test} onChange={(e) => setTest(e.target.value)}>
           <option value="">Select a test</option>
           {TESTS.map((t) => (
@@ -63,28 +63,28 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
         </Select>
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="ee-overall" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Overall score</label>
+        <label htmlFor="ee-overall" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Overall score</label>
         <Input id="ee-overall" type="number" min={0} max={overallScale.max} step={overallScale.step} value={overall} onChange={(e) => setOverall(e.target.value)} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
-          <label htmlFor="ee-listening" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Listening</label>
+          <label htmlFor="ee-listening" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Listening</label>
           <Input id="ee-listening" type="number" min={0} max={9} step={0.5} value={listening} onChange={(e) => setListening(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="ee-reading" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Reading</label>
+          <label htmlFor="ee-reading" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Reading</label>
           <Input id="ee-reading" type="number" min={0} max={9} step={0.5} value={reading} onChange={(e) => setReading(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="ee-writing" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Writing</label>
+          <label htmlFor="ee-writing" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Writing</label>
           <Input id="ee-writing" type="number" min={0} max={9} step={0.5} value={writing} onChange={(e) => setWriting(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="ee-speaking" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Speaking</label>
+          <label htmlFor="ee-speaking" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Speaking</label>
           <Input id="ee-speaking" type="number" min={0} max={9} step={0.5} value={speaking} onChange={(e) => setSpeaking(e.target.value)} />
         </div>
       </div>
-      <p className="text-[13px] text-ink-soft">
+      <p className="text-small text-ink-soft">
         Have your test report? Upload it on the{" "}
         <a href="/documents" className="text-primary underline-offset-2 hover:underline">
           Documents page

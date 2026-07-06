@@ -58,7 +58,7 @@ export function GuideChat() {
   return (
     <div className="flex flex-col gap-4">
       {messages.length === 0 ? (
-        <p className="text-[14px] text-ink-faint">
+        <p className="text-meta text-ink-faint">
           Ask anything about your standing — for example, “Why am I a possible match?” or “What should I
           do before I apply?” Answers come with sources and never decide for you.
         </p>
@@ -68,7 +68,7 @@ export function GuideChat() {
             <li
               key={`${m.role}-${i}`}
               className={cn(
-                "max-w-[85%] whitespace-pre-wrap rounded-xl border px-3.5 py-2.5 text-[15px] leading-relaxed",
+                "max-w-[85%] whitespace-pre-wrap rounded-xl border px-3.5 py-2.5 text-body leading-relaxed",
                 m.role === "user"
                   ? "self-end border-primary/30 bg-primary/5 text-ink"
                   : "self-start border-line bg-surface text-ink",
@@ -80,9 +80,9 @@ export function GuideChat() {
         </ol>
       )}
 
-      {pending ? <span className="text-[13px] text-ink-faint">The guide is thinking…</span> : null}
+      {pending ? <span className="text-small text-ink-faint">The guide is thinking…</span> : null}
       {error ? (
-        <span role="alert" className="text-[13px] text-reach">
+        <span role="alert" className="text-small text-reach">
           {error}
         </span>
       ) : null}
@@ -94,12 +94,12 @@ export function GuideChat() {
           rows={2}
           placeholder="Ask about your verdict, matches, or next steps…"
           aria-label="Ask the guide a question"
-          className="min-h-[44px] flex-1 resize-y rounded-lg border border-line bg-surface px-3 py-2 text-[15px] text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none"
+          className="min-h-[44px] flex-1 resize-y rounded-lg border border-line bg-surface px-3 py-2 text-body text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none"
         />
         <button
           type="submit"
           disabled={pending || input.trim() === ""}
-          className="rounded-pill bg-primary px-5 py-2.5 text-[15px] font-medium text-on-primary hover:bg-primary-ink disabled:opacity-50"
+          className="rounded-pill bg-primary px-5 py-2.5 text-body font-medium text-on-primary hover:bg-primary-ink disabled:opacity-50"
         >
           {pending ? "Asking…" : "Ask"}
         </button>

@@ -22,16 +22,16 @@ export function ChecklistView({ program, university, items, planStates }: { prog
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 px-5 py-10">
       <header className="flex flex-col gap-2">
-        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
           Document checklist{university ? ` · ${university.name}` : ""}
         </span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">{program.name}</h1>
-        <p className="max-w-[64ch] text-[16px] text-ink-soft">
+        <p className="max-w-[64ch] text-control text-ink-soft">
           This checklist is your reference for everything this program requires. You work through
           and tick off these steps in your plan — your single action queue.
         </p>
         {readiness.readyToApplyNow && (
-          <p className="text-[14px] font-medium text-strong">
+          <p className="text-meta font-medium text-strong">
             ✓ You&apos;ve gathered everything you can prepare now — you&apos;re ready to start applying.
           </p>
         )}

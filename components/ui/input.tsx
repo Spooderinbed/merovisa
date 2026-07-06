@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  * straight through, so these stay drop-in replacements for the raw elements.
  */
 const fieldShell =
-  "rounded-md border border-line-2 bg-surface px-3 py-2 text-[16px] text-ink focus:border-primary";
+  "rounded-md border border-line-2 bg-surface px-3 py-2 text-control text-ink focus:border-primary";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(fieldShell, className)} {...props} />;

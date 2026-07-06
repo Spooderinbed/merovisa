@@ -149,7 +149,7 @@ export function AssessFlow({
             <button
               type="button"
               onClick={() => void save(profile)}
-              className="inline-flex rounded-pill bg-primary px-7 py-[15px] text-[17px] font-medium text-on-primary hover:bg-primary-ink"
+              className="inline-flex rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink"
             >
               Try again
             </button>

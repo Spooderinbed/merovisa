@@ -30,12 +30,12 @@ export function OptionCard({ label, selected, onSelect, description, icon, multi
       {icon ? <span className="shrink-0 text-ink-soft">{icon}</span> : null}
       <span className="flex-1">
         <span className={cn("block", disabled ? "text-ink-soft" : "text-ink")}>{label}</span>
-        {description ? <span className="block text-[15px] text-ink-soft">{description}</span> : null}
+        {description ? <span className="block text-body text-ink-soft">{description}</span> : null}
       </span>
       <span
         aria-hidden
         className={cn(
-          "grid size-5 shrink-0 place-items-center border text-[11px] text-on-primary transition-colors",
+          "grid size-5 shrink-0 place-items-center border text-caption text-on-primary transition-colors",
           multi ? "rounded-[6px]" : "rounded-pill",
           selected ? "border-primary bg-primary" : "border-line-2",
         )}

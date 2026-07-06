@@ -18,9 +18,9 @@ export function HowItWorks() {
               (i < STEPS.length - 1 ? "border-b border-line md:border-b-0 md:border-r" : "")
             }
           >
-            <span className="font-mono text-[22px] font-medium text-primary">{n}</span>
-            <h3 className="mt-3 text-[20px]">{t}</h3>
-            <p className="mt-2 text-[15px] text-ink-soft">{b}</p>
+            <span className="font-mono text-display font-medium text-primary">{n}</span>
+            <h3 className="mt-3 text-title">{t}</h3>
+            <p className="mt-2 text-body text-ink-soft">{b}</p>
           </div>
         ))}
       </div>

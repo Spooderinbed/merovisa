@@ -22,17 +22,17 @@ export function UserPill({ user }: { user: User }) {
         type="button"
         data-testid="user-pill"
         onClick={() => setOpen((o) => !o)}
-        className="grid h-9 w-9 place-items-center rounded-pill border border-line-2 bg-bg-tint text-[13px] font-medium text-ink hover:border-primary"
+        className="grid h-9 w-9 place-items-center rounded-pill border border-line-2 bg-bg-tint text-small font-medium text-ink hover:border-primary"
         aria-expanded={open}
       >
         {initials}
       </button>
       {open ? (
         <Card radius="card" className="absolute right-0 z-10 mt-2 w-44 overflow-hidden shadow-sm">
-          <Link href="/dashboard" className="block px-4 py-2 text-[15px] text-ink hover:bg-bg-tint">Dashboard</Link>
-          <Link href="/profile" className="block px-4 py-2 text-[15px] text-ink hover:bg-bg-tint">Profile</Link>
+          <Link href="/dashboard" className="block px-4 py-2 text-body text-ink hover:bg-bg-tint">Dashboard</Link>
+          <Link href="/profile" className="block px-4 py-2 text-body text-ink hover:bg-bg-tint">Profile</Link>
           <form data-testid="signout-form" action="/auth/signout" method="post" className="border-t border-line">
-            <button type="submit" className="block w-full px-4 py-2 text-left text-[15px] text-ink hover:bg-bg-tint">Sign out</button>
+            <button type="submit" className="block w-full px-4 py-2 text-left text-body text-ink hover:bg-bg-tint">Sign out</button>
           </form>
         </Card>
       ) : null}

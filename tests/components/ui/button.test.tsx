@@ -62,7 +62,7 @@ describe("Button loading contract (MV-91)", () => {
     const btn = screen.getByRole("button");
     expect(btn).toHaveClass("w-full"); // caller class survives
     expect(btn).toHaveClass("border-line-2"); // ghost variant
-    expect(btn).toHaveClass("text-[14px]"); // sm size
+    expect(btn).toHaveClass("text-meta"); // sm size
   });
 
   it("idle ellipsis is never emitted regardless of a loadingLabel being present", () => {

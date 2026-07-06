@@ -12,7 +12,7 @@ import { track } from "@/lib/analytics/events";
 
 /** Mono-uppercase state pill, shared by In progress / Done / Dismissed. */
 const statePill =
-  "rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 font-mono text-[11.5px] uppercase tracking-wide text-ink-soft";
+  "rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 font-mono text-caption uppercase tracking-wide text-ink-soft";
 
 export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged?: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -89,7 +89,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
             {done ? <span className={statePill}>Done</span> : null}
             {dismissed ? <span className={statePill}>Dismissed</span> : null}
           </div>
-          <h3 className={`text-[18px] font-medium text-ink ${done ? "line-through" : ""}`}>
+          <h3 className={`text-title font-medium text-ink ${done ? "line-through" : ""}`}>
             {item.title}
           </h3>
         </div>
@@ -100,7 +100,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
               // surface that completes them; there is nothing to mark by hand.
               <Link
                 href={meta.href}
-                className="rounded-pill border border-strong bg-strong-tint px-3 py-1.5 text-[13px] font-medium text-strong hover:opacity-90"
+                className="rounded-pill border border-strong bg-strong-tint px-3 py-1.5 text-small font-medium text-strong hover:opacity-90"
               >
                 {meta.cta}
               </Link>
@@ -110,7 +110,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
                   type="button"
                   onClick={() => setStatus("done")}
                   disabled={busy}
-                  className="rounded-pill border border-strong bg-strong-tint px-3 py-1.5 text-[13px] font-medium text-strong hover:opacity-90"
+                  className="rounded-pill border border-strong bg-strong-tint px-3 py-1.5 text-small font-medium text-strong hover:opacity-90"
                 >
                   Done
                 </button>
@@ -119,7 +119,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
                     type="button"
                     onClick={() => setInProgress(false)}
                     disabled={busy}
-                    className="rounded-pill border border-line-2 px-3 py-1.5 text-[13px] text-ink-soft hover:bg-bg-tint"
+                    className="rounded-pill border border-line-2 px-3 py-1.5 text-small text-ink-soft hover:bg-bg-tint"
                   >
                     Back to open
                   </button>
@@ -128,7 +128,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
                     type="button"
                     onClick={() => setInProgress(true)}
                     disabled={busy}
-                    className="rounded-pill border border-line-2 px-3 py-1.5 text-[13px] text-ink-soft hover:bg-bg-tint"
+                    className="rounded-pill border border-line-2 px-3 py-1.5 text-small text-ink-soft hover:bg-bg-tint"
                   >
                     Mark as in progress
                   </button>
@@ -139,7 +139,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
               type="button"
               onClick={() => setStatus("dismissed")}
               disabled={busy}
-              className="rounded-pill border border-line-2 px-3 py-1.5 text-[13px] text-ink-soft hover:bg-bg-tint"
+              className="rounded-pill border border-line-2 px-3 py-1.5 text-small text-ink-soft hover:bg-bg-tint"
             >
               Dismiss
             </button>
@@ -149,22 +149,22 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
             type="button"
             onClick={() => setStatus("todo")}
             disabled={busy}
-            className="rounded-pill border border-line-2 px-3 py-1.5 text-[13px] text-ink-soft hover:bg-bg-tint"
+            className="rounded-pill border border-line-2 px-3 py-1.5 text-small text-ink-soft hover:bg-bg-tint"
           >
             Undo
           </button>
         )}
       </header>
       {error ? (
-        <p role="alert" className="text-[13px] text-reach">
+        <p role="alert" className="text-small text-reach">
           {error}
         </p>
       ) : null}
-      {item.body ? <p className="text-[15px] text-ink-soft">{item.body}</p> : null}
+      {item.body ? <p className="text-body text-ink-soft">{item.body}</p> : null}
       {sourcesFor(item.kind).map((src) => (
         <SourceLine key={src.url} url={src.url} lastVerified={src.lastVerified} surface="plan" />
       ))}
-      <footer className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-[12px] text-ink-faint">
+      <footer className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-small text-ink-faint">
         {item.liftEstimate ? <span>&uarr; {item.liftEstimate}</span> : null}
         {item.timeEstimate ? <span>&#8987; {item.timeEstimate}</span> : null}
       </footer>

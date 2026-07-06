@@ -32,33 +32,33 @@ export function ChecklistItem({ item, planState }: { item: Item; planState?: Lin
           {isDone ? (
             <span
               aria-hidden
-              className="grid size-4 shrink-0 place-items-center rounded-pill border border-primary bg-primary text-[10px] leading-none text-on-primary"
+              className="grid size-4 shrink-0 place-items-center rounded-pill border border-primary bg-primary text-caption leading-none text-on-primary"
             >
               ✓
             </span>
           ) : null}
-          <span className="text-[15px] text-ink">{item.label}</span>
+          <span className="text-body text-ink">{item.label}</span>
         </span>
         <div className="flex items-center gap-2">
           {item.kind !== null && item.requirement === "recommended" && (
-            <span className="rounded-pill border border-line px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-wide text-ink-faint">
+            <span className="rounded-pill border border-line px-2 py-0.5 font-mono text-caption uppercase tracking-wide text-ink-faint">
               Recommended
             </span>
           )}
-          <span className={`font-mono text-[11px] uppercase tracking-wide ${isDone ? "text-strong" : "text-ink-faint"}`}>
+          <span className={`font-mono text-caption uppercase tracking-wide ${isDone ? "text-strong" : "text-ink-faint"}`}>
             {chip}
           </span>
         </div>
       </div>
-      {item.note && <p className="text-[13px] text-ink-soft">{item.note}</p>}
+      {item.note && <p className="text-small text-ink-soft">{item.note}</p>}
       {item.source && <SourceLine url={item.source.url} lastVerified={item.source.lastVerified} surface="checklist" />}
       {(item.status === "missing" || item.status === "obtained") && item.kind && (
-        <a href="/documents" className="text-[12.5px] text-primary hover:underline">Upload in documents ↗</a>
+        <a href="/documents" className="text-small text-primary hover:underline">Upload in documents ↗</a>
       )}
       {(planState === "open" || planState === "in-progress") && (
         <a
           href="/plan"
-          className="text-[12.5px] text-primary hover:underline"
+          className="text-small text-primary hover:underline"
           onClick={() => track("checklist_plan_link_clicked", { key: item.key })}
         >
           Track in your plan →

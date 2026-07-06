@@ -32,8 +32,8 @@ export function JourneyRail({ signals }: { signals: JourneySignals }) {
   return (
     <Card as="section" aria-label="Your journey" padding="md" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="text-[15px] font-medium text-ink">Your journey</h2>
-        <p className="text-[13px] text-ink-faint">Where you are on the path to studying in Australia.</p>
+        <h2 className="text-body font-medium text-ink">Your journey</h2>
+        <p className="text-small text-ink-faint">Where you are on the path to studying in Australia.</p>
       </div>
       {/* One-line summary for screen readers, before the per-node detail. */}
       <p className="sr-only">{journey.ariaLabel}</p>
@@ -50,10 +50,10 @@ export function JourneyRail({ signals }: { signals: JourneySignals }) {
               className="flex flex-1 flex-col items-center gap-1.5 rounded-md px-1 py-1 transition-colors ease-calm hover:bg-bg-tint"
             >
               <span aria-hidden className={dotCls(stage)} />
-              <span aria-hidden className={cn("text-center text-[12.5px]", labelCls(stage))}>{stage.label}</span>
+              <span aria-hidden className={cn("text-center text-small", labelCls(stage))}>{stage.label}</span>
               <span
                 aria-hidden
-                className={cn("text-center font-mono text-[10px] uppercase tracking-wide", labelCls(stage))}
+                className={cn("text-center font-mono text-caption uppercase tracking-wide", labelCls(stage))}
               >
                 {stage.word}
               </span>

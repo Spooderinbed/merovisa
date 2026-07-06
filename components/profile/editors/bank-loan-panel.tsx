@@ -17,7 +17,7 @@ export function BankLoanPanel() {
   const banks = getEducationLoanBanks();
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4">
-      <h3 className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+      <h3 className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         Class-A banks with education loans
       </h3>
       <ul className="flex flex-col divide-y divide-line-2">
@@ -31,11 +31,11 @@ export function BankLoanPanel() {
                 href={b.educationLoan!.source}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[15px] text-ink hover:text-primary"
+                className="text-body text-ink hover:text-primary"
               >
                 {b.name}
               </a>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-soft">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-small text-ink-soft">
                 {ceiling ? <span>Up to {ceiling}</span> : null}
                 {tenure ? <span>{tenure}-yr term</span> : null}
                 {r ? <span>{r}</span> : null}
@@ -44,7 +44,7 @@ export function BankLoanPanel() {
           );
         })}
       </ul>
-      <p className="text-[12px] text-ink-faint">
+      <p className="text-small text-ink-faint">
         Class-A list per Nepal Rastra Bank. Verify current rates with the bank before applying.
       </p>
     </section>
