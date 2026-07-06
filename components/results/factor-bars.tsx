@@ -43,7 +43,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
             </span>
             <span className="h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
               <span
-                className="block h-full rounded-pill bg-primary transition-[width] duration-700 ease-calm"
+                className="block h-full rounded-pill bg-primary transition-[width] duration-slower ease-calm"
                 style={{ width: `${dim.value}%` }}
               />
             </span>

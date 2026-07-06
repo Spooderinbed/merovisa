@@ -16,7 +16,7 @@ export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
       <span className="mt-3 block h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
         <span
           data-accuracy-fill
-          className="block h-full rounded-pill bg-primary transition-[width] duration-700 ease-calm"
+          className="block h-full rounded-pill bg-primary transition-[width] duration-slower ease-calm"
           style={{ width: `${banded}%` }}
         />
       </span>

@@ -19,6 +19,38 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Motion v2 ADR (docs/design/2026-07-03-motion-v2-adr.md §1): motion stays
+  // CSS-first — no runtime animation library on the low-end-Android funnel. The
+  // narrow escape hatch (one Phase-2 surface) is served by an explicit, reviewed
+  // eslint-disable, which is exactly the friction the ADR asks for.
+  {
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "framer-motion",
+              message:
+                "Motion v2 ADR: no JS animation library — motion is CSS-first (opacity/transform keyframes + transitions). See docs/design/2026-07-03-motion-v2-adr.md.",
+            },
+            {
+              name: "gsap",
+              message:
+                "Motion v2 ADR: no JS animation library — motion is CSS-first. See docs/design/2026-07-03-motion-v2-adr.md.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["motion", "motion/*"],
+              message:
+                "Motion v2 ADR: no JS animation library — motion is CSS-first. The narrow escape hatch needs an explicit reviewed eslint-disable. See docs/design/2026-07-03-motion-v2-adr.md.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

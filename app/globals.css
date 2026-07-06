@@ -38,6 +38,16 @@
 
   --ease-calm: cubic-bezier(0.22, 0.61, 0.36, 1);
 
+  /* Duration ladder — see docs/design/2026-07-03-motion-v2-adr.md (open-Q 1).
+     Generates the duration-fast/medium/slow/slower utilities; values are the
+     app's existing durations, so migrating the raw duration-N sites is a 1:1
+     rename with no rendered change. slower (700ms) is the ADR's ceiling, used
+     only for progress-fill reveals. */
+  --transition-duration-fast: 150ms;
+  --transition-duration-medium: 200ms;
+  --transition-duration-slow: 300ms;
+  --transition-duration-slower: 700ms;
+
   --animate-fade: fade 0.5s var(--ease-calm) both;
   --animate-rise: rise 0.55s var(--ease-calm) both;
   /* The second beat of the verdict reveal: holds hidden through the first ~120ms

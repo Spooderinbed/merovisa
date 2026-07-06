@@ -50,7 +50,7 @@ export function ReadinessMap({ signals }: { signals: ReadinessSignals }) {
             <a
               href={row.href}
               aria-label={`${row.label}, ${BAND_WORD[row.band]}${row.why ? `: ${row.why}` : ""}`}
-              className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 px-4 py-2.5 transition-colors duration-200 ease-calm hover:border-ink-faint"
+              className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 px-4 py-2.5 transition-colors duration-medium ease-calm hover:border-ink-faint"
             >
               <span className="flex flex-col gap-0.5" aria-hidden="true">
                 <span className="text-[14px] font-medium text-ink">{row.label}</span>

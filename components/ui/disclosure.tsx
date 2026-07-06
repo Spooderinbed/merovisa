@@ -37,7 +37,7 @@ export function Disclosure({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors duration-150 ease-calm hover:bg-bg-tint"
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors duration-fast ease-calm hover:bg-bg-tint"
       >
         <span className="flex flex-col gap-0.5">
           <span className="text-[16px] font-medium text-ink">{title}</span>
@@ -47,7 +47,7 @@ export function Disclosure({
           {trailing}
           <span
             className={cn(
-              "text-ink-faint transition-transform duration-200 ease-calm",
+              "text-ink-faint transition-transform duration-medium ease-calm",
               open && "rotate-90",
             )}
             aria-hidden

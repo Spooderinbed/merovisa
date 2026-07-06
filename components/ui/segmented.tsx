@@ -27,7 +27,7 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
             aria-checked={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "rounded-pill px-4 py-2 text-[15px] transition-colors duration-150 ease-calm",
+              "rounded-pill px-4 py-2 text-[15px] transition-colors duration-fast ease-calm",
               active ? "bg-surface text-ink" : "text-ink-soft hover:text-ink",
             )}
           >
