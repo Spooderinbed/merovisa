@@ -42,4 +42,15 @@ describe("AuthCard", () => {
     expect(screen.queryByRole("textbox", { name: /email/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /Create account/i })).toBeNull();
   });
+
+  // Wave A / A4 (MV-109) — two-beat entrance, reduced-motion-safe. Both `rise`
+  // and `settle` are keyframe-baked (no raw animation-delay), so the shared
+  // reduced-motion guard collapses them to the final state without a flash.
+  it("gives the header a rise entrance and the sign-in card a settle entrance", () => {
+    render(<AuthCard />);
+    const heading = screen.getByRole("heading", { name: /Save your result/i });
+    expect(heading.parentElement).toHaveClass("animate-rise");
+    const cta = screen.getByRole("button", { name: /Continue with Google/i });
+    expect(cta.closest(".animate-settle")).not.toBeNull();
+  });
 });

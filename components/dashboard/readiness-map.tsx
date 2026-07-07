@@ -37,7 +37,7 @@ export function ReadinessMap({ signals }: { signals: ReadinessSignals }) {
       : `Based on ${completenessPct}% of your profile — add detail to sharpen this.`;
 
   return (
-    <Card as="section" aria-label="Your readiness" padding="md" className="flex flex-col gap-3">
+    <Card as="section" aria-label="Your readiness" padding="md" className="animate-rise flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h2 className="text-body font-medium text-ink">Your readiness</h2>
         <p className="text-small text-ink-faint">{headerLine}</p>

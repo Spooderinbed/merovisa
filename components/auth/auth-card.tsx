@@ -21,7 +21,7 @@ export function AuthCard({ nextPath }: AuthCardProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-[460px] flex-col gap-7 px-5 pb-20 pt-16">
-      <div className="flex flex-col items-center gap-3 text-center">
+      <div className="flex animate-rise flex-col items-center gap-3 text-center">
         <span aria-hidden className="grid h-11 w-11 place-items-center rounded-md bg-primary text-on-primary">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 10 12 5 2 10l10 5 10-5Z" />
@@ -35,7 +35,7 @@ export function AuthCard({ nextPath }: AuthCardProps) {
         </p>
       </div>
 
-      <Card padding="lg" className="flex flex-col gap-3">
+      <Card padding="lg" className="flex animate-settle flex-col gap-3">
         <Button size="lg" onClick={continueWithGoogle} className="w-full">
           Continue with Google
         </Button>

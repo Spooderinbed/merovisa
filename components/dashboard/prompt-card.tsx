@@ -32,7 +32,7 @@ function Eyebrow({ tone }: { tone: "dark" | "light" }) {
 export function PromptCard({ prompt }: { prompt: PromptState }) {
   if (prompt.kind === "caught-up") {
     return (
-      <Card padding="lg" className="flex flex-col gap-2">
+      <Card padding="lg" className="animate-rise flex flex-col gap-2">
         <Eyebrow tone="light" />
         <h3 className="text-headline text-ink">All caught up</h3>
         <p className="text-body text-ink-soft">
@@ -52,7 +52,7 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
 
   if (prompt.kind === "waiting") {
     return (
-      <Card padding="lg" className="flex flex-col gap-2">
+      <Card padding="lg" className="animate-rise flex flex-col gap-2">
         <Eyebrow tone="light" />
         <h3 className="text-headline text-ink">Everything is underway</h3>
         <p className="text-body text-ink-soft">
@@ -73,7 +73,7 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
   if (prompt.kind === "next") {
     const meta = completionFor(prompt.item.kind);
     return (
-      <Card tone="primary" border="transparent" padding="lg" className="flex flex-col gap-3">
+      <Card tone="primary" border="transparent" padding="lg" className="animate-rise flex flex-col gap-3">
         <Eyebrow tone="dark" />
         <h3 className="text-headline">{prompt.item.title}</h3>
         {prompt.item.body ? (
@@ -91,7 +91,7 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
   }
 
   return (
-    <Card tone="primary" border="transparent" padding="lg" className="flex flex-col gap-3">
+    <Card tone="primary" border="transparent" padding="lg" className="animate-rise flex flex-col gap-3">
       <Eyebrow tone="dark" />
       <h3 className="text-headline">Your next best step</h3>
       <p className="text-body opacity-90">

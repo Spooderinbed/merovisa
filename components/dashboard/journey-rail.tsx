@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 function dotCls(stage: JourneyStage): string {
   const reached = stage.status === "done" || stage.status === "in-progress";
   return cn(
-    "h-2.5 w-2.5 rounded-full",
+    "h-2.5 w-2.5 rounded-full transition-[background-color,border-color,box-shadow] duration-medium ease-calm",
     reached ? "border border-strong bg-strong" : "border border-line bg-surface",
     stage.current && "ring-2 ring-strong/30",
   );
@@ -30,7 +30,7 @@ function labelCls(stage: JourneyStage): string {
 export function JourneyRail({ signals }: { signals: JourneySignals }) {
   const journey = buildJourney(signals);
   return (
-    <Card as="section" aria-label="Your journey" padding="md" className="flex flex-col gap-3">
+    <Card as="section" aria-label="Your journey" padding="md" className="animate-rise flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h2 className="text-body font-medium text-ink">Your journey</h2>
         <p className="text-small text-ink-faint">Where you are on the path to studying in Australia.</p>
@@ -47,7 +47,7 @@ export function JourneyRail({ signals }: { signals: JourneySignals }) {
               href={stage.href}
               aria-label={`${stage.label}: ${stage.word}${stage.current ? " — you are here" : ""}`}
               aria-current={stage.current ? "step" : undefined}
-              className="flex flex-1 flex-col items-center gap-1.5 rounded-md px-1 py-1 transition-colors ease-calm hover:bg-bg-tint"
+              className="flex flex-1 flex-col items-center gap-1.5 rounded-md px-1 py-1 transition-colors duration-medium ease-calm hover:bg-bg-tint"
             >
               <span aria-hidden className={dotCls(stage)} />
               <span aria-hidden className={cn("text-center text-small", labelCls(stage))}>{stage.label}</span>

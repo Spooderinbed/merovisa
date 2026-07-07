@@ -12,4 +12,10 @@ describe("Greeting", () => {
     render(<Greeting name={null} partOfDay="afternoon" />);
     expect(screen.getByText(/Good afternoon, there/i)).toBeInTheDocument();
   });
+
+  it("reveals on mount with a single calm entrance (no per-child stagger)", () => {
+    const { container } = render(<Greeting name="Aarav" partOfDay="morning" />);
+    const header = container.querySelector("header");
+    expect(header?.className).toContain("animate-rise");
+  });
 });
