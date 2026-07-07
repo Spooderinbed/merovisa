@@ -68,7 +68,7 @@ export function GuideChat() {
             <li
               key={`${m.role}-${i}`}
               className={cn(
-                "max-w-[85%] whitespace-pre-wrap rounded-xl border px-3.5 py-2.5 text-body leading-relaxed",
+                "animate-fade max-w-[85%] whitespace-pre-wrap rounded-xl border px-3.5 py-2.5 text-body leading-relaxed",
                 m.role === "user"
                   ? "self-end border-primary/30 bg-primary/5 text-ink"
                   : "self-start border-line bg-surface text-ink",
@@ -80,7 +80,7 @@ export function GuideChat() {
         </ol>
       )}
 
-      {pending ? <span className="text-small text-ink-faint">The guide is thinking…</span> : null}
+      {pending ? <span className="font-mono text-small text-ink-faint">The guide is thinking…</span> : null}
       {error ? (
         <span role="alert" className="text-small text-reach">
           {error}
