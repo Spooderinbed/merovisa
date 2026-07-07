@@ -23,9 +23,9 @@
 
 _empty_
 
-## In progress (WIP 1) — 0
+## In progress (WIP 1) — 1
 
-_empty_
+- **MV-111** · P1 · [MV-105 Layer B — honest goal trade-off note (Option 1)](cards/MV-111.md) — _Building. Plan: docs/superpowers/plans/2026-07-07-goal-tradeoff-note.md. New pure lib/goals/conflicts.ts goalTradeoffNote(primary, secondaryGoals) mirroring lib/scoring/field-note.ts competitivenessNote; presentational components/matches/goal-tradeoff-note.tsx (sibling of PreferenceNote, never a modal); carried on the anon AssessmentPayload (assemble.ts) + computed inline on signed-in matches. Score/order-inert (applyPreference never receives secondaries; existing secondary-goals-inert test re-run as the guarantee)._
 
 ## In review (WIP 3) — 2
 

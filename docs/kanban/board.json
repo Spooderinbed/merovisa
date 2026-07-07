@@ -1439,6 +1439,18 @@
       "summary": "Phase-2 continuation after the guide slice (MV-100); the LAST non-mascot Phase-2 slice. Ships spec MV-101 (Chrome + cleanup). Ground-truth: (1) wordmark/logo ALREADY refreshed to dusk-plum tokens + type scale via MV-84 -- a new mark is Gate-G brand-asset work, so only a calm hover affordance added (transition-opacity duration-fast ease-calm hover:opacity-80 on the Link); (2) mobile-tab-bar had transition-colors ease-calm but no duration token + no active indicator -> added duration-fast timing + an always-present aria-hidden accent bar (h-0.5 bg-primary, transition-opacity, opacity-100/opacity-0 toggle) that FADES on the active tab (reduced-motion-safe transition, not a delay stagger); (3) deleted 5 verified-unreferenced create-next-app scaffold SVGs (file/globe/next/vercel/window). DEFERRED: opengraph-image.tsx (optional + outward-facing brand asset, founder-owned Gate-G). Presentational only -- no data/logic/nav change. FLAGGED (visual judgment calls): logo hover:opacity-80 + the 2px top accent-bar placement (both one-class reverts). TDD: +4 tests (tab-bar duration token + active/inactive accent-bar opacity + motion ratchets; logo hover classes + structure preserved). Not browser-verified (auth-gated chrome) -- suite + ratchets, per prior slices. After MV-101 the overhaul has ONLY the Gate-G mascot tail left (MV-85/86 + SVGs).",
       "created": "2026-07-07",
       "entered": "2026-07-07"
+    },
+    {
+      "id": "MV-111",
+      "col": "inprogress",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "In Progress on branch mv-111-goal-tradeoff-note (off origin/master). MV-105 Layer B, Option 1: turns the inert Layer A secondaryGoals capture into ONE honest, score-inert + order-inert trade-off note when the primary goal and a secondary goal pull in different directions. v1 ships 2 framing-only tension pairs (PR<->highest-ranked, lowest-cost<->highest-ranked) that assert no external fact (no citation needed, same bar as competitivenessNote); citable/synergy pairs deferred to a sourced follow-up.",
+      "file": "cards/MV-111.md",
+      "title": "MV-105 Layer B — honest goal trade-off note (Option 1)",
+      "summary": "Building. Plan: docs/superpowers/plans/2026-07-07-goal-tradeoff-note.md. New pure lib/goals/conflicts.ts goalTradeoffNote(primary, secondaryGoals) mirroring lib/scoring/field-note.ts competitivenessNote; presentational components/matches/goal-tradeoff-note.tsx (sibling of PreferenceNote, never a modal); carried on the anon AssessmentPayload (assemble.ts) + computed inline on signed-in matches. Score/order-inert (applyPreference never receives secondaries; existing secondary-goals-inert test re-run as the guarantee).",
+      "created": "2026-07-08",
+      "entered": "2026-07-08"
     }
   ]
 }
