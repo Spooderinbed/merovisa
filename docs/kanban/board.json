@@ -1442,13 +1442,14 @@
     },
     {
       "id": "MV-111",
-      "col": "inreview",
+      "col": "done",
+      "done": "2026-07-08",
       "pri": "P1",
       "owner": "agent",
-      "badge": "In Review on branch mv-111-goal-tradeoff-note (off origin/master; FOUNDER-GATED merge). MV-105 Layer B, Option 1. Two-stage review both PASSED (spec ✅ + code-quality ✅). Gate green: typecheck 0, lint 0 errors (pre-existing build.mjs warn only), vitest 281 files / 1824 tests, 0 failures (+9 conflicts cases; secondary-goals-inert untouched + green).",
+      "badge": "MERGED to master + DEPLOYED 2026-07-08 (PR #71, founder go with green checks; fast-forward 624567e→5a8debc; branch deleted). MV-105 Layer B, Option 1. Two-stage review both PASSED (spec ✅ + code-quality ✅). Gate green: typecheck 0, lint 0 errors (pre-existing build.mjs warn only), vitest 281 files / 1824 tests, 0 failures (+9 conflicts cases; secondary-goals-inert untouched + green).",
       "file": "cards/MV-111.md",
       "title": "MV-105 Layer B — honest goal trade-off note (Option 1)",
-      "summary": "SHIPPED to In Review (founder merges to close). Turns the inert Layer A secondaryGoals capture into ONE honest, score-inert + order-inert trade-off note when the primary goal and a secondary goal pull in different directions. New pure lib/goals/conflicts.ts goalTradeoffNote() mirrors lib/scoring/field-note.ts competitivenessNote (returns at most one note from an ORDERED tension table); presentational components/matches/goal-tradeoff-note.tsx (sibling of PreferenceNote, never a modal); carried on the anon AssessmentPayload (assemble.ts + results.tsx) + computed inline on signed-in matches (page.tsx). v1 ships 2 framing-only tension pairs (permanent-residency<->highest-ranked > lowest-cost<->highest-ranked) that assert no external fact — no citation needed (same bar as competitivenessNote); fastest-admission<->research + synergy pairs + best-employment deliberately DEFERRED to a sourced follow-up. Inertness is structural (applyPreference never receives secondaries) + guarded by the untouched secondary-goals-inert test. No scoring-engine change, no migration, goldens untouched. Plan: docs/superpowers/plans/2026-07-07-goal-tradeoff-note.md. Dossier: cards/MV-111.md.",
+      "summary": "DONE — merged to master + live in prod 2026-07-08 (PR #71). Turns the inert Layer A secondaryGoals capture into ONE honest, score-inert + order-inert trade-off note when the primary goal and a secondary goal pull in different directions. New pure lib/goals/conflicts.ts goalTradeoffNote() mirrors lib/scoring/field-note.ts competitivenessNote (returns at most one note from an ORDERED tension table); presentational components/matches/goal-tradeoff-note.tsx (sibling of PreferenceNote, never a modal); carried on the anon AssessmentPayload (assemble.ts + results.tsx) + computed inline on signed-in matches (page.tsx). v1 ships 2 framing-only tension pairs (permanent-residency<->highest-ranked > lowest-cost<->highest-ranked) that assert no external fact — no citation needed (same bar as competitivenessNote); fastest-admission<->research + synergy pairs + best-employment deliberately DEFERRED to a sourced follow-up. Inertness is structural (applyPreference never receives secondaries) + guarded by the untouched secondary-goals-inert test. No scoring-engine change, no migration, goldens untouched. Plan: docs/superpowers/plans/2026-07-07-goal-tradeoff-note.md. Dossier: cards/MV-111.md.",
       "created": "2026-07-08",
       "entered": "2026-07-08"
     }
