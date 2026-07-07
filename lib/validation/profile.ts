@@ -14,6 +14,7 @@ import {
 import type { StudentProfile } from "@/lib/scoring/types";
 import { computeGapYears, GAP_REQUIRES_REASON_THRESHOLD } from "@/lib/scoring/gap";
 import { ALSO_CONSIDERING_CAP } from "@/lib/wizard/also-considering";
+import { SECONDARY_GOALS_CAP } from "@/lib/wizard/secondary-goals";
 
 export const ProfileSchema = z
   .object({
@@ -35,6 +36,7 @@ export const ProfileSchema = z
     budgetCurrency: z.enum(CURRENCIES),
     fundingSource: z.enum(FUNDING_SOURCES),
     goal: z.enum(GOALS),
+    secondaryGoals: z.array(z.enum(GOALS)).max(SECONDARY_GOALS_CAP).optional(),
     dependents: z
       .object({ partner: z.boolean(), children: z.number().int().min(0).max(10) })
       .optional(),
@@ -62,6 +64,20 @@ export const ProfileSchema = z
     {
       message: "alsoConsidering must exclude the primary field and contain no duplicates",
       path: ["alsoConsidering"],
+    },
+  )
+  .refine(
+    (data) => {
+      const secondaries = data.secondaryGoals;
+      if (!secondaries || secondaries.length === 0) return true;
+      // Must stay disjoint from the primary goal and carry no duplicates.
+      if (secondaries.includes(data.goal)) return false;
+      if (new Set(secondaries).size !== secondaries.length) return false;
+      return true;
+    },
+    {
+      message: "secondaryGoals must exclude the primary goal and contain no duplicates",
+      path: ["secondaryGoals"],
     },
   )
   .refine(

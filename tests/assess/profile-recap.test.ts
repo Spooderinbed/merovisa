@@ -44,6 +44,18 @@ describe("recapLines", () => {
     expect(line).toContain("Data Science");
   });
 
+  it("shows an also-aiming-for line only when secondary goals are present", () => {
+    expect(recapLines(aarav).some((l) => /also aiming for/i.test(l))).toBe(false);
+    const withSecondaries = recapLines({
+      ...aarav,
+      secondaryGoals: ["lowest-cost", "highest-ranked"],
+    });
+    const line = withSecondaries.find((l) => /also aiming for/i.test(l));
+    expect(line).toBeDefined();
+    expect(line).toContain("Lowest total cost");
+    expect(line).toContain("Highest-ranked university");
+  });
+
   it("renders a CGPA grade on its own scale, never as a bogus percentage", () => {
     const gpa = { ...aarav, gradeSystem: "cgpa-4" as const, grade: 3.4 };
     const joined = recapLines(gpa).join("\n");

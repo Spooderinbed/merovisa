@@ -111,4 +111,49 @@ describe("ProfileSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // MV-105 Layer A — optional secondaryGoals (up to 2, disjoint from the primary goal).
+  it("accepts a valid secondaryGoals list", () => {
+    const result = ProfileSchema.safeParse({
+      ...validProfile,
+      secondaryGoals: ["lowest-cost", "highest-ranked"],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.secondaryGoals).toEqual(["lowest-cost", "highest-ranked"]);
+  });
+
+  it("accepts a profile with secondaryGoals omitted", () => {
+    const result = ProfileSchema.safeParse(validProfile);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty secondaryGoals array", () => {
+    const result = ProfileSchema.safeParse({ ...validProfile, secondaryGoals: [] });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects secondaryGoals that contains the primary goal", () => {
+    const result = ProfileSchema.safeParse({
+      ...validProfile,
+      goal: "permanent-residency",
+      secondaryGoals: ["permanent-residency"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate secondaryGoals", () => {
+    const result = ProfileSchema.safeParse({
+      ...validProfile,
+      secondaryGoals: ["lowest-cost", "lowest-cost"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects more than two secondaryGoals", () => {
+    const result = ProfileSchema.safeParse({
+      ...validProfile,
+      secondaryGoals: ["lowest-cost", "highest-ranked", "fastest-admission"],
+    });
+    expect(result.success).toBe(false);
+  });
 });

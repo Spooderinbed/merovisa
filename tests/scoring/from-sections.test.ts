@@ -43,6 +43,26 @@ describe("sectionsToStudentProfile", () => {
     expect(result.alsoConsidering).toBeUndefined();
   });
 
+  // MV-105 Layer A — carry the secondary goals through the signed-in re-score path.
+  // Scoring still never reads them (see secondary-goals-inert.test.ts); this only
+  // preserves the captured context so downstream (Layer B) matches can use it.
+  test("forwards secondaryGoals from the career section", () => {
+    const result = sectionsToStudentProfile({
+      career: { goal: "permanent-residency", secondaryGoals: ["lowest-cost"] },
+    });
+    expect(result.secondaryGoals).toEqual(["lowest-cost"]);
+  });
+
+  test("leaves secondaryGoals undefined when the career section omits it, without changing the goal default", () => {
+    const omitted = sectionsToStudentProfile({ career: { goal: "highest-ranked" } });
+    expect(omitted.secondaryGoals).toBeUndefined();
+    expect(omitted.goal).toBe("highest-ranked");
+
+    const noCareer = sectionsToStudentProfile({});
+    expect(noCareer.secondaryGoals).toBeUndefined();
+    expect(noCareer.goal).toBe("permanent-residency");
+  });
+
   test("returns sensible defaults for empty sections", () => {
     const result = sectionsToStudentProfile({});
     expect(result.homeCountry).toBe("nepal");

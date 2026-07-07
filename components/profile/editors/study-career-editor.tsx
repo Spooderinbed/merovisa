@@ -9,18 +9,18 @@ import {
   toggleAlsoConsidering,
   ALSO_CONSIDERING_CAP,
 } from "@/lib/wizard/also-considering";
-import type { FieldOfStudy } from "@/lib/scoring/types";
+import {
+  reconcileSecondaryGoals,
+  toggleSecondaryGoal,
+  SECONDARY_GOALS_CAP,
+} from "@/lib/wizard/secondary-goals";
+import type { FieldOfStudy, Goal } from "@/lib/scoring/types";
 
 export interface StudyCareerInitial {
   "intended-study"?: { level?: string; field?: string; alsoConsidering?: string[]; specialisation?: string };
   career?: {
-    goal?:
-      | "permanent-residency"
-      | "lowest-cost"
-      | "highest-ranked"
-      | "fastest-admission"
-      | "best-employment"
-      | "research";
+    goal?: Goal;
+    secondaryGoals?: Goal[];
     targetRole?: string;
   };
 }
@@ -75,6 +75,24 @@ export function buildIntendedStudyPatch(state: {
   return patch;
 }
 
+/**
+ * Assemble the career PATCH from editor state. `secondaryGoals` is ALWAYS sent (an
+ * empty array when none) for the same reason as intended-study.alsoConsidering: the
+ * API shallow-merges the patch, so an omitted key would never clear extras the
+ * student just removed, leaving stale secondary context persisted. `goal`/`targetRole`
+ * stay omit-when-empty (their absence is not a clear signal here).
+ */
+export function buildCareerPatch(state: {
+  goal: string;
+  secondaryGoals: string[];
+  targetRole: string;
+}): Record<string, unknown> {
+  const patch: Record<string, unknown> = { secondaryGoals: state.secondaryGoals };
+  if (state.goal) patch.goal = state.goal;
+  if (state.targetRole.trim()) patch.targetRole = state.targetRole.trim();
+  return patch;
+}
+
 /** "Study & career goals" group: intended-study + career. */
 export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) {
   const [level, setLevel] = useState(initial["intended-study"]?.level ?? "");
@@ -84,6 +102,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
   );
   const [specialisation, setSpecialisation] = useState(initial["intended-study"]?.specialisation ?? "");
   const [goal, setGoal] = useState<string>(initial.career?.goal ?? "");
+  const [secondaryGoals, setSecondaryGoals] = useState<string[]>(initial.career?.secondaryGoals ?? []);
   const [targetRole, setTargetRole] = useState<string>(initial.career?.targetRole ?? "");
   const { status, saveSections } = useGroupSave();
 
@@ -98,14 +117,19 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       toggleAlsoConsidering(alsoConsidering as FieldOfStudy[], value as FieldOfStudy, field as FieldOfStudy),
     );
 
+  // Changing the primary goal drops it from the secondaries so the two stay disjoint.
+  const chooseGoal = (next: string) => {
+    setGoal(next);
+    setSecondaryGoals(reconcileSecondaryGoals(next as Goal, secondaryGoals as Goal[]));
+  };
+  const toggleSecondary = (value: string) =>
+    setSecondaryGoals(
+      toggleSecondaryGoal(secondaryGoals as Goal[], value as Goal, goal as Goal),
+    );
+
   const buildStudy = () => buildIntendedStudyPatch({ level, field, alsoConsidering, specialisation });
 
-  const buildCareer = () => {
-    const patch: Record<string, unknown> = {};
-    if (goal) patch.goal = goal;
-    if (targetRole.trim()) patch.targetRole = targetRole.trim();
-    return patch;
-  };
+  const buildCareer = () => buildCareerPatch({ goal, secondaryGoals, targetRole });
 
   const baseline = useRef({
     study: JSON.stringify(buildStudy()),
@@ -181,13 +205,47 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       <div className="flex flex-col gap-4 border-t border-line pt-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="ce-goal" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Career goal</label>
-          <Select id="ce-goal" value={goal} onChange={(e) => setGoal(e.target.value)}>
+          <Select id="ce-goal" value={goal} onChange={(e) => chooseGoal(e.target.value)}>
             <option value="">Select a goal</option>
             {GOALS.map((g) => (
               <option key={g.value} value={g.value}>{g.label}</option>
             ))}
           </Select>
         </div>
+        {goal ? (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+              Also aiming for (optional — up to {SECONDARY_GOALS_CAP})
+            </legend>
+            <p className="text-meta text-ink-soft">
+              Extra goals add context. They do not combine into a new verdict, and they do not change
+              your matches yet.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {GOALS.filter((g) => g.value !== goal).map((g) => {
+                const selected = secondaryGoals.includes(g.value);
+                const atCap = secondaryGoals.length >= SECONDARY_GOALS_CAP;
+                return (
+                  <label
+                    key={g.value}
+                    className={`inline-flex cursor-pointer items-center gap-2 rounded-pill border px-3 py-1 text-meta ${
+                      selected ? "border-primary bg-primary-tint text-ink" : "border-line-2 text-ink-soft"
+                    } ${!selected && atCap ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={selected}
+                      disabled={!selected && atCap}
+                      onChange={() => toggleSecondary(g.value)}
+                    />
+                    {g.label}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        ) : null}
         <div className="flex flex-col gap-2">
           <label htmlFor="ce-target-role" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Target role</label>
           <Input id="ce-target-role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />

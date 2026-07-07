@@ -27,7 +27,7 @@ export interface ProfileSections {
   finance?:         { total?: number; currency?: Currency; source?: FundingSource; proofUploaded?: boolean };
   immigration?:     { refusals?: "none" | "one" | "multiple"; travelled?: boolean };
   family?:          { situation?: "alone" | "spouse" | "spouse-and-kids" | "other"; children?: number };
-  career?:          { goal?: Goal; targetRole?: string };
+  career?:          { goal?: Goal; secondaryGoals?: Goal[]; targetRole?: string };
   scholarships?:    { profile?: string[] };
   "deal-breakers"?: { mustHaves?: string[] };
 }

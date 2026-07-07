@@ -90,7 +90,13 @@ export function profileSectionsFromAssessment(
 
   // career
   const goal = get<Goal>("goal");
-  if (goal) out.career = { goal };
+  if (goal) {
+    const secondaryGoals = get<Goal[]>("secondaryGoals");
+    out.career = {
+      goal,
+      ...(secondaryGoals && secondaryGoals.length > 0 ? { secondaryGoals } : {}),
+    };
+  }
 
   return out;
 }
