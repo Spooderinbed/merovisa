@@ -71,7 +71,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
   const isClosed = done || dismissed;
   return (
     <article
-      className={`flex flex-col gap-3 rounded-lg border p-5 transition duration-300 ease-calm ${
+      className={`flex flex-col gap-3 rounded-lg border p-5 transition duration-slow ease-calm ${
         isClosed ? "border-line bg-bg-tint opacity-70" : "border-line bg-surface"
       }`}
     >

@@ -36,7 +36,7 @@ export function WorkingWithAgents() {
           >
             <summary className="flex cursor-pointer list-none items-center justify-between font-mono text-caption uppercase tracking-wide text-ink-faint marker:content-['']">
               {section.heading}
-              <span className="transition-transform duration-200 ease-calm group-open:rotate-90" aria-hidden>
+              <span className="transition-transform duration-medium ease-calm group-open:rotate-90" aria-hidden>
                 &rsaquo;
               </span>
             </summary>

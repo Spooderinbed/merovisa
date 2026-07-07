@@ -37,7 +37,7 @@ export function ChipInput({
           type="button"
           aria-label={`Remove ${chip}`}
           onClick={() => onChange(value.filter((c) => c !== chip))}
-          className="inline-flex items-center gap-1.5 rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 text-small text-ink transition-colors duration-150 ease-calm hover:border-line"
+          className="inline-flex items-center gap-1.5 rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 text-small text-ink transition-colors duration-fast ease-calm hover:border-line"
         >
           {chip}
           <span aria-hidden className="text-ink-faint">×</span>

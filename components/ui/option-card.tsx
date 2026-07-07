@@ -22,7 +22,7 @@ export function OptionCard({ label, selected, onSelect, description, icon, multi
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left transition-colors duration-150 ease-calm",
+        "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left transition-colors duration-fast ease-calm",
         selected ? "border-primary bg-primary-tint" : "border-line-2 bg-surface hover:bg-surface-2",
         disabled && "cursor-not-allowed bg-surface-2 opacity-60 hover:bg-surface-2",
       )}

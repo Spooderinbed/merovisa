@@ -29,7 +29,7 @@ export function NextSteps() {
           key={l.href}
           href={l.href}
           padding="md"
-          className="group flex flex-col gap-1 transition-colors duration-150 ease-calm hover:border-primary"
+          className="group flex flex-col gap-1 transition-colors duration-fast ease-calm hover:border-primary"
         >
           <span className="text-lead text-ink group-hover:text-primary">{l.title}</span>
           <span className="text-body text-ink-soft">{l.description}</span>

@@ -7,7 +7,7 @@ type Variant = "primary" | "ghost" | "quiet";
 type Size = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-pill font-medium transition-[background-color,transform] duration-150 ease-calm active:translate-y-px disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-pill font-medium transition-[background-color,transform] duration-fast ease-calm active:translate-y-px disabled:pointer-events-none disabled:opacity-50";
 
 const variants: Record<Variant, string> = {
   primary: "bg-primary text-on-primary hover:bg-primary-ink",

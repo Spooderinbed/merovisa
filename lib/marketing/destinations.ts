@@ -7,6 +7,7 @@ export interface MarketingDestination {
   supported: boolean;
   name: string;
   flag: string;
+  iso: string;
   tagline: string;
   match: MarketingMatch;
   tuition: string;
@@ -26,6 +27,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
     supported: true,
     name: "Australia",
     flag: "🇦🇺",
+    iso: "AU",
     tagline: "Strong post-study work rights, clear financial rules.",
     match: "strong",
     tuition: "A$33k–48k / yr",
@@ -47,6 +49,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
     supported: false,
     name: "Canada",
     flag: "🇨🇦",
+    iso: "CA",
     tagline: "Provincial caps in effect — apply early.",
     match: "possible",
     tuition: "C$25k–38k / yr",
@@ -68,6 +71,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
     supported: false,
     name: "United Kingdom",
     flag: "🇬🇧",
+    iso: "GB", // GB is the ISO 3166-1 alpha-2 code for the UK (informal alt "UK"); the id stays "uk".
     tagline: "Fast visa decisions; dependant rules tightened.",
     match: "possible",
     tuition: "£16k–32k / yr",
@@ -89,6 +93,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
     supported: false,
     name: "Germany",
     flag: "🇩🇪",
+    iso: "DE",
     tagline: "Low/no tuition at public universities.",
     match: "reach",
     tuition: "€0–3k / yr (public)",
@@ -110,6 +115,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
     supported: false,
     name: "United States",
     flag: "🇺🇸",
+    iso: "US",
     tagline: "Largest choice; interview-based visa.",
     match: "reach",
     tuition: "$28k–60k / yr",
@@ -131,6 +137,7 @@ export const MARKETING_DESTINATIONS: MarketingDestination[] = [
     supported: false,
     name: "Ireland",
     flag: "🇮🇪",
+    iso: "IE",
     tagline: "English-speaking EU; growing tech sector.",
     match: "possible",
     tuition: "€10k–25k / yr",

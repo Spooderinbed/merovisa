@@ -88,7 +88,7 @@ export function DocumentCard({
   return (
     <>
       <div
-        className={`flex flex-col gap-2 rounded-xl border p-4 transition-colors duration-150 ease-calm ${
+        className={`flex flex-col gap-2 rounded-xl border p-4 transition-colors duration-fast ease-calm ${
           doc ? "border-primary bg-surface" : "border-line bg-bg-tint"
         }`}
       >

@@ -1,6 +1,19 @@
 # ADR — Motion v2 (CSS-first motion system)
 
-**Status:** Proposed · **Date:** 2026-07-03 · **Card:** MV-93 · **Owner:** agent
+**Status:** Adopted (durations + bans applied in MV-107) · **Date:** 2026-07-03 · **Card:** MV-93 (decision) → MV-107 (applied) · **Owner:** agent
+
+> **Applied in MV-107 (2026-07-07).** Open question **1** resolved *yes*: a named
+> duration ladder shipped as `@theme` tokens (`--transition-duration-fast` 150 /
+> `-medium` 200 / `-slow` 300 / `-slower` 700) and the 18 raw `duration-N` sites
+> migrated 1:1 (zero rendered change). The namespace is **`--transition-duration-*`**
+> — Tailwind v4 generates `duration-fast/medium/slow/slower` from it; the `--dur-*`
+> placeholder proposed below was dropped because it does not generate a utility
+> (verified). Adoption items **1** and **4** also landed: `transition-all` and the
+> JS-animation libraries (`framer-motion` / `motion` / `gsap`) are now fenced by a
+> ratchet (`tests/styles/motion-tokens-ratchet.test.ts`) + `no-restricted-imports`
+> in `eslint.config.mjs`. **Still open:** Q2 (a second easing) and Q3
+> (`slide-fwd/back` keyframes — defined in `@theme` but still unused). Token names
+> are one-line-tunable at review.
 **Decision scope:** how the app animates — the motion *vocabulary*, the *rules*
 for using it, and the *architectural* call to stay CSS-first. Companion to the
 [type-scale ADR](2026-07-03-type-scale-adr.md); both are foldable into

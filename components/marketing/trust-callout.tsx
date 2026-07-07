@@ -3,7 +3,7 @@ import { Eyebrow } from "./eyebrow";
 
 export function TrustCallout() {
   return (
-    <section className="mx-auto w-full max-w-[720px] px-5 pt-24 text-center">
+    <section className="mx-auto w-full max-w-[720px] px-5 pt-24 text-center animate-rise">
       <Eyebrow>Trust is the product</Eyebrow>
       <h2 className="mt-4 text-[clamp(28px,3.4vw,38px)]">We sit before the consultancy, not in place of one.</h2>
       <p className="mx-auto mt-4 max-w-[58ch] text-lead text-ink-soft">
@@ -13,13 +13,13 @@ export function TrustCallout() {
       <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
         <Link
           href="/assess"
-          className="inline-flex items-center rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink"
+          className="inline-flex items-center rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink transition-[background-color,transform] duration-fast ease-calm active:translate-y-px"
         >
           Check your eligibility
         </Link>
         <Link
           href="/destinations"
-          className="inline-flex items-center rounded-pill border border-line-2 px-7 py-[15px] text-lead text-ink hover:bg-bg-tint"
+          className="inline-flex items-center rounded-pill border border-line-2 px-7 py-[15px] text-lead text-ink hover:bg-bg-tint transition-[background-color,transform] duration-fast ease-calm active:translate-y-px"
         >
           Browse destinations
         </Link>

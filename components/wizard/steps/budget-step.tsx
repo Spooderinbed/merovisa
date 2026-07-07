@@ -142,7 +142,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
                 aria-label="Remove a child"
                 onClick={() => setChildren(children - 1)}
                 disabled={children <= 1}
-                className="flex h-8 w-8 items-center justify-center rounded-pill border border-line text-ink-soft transition-colors duration-150 ease-calm hover:text-ink disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-pill border border-line text-ink-soft transition-colors duration-fast ease-calm hover:text-ink disabled:opacity-40"
               >
                 −
               </button>
@@ -154,7 +154,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
                 aria-label="Add a child"
                 onClick={() => setChildren(children + 1)}
                 disabled={children >= MAX_CHILDREN}
-                className="flex h-8 w-8 items-center justify-center rounded-pill border border-line text-ink-soft transition-colors duration-150 ease-calm hover:text-ink disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-pill border border-line text-ink-soft transition-colors duration-fast ease-calm hover:text-ink disabled:opacity-40"
               >
                 +
               </button>
