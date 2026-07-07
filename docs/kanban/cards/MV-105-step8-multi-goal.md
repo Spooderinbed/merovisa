@@ -84,7 +84,7 @@ EDIT `lib/scoring/types.ts`, `lib/profiles/sections.ts`, `lib/validation/profile
 ## Status
 
 **Layer A BUILT 2026-07-07** on `mv-105-step8-multi-goal` (founder Option 1) — In Review,
-founder-gated merge. Built TDD via a build→adversarial-verify workflow; independent reviewer
+[PR #70](https://github.com/Spooderinbed/merovisa/pull/70), founder-gated merge. Built TDD via a build→adversarial-verify workflow; independent reviewer
 verdict = **SHIP, 0 defects**. Gate GREEN on the orchestrator's own re-run: `typecheck` 0 errors,
 `lint` 0 errors (baseline `build.mjs` warning only, no new), `vitest` **280 files / 1815 tests, 0
 failed**. The honesty guarantee (`tests/scoring/secondary-goals-inert.test.ts`) drives the real
