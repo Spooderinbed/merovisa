@@ -26,6 +26,13 @@ describe("ReadinessMap", () => {
     expect(screen.getByRole("region", { name: "Your readiness" })).toBeInTheDocument();
   });
 
+  it("reveals the region on mount with a single calm entrance", () => {
+    render(<ReadinessMap signals={signals()} />);
+    expect(screen.getByRole("region", { name: "Your readiness" }).className).toContain(
+      "animate-rise",
+    );
+  });
+
   it("renders four rows linking to where the student acts", () => {
     render(<ReadinessMap signals={signals()} />);
     expect(screen.getByRole("link", { name: /Academics & English/ })).toHaveAttribute("href", "/profile");

@@ -34,4 +34,11 @@ describe("SnapshotCard", () => {
     expect(screen.queryByText(/Two minutes/i)).toBeNull();
     expect(screen.getByRole("link", { name: /Check eligibility/i })).toHaveAttribute("href", "/assess");
   });
+
+  it("reveals both the populated and empty cards with a single calm entrance", () => {
+    const { container: filled } = render(<SnapshotCard primary={payload} destinationLabel="Australia" />);
+    expect(filled.firstElementChild?.className).toContain("animate-rise");
+    const { container: empty } = render(<SnapshotCard primary={null} destinationLabel={null} />);
+    expect(empty.firstElementChild?.className).toContain("animate-rise");
+  });
 });

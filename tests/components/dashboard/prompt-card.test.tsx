@@ -62,4 +62,18 @@ describe("PromptCard", () => {
     expect(screen.queryByText(/refresh your assessment/i)).toBeNull();
     expect(screen.getByRole("link", { name: /See your plan/i })).toHaveAttribute("href", "/plan");
   });
+
+  it("reveals its card with a single calm entrance in every state", () => {
+    const states: PromptState[] = [
+      { kind: "profile-incomplete" },
+      next(),
+      { kind: "waiting", openCount: 2 },
+      { kind: "caught-up" },
+    ];
+    for (const prompt of states) {
+      const { container, unmount } = render(<PromptCard prompt={prompt} />);
+      expect(container.firstElementChild?.className).toContain("animate-rise");
+      unmount();
+    }
+  });
 });
