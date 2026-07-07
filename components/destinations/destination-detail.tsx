@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { MarketingDestination } from "@/lib/marketing/destinations";
 import { Card } from "@/components/ui/card";
+import { IsoPill } from "@/components/ui/iso-pill";
 import { VerdictPill } from "@/components/ui/verdict-pill";
 import { Fact } from "./fact";
 
@@ -24,9 +25,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
 
       {/* hero */}
       <div className="mt-5 flex flex-wrap items-center gap-4">
-        <span aria-hidden className="inline-flex h-10 w-12 items-center justify-center rounded-md border border-line bg-bg-tint text-2xl leading-none">
-          {c.flag}
-        </span>
+        <IsoPill code={c.iso} />
         <h1 className="text-[clamp(36px,4.6vw,52px)] leading-[1.05]">{c.name}</h1>
         {c.supported ? (
           <VerdictPill verdict={c.match} size="lg" className="text-small" />

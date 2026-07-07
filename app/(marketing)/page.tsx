@@ -45,23 +45,23 @@ export default async function HomePage() {
       {/* hero */}
       <section className="mx-auto w-full max-w-[1120px] px-5 pb-6 pt-[72px]">
         <div className="max-w-[760px]">
-          <Eyebrow>For students applying abroad</Eyebrow>
-          <h1 className="mt-5 text-[clamp(42px,6vw,68px)] leading-[1.05]">
+          <Eyebrow className="animate-rise">For students applying abroad</Eyebrow>
+          <h1 className="mt-5 animate-rise text-[clamp(42px,6vw,68px)] leading-[1.05]">
             An honest answer before
             <br />
             you pay anyone.
           </h1>
-          <p className="mt-6 max-w-[58ch] text-[clamp(18px,1.5vw,21px)] text-ink-soft">
+          <p className="mt-6 max-w-[58ch] animate-settle text-[clamp(18px,1.5vw,21px)] text-ink-soft">
             Can I get in? What will it really cost? What&apos;s my visa risk? Answer 9 quick questions to see where you
             stand — free, and no sign-up to start.
           </p>
-          <p className="mt-4 max-w-[58ch] text-body text-ink-soft">
+          <p className="mt-4 max-w-[58ch] animate-settle text-body text-ink-soft">
             Built on official Home Affairs and university data — every figure shows its source and date.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3 animate-settle">
             <Link
               href="/assess"
-              className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink"
+              className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink transition-[background-color,transform] duration-fast ease-calm active:translate-y-px"
             >
               Check your eligibility →
             </Link>
@@ -75,13 +75,13 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="mt-16">
+        <div className="mt-16 animate-fade">
           <HeroPreview />
         </div>
       </section>
 
       {/* tiles */}
-      <section className="mx-auto w-full max-w-[1120px] px-5 pt-20">
+      <section className="mx-auto w-full max-w-[1120px] px-5 pt-20 animate-rise">
         <Eyebrow>What you get</Eyebrow>
         <h2 className="mt-4 max-w-[600px] text-[clamp(28px,3.4vw,38px)]">Three quiet tools, no clutter.</h2>
         <div className="mt-9 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -106,7 +106,7 @@ export default async function HomePage() {
       </section>
 
       {/* how it works */}
-      <section className="mx-auto mt-24 w-full max-w-[1120px] px-5">
+      <section className="mx-auto mt-24 w-full max-w-[1120px] px-5 animate-rise">
         <HowItWorks />
       </section>
 

@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { IsoPill } from "@/components/ui/iso-pill";
 import { VerdictPill } from "@/components/ui/verdict-pill";
 
 export function HeroPreview() {
@@ -32,7 +33,7 @@ export function HeroPreview() {
           </div>
           <Card radius="card" padding="sm" className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2 text-body font-medium text-ink">🇦🇺 Visa update</span>
+              <span className="inline-flex items-center gap-2 text-body font-medium text-ink"><IsoPill code="AU" /> Visa update</span>
               <VerdictPill verdict="strong" size="md" />
             </div>
             <p className="text-body text-ink-soft">

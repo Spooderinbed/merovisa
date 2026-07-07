@@ -1367,6 +1367,18 @@
       "summary": "Wave A step 2 of the elevated-calm overhaul (after A1 type scale, MV-106). Off the Motion v2 ADR (docs/design/2026-07-03-motion-v2-adr.md): (1) added a named duration ladder to @theme -- --transition-duration-fast 150 / medium 200 / slow 300 / slower 700; Tailwind v4 generates duration-<name> from the --transition-duration-* namespace (the ADR --dur-* placeholder was dropped -- it does not generate a utility, verified via standalone compile). (2) Migrated all 18 raw duration-N sites to the tokens 1:1 (pure rename, zero rendered change). (3) Fenced the ADR bans: a new ratchet locks zero transition-all + zero raw duration + no JS-anim dependency; eslint no-restricted-imports bans framer-motion/motion/gsap, with the ADR narrow escape hatch served by an explicit reviewed eslint-disable. TDD red-first (2 fail -> 4 pass). ADR flipped Proposed->Adopted; open Q2 (2nd easing) + Q3 (slide keyframes) remain. Token names are one-line-tunable at review.",
       "created": "2026-07-07",
       "entered": "2026-07-07"
+    },
+    {
+      "id": "MV-108",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "In Review on branch mv-108-landing-restyle (STACKED on #62 MV-106 + #63 MV-107 -- base merges both token branches so text-* + duration-*/animate-* are available; rebase --onto master once they merge). Gate green: typecheck 0 + lint 0 (pre-existing build.mjs warn only) + vitest 277 files/1758 passed. Live-render check on the running dev server: landing HTTP 200, IsoPill 'AU' emits its exact recipe, ZERO flag emoji in the landing HTML (was AU-flag), animate-rise/settle/fade + active:translate-y-px all present.",
+      "file": "MV-108-landing-restyle.md",
+      "title": "Overhaul A3: landing (marketing) non-mascot restyle -- ISO pills + two-beat hero + per-section reveals + CTA micro-interaction",
+      "summary": "Wave A step 3 of the elevated-calm overhaul (after A1 type scale MV-106 + A2 motion tokens MV-107). Ships the NON-MASCOT half of the spec's MV-92 (Landing); the hero mascot mark stays deferred (Gate G: MV-85 + MV-86 + hand-traced SVGs). (1) New shared primitive components/ui/iso-pill.tsx (bordered mono ISO-code pill, aria-hidden) replaces flag emoji on marketing/destinations surfaces -- absorbs the killed MV-49 flag-pill half; imagery policy bans flag iconography on marketing. Added explicit iso field to MarketingDestination (all 6 rows; uk->GB, the ISO-3166 alpha-2 for the UK, not a naive id.toUpperCase). (2) Two-beat hero entrance (animate-rise beat 1, animate-settle beat 2, animate-fade preview) -- reduced-motion-safe WITHOUT touching the shared guard (settle bakes its hold into keyframe phases; the guard zeroes duration but not delay, so a raw delay stagger would flash). (3) One mount-based reveal per below-fold section (NOT IntersectionObserver -- no-JS/SEO/reduced-motion safe). (4) Hero + TrustCallout CTAs stay semantic Links (no link->button a11y regression; Button polymorphism is MV-89's lane) but gain the Button press micro-interaction. Eyebrow gained an optional className (cn-merged) so the hero eyebrow can animate; other call sites unaffected. TDD: +IsoPill unit test, +no-marketing-flag-emoji ratchet (scoped to components/marketing + components/destinations). No existing tests needed changes. Corridor-neutral brand already satisfied (plum = neutral global brand pre-onboarding).",
+      "created": "2026-07-07",
+      "entered": "2026-07-07"
     }
   ]
 }

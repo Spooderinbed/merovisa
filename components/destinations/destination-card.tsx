@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { MarketingDestination } from "@/lib/marketing/destinations";
 import { Card } from "@/components/ui/card";
+import { IsoPill } from "@/components/ui/iso-pill";
 import { VerdictPill } from "@/components/ui/verdict-pill";
 
 export function DestinationCard({ destination }: { destination: MarketingDestination }) {
@@ -13,9 +14,7 @@ export function DestinationCard({ destination }: { destination: MarketingDestina
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span aria-hidden className="inline-flex h-8 w-10 items-center justify-center rounded-md border border-line bg-bg-tint text-xl leading-none">
-            {destination.flag}
-          </span>
+          <IsoPill code={destination.iso} />
           <span className="text-title font-medium text-ink">{destination.name}</span>
         </div>
         {destination.supported ? (
