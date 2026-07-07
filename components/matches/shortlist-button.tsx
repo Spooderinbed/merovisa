@@ -56,7 +56,7 @@ export function ShortlistButton({
               type="button"
               onClick={() => choose(step.value)}
               aria-pressed={active}
-              className={`rounded-pill px-3 py-1 text-[13px] font-medium transition ${
+              className={`rounded-pill px-3 py-1 text-small font-medium transition ${
                 active ? "bg-strong-tint text-strong" : "text-ink-soft hover:bg-bg-tint"
               }`}
             >
@@ -65,7 +65,7 @@ export function ShortlistButton({
           );
         })}
       </div>
-      <p className="max-w-[15rem] text-right text-[11.5px] text-ink-faint">
+      <p className="max-w-[15rem] text-right text-caption text-ink-faint">
         Marking Applied locks in this verdict so we can compare it against your real outcome.
       </p>
     </div>

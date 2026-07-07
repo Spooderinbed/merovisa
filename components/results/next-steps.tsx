@@ -22,7 +22,7 @@ const LINKS = [
 export function NextSteps() {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-[21px]">What&apos;s next</h3>
+      <h3 className="text-headline">What&apos;s next</h3>
       {LINKS.map((l) => (
         <Card
           as={Link}
@@ -31,8 +31,8 @@ export function NextSteps() {
           padding="md"
           className="group flex flex-col gap-1 transition-colors duration-fast ease-calm hover:border-primary"
         >
-          <span className="text-[17px] text-ink group-hover:text-primary">{l.title}</span>
-          <span className="text-[15px] text-ink-soft">{l.description}</span>
+          <span className="text-lead text-ink group-hover:text-primary">{l.title}</span>
+          <span className="text-body text-ink-soft">{l.description}</span>
         </Card>
       ))}
     </section>

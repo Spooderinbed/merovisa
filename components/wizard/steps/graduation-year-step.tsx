@@ -36,7 +36,7 @@ export function GraduationYearStep({ profile, setField, callouts, eyebrow }: Ste
         />
       </div>
       {isEarlier ? (
-        <label className="mt-2 flex flex-col gap-1 text-[15px] text-ink-soft">
+        <label className="mt-2 flex flex-col gap-1 text-body text-ink-soft">
           Graduation year
           <input
             type="number"
@@ -49,7 +49,7 @@ export function GraduationYearStep({ profile, setField, callouts, eyebrow }: Ste
         </label>
       ) : null}
       {showGapPreview ? (
-        <p className="mt-2 text-[15px] text-accent">
+        <p className="mt-2 text-body text-accent">
           That&rsquo;s a {gap}-year gap — we&rsquo;ll ask what you were doing; explaining it well strengthens your case.
         </p>
       ) : null}

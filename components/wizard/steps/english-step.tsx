@@ -59,13 +59,13 @@ export function EnglishStep({ profile, setField, callouts, eyebrow }: StepProps)
       {status === "taken" ? (
         <Card radius="card" padding="sm" className="mt-2 flex flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <span className="text-[13px] text-ink-soft">Which test?</span>
+            <span className="text-small text-ink-soft">Which test?</span>
             <Segmented ariaLabel="English test" options={TESTS} value={test} onChange={onTest} />
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-[15px] text-ink-soft">{scale.label}</span>
-              <span className="font-mono text-[15px] text-ink">
+              <span className="text-body text-ink-soft">{scale.label}</span>
+              <span className="font-mono text-body text-ink">
                 {test === "ielts" ? score.toFixed(1) : score}
               </span>
             </div>
@@ -78,14 +78,14 @@ export function EnglishStep({ profile, setField, callouts, eyebrow }: StepProps)
               onChange={(v) => setField({ englishScore: v })}
             />
             {test !== "ielts" ? (
-              <span className="text-[13px] text-ink-soft">
+              <span className="text-small text-ink-soft">
                 ≈ IELTS {toIeltsEquivalent(score, test).toFixed(1)} equivalent
               </span>
             ) : null}
           </div>
         </Card>
       ) : (
-        <p className="mt-2 text-[13px] text-ink-soft">
+        <p className="mt-2 text-small text-ink-soft">
           Until you test, we&apos;ll assume a provisional IELTS 6.0.
         </p>
       )}

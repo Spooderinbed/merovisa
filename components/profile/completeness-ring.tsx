@@ -9,7 +9,7 @@ export function CompletenessRing({
   const offset = circumference * (1 - Math.min(100, Math.max(0, pct)) / 100);
   return (
     <Card as="aside" padding="lg" className="flex flex-col gap-3">
-      <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Completeness</span>
+      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Completeness</span>
       <div className="flex items-center gap-4">
         <svg viewBox="0 0 100 100" width="96" height="96" aria-hidden>
           <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="6" fill="none" className="text-line-2" />
@@ -21,7 +21,7 @@ export function CompletenessRing({
           />
           <text x="50" y="55" textAnchor="middle" fontSize="13" className="fill-ink font-medium">{bandLabel(pct)}</text>
         </svg>
-        <ul className="flex flex-col gap-1 text-[14px] text-ink-soft">
+        <ul className="flex flex-col gap-1 text-meta text-ink-soft">
           <li>{complete} complete</li>
           <li>{partial} partial</li>
           <li>{empty} not started</li>

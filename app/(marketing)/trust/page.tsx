@@ -8,7 +8,7 @@ export default function TrustPage() {
       <h1 className="mt-3 text-[clamp(32px,4vw,46px)] leading-[1.1]">
         No agents. No hidden commissions. No upsells in disguise.
       </h1>
-      <p className="mt-4 text-[17px] text-ink-soft">
+      <p className="mt-4 text-lead text-ink-soft">
         This platform exists to give you an honest picture before you spend money on a consultancy. That purpose
         only holds if the platform itself is transparent. Here is what we collect, where it lives, and when we
         delete it.
@@ -17,10 +17,10 @@ export default function TrustPage() {
       <div className="mt-12 space-y-10">
         {/* Section 1 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             No referral fees, no agent partnerships
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             We do not sell your contact details to consultancies. We do not earn a commission when you enquire
             at a university. We are not a lead-generation service with an assessment layer on top. If we ever
             earn referral revenue from a partner — for instance, if a future paid plan includes an optional
@@ -33,10 +33,10 @@ export default function TrustPage() {
 
         {/* Section 2 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             What data we collect, and why
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             Your assessment inputs — grade, English score, budget, funding source, study purpose — are used to
             compute your verdict and match programs. Nothing more. Your name and email (via Google sign-in) are
             used to recognise you across visits and associate your assessment with your account. Documents you
@@ -51,10 +51,10 @@ export default function TrustPage() {
 
         {/* Section 3 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             Where the data lives
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             Student data is hosted on Supabase in Australian and EU regions. Row-level security is enabled on
             every table — your rows are only accessible to your account. Even in the event of a database
             breach, another user&apos;s profile cannot be exposed to you, and vice versa. Documents are stored in a
@@ -67,10 +67,10 @@ export default function TrustPage() {
 
         {/* Section 4 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             When we delete your data
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             You can delete your account at any time from the settings page. Account deletion is real deletion —
             your profile, assessment, and documents are removed. We retain assessment records for 12 months
             after deletion for legal-compliance reasons, then purge them. There is no soft-delete or
@@ -90,10 +90,10 @@ export default function TrustPage() {
 
         {/* Section 5 */}
         <div>
-          <h2 className="text-[20px] font-medium leading-snug">
+          <h2 className="text-title font-medium leading-snug">
             Questions and corrections
           </h2>
-          <p className="mt-3 text-[17px] text-ink-soft">
+          <p className="mt-3 text-lead text-ink-soft">
             If you find a number that is wrong, a threshold that has changed, or a policy we have misread,
             please tell us. We treat data corrections as urgent fixes, not support tickets. Reach us at{" "}
             <a
@@ -111,7 +111,7 @@ export default function TrustPage() {
       <div className="mt-12">
         <Link
           href="/destinations"
-          className="inline-flex items-center gap-2 rounded-pill border border-line-2 px-7 py-[15px] text-[17px] text-ink hover:bg-bg-tint"
+          className="inline-flex items-center gap-2 rounded-pill border border-line-2 px-7 py-[15px] text-lead text-ink hover:bg-bg-tint"
         >
           Browse destinations
         </Link>

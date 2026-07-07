@@ -16,7 +16,7 @@ export function PlanList({
   const phases = groupByPhase(items);
 
   const intro = (
-    <p className="max-w-[64ch] text-[14px] text-ink-soft">
+    <p className="max-w-[64ch] text-meta text-ink-soft">
       This is your guided plan — the steps to studying in Australia, in the order to tackle
       them. Each program&apos;s checklist is the full requirement reference behind it.
     </p>
@@ -27,8 +27,8 @@ export function PlanList({
       <div className="flex flex-col gap-4">
         {intro}
         <Card padding="lg" className="flex flex-col gap-2 text-center">
-          <h2 className="text-[20px]">All caught up</h2>
-          <p className="text-[15px] text-ink-soft">
+          <h2 className="text-title">All caught up</h2>
+          <p className="text-body text-ink-soft">
             When you change your profile or rerun your assessment, new actions land here.
           </p>
         </Card>
@@ -42,8 +42,8 @@ export function PlanList({
       {phases.map(({ phase, items: phaseItems }) => (
         <section key={phase.id} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h2 className="text-[20px] font-medium text-ink">{phase.title}</h2>
-            <p className="text-[14px] text-ink-soft">{phase.blurb}</p>
+            <h2 className="text-title font-medium text-ink">{phase.title}</h2>
+            <p className="text-meta text-ink-soft">{phase.blurb}</p>
           </div>
           <div className="flex flex-col gap-3">
             {phaseItems.map((i) => (
@@ -55,7 +55,7 @@ export function PlanList({
 
       {closed.length > 0 ? (
         <Card as="details" padding="sm">
-          <summary className="cursor-pointer font-mono text-[12.5px] uppercase tracking-wide text-ink-faint">
+          <summary className="cursor-pointer font-mono text-small uppercase tracking-wide text-ink-faint">
             Closed ({closed.length})
           </summary>
           <div className="mt-3 flex flex-col gap-3">

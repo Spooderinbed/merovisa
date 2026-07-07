@@ -41,7 +41,7 @@ export function JourneyMarker({ journey }: { journey: Journey }) {
       <Link
         href="/dashboard"
         aria-label={`${journey.ariaLabel} Step ${stepN} of ${total}. Open your journey.`}
-        className="mx-auto flex w-full max-w-[1120px] items-center gap-3 px-5 py-2 text-[12.5px] transition-colors ease-calm hover:bg-bg-tint"
+        className="mx-auto flex w-full max-w-[1120px] items-center gap-3 px-5 py-2 text-small transition-colors ease-calm hover:bg-bg-tint"
       >
         <span
           data-testid="journey-marker-dots"
@@ -55,7 +55,7 @@ export function JourneyMarker({ journey }: { journey: Journey }) {
         <span aria-hidden className="text-ink-soft">
           <span className="font-medium text-ink">{current?.label}</span>
           {" · "}
-          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
             step {stepN} of {total}
           </span>
         </span>

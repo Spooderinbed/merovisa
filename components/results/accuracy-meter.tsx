@@ -8,8 +8,8 @@ export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
   return (
     <Card as="section" padding="lg">
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Profile accuracy</span>
-        <span className="font-mono text-[12.5px] text-ink-soft">
+        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Profile accuracy</span>
+        <span className="font-mono text-small text-ink-soft">
           {accuracy.level} confidence
         </span>
       </div>
@@ -20,10 +20,10 @@ export function AccuracyMeter({ accuracy }: { accuracy: ProfileAccuracy }) {
           style={{ width: `${banded}%` }}
         />
       </span>
-      <p className="mt-4 text-[15px] text-ink-soft">Make your assessment more complete:</p>
+      <p className="mt-4 text-body text-ink-soft">Make your assessment more complete:</p>
       <ul className="mt-2 flex flex-col gap-2">
         {accuracy.suggestions.map((s) => (
-          <li key={s.id} className="flex items-center justify-between gap-3 text-[15px]">
+          <li key={s.id} className="flex items-center justify-between gap-3 text-body">
             <span className="text-ink">{s.label}</span>
             <span className="text-ink-faint">→ {s.gain}</span>
           </li>

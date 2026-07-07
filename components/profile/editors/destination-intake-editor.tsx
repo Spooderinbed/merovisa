@@ -97,7 +97,7 @@ export function DestinationIntakeEditor({ initial }: { initial: DestinationIntak
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Primary destination</span>
+        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Primary destination</span>
         <div role="radiogroup" aria-label="Primary destination" className="flex flex-col gap-2">
           {DESTINATIONS.map((d) => {
             const selectable = isSelectable(d);
@@ -115,7 +115,7 @@ export function DestinationIntakeEditor({ initial }: { initial: DestinationIntak
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Alternate destinations</span>
+        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Alternate destinations</span>
         <div role="group" aria-label="Alternate destinations" className="flex flex-col gap-2">
           {alternateOptions.map((d) => {
             const selectable = isSelectable(d);
@@ -137,15 +137,15 @@ export function DestinationIntakeEditor({ initial }: { initial: DestinationIntak
         </div>
       </div>
       <div className="flex flex-col gap-2 border-t border-line pt-4">
-        <label htmlFor="pe-intake" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Intake</label>
+        <label htmlFor="pe-intake" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Intake</label>
         <Input id="pe-intake" type="date" value={intake} onChange={(e) => setIntake(e.target.value)} />
-        <span className="text-[12px] text-ink-soft">When you plan to start studying.</span>
+        <span className="text-small text-ink-soft">When you plan to start studying.</span>
       </div>
       <div className="flex flex-col gap-2 border-t border-line pt-4">
-        <label htmlFor="dbe-musthaves" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Must-haves</label>
+        <label htmlFor="dbe-musthaves" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Must-haves</label>
         <ChipInput id="dbe-musthaves" value={mustHaves} onChange={setMustHaves}
           placeholder="e.g. PR pathway, work rights" />
-        <span className="text-[12px] text-ink-soft">Deal-breakers a destination must meet. Press Enter to add each one.</span>
+        <span className="text-small text-ink-soft">Deal-breakers a destination must meet. Press Enter to add each one.</span>
       </div>
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={status === "saving"}>Save</Button>

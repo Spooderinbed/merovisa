@@ -27,14 +27,14 @@ export function ConversionPrompt({
   if (!assessmentId) {
     return (
       <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[15px] text-ink-soft">
+        <p className="text-body text-ink-soft">
           We couldn&apos;t save this — your results are still here. Try again.
         </p>
         <button
           type="button"
           onClick={onRetrySave}
           disabled={retryingSave}
-          className="inline-flex shrink-0 items-center rounded-pill bg-primary px-[22px] py-3 text-[16px] font-medium text-on-primary hover:bg-primary-ink disabled:opacity-60"
+          className="inline-flex shrink-0 items-center rounded-pill bg-primary px-[22px] py-3 text-control font-medium text-on-primary hover:bg-primary-ink disabled:opacity-60"
         >
           {retryingSave ? "Saving…" : "Try saving again"}
         </button>
@@ -44,7 +44,7 @@ export function ConversionPrompt({
 
   return (
     <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-[15px] text-ink-soft">
+      <p className="text-body text-ink-soft">
         Keep this assessment and get updates as visa rules change.
       </p>
       <Button

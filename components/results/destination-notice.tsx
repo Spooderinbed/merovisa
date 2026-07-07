@@ -8,10 +8,10 @@ export function UnsupportedDestinationNotice({ destination }: { destination: Des
   const country = DESTINATION_LABELS[destination];
   return (
     <Card as="section" border="line-2" padding="lg">
-      <p className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+      <p className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         Destination coverage
       </p>
-      <h1 className="mt-2 text-[26px] leading-snug text-ink">
+      <h1 className="mt-2 text-display leading-snug text-ink">
         We don&apos;t cover Nepal → {country} yet.
       </h1>
       <p className="mt-3 text-ink-soft">
@@ -32,7 +32,7 @@ export function UnsupportedDestinationNotice({ destination }: { destination: Des
 export function NotSureFramingNotice() {
   return (
     <Card as="section" border="line-2" className="px-5 py-4">
-      <p className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Destination</p>
+      <p className="font-mono text-caption uppercase tracking-wide text-ink-faint">Destination</p>
       <p className="mt-1 text-ink-soft">
         You asked us to suggest a destination. Australia is the only corridor we fully cover
         today, so this readout shows where you stand for Nepal → Australia.

@@ -49,21 +49,21 @@ export function ProgramCard({
     <Card as="article" padding="md" className="flex flex-col gap-3">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
             {u.name} &middot; {u.city}
           </span>
-          <h3 className="text-[18px] font-medium text-ink">{p.name}</h3>
+          <h3 className="text-title font-medium text-ink">{p.name}</h3>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {preferenceChip ? (
-            <span className="inline-flex items-center rounded-pill border border-line px-2.5 py-0.5 font-mono text-[11px] text-ink-soft">
+            <span className="inline-flex items-center rounded-pill border border-line px-2.5 py-0.5 font-mono text-caption text-ink-soft">
               {preferenceChip.text}
             </span>
           ) : null}
-          <VerdictPill verdict={verdict} size="lg" className="text-[12px]" />
+          <VerdictPill verdict={verdict} size="lg" className="text-small" />
         </div>
       </header>
-      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink-soft">
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-small text-ink-soft">
         {p.tuitionMin != null && (
           <span>
             AUD {p.tuitionMin.toLocaleString()}&ndash;
@@ -86,7 +86,7 @@ export function ProgramCard({
         )}
         {p.intakes.length > 0 && <span>Intakes: {p.intakes.join(", ")}</span>}
       </div>
-      <ul className="flex flex-col gap-1 text-[14px]">
+      <ul className="flex flex-col gap-1 text-meta">
         {reasons.map((r, i) => (
           <li key={i} className={r.positive ? "text-strong" : "text-ink-soft"}>
             {r.positive ? "✓" : "·"} {r.text}
@@ -94,8 +94,8 @@ export function ProgramCard({
         ))}
       </ul>
       {p.notes ? (
-        <Card as="p" radius="card" tone="tint" className="px-3 py-2 text-[13px] text-ink-soft">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+        <Card as="p" radius="card" tone="tint" className="px-3 py-2 text-small text-ink-soft">
+          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
             Good to know
           </span>
           <br />
@@ -104,17 +104,17 @@ export function ProgramCard({
       ) : null}
       <footer className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-col gap-0.5">
-          <span className={`font-mono text-[11px] uppercase tracking-wide ${provenanceTone}`}>
+          <span className={`font-mono text-caption uppercase tracking-wide ${provenanceTone}`}>
             {provenance}
           </span>
           <SourceAnchor
             surface="matches"
             href={p.source}
-            className="text-[12.5px] text-primary hover:underline"
+            className="text-small text-primary hover:underline"
           >
             {linkLabel} ↗
           </SourceAnchor>
-          <a href={`/checklist/${p.id}`} className="text-[12.5px] text-primary hover:underline">
+          <a href={`/checklist/${p.id}`} className="text-small text-primary hover:underline">
             Document checklist →
           </a>
           {cricos ? (
@@ -125,7 +125,7 @@ export function ProgramCard({
               surface="matches"
               href={cricos.source}
               title={`${cricos.cricosCode} is ${cricos.provider}'s provider (institution) CRICOS code — not the course code you'll need on visa form 157A. The official register has no direct link, so search this code there.`}
-              className="font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
+              className="font-mono text-caption text-ink-faint hover:text-primary hover:underline"
             >
               Provider CRICOS {cricos.cricosCode} &middot; search the register ↗
             </SourceAnchor>
@@ -135,7 +135,7 @@ export function ProgramCard({
               surface="matches"
               href={AU_NEPAL_EVIDENCE_SOURCE}
               title="DHA document evidence level for a Nepalese passport at this provider — Streamlined means lighter documentary expectations. Check the official tool."
-              className="font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
+              className="font-mono text-caption text-ink-faint hover:text-primary hover:underline"
             >
               {evidence} evidence &middot; Nepal ↗
             </SourceAnchor>

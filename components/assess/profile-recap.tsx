@@ -80,13 +80,13 @@ export function ProfileRecap({
   return (
     <div className="grid min-h-[70vh] place-items-center px-5">
       <div className="flex w-full max-w-narrow flex-col items-center gap-3 text-center">
-        <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
           Your answers
         </span>
         {lines.map((line, i) => {
           const words = line.split(" ");
           return (
-            <p key={i} className="text-[19px] text-ink">
+            <p key={i} className="text-title text-ink">
               {words.map((word, j) => {
                 const delay = Math.min(((lineStart[i] ?? 0) + j) * 0.07, 1.2);
                 return (

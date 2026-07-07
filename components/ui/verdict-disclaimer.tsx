@@ -24,7 +24,7 @@ export function VerdictDisclaimer({
       as="p"
       role="note"
       radius="card"
-      className={`px-3 py-2 text-[12.5px] text-ink-soft ${className}`.trim()}
+      className={`px-3 py-2 text-small text-ink-soft ${className}`.trim()}
     >
       {message}
     </Card>

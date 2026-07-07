@@ -30,17 +30,17 @@ export default function MarketingError({
 
   return (
     <div className="mx-auto flex w-full max-w-narrow flex-col items-start gap-4 px-5 py-16">
-      <p className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+      <p className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         Something went wrong
       </p>
-      <h1 className="text-[24px] leading-snug text-ink">We couldn&apos;t load this page</h1>
-      <p className="text-[15px] text-ink-soft">
+      <h1 className="text-display leading-snug text-ink">We couldn&apos;t load this page</h1>
+      <p className="text-body text-ink-soft">
         This is usually a brief connection hiccup, not a problem on your end. Try again in a moment.
       </p>
       <button
         type="button"
         onClick={reset}
-        className="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-[16px] font-medium text-on-primary hover:bg-primary-ink"
+        className="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-control font-medium text-on-primary hover:bg-primary-ink"
       >
         Try again
       </button>

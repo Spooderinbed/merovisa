@@ -39,8 +39,8 @@ export function ReadinessMap({ signals }: { signals: ReadinessSignals }) {
   return (
     <Card as="section" aria-label="Your readiness" padding="md" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="text-[15px] font-medium text-ink">Your readiness</h2>
-        <p className="text-[13px] text-ink-faint">{headerLine}</p>
+        <h2 className="text-body font-medium text-ink">Your readiness</h2>
+        <p className="text-small text-ink-faint">{headerLine}</p>
       </div>
       {/* One-line summary for screen readers, before the per-row detail. */}
       <p className="sr-only">{ariaLabel}</p>
@@ -53,12 +53,12 @@ export function ReadinessMap({ signals }: { signals: ReadinessSignals }) {
               className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 px-4 py-2.5 transition-colors duration-medium ease-calm hover:border-ink-faint"
             >
               <span className="flex flex-col gap-0.5" aria-hidden="true">
-                <span className="text-[14px] font-medium text-ink">{row.label}</span>
-                {row.why ? <span className="text-[12.5px] text-ink-faint">{row.why}</span> : null}
+                <span className="text-meta font-medium text-ink">{row.label}</span>
+                {row.why ? <span className="text-small text-ink-faint">{row.why}</span> : null}
               </span>
               <span
                 aria-hidden="true"
-                className={`shrink-0 rounded-pill px-2.5 py-1 font-mono text-[11px] uppercase tracking-wide ${BAND_PILL[row.band]}`}
+                className={`shrink-0 rounded-pill px-2.5 py-1 font-mono text-caption uppercase tracking-wide ${BAND_PILL[row.band]}`}
               >
                 {BAND_WORD[row.band]}
               </span>

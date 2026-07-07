@@ -25,7 +25,7 @@ export function HomeCountryStep({ profile, setField, callouts, eyebrow }: StepPr
           onSelect={() => setField({ homeCountry: SUPPORTED_COUNTRY, gradeSystem: "percentage-nepal" })}
         />
       </div>
-      <p className="text-[13px] text-ink-faint">More countries coming soon: {COMING_SOON.join(", ")}.</p>
+      <p className="text-small text-ink-faint">More countries coming soon: {COMING_SOON.join(", ")}.</p>
     </StepShell>
   );
 }

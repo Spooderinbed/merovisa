@@ -30,15 +30,15 @@ function rowClass(r: NepalRefusalRecovery): string {
  */
 export function RefusalRecovery() {
   return (
-    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-[14px] text-ink-soft">
-      <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-meta text-ink-soft">
+      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         Refusal risk &amp; recovery (Nepal &rarr; Australia)
       </span>
 
       <div className="flex flex-col gap-3">
         {SECTIONS.map((section) => (
           <div key={section.kind} className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+            <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
               {section.heading}
             </span>
             <ul className="flex flex-col gap-1">
@@ -57,13 +57,13 @@ export function RefusalRecovery() {
               ))}
             </ul>
             {section.kind === "grant-rate" ? (
-              <p className="text-[12.5px] text-ink-faint">{VET_GUARD}</p>
+              <p className="text-small text-ink-faint">{VET_GUARD}</p>
             ) : null}
           </div>
         ))}
       </div>
 
-      <p className="text-[12.5px] text-ink-faint">{DISCLAIMER}</p>
+      <p className="text-small text-ink-faint">{DISCLAIMER}</p>
     </Card>
   );
 }

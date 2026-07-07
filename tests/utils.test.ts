@@ -6,6 +6,20 @@ describe("cn", () => {
     expect(cn("p-2", "p-4")).toBe("p-4");
     expect(cn("text-ink", undefined, false && "hidden", "text-ink-soft")).toBe("text-ink-soft");
   });
+
+  // MV-106: the type scale (text-body, text-caption, …) is registered with
+  // tailwind-merge as font-size utilities. Without this, twMerge groups a bare
+  // size token with text-<colour> and silently drops the size wherever both
+  // meet in one cn() call. This guard fails if the extension is reverted.
+  it("keeps a scale font-size beside a colour utility (not treated as a colour)", () => {
+    expect(cn("text-caption", "text-strong")).toBe("text-caption text-strong");
+    expect(cn("text-title", "text-ink-soft")).toBe("text-title text-ink-soft");
+  });
+
+  it("dedupes two scale sizes and lets an arbitrary size override the scale", () => {
+    expect(cn("text-small", "text-body")).toBe("text-body");
+    expect(cn("text-small", "text-[13px]")).toBe("text-[13px]");
+  });
 });
 
 describe("formatNpr", () => {

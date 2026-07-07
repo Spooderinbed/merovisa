@@ -19,12 +19,12 @@ const TEASERS = [
 export function GatedTeasers({ onUnlock, unlocked = false }: { onUnlock: () => void; unlocked?: boolean }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-[21px]">Your full roadmap</h3>
+      <h3 className="text-headline">Your full roadmap</h3>
       {unlocked ? (
         TEASERS.map((t) => (
           <Card key={t.title} radius="card" padding="sm">
             <span className="block text-ink">{t.title}</span>
-            <span className="mt-1 block text-[15px] text-ink-soft">{t.peek}</span>
+            <span className="mt-1 block text-body text-ink-soft">{t.peek}</span>
           </Card>
         ))
       ) : (
@@ -42,7 +42,7 @@ export function GatedTeasers({ onUnlock, unlocked = false }: { onUnlock: () => v
             className="overflow-hidden text-left"
           >
             <span className="block text-ink">{t.title}</span>
-            <span className="mt-1 block text-[15px] text-ink-soft blur-[4px] select-none" aria-hidden>
+            <span className="mt-1 block text-body text-ink-soft blur-[4px] select-none" aria-hidden>
               {t.peek}
             </span>
           </Card>

@@ -19,7 +19,7 @@ export function IntakeTimingCard({ intake }: { intake: IntakeTiming }) {
   const timeline = buildIntakeTimeline(intake);
   return (
     <Card as="section" padding="lg">
-      <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Intake timing</span>
+      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Intake timing</span>
       {/* A calendar-proportioned tick-timeline: `now` anchors the start, intake ticks
           sit at their real distance ahead, coloured by how open the window is. The
           nearest + alternatives text below carries the same intakes accessibly, so the
@@ -29,7 +29,7 @@ export function IntakeTimingCard({ intake }: { intake: IntakeTiming }) {
           <div className="absolute inset-x-0 top-4 h-px bg-line" />
           <div className="absolute top-2 flex -translate-x-1/2 flex-col items-center" style={{ left: "0%" }}>
             <span className="block h-4 w-px bg-ink-faint" />
-            <span className="mt-1 font-mono text-[10px] uppercase tracking-wide text-ink-faint">Now</span>
+            <span className="mt-1 font-mono text-caption uppercase tracking-wide text-ink-faint">Now</span>
           </div>
           {timeline.map((p) => (
             <div
@@ -39,24 +39,24 @@ export function IntakeTimingCard({ intake }: { intake: IntakeTiming }) {
               title={p.note}
             >
               <span className={`block h-2.5 w-2.5 rounded-full ${TICK_CLS[p.status]}`} />
-              <span className="mt-1 whitespace-nowrap font-mono text-[10px] uppercase tracking-wide text-ink-soft">
+              <span className="mt-1 whitespace-nowrap font-mono text-caption uppercase tracking-wide text-ink-soft">
                 {p.name.slice(0, 3)} {p.year}
               </span>
             </div>
           ))}
         </div>
       </div>
-      <p className="mt-6 text-[19px] text-ink">
+      <p className="mt-6 text-title text-ink">
         Nearest realistic intake:{" "}
         <span className="font-medium">
           {intake.nearest.name} {intake.nearest.year}
         </span>
       </p>
-      <p className={`mt-1 text-[15px] ${STATUS_CLS[intake.nearest.status]}`}>{intake.nearest.note}</p>
+      <p className={`mt-1 text-body ${STATUS_CLS[intake.nearest.status]}`}>{intake.nearest.note}</p>
       {intake.alternatives.length > 0 ? (
         <ul className="mt-4 flex flex-col gap-2 border-t border-line pt-4">
           {intake.alternatives.map((o, i) => (
-            <li key={i} className="flex items-center justify-between gap-3 text-[15px]">
+            <li key={i} className="flex items-center justify-between gap-3 text-body">
               <span className="text-ink-soft">
                 {o.name} {o.year}
               </span>

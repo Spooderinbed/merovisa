@@ -23,22 +23,22 @@ function MatchCard({ m }: { m: MatchResult }) {
     <Card as="article" radius="card" padding="sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
             {u.name} · {u.city}
           </span>
           <span className="text-ink">{p.name}</span>
         </div>
         <div className="flex items-center gap-2">
           {preferenceChip ? (
-            <span className="inline-flex items-center rounded-pill border border-line px-2.5 py-0.5 font-mono text-[11px] text-ink-soft">
+            <span className="inline-flex items-center rounded-pill border border-line px-2.5 py-0.5 font-mono text-caption text-ink-soft">
               {preferenceChip.text}
             </span>
           ) : null}
           <VerdictPill verdict={verdict} size="md" />
         </div>
       </div>
-      {fee ? <p className="mt-1 text-[15px] text-ink-soft">{fee}</p> : null}
-      <ul className="mt-1 flex flex-col gap-0.5 text-[14px]">
+      {fee ? <p className="mt-1 text-body text-ink-soft">{fee}</p> : null}
+      <ul className="mt-1 flex flex-col gap-0.5 text-meta">
         {reasons.map((r, i) => (
           <li key={i} className={r.positive ? "text-strong" : "text-ink-soft"}>
             {r.positive ? "✓" : "·"} {r.text}
@@ -46,8 +46,8 @@ function MatchCard({ m }: { m: MatchResult }) {
         ))}
       </ul>
       {p.notes ? (
-        <Card as="p" radius="card" tone="tint" className="mt-2 px-3 py-2 text-[13px] text-ink-soft">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+        <Card as="p" radius="card" tone="tint" className="mt-2 px-3 py-2 text-small text-ink-soft">
+          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
             Good to know
           </span>
           <br />
@@ -59,7 +59,7 @@ function MatchCard({ m }: { m: MatchResult }) {
           surface="matches"
           href={evidence.source}
           title="DHA document evidence level for a Nepalese passport at this provider — Streamlined means lighter documentary expectations. Check the official tool."
-          className="mt-2 inline-flex font-mono text-[11px] text-ink-faint hover:text-primary hover:underline"
+          className="mt-2 inline-flex font-mono text-caption text-ink-faint hover:text-primary hover:underline"
         >
           {evidence.level} evidence · Nepal ↗
         </SourceAnchor>
@@ -93,8 +93,8 @@ export function UniversityMatches({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-[21px]">University matches</h3>
-        <span className="font-mono text-[12.5px] text-ink-faint">{total} matched your profile</span>
+        <h3 className="text-headline">University matches</h3>
+        <span className="font-mono text-small text-ink-faint">{total} matched your profile</span>
       </div>
 
       {unlocked ? (
@@ -111,7 +111,7 @@ export function UniversityMatches({
                 {locked.slice(0, 3).map((m) => (
                   <div key={m.program.id} className="flex items-center justify-between">
                     <span className="text-ink">{m.program.name}</span>
-                    <span className="font-mono text-[11.5px] text-ink-faint">{VERDICT_LABELS[m.verdict].label}</span>
+                    <span className="font-mono text-caption text-ink-faint">{VERDICT_LABELS[m.verdict].label}</span>
                   </div>
                 ))}
               </div>

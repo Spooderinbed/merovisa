@@ -39,17 +39,17 @@ export function SecondaryVerdicts({
 
   return (
     <Card as="aside" radius="card" className="px-4 py-3">
-      <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+      <p className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         Your standing if you applied under a different field
       </p>
       <ul className="mt-2 flex flex-col gap-2">
         {items.map((item) => (
           <li key={item.field} className="flex items-center justify-between gap-3">
-            <span className="text-[14px] text-ink-soft">
+            <span className="text-meta text-ink-soft">
               If you applied under {item.label} instead
             </span>
             <span
-              className={`inline-flex shrink-0 items-center rounded-pill px-3 py-1 font-mono text-[12.5px] ${VERDICT_CLS[item.verdict]}`}
+              className={`inline-flex shrink-0 items-center rounded-pill px-3 py-1 font-mono text-small ${VERDICT_CLS[item.verdict]}`}
             >
               {VERDICT_LABELS[item.verdict].label}
             </span>
@@ -57,7 +57,7 @@ export function SecondaryVerdicts({
         ))}
       </ul>
       {pivot ? (
-        <p role="note" className="mt-3 rounded-md border border-line bg-bg-tint px-3 py-2 text-[13px] text-ink-soft">
+        <p role="note" className="mt-3 rounded-md border border-line bg-bg-tint px-3 py-2 text-small text-ink-soft">
           You&apos;d land a {BAND_WORD[pivot.verdict]} band under {pivot.label} — a stronger band than your{" "}
           {BAND_WORD[primary.verdict]} under {primary.label}. Worth exploring if a switch appeals to you.
         </p>

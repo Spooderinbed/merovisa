@@ -55,13 +55,13 @@ export function EducationStep({ profile, setField, callouts, eyebrow }: StepProp
       />
       <Card radius="card" padding="sm" className="mt-2 flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
-          <span className="text-[15px] text-ink-soft">Your grade</span>
-          <span className="font-mono text-[15px] text-ink">
+          <span className="text-body text-ink-soft">Your grade</span>
+          <span className="font-mono text-body text-ink">
             {system === "cgpa-4" ? `${grade.toFixed(1)} / 4.0` : `${Math.round(grade)}%`}
           </span>
         </div>
         {system === "cgpa-4" && (
-          <div className="text-right text-[13px] text-ink-faint">
+          <div className="text-right text-small text-ink-faint">
             ≈ {Math.round(gradeToPercentage(grade, "cgpa-4"))}% equivalent
           </div>
         )}

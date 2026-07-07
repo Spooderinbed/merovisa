@@ -95,10 +95,10 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
       />
       <Card radius="card" padding="sm" className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
-          <span className="font-mono text-[17px] text-ink">
+          <span className="font-mono text-lead text-ink">
             {currency === "NPR" ? formatNpr(budget) : formatAud(budget)}
           </span>
-          <span className="text-[15px] text-ink-soft">≈ {converted}</span>
+          <span className="text-body text-ink-soft">≈ {converted}</span>
         </div>
         <Slider
           ariaLabel="Yearly budget"
@@ -108,7 +108,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
           value={budget}
           onChange={(v) => setField({ budget: v })}
         />
-        <span className="text-[13px] text-ink-faint">
+        <span className="text-small text-ink-faint">
           Indicative rate: NPR {Math.round(nprPerAud)} ≈ A$1
         </span>
       </Card>
@@ -125,7 +125,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
 
       {profile.destination === "australia" && (
         <div className="flex flex-col gap-3">
-          <span className="text-[15px] text-ink-soft">
+          <span className="text-body text-ink-soft">
             Bringing family to Australia? <span className="text-ink-faint">(optional)</span>
           </span>
           <Segmented
@@ -136,7 +136,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
           />
           {familyMode === "partner-kids" && (
             <div className="flex items-center gap-3">
-              <span className="text-[15px] text-ink-soft">Children</span>
+              <span className="text-body text-ink-soft">Children</span>
               <button
                 type="button"
                 aria-label="Remove a child"
@@ -146,7 +146,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
               >
                 −
               </button>
-              <span aria-live="polite" className="min-w-6 text-center font-mono text-[15px] text-ink">
+              <span aria-live="polite" className="min-w-6 text-center font-mono text-body text-ink">
                 {children}
               </span>
               <button

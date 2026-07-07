@@ -13,9 +13,9 @@ const verdictCls: Record<Verdict, string> = {
 type Size = "sm" | "md" | "lg";
 
 const sizes: Record<Size, string> = {
-  sm: "px-2 py-0.5 text-[11px]",
-  md: "px-2.5 py-0.5 text-[11.5px]",
-  lg: "px-3 py-1 text-[12.5px]",
+  sm: "px-2 py-0.5 text-caption",
+  md: "px-2.5 py-0.5 text-caption",
+  lg: "px-3 py-1 text-small",
 };
 
 export function VerdictPill({

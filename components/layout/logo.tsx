@@ -13,7 +13,7 @@ export function Logo({ href = "/" }: { href?: string }) {
           <path d="M6 12v5c0 1 3 3 6 3s6-2 6-3v-5" />
         </svg>
       </span>
-      <span className="text-[18px] font-medium tracking-[-0.02em] text-ink">MyVisa</span>
+      <span className="text-title font-medium tracking-[-0.02em] text-ink">MyVisa</span>
     </Link>
   );
 }
