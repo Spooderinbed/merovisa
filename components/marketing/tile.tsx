@@ -18,13 +18,13 @@ export function Tile({
           {iconSvg}
         </span>
         {badge ? (
-          <span className="inline-flex items-center rounded-pill bg-bg-tint px-2.5 py-0.5 font-mono text-[11.5px] text-ink-soft">
+          <span className="inline-flex items-center rounded-pill bg-bg-tint px-2.5 py-0.5 font-mono text-caption text-ink-soft">
             {badge}
           </span>
         ) : null}
       </div>
-      <h3 className="mt-1 text-[21px]">{title}</h3>
-      <p className="text-[15px] text-ink-soft">{body}</p>
+      <h3 className="mt-1 text-headline">{title}</h3>
+      <p className="text-body text-ink-soft">{body}</p>
     </Card>
   );
 }

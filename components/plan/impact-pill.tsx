@@ -10,7 +10,7 @@ export function ImpactPill({ impact }: { impact: Impact }) {
   const s = STYLE[impact];
   return (
     <span
-      className={`inline-flex items-center rounded-pill px-2.5 py-0.5 font-mono text-[11.5px] ${s.cls}`}
+      className={`inline-flex items-center rounded-pill px-2.5 py-0.5 font-mono text-caption ${s.cls}`}
     >
       {s.label}
     </span>

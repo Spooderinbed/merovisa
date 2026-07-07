@@ -43,7 +43,7 @@ export function VerdictGroup({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-[20px] font-medium text-ink">
+      <h2 className="text-title font-medium text-ink">
         {VERDICT_LABELS[verdict].groupLabel} ({total})
       </h2>
       <div id={listId} className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -61,7 +61,7 @@ export function VerdictGroup({
           onClick={() => setExpanded((e) => !e)}
           aria-expanded={expanded}
           aria-controls={listId}
-          className="inline-flex items-center gap-1.5 self-start rounded-pill border border-line-2 px-4 py-1.5 text-[13px] text-ink-soft transition-colors hover:bg-bg-tint"
+          className="inline-flex items-center gap-1.5 self-start rounded-pill border border-line-2 px-4 py-1.5 text-small text-ink-soft transition-colors hover:bg-bg-tint"
         >
           {expanded ? "Show fewer" : showLabel}
           <span aria-hidden="true">{expanded ? "▴" : "▾"}</span>

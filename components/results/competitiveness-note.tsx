@@ -15,10 +15,10 @@ export function CompetitivenessNote({
   if (!note) return null;
   return (
     <aside className="rounded-md border border-line bg-bg-tint px-4 py-3">
-      <p className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+      <p className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         Also considering
       </p>
-      <p className="mt-1 text-[14px] text-ink-soft">{note.text}</p>
+      <p className="mt-1 text-meta text-ink-soft">{note.text}</p>
     </aside>
   );
 }

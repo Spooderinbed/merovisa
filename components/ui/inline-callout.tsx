@@ -9,7 +9,7 @@ const toneStyles: Record<Callout["tone"], string> = {
 
 export function InlineCallout({ callout }: { callout: Callout }) {
   return (
-    <div className={cn("flex flex-col gap-1 rounded-md px-3 py-2 text-[15px] text-ink-soft", toneStyles[callout.tone])}>
+    <div className={cn("flex flex-col gap-1 rounded-md px-3 py-2 text-body text-ink-soft", toneStyles[callout.tone])}>
       <p>{callout.message}</p>
       {callout.actionHref ? (
         <a

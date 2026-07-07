@@ -1,6 +1,17 @@
 # ADR — Type scale (`--text-*`)
 
-**Status:** Proposed · **Date:** 2026-07-03 · **Card:** MV-88 · **Owner:** agent
+**Status:** Applied (faithful interpretation) · **Date:** 2026-07-03 · **Card:** MV-88 (decision) → MV-106 (applied) · **Owner:** agent
+
+> **Applied in MV-106 (2026-07-06).** The scale below shipped verbatim as
+> `@theme` tokens and the 414 `text-[Npx]` sites were migrated. The three
+> open questions were resolved in the *faithful* direction (the "go" for A1):
+> title (20) and headline (21) both kept → 9 steps, not Alternative B; line-height
+> deferred. Two facts surfaced during application that this decision-doc predates:
+> (1) 125 **fractional** sites (86× `11.5`, 36× `12.5`, +3) appeared post-ADR and
+> were de-jittered to their nearest step (0.5px, same role); (2) naming sizes as
+> bare words (`text-body`) collides with `text-<colour>` under tailwind-merge, so
+> `lib/utils.ts` `cn` now registers the scale in the font-size group (guarded).
+> The anchor values remain a one-line `@theme` edit — founder may retune at review.
 **Decision scope:** the app's font-size vocabulary only. Motion v2, primitive
 contracts, and the CSS-first / no-framer-motion call are *separate* decisions and
 are **not** covered here (they remain their own future ADRs). This doc is

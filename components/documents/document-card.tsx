@@ -93,21 +93,21 @@ export function DocumentCard({
         }`}
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[15px] text-ink">{meta.label}</span>
+          <span className="text-body text-ink">{meta.label}</span>
           {doc && (
-            <span className="rounded-pill bg-strong/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-strong">
+            <span className="rounded-pill bg-strong/10 px-2 py-0.5 font-mono text-caption uppercase tracking-wide text-strong">
               Uploaded
             </span>
           )}
         </div>
 
         {doc && (
-          <p className="truncate font-mono text-[12px] text-ink-faint">
+          <p className="truncate font-mono text-small text-ink-faint">
             {doc.originalName} · {fileSize}
           </p>
         )}
 
-        {notification && <p className="text-[13px] text-ink-soft">{notification}</p>}
+        {notification && <p className="text-small text-ink-soft">{notification}</p>}
 
         <div className="mt-1 flex flex-wrap gap-2">
           <input

@@ -55,17 +55,17 @@ export default async function HomePage() {
             Can I get in? What will it really cost? What&apos;s my visa risk? Answer 9 quick questions to see where you
             stand — free, and no sign-up to start.
           </p>
-          <p className="mt-4 max-w-[58ch] text-[15px] text-ink-soft">
+          <p className="mt-4 max-w-[58ch] text-body text-ink-soft">
             Built on official Home Affairs and university data — every figure shows its source and date.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/assess"
-              className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-[15px] text-[17px] font-medium text-on-primary hover:bg-primary-ink"
+              className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink"
             >
               Check your eligibility →
             </Link>
-            <span className="inline-flex items-center gap-2 text-[15px] text-ink-soft">
+            <span className="inline-flex items-center gap-2 text-body text-ink-soft">
               <svg aria-hidden viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-ink-faint">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 7v5l3 2" />

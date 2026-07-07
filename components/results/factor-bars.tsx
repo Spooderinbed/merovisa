@@ -39,7 +39,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
           <>
             <span className="flex items-center justify-between">
               <span className="text-ink">{label}</span>
-              <span className="font-mono text-[12.5px] text-ink-faint">{bandLabel(dim.value)}</span>
+              <span className="font-mono text-small text-ink-faint">{bandLabel(dim.value)}</span>
             </span>
             <span className="h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
               <span
@@ -66,7 +66,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
             {isOpen ? (
               <ul className="flex flex-col gap-2 border-t border-line px-4 py-3">
                 {factors.map((f, i) => (
-                  <li key={i} className="flex flex-col text-[15px]">
+                  <li key={i} className="flex flex-col text-body">
                     <span className={cn("font-medium", INFLUENCE_CLS[f.influence])}>{f.label}</span>
                     <span className="text-ink-soft">{humanizeFactorDetail(f.detail)}</span>
                     {f.source ? <SourceLine url={f.source.url} lastVerified={f.source.lastVerified} surface="factor-bars" /> : null}

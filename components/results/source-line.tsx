@@ -18,7 +18,7 @@ export function SourceLine({
   surface: SourceSurface;
 }) {
   return (
-    <span className="mt-1 inline-flex flex-wrap items-center gap-1.5 font-mono text-[12.5px] text-ink-faint">
+    <span className="mt-1 inline-flex flex-wrap items-center gap-1.5 font-mono text-small text-ink-faint">
       {lastVerified ? `verified ${lastVerified}` : "sourced"}
       <span className="opacity-50">·</span>
       <SourceAnchor surface={surface} href={url} className="text-primary hover:underline">

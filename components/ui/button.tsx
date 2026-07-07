@@ -16,9 +16,9 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: "text-[14px] px-[15px] py-2",
-  md: "text-[16px] px-[22px] py-3",
-  lg: "text-[17px] px-7 py-[15px]",
+  sm: "text-meta px-[15px] py-2",
+  md: "text-control px-[22px] py-3",
+  lg: "text-lead px-7 py-[15px]",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

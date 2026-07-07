@@ -18,15 +18,15 @@ export function CostToApply() {
   const { groups, note } = selectCostToApply();
 
   return (
-    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-[14px] text-ink-soft">
-      <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+    <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-meta text-ink-soft">
+      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
         What it costs to apply (Nepal &rarr; Australia)
       </span>
 
       <div className="flex flex-col gap-3">
         {groups.map((group) => (
           <div key={group.heading} className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+            <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
               {group.heading}
             </span>
             <ul className="flex flex-col gap-1">
@@ -59,7 +59,7 @@ export function CostToApply() {
         ))}
       </div>
 
-      <p className="text-[12.5px] text-ink-faint">{note}</p>
+      <p className="text-small text-ink-faint">{note}</p>
     </Card>
   );
 }

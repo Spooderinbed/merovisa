@@ -19,14 +19,14 @@ export default async function GuidePage() {
       <header className="flex flex-col gap-2">
         <Eyebrow>AI guide</Eyebrow>
         <h1 className="text-[clamp(24px,3vw,32px)]">Ask about your standing</h1>
-        <p className="max-w-[58ch] text-[15px] text-ink-soft">
+        <p className="max-w-[58ch] text-body text-ink-soft">
           The guide explains your assessment using MyVisa&apos;s sourced Nepal → Australia data — with
           sources, in plain language. It won&apos;t decide for you or write your application.
         </p>
       </header>
 
       {!hasAssessment ? (
-        <Card padding="sm" className="text-[14px] text-ink-soft">
+        <Card padding="sm" className="text-meta text-ink-soft">
           You haven&apos;t run an assessment yet, so the guide can only answer general questions about
           applying from Nepal.{" "}
           <Link href="/assess" className="text-primary underline-offset-2 hover:underline">

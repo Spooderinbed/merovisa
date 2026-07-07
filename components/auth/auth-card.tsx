@@ -29,7 +29,7 @@ export function AuthCard({ nextPath }: AuthCardProps) {
           </svg>
         </span>
         <h1 className="text-[clamp(28px,3.4vw,38px)]">Save your result</h1>
-        <p className="max-w-[42ch] text-[17px] text-ink-soft">
+        <p className="max-w-[42ch] text-lead text-ink-soft">
           We&apos;ll keep your verdict and checklist safe so you can pick up where you left off. No spam, no agents
           calling you.
         </p>
@@ -40,7 +40,7 @@ export function AuthCard({ nextPath }: AuthCardProps) {
           Continue with Google
         </Button>
 
-        <p className="inline-flex items-center justify-center gap-2 text-[12.5px] text-ink-faint">
+        <p className="inline-flex items-center justify-center gap-2 text-small text-ink-faint">
           <svg aria-hidden viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -51,13 +51,13 @@ export function AuthCard({ nextPath }: AuthCardProps) {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="mt-2 text-center font-mono text-[12.5px] uppercase tracking-wide text-ink-faint hover:text-ink"
+          className="mt-2 text-center font-mono text-small uppercase tracking-wide text-ink-faint hover:text-ink"
         >
           {open ? "Hide other options" : "Other ways to sign in →"}
         </button>
 
         {open ? (
-          <p role="status" className="mt-2 border-t border-line pt-4 text-[14px] text-ink-soft">
+          <p role="status" className="mt-2 border-t border-line pt-4 text-meta text-ink-soft">
             Email sign-in isn&apos;t ready yet — Google is the only way to sign in for now.
           </p>
         ) : null}

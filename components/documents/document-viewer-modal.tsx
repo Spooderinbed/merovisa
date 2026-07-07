@@ -35,11 +35,11 @@ export function DocumentViewerModal({
     >
       <div className="relative flex max-h-full max-w-[1100px] flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[15px] text-on-primary">{label}</span>
+          <span className="text-body text-on-primary">{label}</span>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-pill bg-surface px-3 py-1 text-[13px] text-ink hover:bg-bg-tint"
+            className="rounded-pill bg-surface px-3 py-1 text-small text-ink hover:bg-bg-tint"
             aria-label="Close"
           >
             Close ✕

@@ -16,7 +16,7 @@ describe("VerdictPill", () => {
   it("renders the md pill string exactly (the census-dominant tier)", () => {
     render(<VerdictPill verdict="strong" />);
     expect(screen.getByText("Strong match").className).toBe(
-      "inline-flex items-center rounded-pill font-mono px-2.5 py-0.5 text-[11.5px] bg-strong-tint text-strong",
+      "inline-flex items-center rounded-pill font-mono px-2.5 py-0.5 text-caption bg-strong-tint text-strong",
     );
   });
 
@@ -34,17 +34,17 @@ describe("VerdictPill", () => {
     const sm = screen.getByText("Reach");
     expect(sm).toHaveClass("px-2");
     expect(sm).toHaveClass("py-0.5");
-    expect(sm).toHaveClass("text-[11px]");
+    expect(sm).toHaveClass("text-caption");
     const lg = screen.getByText("Strong match");
     expect(lg).toHaveClass("px-3");
     expect(lg).toHaveClass("py-1");
-    expect(lg).toHaveClass("text-[12.5px]");
+    expect(lg).toHaveClass("text-small");
   });
 
   it("lets className retune the type size per call site (tailwind-merge: later font-size wins)", () => {
     render(<VerdictPill verdict="reach" size="lg" className="text-[13px]" />);
     const pill = screen.getByText("Reach");
     expect(pill).toHaveClass("text-[13px]");
-    expect(pill).not.toHaveClass("text-[12.5px]");
+    expect(pill).not.toHaveClass("text-small"); // lg's default size is dropped
   });
 });

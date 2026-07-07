@@ -33,7 +33,7 @@ export function MobileTabBar() {
               key={tab.href}
               href={tab.href}
               aria-current={active ? "page" : undefined}
-              className={`flex flex-1 items-center justify-center whitespace-nowrap text-[12px] transition-colors ease-calm ${
+              className={`flex flex-1 items-center justify-center whitespace-nowrap text-small transition-colors ease-calm ${
                 active ? "font-medium text-primary" : "text-ink-soft hover:text-ink"
               }`}
             >

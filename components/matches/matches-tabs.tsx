@@ -79,7 +79,7 @@ export function MatchesTabs({
               data-active={active ? "true" : "false"}
               onClick={() => select(key)}
               onKeyDown={(event) => onTabKeyDown(event, index)}
-              className={`rounded-pill px-4 py-2 text-[14px] ${
+              className={`rounded-pill px-4 py-2 text-meta ${
                 active ? "bg-primary text-on-primary font-medium" : "text-ink-soft hover:bg-bg-tint"
               }`}
             >

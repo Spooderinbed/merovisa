@@ -40,8 +40,8 @@ export function Disclosure({
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors duration-150 ease-calm hover:bg-bg-tint"
       >
         <span className="flex flex-col gap-0.5">
-          <span className="text-[16px] font-medium text-ink">{title}</span>
-          {subtitle ? <span className="text-[13.5px] text-ink-soft">{subtitle}</span> : null}
+          <span className="text-control font-medium text-ink">{title}</span>
+          {subtitle ? <span className="text-small text-ink-soft">{subtitle}</span> : null}
         </span>
         <span className="flex shrink-0 items-center gap-3">
           {trailing}

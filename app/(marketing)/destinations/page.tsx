@@ -9,7 +9,7 @@ export default function DestinationsPage() {
       <h1 className="mt-3 max-w-[700px] text-[clamp(34px,4.4vw,52px)] leading-[1.05]">
         Six countries, done well — depth and freshness over breadth.
       </h1>
-      <p className="mt-4 max-w-[60ch] text-[17px] text-ink-soft">
+      <p className="mt-4 max-w-[60ch] text-lead text-ink-soft">
         Visa rules, real costs, and what you&apos;ll need. Every page shows where the data came from and when we last
         checked.
       </p>

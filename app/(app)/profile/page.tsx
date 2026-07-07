@@ -89,7 +89,7 @@ export default async function ProfilePage() {
     <div className="mx-auto grid w-full max-w-[1120px] grid-cols-1 gap-6 px-5 py-10 lg:grid-cols-[280px_1fr]">
       <header className="flex flex-col gap-2 lg:col-span-2">
         <h1 className="text-[clamp(28px,3.4vw,40px)]">{displayName}</h1>
-        <span className="text-[15px] text-ink-soft">{user.email}</span>
+        <span className="text-body text-ink-soft">{user.email}</span>
       </header>
       <CompletenessRing pct={pct} complete={counts.complete} partial={counts.partial} empty={counts.empty} />
       <div className="flex flex-col gap-3">

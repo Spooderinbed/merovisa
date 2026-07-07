@@ -6,7 +6,7 @@ export function PreferenceNote({ note }: { note: PreferenceNoteData | null | und
 
   if (note.kind === "pr-context") {
     return (
-      <p className="text-[14px] text-ink-soft">
+      <p className="text-meta text-ink-soft">
         {note.before}
         <SourceAnchor
           surface="preference-note"
@@ -21,5 +21,5 @@ export function PreferenceNote({ note }: { note: PreferenceNoteData | null | und
     );
   }
 
-  return <p className="text-[14px] text-ink-soft">{note.text}</p>;
+  return <p className="text-meta text-ink-soft">{note.text}</p>;
 }

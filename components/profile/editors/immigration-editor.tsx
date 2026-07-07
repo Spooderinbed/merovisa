@@ -32,7 +32,7 @@ export function ImmigrationEditor({ initial }: { initial: ImmigrationInitial }) 
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="ie-refusals" className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">Prior visa refusals</label>
+        <label htmlFor="ie-refusals" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Prior visa refusals</label>
         <Select id="ie-refusals" value={refusals} onChange={(e) => setRefusals(e.target.value)}>
           <option value="">Select an option</option>
           {REFUSALS.map((r) => (
@@ -40,7 +40,7 @@ export function ImmigrationEditor({ initial }: { initial: ImmigrationInitial }) 
           ))}
         </Select>
       </div>
-      <label className="flex items-center gap-2 text-[14px] text-ink">
+      <label className="flex items-center gap-2 text-meta text-ink">
         <input type="checkbox" checked={travelled} onChange={(e) => setTravelled(e.target.checked)} />
         Have you travelled abroad before?
       </label>

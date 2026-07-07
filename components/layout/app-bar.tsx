@@ -32,13 +32,13 @@ export function AppBar({ variant, user }: { variant: Variant; user?: User | null
             <Logo />
             <nav className="hidden items-center gap-6 md:flex">
               {NAV_MARKETING.map((i) => (
-                <Link key={i.href} href={i.href} className="text-[15px] text-ink-soft hover:text-ink">{i.label}</Link>
+                <Link key={i.href} href={i.href} className="text-body text-ink-soft hover:text-ink">{i.label}</Link>
               ))}
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/auth" className="hidden rounded-pill px-4 py-2 text-[15px] text-ink-soft hover:bg-bg-tint hover:text-ink md:inline-flex">Sign in</Link>
-            <Link href="/assess" className="inline-flex items-center rounded-pill bg-primary px-[15px] py-2 text-[14px] font-medium text-on-primary hover:bg-primary-ink">Check eligibility</Link>
+            <Link href="/auth" className="hidden rounded-pill px-4 py-2 text-body text-ink-soft hover:bg-bg-tint hover:text-ink md:inline-flex">Sign in</Link>
+            <Link href="/assess" className="inline-flex items-center rounded-pill bg-primary px-[15px] py-2 text-meta font-medium text-on-primary hover:bg-primary-ink">Check eligibility</Link>
           </div>
         </div>
       </header>
@@ -53,12 +53,12 @@ export function AppBar({ variant, user }: { variant: Variant; user?: User | null
             <Logo />
             <nav className="hidden items-center gap-6 md:flex">
               {NAV_MARKETING.map((i) => (
-                <Link key={i.href} href={i.href} className="text-[15px] text-ink-soft hover:text-ink">{i.label}</Link>
+                <Link key={i.href} href={i.href} className="text-body text-ink-soft hover:text-ink">{i.label}</Link>
               ))}
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="hidden rounded-pill bg-primary px-[15px] py-2 text-[14px] font-medium text-on-primary hover:bg-primary-ink md:inline-flex">Open dashboard</Link>
+            <Link href="/dashboard" className="hidden rounded-pill bg-primary px-[15px] py-2 text-meta font-medium text-on-primary hover:bg-primary-ink md:inline-flex">Open dashboard</Link>
             <UserPill user={user!} />
           </div>
         </div>
@@ -74,7 +74,7 @@ export function AppBar({ variant, user }: { variant: Variant; user?: User | null
             <Logo href="/dashboard" />
             <nav className="hidden items-center gap-5 md:flex">
               {NAV_APP.map((i) => (
-                <Link key={i.href} href={i.href} className="text-[15px] text-ink-soft hover:text-ink">{i.label}</Link>
+                <Link key={i.href} href={i.href} className="text-body text-ink-soft hover:text-ink">{i.label}</Link>
               ))}
             </nav>
           </div>

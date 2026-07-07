@@ -45,10 +45,10 @@ export function FieldOfStudyStep({ profile, setField, callouts, eyebrow }: StepP
       {primary ? (
         <div className="mt-8 flex animate-rise flex-col gap-3 border-t border-line pt-6">
           <div className="flex flex-col gap-1">
-            <span className="font-mono text-[11.5px] uppercase tracking-wide text-ink-faint">
+            <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
               Also considering? (optional — up to {ALSO_CONSIDERING_CAP})
             </span>
-            <p className="text-[15px] text-ink-soft">
+            <p className="text-body text-ink-soft">
               Your verdict is based on your main choice. Extra picks just widen the university list we
               show you.
             </p>
@@ -73,8 +73,8 @@ export function FieldOfStudyStep({ profile, setField, callouts, eyebrow }: StepP
             })}
           </div>
           {note ? (
-            <p className="rounded-md border border-line bg-bg-tint px-3 py-2 text-[14px] text-ink-soft">
-              <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">
+            <p className="rounded-md border border-line bg-bg-tint px-3 py-2 text-meta text-ink-soft">
+              <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
                 Good to know
               </span>
               <br />

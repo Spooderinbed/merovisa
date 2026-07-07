@@ -64,11 +64,11 @@ export function DocumentStatusToggle({
         onChange={toggle}
         className="h-4 w-4 shrink-0 accent-primary disabled:opacity-50"
       />
-      <span className="text-[15px] text-ink">{label}</span>
+      <span className="text-body text-ink">{label}</span>
       {obtained ? (
-        <span className="ml-auto text-[12.5px] text-primary">Obtained</span>
+        <span className="ml-auto text-small text-primary">Obtained</span>
       ) : (
-        <span className="ml-auto text-[12.5px] text-ink-faint">Not yet</span>
+        <span className="ml-auto text-small text-ink-faint">Not yet</span>
       )}
     </Card>
   );

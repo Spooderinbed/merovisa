@@ -62,13 +62,13 @@ export function VerdictCard({
           rather than show the calm "verified {date}" line — a stale verdict must
           never read as current. */}
       {rulesStale ? (
-        <p className="mt-3 rounded-lg bg-possible-tint px-3 py-2 font-mono text-[12.5px] text-possible-ink">
+        <p className="mt-3 rounded-lg bg-possible-tint px-3 py-2 font-mono text-small text-possible-ink">
           Some scoring rules are overdue for re-verification
           {rulesVerified ? ` (last verified ${rulesVerified})` : ""} — treat this verdict as
           indicative, not current.
         </p>
       ) : rulesVerified ? (
-        <p className="mt-3 font-mono text-[12.5px] text-ink-faint">
+        <p className="mt-3 font-mono text-small text-ink-faint">
           Assessment rules verified {rulesVerified}
         </p>
       ) : null}

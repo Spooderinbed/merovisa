@@ -67,7 +67,7 @@ export function useSectionSave(section: SectionKey) {
 
 export function SaveFeedback({ status }: { status: SaveStatus }) {
   return (
-    <span role="status" className="text-[14px]">
+    <span role="status" className="text-meta">
       {status === "saved" ? <span className="animate-fade text-strong">Saved</span> : null}
       {status === "error" ? <span className="text-reach">Couldn&apos;t save — try again.</span> : null}
     </span>
