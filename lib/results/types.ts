@@ -2,6 +2,7 @@ import type { AssessmentResult } from "@/lib/scoring/types";
 import type { MatchResult, PreferenceNote } from "@/lib/matches/types";
 import type { IntakeTiming } from "@/lib/timing/intake";
 import type { FieldCompetitivenessNote } from "@/lib/scoring/field-note";
+import type { GoalTradeoffNote } from "@/lib/goals/conflicts";
 import type { SecondaryVerdicts } from "./secondary-verdicts";
 import type { ProfileAccuracy } from "./accuracy";
 
@@ -19,6 +20,12 @@ export interface AssessmentPayload {
   preferenceNote?: PreferenceNote | null;
   /** Honest context when an "also considering" field's admission bar differs materially from the primary the verdict was scored on (MV-101). Never changes the score. Absent on legacy stored payloads. */
   competitivenessNote?: FieldCompetitivenessNote | null;
+  /**
+   * Honest note when the primary goal and a secondary goal pull in different
+   * directions (lib/goals/conflicts.ts). Score-inert and order-inert — display
+   * only. Absent/null when nothing tensions.
+   */
+  goalTradeoffNote?: GoalTradeoffNote | null;
   /** Banded verdicts for each "also considering" field, re-scored server-side (Option C / MV-102).
    *  Null when no extras or on legacy stored payloads. Never affects the primary verdict. */
   secondaryVerdicts?: SecondaryVerdicts | null;

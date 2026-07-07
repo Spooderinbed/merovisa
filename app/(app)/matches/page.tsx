@@ -18,6 +18,8 @@ import { CostToApply } from "@/components/results/cost-to-apply";
 import { CostEstimatePanel } from "@/components/matches/cost-estimate-panel";
 import { ScholarshipsPanel } from "@/components/matches/scholarships-panel";
 import { PreferenceNote } from "@/components/matches/preference-note";
+import { GoalTradeoffNote } from "@/components/matches/goal-tradeoff-note";
+import { goalTradeoffNote } from "@/lib/goals/conflicts";
 import { PromptCard } from "@/components/dashboard/prompt-card";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
@@ -59,6 +61,10 @@ export default async function MatchesPage() {
         signedInPreferenceAdapter,
         new Date(),
       );
+      const goalNote = goalTradeoffNote(
+        sections.career?.goal ?? null,
+        sections.career?.secondaryGoals,
+      );
       const statusById = new Map<string, Status>(shortlist.map((s) => [s.programId, s.status]));
       const strong = matches.filter((m) => m.verdict === "strong");
       const possible = matches.filter((m) => m.verdict === "possible");
@@ -66,6 +72,7 @@ export default async function MatchesPage() {
       return (
         <div className="flex flex-col gap-6">
           <PreferenceNote note={preferenceNote} />
+          <GoalTradeoffNote note={goalNote} />
           <VerdictGroup verdict="strong" matches={strong} statusById={statusById} />
           <VerdictGroup verdict="possible" matches={possible} statusById={statusById} />
           {/* Reach = the stretch schools; collapse them by default so the page opens on

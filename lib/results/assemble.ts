@@ -7,6 +7,7 @@ import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/prefer
 import { attachNepalEvidence } from "@/lib/matches/evidence";
 import { computeIntakeTiming } from "@/lib/timing/intake";
 import { competitivenessNote } from "@/lib/scoring/field-note";
+import { goalTradeoffNote } from "@/lib/goals/conflicts";
 import { computeSecondaryVerdicts } from "./secondary-verdicts";
 import { computeProfileAccuracy } from "./accuracy";
 import { AUSTRALIA } from "@/lib/data/destination/australia";
@@ -60,6 +61,10 @@ export function assembleAssessment(
     // results page can show it near the verdict. The verdict itself stays scored on the
     // primary field alone (competitivenessNote never touches the score).
     competitivenessNote: competitivenessNote(scored.fieldOfStudy, scored.alsoConsidering),
+    // Honest note when the primary goal and a secondary goal pull in different
+    // directions. Derived purely from the two goal selections — never touches the
+    // verdict above or the match ordering computed via applyPreference.
+    goalTradeoffNote: goalTradeoffNote(scored.goal, scored.secondaryGoals),
     // Real banded verdicts for each also-considering field (Option C / MV-102). The
     // primary verdict above is passed in and never recomputed; null when no extras.
     secondaryVerdicts: computeSecondaryVerdicts(scored, result),

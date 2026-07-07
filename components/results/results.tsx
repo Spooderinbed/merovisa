@@ -16,6 +16,7 @@ import { GenuineStudent } from "./genuine-student";
 import { WorkingWithAgents } from "./working-with-agents";
 import { IntakeTimingCard } from "./intake-timing";
 import { PreferenceNote } from "@/components/matches/preference-note";
+import { GoalTradeoffNote } from "@/components/matches/goal-tradeoff-note";
 import { UniversityMatches } from "./university-matches";
 import { GatedTeasers } from "./gated-teasers";
 import { AccuracyMeter } from "./accuracy-meter";
@@ -89,6 +90,7 @@ export function Results({
           by a wall of reference cards. No content is removed — it is all trust-defense. */}
       <IntakeTimingCard intake={payload.intake} />
       <PreferenceNote note={payload.preferenceNote} />
+      <GoalTradeoffNote note={payload.goalTradeoffNote} />
       <UniversityMatches
         matches={payload.matches}
         total={payload.matchedCount}
