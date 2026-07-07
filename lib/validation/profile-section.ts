@@ -11,6 +11,7 @@ import {
 } from "@/lib/scoring/types";
 import { normalizeAcademicPatch } from "@/lib/profiles/normalize-academic";
 import { ALSO_CONSIDERING_CAP } from "@/lib/wizard/also-considering";
+import { SECONDARY_GOALS_CAP } from "@/lib/wizard/secondary-goals";
 
 const PersonalPatch = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -95,10 +96,27 @@ const FamilyPatch = z.object({
   situation: z.enum(["alone","spouse","spouse-and-kids","other"]).optional(),
   children: z.number().int().min(0).max(10).optional(),
 });
-const CareerPatch = z.object({
-  goal: z.enum(GOALS).optional(),
-  targetRole: z.string().min(1).max(120).optional(),
-});
+const CareerPatch = z
+  .object({
+    goal: z.enum(GOALS).optional(),
+    secondaryGoals: z.array(z.enum(GOALS)).max(SECONDARY_GOALS_CAP).optional(),
+    targetRole: z.string().min(1).max(120).optional(),
+  })
+  .refine(
+    (data) => {
+      const secondaries = data.secondaryGoals;
+      if (!secondaries || secondaries.length === 0) return true;
+      // Carry no duplicates; and when the primary goal is set in the same patch,
+      // stay disjoint from it. (Disjointness can only be checked when `goal` is present.)
+      if (new Set(secondaries).size !== secondaries.length) return false;
+      if (data.goal && secondaries.includes(data.goal)) return false;
+      return true;
+    },
+    {
+      message: "secondaryGoals must exclude the primary goal and contain no duplicates",
+      path: ["secondaryGoals"],
+    },
+  );
 const ScholarshipsPatch = z.object({
   profile: z.array(z.string().min(1).max(80)).max(8).optional(),
 });

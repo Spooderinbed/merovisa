@@ -126,6 +126,16 @@ export interface StudentProfile {
   fundingSource: FundingSource;
   goal: Goal;
   /**
+   * Extra goals the student is also aiming for, beyond their primary `goal`
+   * (max 2, disjoint from the primary). Purely additive and lightly INERT in
+   * Layer A: the verdict and every scoring rule read ONLY the primary signals —
+   * `goal` itself never moves a score, and these secondaries move nothing either
+   * (see tests/scoring/secondary-goals-inert.test.ts). They are captured + echoed
+   * in the recap so a later matches layer can use them; they do NOT combine into a
+   * new verdict or re-rank matches today. Omitted/undefined = the primary goal alone.
+   */
+  secondaryGoals?: Goal[];
+  /**
    * Family the applicant intends to bring. Omitted/undefined = applying alone.
    * Raises the DHA Subclass 500 financial-capacity floor (partner + each child)
    * in the Australia financial gate — see lib/scoring/financial.ts.

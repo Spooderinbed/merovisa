@@ -61,4 +61,23 @@ describe("profileSectionsFromAssessment", () => {
     const out = profileSectionsFromAssessment({}, {});
     expect(out).toEqual({});
   });
+
+  // MV-105 Layer A — non-empty secondaryGoals ride into the career section.
+  it("maps non-empty secondaryGoals into the career section", () => {
+    const out = profileSectionsFromAssessment(
+      { ...wizardProfile, secondaryGoals: ["lowest-cost", "highest-ranked"] },
+      {},
+    );
+    expect(out.career?.goal).toBe("permanent-residency");
+    expect(out.career?.secondaryGoals).toEqual(["lowest-cost", "highest-ranked"]);
+  });
+
+  it("omits secondaryGoals from the career section when empty or absent", () => {
+    const empty = profileSectionsFromAssessment({ ...wizardProfile, secondaryGoals: [] }, {});
+    expect(empty.career?.goal).toBe("permanent-residency");
+    expect(empty.career?.secondaryGoals).toBeUndefined();
+
+    const absent = profileSectionsFromAssessment(wizardProfile, {});
+    expect(absent.career?.secondaryGoals).toBeUndefined();
+  });
 });

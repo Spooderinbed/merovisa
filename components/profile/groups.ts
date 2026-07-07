@@ -66,7 +66,7 @@ function summarize(key: SectionKey, sections: ProfileSections): string {
     case "finance":       return [humanize(s.source as string), s.proofUploaded ? "" : "proof not uploaded"].filter(Boolean).join(" · ");
     case "immigration":   return [s.refusals ? `${humanize(s.refusals as string)} refusal${s.refusals !== "one" ? "s" : ""}` : "", s.travelled === undefined ? "travel history unknown" : ""].filter(Boolean).join(" · ");
     case "family":        return humanize(s.situation as string);
-    case "career":        return [humanize(s.goal as string), s.targetRole as string].filter(Boolean).join(" · ");
+    case "career":        return [humanize(s.goal as string), ...((s.secondaryGoals as string[] | undefined) ?? []).map(humanize), s.targetRole as string].filter(Boolean).join(" · ");
     case "scholarships":  return ((s.profile as string[] | undefined) ?? []).join(", ");
     case "deal-breakers": return ((s.mustHaves as string[] | undefined) ?? []).join(", ");
   }

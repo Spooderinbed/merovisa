@@ -120,6 +120,50 @@ describe("StudyCareerEditor", () => {
     expect(body.patch.alsoConsidering).toEqual([]);
   });
 
+  // MV-105 Layer A — the career patch mirrors the alsoConsidering trick: ALWAYS send
+  // secondaryGoals (an empty array when none) so the shallow-merge in repo.ts clears
+  // dropped extras rather than leaving stale secondary context persisted forever.
+  it("renders existing secondary goals as selected", () => {
+    render(
+      <StudyCareerEditor
+        initial={{ career: { goal: "permanent-residency", secondaryGoals: ["lowest-cost"] } }}
+      />,
+    );
+    expect(screen.getByRole("checkbox", { name: /Lowest cost/i })).toBeChecked();
+  });
+
+  it("clears secondary goals on save when the last one is removed (empty array persisted)", async () => {
+    const fetchMock = okFetch();
+    render(
+      <StudyCareerEditor
+        initial={{ career: { goal: "permanent-residency", secondaryGoals: ["lowest-cost"] } }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("checkbox", { name: /Lowest cost/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Save/i }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [body] = bodies(fetchMock);
+    expect(body.section).toBe("career");
+    expect(body.patch.secondaryGoals).toEqual([]);
+  });
+
+  it("drops the new primary goal from the secondaries when the primary changes", async () => {
+    const fetchMock = okFetch();
+    render(
+      <StudyCareerEditor
+        initial={{ career: { goal: "permanent-residency", secondaryGoals: ["lowest-cost", "highest-ranked"] } }}
+      />,
+    );
+    // Change the primary career goal to one that is currently a secondary — it must be
+    // reconciled out of the secondaries in the saved patch.
+    await userEvent.selectOptions(screen.getByLabelText(/Career goal/i), "lowest-cost");
+    await userEvent.click(screen.getByRole("button", { name: /Save/i }));
+    const [body] = bodies(fetchMock);
+    expect(body.section).toBe("career");
+    expect(body.patch.goal).toBe("lowest-cost");
+    expect(body.patch.secondaryGoals).toEqual(["highest-ranked"]);
+  });
+
   it("shows an error notice on non-200", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("err", { status: 422 }));
     render(<StudyCareerEditor initial={{}} />);

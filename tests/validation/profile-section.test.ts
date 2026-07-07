@@ -113,6 +113,33 @@ describe("IntendedStudyPatch — alsoConsidering disjoint/dedup (MV-102)", () =>
   });
 });
 
+describe("CareerPatch — secondaryGoals disjoint/dedup (MV-105)", () => {
+  const parse = (patch: unknown) =>
+    ProfileSectionPatchBodySchema.safeParse({ section: "career", patch }).success;
+
+  it("accepts a valid secondaryGoals list alongside the primary goal", () => {
+    expect(parse({ goal: "permanent-residency", secondaryGoals: ["lowest-cost", "highest-ranked"] })).toBe(
+      true,
+    );
+  });
+
+  it("rejects a secondaryGoals list that contains the primary goal (when goal is in the same patch)", () => {
+    expect(parse({ goal: "permanent-residency", secondaryGoals: ["permanent-residency"] })).toBe(false);
+  });
+
+  it("rejects a duplicate in the secondaryGoals list", () => {
+    expect(parse({ secondaryGoals: ["lowest-cost", "lowest-cost"] })).toBe(false);
+  });
+
+  it("accepts a secondaryGoals-only patch (no goal present to check disjointness against)", () => {
+    expect(parse({ secondaryGoals: ["lowest-cost", "highest-ranked"] })).toBe(true);
+  });
+
+  it("rejects more than two secondaryGoals", () => {
+    expect(parse({ secondaryGoals: ["lowest-cost", "highest-ranked", "fastest-admission"] })).toBe(false);
+  });
+});
+
 describe("FamilyPatch — child count", () => {
   it("preserves an in-range child count through the envelope (not stripped)", () => {
     const r = ProfileSectionPatchBodySchema.safeParse({

@@ -46,6 +46,9 @@ export function recapLines(p: StudentProfile): string[] {
         : `${formatUsd(p.budget)}/yr`;
   lines.push([DESTINATION_LABELS[p.destination], budget, FUNDING_LABELS[p.fundingSource]].join(" · "));
   lines.push(`Priority: ${GOAL_LABELS[p.goal]}`);
+  if (p.secondaryGoals && p.secondaryGoals.length > 0) {
+    lines.push(`Also aiming for: ${p.secondaryGoals.map((g) => GOAL_LABELS[g]).join(", ")}`);
+  }
   return lines;
 }
 
