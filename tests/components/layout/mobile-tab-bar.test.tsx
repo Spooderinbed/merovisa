@@ -51,4 +51,39 @@ describe("MobileTabBar", () => {
     expect(bar.className).toContain("bottom-0");
     expect(bar.className).toContain("pb-[env(safe-area-inset-bottom)]");
   });
+
+  it("times the active-tab transition with the calm duration token", () => {
+    usePathname.mockReturnValue("/matches");
+    render(<MobileTabBar />);
+    const active = screen.getByRole("link", { name: /^Matches$/i });
+    expect(active.className).toContain("duration-fast");
+  });
+
+  it("renders an always-present accent bar that fades in on the active tab", () => {
+    usePathname.mockReturnValue("/matches");
+    render(<MobileTabBar />);
+    const active = screen.getByRole("link", { name: /^Matches$/i });
+    const inactive = screen.getByRole("link", { name: /^Home$/i });
+
+    const activeBar = active.querySelector("[aria-hidden]");
+    const inactiveBar = inactive.querySelector("[aria-hidden]");
+
+    expect(activeBar).not.toBeNull();
+    expect(inactiveBar).not.toBeNull();
+    expect(activeBar?.className).toContain("opacity-100");
+    expect(inactiveBar?.className).toContain("opacity-0");
+    // Flat plum bar, always mounted (opacity-toggled, not conditionally rendered).
+    expect(activeBar?.className).toContain("bg-primary");
+    expect(activeBar?.className).toContain("h-0.5");
+    expect(activeBar?.className).toContain("transition-opacity");
+  });
+
+  it("keeps the calm-motion ratchets on the active-tab markup", () => {
+    usePathname.mockReturnValue("/matches");
+    render(<MobileTabBar />);
+    const active = screen.getByRole("link", { name: /^Matches$/i });
+    expect(active.className).not.toMatch(/transition-all/);
+    expect(active.className).not.toMatch(/animate-(bounce|ping|pulse)/);
+    expect(active.className).not.toMatch(/duration-\d/);
+  });
 });
