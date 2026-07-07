@@ -33,10 +33,16 @@ export function MobileTabBar() {
               key={tab.href}
               href={tab.href}
               aria-current={active ? "page" : undefined}
-              className={`flex flex-1 items-center justify-center whitespace-nowrap text-small transition-colors ease-calm ${
+              className={`relative flex flex-1 items-center justify-center whitespace-nowrap text-small transition-colors duration-fast ease-calm ${
                 active ? "font-medium text-primary" : "text-ink-soft hover:text-ink"
               }`}
             >
+              <span
+                aria-hidden
+                className={`pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-primary transition-opacity duration-fast ease-calm ${
+                  active ? "opacity-100" : "opacity-0"
+                }`}
+              />
               {tab.label}
             </Link>
           );
