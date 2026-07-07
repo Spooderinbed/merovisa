@@ -17,6 +17,11 @@ describe("goalTradeoffNote — honest, inert goal trade-off note", () => {
     expect(goalTradeoffNote("research", ["best-employment"])).toBeNull();
   });
 
+  it("returns null when the primary is in a pair but its partner isn't selected", () => {
+    // permanent-residency tensions only with highest-ranked; lowest-cost is not its partner.
+    expect(goalTradeoffNote("permanent-residency", ["lowest-cost"])).toBeNull();
+  });
+
   it("fires for permanent-residency (primary) + highest-ranked (secondary)", () => {
     const note = goalTradeoffNote("permanent-residency", ["highest-ranked"]);
     expect(note).not.toBeNull();
