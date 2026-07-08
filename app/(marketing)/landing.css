@@ -100,7 +100,7 @@
 .mv-landing .t-reach{color:var(--reach);background-color:color-mix(in srgb,var(--reach) 13%,transparent)}
 .mv-landing .chev{color:var(--ink-faint);font-size:16px;transition:transform .3s var(--ease);line-height:1}
 .mv-landing details[open] > .step-head .chev,.mv-landing details[open] > .frow .fchev,.mv-landing .dim.open .chev{transform:rotate(90deg)}
-.mv-landing .bar{height:6px;border-radius:999px;background-color:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden;margin-bottom:2px}
+.mv-landing .bar{display:block;height:6px;border-radius:999px;background-color:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden;margin-bottom:2px}
 .mv-landing .fill{display:block;height:100%;border-radius:999px;transition:width .6s var(--ease),background .4s var(--ease)}
 .mv-landing .f-strong{background-color:var(--strong)} .mv-landing .f-possible{background-color:var(--possible)} .mv-landing .f-reach{background-color:var(--reach)}
 .mv-landing .dim-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease)}
@@ -255,9 +255,11 @@
 @keyframes cta-float{to{rotate:360deg}}
 @media (prefers-reduced-motion:reduce){.mv-landing .sparkle-cta .spark,.mv-landing .sparkle-cta .spark:before,.mv-landing .sparkle-cta .particle,.mv-landing .sparkle-cta .sparkle path{animation:none}.mv-landing .sparkle-cta .particle-pen{display:none}}
 
-/* scroll reveals - hidden state only after JS sets .hidden (never hides no-JS content) */
+/* scroll reveals - pre-reveal state only after JS sets .off (never hides no-JS content).
+   NOTE: the class is .off, not .hidden - .hidden collides with Tailwind's
+   display:none utility, which defeats IntersectionObserver (element unobservable). */
 @media (prefers-reduced-motion:no-preference){
-  .mv-landing .mv-reveal.hidden{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+  .mv-landing .mv-reveal.off{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
   .mv-landing .mv-reveal.in{opacity:1;transform:none;transition:opacity .7s var(--ease),transform .7s var(--ease)}
 }
 

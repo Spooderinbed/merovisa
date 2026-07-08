@@ -2,7 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-type Phase = "rest" | "hidden" | "in";
+// "off" is the post-mount pre-reveal state. It must NOT be named "hidden":
+// that collides with Tailwind's global `.hidden{display:none}` utility, which
+// would remove the element from layout and make it unobservable by
+// IntersectionObserver (so it could never reveal). See landing.css `.mv-reveal.off`.
+type Phase = "rest" | "off" | "in";
 
 /** Shared scroll-reveal wrapper (spec §8). Server/first paint = visible ("rest").
  *  Only after mount, and only when motion is allowed + IO exists, does it hide
@@ -17,7 +21,7 @@ export function Reveal({ children, className }: { children: React.ReactNode; cla
     // One-time, client-only seed of the hide->reveal animation. SSR/first paint
     // stays "rest" (visible) for hydration parity; this cannot run during render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPhase("hidden");
+    setPhase("off");
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
