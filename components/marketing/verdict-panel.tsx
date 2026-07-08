@@ -7,12 +7,17 @@ import { SAMPLE_PROFILES, getProfile, formatCost, type SampleProfile } from "@/l
 const DEFAULT_ID: SampleProfile["id"] = "aarav";
 
 export function VerdictPanel() {
+  // selectedId drives the toggle pill; it updates INSTANTLY on click so the button
+  // gives immediate tactile feedback. activeId drives the panel content, which swaps
+  // after a short crossfade. Splitting them stops the pill lagging 150ms behind the tap.
+  const [selectedId, setSelectedId] = useState<SampleProfile["id"]>(DEFAULT_ID);
   const [activeId, setActiveId] = useState<SampleProfile["id"]>(DEFAULT_ID);
   const [displayCost, setDisplayCost] = useState<number>(getProfile(DEFAULT_ID).cost);
   const [swapping, setSwapping] = useState(false);
   const [openDims, setOpenDims] = useState<Set<string>>(() => new Set());
   const reduceRef = useRef(false);
   const rafRef = useRef<number | null>(null);
+  const swapRef = useRef<number | null>(null);
   const profile = getProfile(activeId);
 
   function toggleDim(key: string) {
@@ -26,7 +31,10 @@ export function VerdictPanel() {
 
   useEffect(() => {
     reduceRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (swapRef.current) clearTimeout(swapRef.current);
+    };
   }, []);
 
   function countTo(target: number, from: number) {
@@ -45,12 +53,14 @@ export function VerdictPanel() {
   }
 
   function select(id: SampleProfile["id"]) {
-    if (id === activeId) return;
+    if (id === selectedId) return;
+    setSelectedId(id); // instant pill highlight, never waiting on the content crossfade
     const next = getProfile(id);
     const from = displayCost;
     if (reduceRef.current) { setActiveId(id); setDisplayCost(next.cost); return; }
     setSwapping(true);
-    window.setTimeout(() => {
+    if (swapRef.current) clearTimeout(swapRef.current);
+    swapRef.current = window.setTimeout(() => {
       setActiveId(id);
       setSwapping(false);
       countTo(next.cost, from);
@@ -73,12 +83,12 @@ export function VerdictPanel() {
           <span className="toggle-lbl">Sample profile</span>
           <div className="toggle" role="radiogroup" aria-label="Sample profile">
             {SAMPLE_PROFILES.map((p) => (
-              <label key={p.id} className={cn("toggle-opt", activeId === p.id && "on")}>
+              <label key={p.id} className={cn("toggle-opt", selectedId === p.id && "on")}>
                 <input
                   type="radio"
                   name="mv-profile"
                   className="vh"
-                  checked={activeId === p.id}
+                  checked={selectedId === p.id}
                   onChange={() => select(p.id)}
                 />
                 <span>{p.label}</span>

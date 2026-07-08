@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, act } from "@testing-library/react";
 import { VerdictPanel } from "@/components/marketing/verdict-panel";
 
 function reduceMotion() {
@@ -49,6 +49,32 @@ describe("VerdictPanel", () => {
   it("the 'See full breakdown' affordance is a real link to /assess", () => {
     render(<VerdictPanel />);
     expect(screen.getByRole("link", { name: /See full breakdown/i })).toHaveAttribute("href", "/assess");
+  });
+
+  it("clicking a profile flips the toggle pill instantly, before the content crossfades (no 150ms lag)", () => {
+    // Regression guard for the shipped lag: selecting a profile used to delay
+    // `activeId`, which drove BOTH the pill highlight and the content, so the pill
+    // sat unresponsive for 150ms. The pill must react on the tick of the click;
+    // only the panel content waits for the crossfade.
+    vi.useFakeTimers();
+    try {
+      render(<VerdictPanel />);
+      const shruti = screen.getByRole("radio", { name: /Shruti · GPA 3.8/i });
+      const aarav = screen.getByRole("radio", { name: /Aarav · GPA 3.2/i });
+      fireEvent.click(shruti);
+      // Pill reacts immediately — no timer advanced yet.
+      expect(shruti).toBeChecked();
+      expect(aarav).not.toBeChecked();
+      expect(shruti.closest(".toggle-opt")).toHaveClass("on");
+      expect(aarav.closest(".toggle-opt")).not.toHaveClass("on");
+      // …while the panel content is still showing the previous verdict mid-crossfade.
+      expect(within(screen.getByRole("status")).getByText("Possible")).toBeInTheDocument();
+      // After the crossfade window, the content catches up to the selected profile.
+      act(() => { vi.advanceTimersByTime(160); });
+      expect(within(screen.getByRole("status")).getByText("Strong")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("exposes a native radio group; toggling to Shruti yields Strong (reduced motion)", () => {
