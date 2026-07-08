@@ -1454,10 +1454,10 @@
     },
     {
       "id": "MV-112",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "In Progress on branch mv-112-landing-redesign (off origin/master; FOUNDER-GATED merge). Spec founder-locked (\"looks good to me\") + Codex xhigh reviewed twice, all fixes folded (spec 2f4c150). Next: writing-plans -> subagent-driven TDD build.",
+      "badge": "In Review. All 20 TDD tasks shipped on branch mv-112-landing-redesign via subagent-driven-development. Gate green: typecheck clean, lint 0 errors, 1890 tests pass. Page preview-verified live (0 hydration errors across 8 islands, filled rest state, freshness figures + Jun 2026 at rest, CTAs -> /assess). Final adversarial whole-impl review = SHIP-WITH-NITS: all 11 locked invariants hold; finding-1 (em-dashes in landing.css comments) fixed 626b59b + copy guard extended to landing.css; 2 cosmetic nits documented (unmount timer cleanup, 150ms re-click race). PR #73 open, FOUNDER-GATED merge to master (auto-deploys prod).",
       "file": "cards/MV-112.md",
       "title": "Landing page redesign — v7 Cursor cadence",
       "summary": "Rebuild the signed-out marketing landing (app/(marketing)/page.tsx) in the premium v7 'Cursor cadence' style: confident hero + alternating product sections each anchored by ONE real interactive artifact (live verdict panel -> plan-step accordion -> documents checklist -> autoplay guide typewriter -> freshness verify-sweep table -> sparkle close). New client islands components/marketing/* (verdict-panel, plan-steps, documents-checklist, guide-thread, freshness-table, sparkle-cta, reveal, hero-marker) + typed data lib/marketing/* (sample-profiles, plan-steps, checklist-items, guide-answers, freshness-rows); delete superseded hero-preview/how-it-works/tile/trust-callout + drop TrustStrip from the page. LOCKED invariants: server-rendered FILLED rest state (not the reference's JS-builds-empty), hydration parity (no matchMedia/IO/rAF/Math.random in render), honesty split (sample cost = no verified citation; kind:'sample'|'sourced'; freshness provenance visible at rest), Genuine Student (GS) terminology, no href=# (CTAs -> /assess, Sign in -> /auth), preserve getUser()->/dashboard redirect, no em-dashes, both themes, 1160px. Presentational only (no scoring/API/DB/Zod). Spec: docs/superpowers/specs/2026-07-08-landing-redesign-design.md. Reference: docs/superpowers/specs/assets/2026-07-08-landing-v7-reference.html. Dossier: cards/MV-112.md.",
