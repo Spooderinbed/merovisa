@@ -1,7 +1,7 @@
 # Landing redesign — v7 "Cursor cadence on our own skin"
 
 **Date:** 2026-07-08
-**Status:** Design spec — founder-locked ("yes go", 2026-07-08). Awaiting founder review of this written spec before an implementation plan is written.
+**Status:** Design spec — founder-locked ("yes go", 2026-07-08). Codex (GPT-5.5, xhigh) adversarially reviewed 2026-07-08 → **BUILDABLE-WITH-FIXES**; all 6 blockers + 5 should-fixes folded in (changelog §14). Awaiting founder review of this written spec before an implementation plan is written.
 **Slice:** MV-112 · branch `mv-112-landing-redesign` off `origin/master` (merge founder-gated).
 **Surface:** `app/(marketing)/page.tsx` + `components/marketing/*` (the signed-out home page).
 **Design source of truth (exact markup / CSS / copy):**
@@ -36,19 +36,29 @@ provenance**. Each section shows the actual thing, working, with sourced numbers
    founder-approved flourishes** (§4) and the faint paper grain (§4.3), which are material texture,
    not depth.
 3. **Honesty invariant.** Every *factual figure* carries a visible `source · verified <month>`.
-   Sample-student numbers are labelled as sample, never as claims (§6). No fabricated stats, no
-   vanity metrics ("10,000 students"), ever.
+   Sample-student numbers are labelled as sample and **never carry a sourced `verified` citation**
+   (a sample estimate must not read as a real-world claim — §6). No fabricated stats, no vanity
+   metrics ("10,000 students"), ever.
 4. **Max width 1160px** (`--maxw`), 26px gutters.
 5. **Single scroll.** `overflow-x: clip` on the page root; wide content never induces a horizontal
    scrollbar.
 6. **Reduced-motion is a real path, not an afterthought.** Every animation is gated behind
-   `prefers-reduced-motion: no-preference`; every interactive island renders a complete, correct
-   **rest state** with reduced motion and with no JS at all.
+   `prefers-reduced-motion: no-preference`; every interactive island renders a complete, correct,
+   **server-rendered rest state** — filled dimension details, set fill widths, first guide exchange,
+   verified provenance — with reduced motion and with no JS at all. The reference builds this DOM in
+   JS from an empty container; our build inverts that (server-render filled, JS only enhances — §7).
+   Where the reference's JS-builds-empty pattern conflicts with this, the invariant wins.
 7. **No em-dashes in landing copy.** (Middots `·` and commas only.)
 8. **Both themes** carried by tokens with equal care; dark mode uses `background-color`, never the
    `background` shorthand (custom-property re-resolution bug).
 9. **Imageless product body.** No photography anywhere on this page (marketing *may* use it; this
    page deliberately does not — restraint is the anti-AI-look defence).
+10. **Signed-in redirect preserved.** The server shell keeps the existing Supabase `getUser()`
+    guard that `redirect("/dashboard")`s authenticated users *before* rendering any landing markup
+    (current `page.tsx:36–39`). The visual rebuild must not regress signed-in users back onto the
+    marketing page.
+11. **No dead links.** Every link and CTA resolves to a real route (§3a); no `href="#"`, no
+    decorative non-navigating CTA. The reference's placeholder `#` hrefs are mock-only.
 
 ## 3. The Cursor-cadence structure (top to bottom)
 
@@ -81,7 +91,37 @@ The reference is the canonical order. Sections:
 Section rhythm: `.psec` sections open with a hairline top rule and 88px top padding; splits are
 `minmax(340px,.9fr) minmax(560px,1.25fr)` with 72px gap, collapsing to one column under 860px.
 
-## 4. The two approved flourishes + the grain
+### 3a. Link & navigation map (no placeholder hrefs — invariant 11)
+
+The reference uses `href="#"` throughout; production must use real targets:
+- Header brand → `/`; "Sign in" → `/auth` (matches the app chrome, `components/layout/app-bar.tsx:40`).
+- Header nav "How it works" → in-page anchor `#how`; "What you get" → `#what` (ids on the plan +
+  documents sections). These are the only in-page anchors.
+- Hero primary CTA "Check your eligibility →" → `/assess`.
+- Section soft links ("See a sample plan →", "See the checklist →", "Meet the guide →") → `/assess`
+  (they funnel into the same assessment, not separate pages).
+- Closing **sparkle CTA** → `/assess`, as a real navigation (an `<a>`/`Link` styled as the sparkle
+  button, or a button that pushes the route) — never a non-navigating button.
+- Footer is text only (no links required).
+
+A test asserts no rendered `href="#"` and that both eligibility CTAs point at `/assess`.
+
+### 3b. Responsive contract
+
+The reference holds the exact mobile rules; they are in scope and must be ported, not dropped:
+panel body / dimension layout, the split's collapse, the proof strip stacking, the freshness row
+grid reflow, nav-text hiding (all except "Sign in") under 860px, and reduced section padding on
+small screens (reference ~lines 413–430). Breakpoint of record: **860px** for split collapse + nav
+hide. Where a mobile pixel is unstated here, the reference wins (§1 precedence).
+
+## 4. Interactive artifacts and the approved flourishes
+
+§4.1–4.3 are the three approved departures from flat (two flourishes + the paper grain); §4.4–4.8
+specify the five live artifacts the sections are built around. Each artifact spec below fixes its
+**server-rendered rest state, its enhancement, its reduced-motion / no-JS behaviour, its a11y, and
+its acceptance test** — the reference holds the exact markup and CSS, this spec holds the contract.
+
+### The three approved departures from flat
 
 These are the *only* departures from flat, each founder-approved during mockup iteration. They must
 be ported faithfully and must degrade to calm static states under reduced motion.
@@ -112,7 +152,11 @@ scoped under `.sparkle-cta` so its bare `button{}`/`svg{}` resets never leak. Ke
 - **Edge shimmer is in-view-gated:** an IntersectionObserver adds `.live` only while the button is
   on screen (`cta-flip` + `cta-rotate` run only under `.live`), so scrolling never pays for an
   off-screen rotating conic gradient.
-- Particles are seeded with random drift CSS vars in JS on mount.
+- Particles: a fixed count (per reference) mounted into the pen; their random drift CSS vars are
+  seeded in `useEffect` **after mount only** (never during render — hydration parity §7), so the
+  server HTML and first client paint match.
+- **Navigation:** the sparkle CTA is a real link to `/assess` (§3a), styled as the button — not a
+  decorative non-navigating button.
 - `@media (prefers-reduced-motion:reduce)` kills all sparkle/particle animation and hides the
   particle pen; the button remains a legible, clickable pill.
 
@@ -122,6 +166,104 @@ at very low opacity (light `.045` `mix-blend:multiply`; dark `.08` `mix-blend:sc
 paper texture, not a shadow or gradient — it is the tactile warmth of the calm-authority language,
 and it is static. It is in scope and approved; document it so a reviewer does not read it as a flat
 violation.
+
+### The five interactive artifacts
+
+**Shared rule (hydration parity, §7):** every artifact is a `'use client'` island whose **first
+client paint is byte-identical to the server HTML**. No `matchMedia`, `IntersectionObserver`,
+`requestAnimationFrame`, or `Math.random` runs during render — all of them run only in `useEffect`
+after mount. **Recommended:** build the plan-step, checklist, and freshness accordions on native
+`<details>/<summary>` (and native `<input type="checkbox">` for the checklist) so the open/close and
+checked rest states work with zero JS and need no hand-wired `aria-expanded`.
+
+### 4.4 Live verdict panel (hero)
+A bordered `.stage` showing one sample profile's banded verdict, four dimension rows, an estimated
+cost, and a profile toggle.
+- **SSR rest state:** renders Aarav fully — verdict word "Possible" in `--possible`; all four
+  dimension rows (Academic / English / Finances / Visa risk) with their tag, blurb, and fill bar at
+  its final width **set inline (not 0)**; the estimated cost shown at its **final value** (no
+  count-up); the toggle defaulting to Aarav. Complete and correct with no JS.
+- **Enhancement (JS + motion):** on first in-view, dimension fills animate from 0 and the cost
+  counts up (rAF); the toggle swaps Aarav⇄Shruti with a short `.swapping` fade and re-runs
+  fill/count. Dimension rows expand for the per-dimension blurb.
+- **Reduced motion / no-JS:** final widths and final cost shown instantly; the toggle still switches
+  data (no fade); no count-up, no fill animation.
+- **Honesty:** the cost line is labelled a **sample estimate** and carries **no** sourced `verified`
+  citation (§6) — a "Sample profile" label and the `≈` marker sit adjacent to the number. Carry the
+  reference's side content ("See full breakdown" affordance + the explanatory hint).
+- **A11y:** the verdict word is an `aria-live="polite"` status announced on swap; the toggle is a
+  labelled `role="group"` (or radio pair); dimension expanders are `<details>` or `<button
+  aria-expanded>`.
+- **Acceptance test:** SSR render (no effects) shows "Possible", all four dimension labels, the
+  final cost value, and the "Sample profile" label; the cost line renders **no** "verified"
+  citation; toggling to Shruti yields "Strong".
+
+### 4.5 Plan-step accordion ("From verdict to plan")
+Five plan steps (state pill, title, detail, citation), one expandable at a time.
+- **SSR rest state:** all five steps render with title + state pill visible; **step 02 is open**
+  showing its detail + citation; the rest are collapsed but present in the DOM.
+- **Enhancement:** clicking a step expands it (smooth `grid-template-rows` height transition) and
+  collapses the previously open one.
+- **Reduced motion / no-JS:** native `<details>` (recommended) makes this work with zero JS — step
+  02 carries `open`; expand/collapse is instant under reduced motion.
+- **A11y:** each header is a `<summary>` (or `<button aria-expanded>`); one detail region per step.
+- **Data:** `lib/marketing/plan-steps.ts` (§6). Sourced citations render `source · verified`.
+- **Acceptance test:** SSR shows all five titles and step 02's detail; the data module has exactly
+  five steps; each step carrying a citation renders its `source · verified` string.
+
+### 4.6 Documents checklist ("Documents")
+Six requirement rows, each toggleable done/undone, with a live progress bar and an "All set" pill at
+6/6.
+- **SSR rest state:** all six rows render with label + source; **2 of 6 marked done**; the progress
+  fill width is set to 2/6 **inline (not 0)**; the count reads "2 of 6".
+- **Enhancement:** toggling a row updates the count and animates the fill; at 6/6 the "All set" pill
+  appears.
+- **Reduced motion / no-JS:** rows are **native `<input type="checkbox">`** (two defaulted
+  `checked`), so toggling and the checked state work with no JS; the fill still shows 2/6 at rest.
+- **Honesty:** each row shows its requirement `source` (Home Affairs / university). These are
+  requirement labels, not sample estimates.
+- **A11y:** native checkboxes with visible labels (never `aria-pressed` on a div); the count lives
+  in one `aria-live="polite"` region.
+- **Data:** `lib/marketing/checklist-items.ts` (§6).
+- **Acceptance test:** SSR shows six labels, two `role="checkbox"` checked, progress "2 of 6";
+  toggling a third updates the count to "3 of 6".
+
+### 4.7 Guide typewriter ("The guide")
+An autoplay chat that types one of three genuine first-person applicant questions and its sourced
+answer, with clickable chips to jump between them.
+- **SSR rest state:** the **first exchange (`ielts`) is fully rendered** — question, answer, and its
+  `Home Affairs · Jun 2026` citation, all as final text (no typing). The three chips render as real
+  buttons.
+- **Enhancement:** in-view autoplay (IO threshold 0.35) types Q → typing dots → types A → reveals
+  the citation, then advances through `order = [ielts, funds, gte]`; a chip click interrupts the run
+  (run-id guard) and plays that exchange.
+- **Reduced motion / no-JS:** no typing; the `ielts` exchange stands as the static rest state; chips
+  still navigate (each chip swaps which exchange is shown, working without the typewriter).
+- **Honesty:** every answer carries its citation; the three questions are the founder-approved set,
+  verbatim in `lib/marketing/guide-answers.ts` (§6).
+- **A11y:** the thread is `aria-live="off"` (no character-by-character spam); a separate visually
+  hidden `aria-live="polite"` region announces **completed exchanges only**; user chip interaction
+  **pauses/stops autoplay** so it never fights the reader.
+- **Acceptance test:** SSR shows the `ielts` question, full answer, and citation; the data module
+  has exactly the three approved questions; the thread container is `aria-live="off"`.
+
+### 4.8 Freshness table ("Sourced & dated")
+Five provenance rows, each a real sourced figure with its verification, plus a one-time "verify
+sweep" on first view.
+- **SSR rest state:** all five rows render **already verified** — value, source, verified date, and
+  next-check date all **visible at rest** (not hidden behind the row accordion); each verified dot
+  shown. No row depends on JS to reveal its provenance.
+- **Enhancement:** on first in-view (IO threshold 0.4) a staggered `.lit → .verified` sweep plays
+  once; rows expand for extra detail (the *core* provenance triple stays visible when collapsed).
+- **Reduced motion / no-JS:** rows render verified and static; `<details>` (recommended) gives no-JS
+  expand of the extra detail.
+- **Honesty (critical):** every row exposes `source · verified Jun 2026 · next check Jul 2026`
+  **without interaction** — this is the page's provenance proof and must never be gated behind a
+  click or JS. Exact figures per §6 (A$29,710 · s.500 · ≈A$33,000 tuition · 485 = 2–4 yrs · OSHC).
+- **A11y:** row expanders are `<summary>` / `<button aria-expanded>`; the sweep is decorative and
+  not announced.
+- **Acceptance test:** SSR (no effects) shows all five rows with value, source, verified date, and
+  next-check date visible; each sourced figure string matches §6 exactly (fabrication guard).
 
 ## 5. Design tokens (both themes)
 
@@ -135,6 +277,11 @@ Mono. Themed three ways for parity: `@media (prefers-color-scheme:dark)`, `:root
 `:root[data-theme="light"]` (the app's theme toggle stamps `data-theme`, which must win over the
 media query in both directions).
 
+**Font loading:** load the two faces the way the rest of the app already loads them (the existing
+`next/font` or `@font-face` pipeline) — `--sans`/`--mono` must resolve to *real, loaded* Hanken
+Grotesk + IBM Plex Mono, not a bare CSS stack that silently falls back to system fonts. Reuse the
+app's font setup; do not add a font-CDN link.
+
 ## 6. Data & honesty model
 
 Two categories of number appear on the page and the build must keep them distinct:
@@ -143,12 +290,19 @@ Two categories of number appear on the page and the build must keep them distinc
   Shruti · GPA 3.8 → "Strong"), their dimension bars (Academic/English/Finances/Visa risk),
   per-dimension blurbs, and estimated first-year costs (≈A$42,600 / ≈A$44,200). These are
   **illustrative sample profiles**, surfaced under the explicit "Sample profile" label and the `≈`
-  estimate marker. They are demo scaffolding, not claims about a real person. Tests assert the
-  "Sample profile" label is present so this can never silently read as real data.
+  estimate marker. They are demo scaffolding, not claims about a real person. The **estimated cost
+  renders as a sample estimate with no sourced `verified` citation** (a `≈` figure beside the
+  "Sample profile" label), so it can never read as a sourced claim. Tests assert the "Sample
+  profile" label is present *and* that the cost line carries no "verified" string.
 - **Sourced facts** — the figures that *are* real-world claims: living-cost requirement A$29,710
-  (Home Affairs s.500), GTE s.500 criteria, avg first-year tuition ≈A$33,000 (university data),
-  post-study work 485 = 2–4 years, OSHC required, IELTS 6.5 floor / 7.0 stretch. Each renders a
-  visible `source · verified Jun 2026` (freshness rows also carry "Next check Jul 2026").
+  (Home Affairs), the **Genuine Student (GS) requirement** — this replaced the old "GTE / Genuine
+  Temporary Entrant" in 2024, so do **not** ship "GTE"; use the current official label and its
+  correct instrument, **source-confirmed at build time** — avg first-year tuition ≈A$33,000
+  (university data), post-study work 485 = 2–4 years, OSHC required, IELTS 6.5 floor / 7.0 stretch.
+  Each renders a visible `source · verified Jun 2026` (freshness rows also carry "next check Jul
+  2026"). The exact official label + instrument + date per figure are pinned in the data module (not
+  free-typed in JSX) and stay consistent across hero, guide, and freshness — no loose GS/GTE/s.500
+  mixing.
 
 Model these as **typed data modules** so copy is reviewable and the honesty invariant is testable
 in isolation, not buried in JSX:
@@ -161,7 +315,10 @@ in isolation, not buried in JSX:
 - `lib/marketing/freshness-rows.ts` — the 5 provenance rows (key, value, source, detail, verified,
   nextCheck).
 Every string in these modules is copy the founder reviews; keep apostrophes and the no-em-dash rule
-intact.
+intact. Make the sample-vs-sourced distinction a **discriminated union at the type level** (a
+`kind: 'sample' | 'sourced'` tag) so a test can mechanically assert that sample data never renders a
+`verified` citation and sourced data always does — the honesty invariant becomes type-enforced, not
+just prose.
 
 ## 7. Progressive enhancement & reduced-motion contract
 
@@ -177,14 +334,23 @@ The reference is a single inline `<script>`; the build re-expresses it as React 
   toggles, checklist) working.
 - **Motion is JS-gated for hiding:** the `.reveal` hidden state only applies under `.js`, so a
   no-JS client is never left with invisible content.
+- **Hydration parity (SSR === first client paint).** Islands are `'use client'` but their initial
+  render must equal the server HTML. No `matchMedia`, `IntersectionObserver`, `requestAnimationFrame`,
+  or `Math.random` runs during render — read reduced-motion, observe in-view, count up, and seed
+  sparkle particles only inside `useEffect` after mount. The reference's "build DOM in JS from an
+  empty container" is a **mock-only** technique; porting it verbatim would ship empty rest states and
+  random-seeded hydration mismatches. Invert it: server-render the filled state (§4.4–4.8), then
+  enhance.
 
 ## 8. Architecture / component decomposition
 
 A **server-component page shell** composes static copy + a handful of **client-island** artifacts.
 Keep islands small and single-purpose; server-render their rest state.
 
-- `app/(marketing)/page.tsx` — server shell: header, hero copy, section copy/leads, footer, and the
-  inline hidden SVG filters (`#hero-rough` + the grain data-URI usage). Imports the islands.
+- `app/(marketing)/page.tsx` — server shell: **keeps the existing `getUser()` →
+  `redirect("/dashboard")` guard at the top (invariant 10)**, then renders header, hero copy, section
+  copy/leads, footer, and the inline hidden SVG filters (`#hero-rough` + the grain data-URI usage).
+  Imports the islands.
 - `components/marketing/verdict-panel.tsx` — **client**: profile toggle, dimension accordion +
   animated fills, rAF cost count-up, swap fade. Rest state = Aarav, static.
 - `components/marketing/plan-steps.tsx` — **client** (accordion); rest state = step 02 open.
@@ -219,12 +385,22 @@ rather than layering a second reveal system:
   `components/marketing/hero-preview.tsx`, `how-it-works.tsx`, `tile.tsx`, `trust-callout.tsx`
   (verify each has no other importer first). `eyebrow.tsx` is a reusable primitive — keep it if the
   new hero still uses an eyebrow, otherwise remove. The plan enumerates the exact deletions.
+- **`TrustStrip` (`components/layout/trust-strip.tsx`) is removed from this page** — the v7 sticky
+  header + hero proof strip replace its role. It is *layout* chrome, not a marketing component: drop
+  its import/usage from the rebuilt `page.tsx`, but only delete the component itself if a usage
+  check shows the landing page was its sole importer; otherwise leave it for its other users.
 
 ## 10. Accessibility & theming
 
-- Verdict is an `aria-live` status; the guide announces each completed exchange via a visually
-  hidden `aria-live` region; the toggle is a labelled `role="group"`; every accordion trigger is a
-  real `<button>` with `aria-expanded`. Preserve all of this.
+- **Verdict:** the verdict word is an `aria-live="polite"` status; the profile toggle is a labelled
+  `role="group"` (or radio pair).
+- **Guide:** the thread is `aria-live="off"` (no character-by-character announcement); a separate
+  visually hidden `aria-live="polite"` region announces **completed exchanges only**; a user chip
+  click pauses/stops autoplay.
+- **Checklist:** native `<input type="checkbox">` rows with visible labels (not `aria-pressed` on a
+  div); the "N of 6" count updates in one `aria-live="polite"` region.
+- **Accordions:** every trigger is a real `<summary>` or `<button aria-expanded>` (native
+  `<details>` recommended for plan / freshness / dimension rows so no-JS works for free).
 - Visible `:focus-visible` outline (plum, offset) on every interactive control.
 - Contrast: plum-on-paper, paper-on-plum (CTA), and all three verdict colours clear AA for their
   sizes in **both** themes.
@@ -239,8 +415,23 @@ TDD per task. Assert **structure, content, and the honesty invariant** — not p
 - Each sourced figure renders its `source · verified` string (assert the exact A$29,710 / s.500 /
   ≈A$33,000 / 485 / OSHC rows and their citations) — a drift-into-fabrication guard.
 - The guide data module contains exactly the three founder-approved questions and their citations.
-- Rest-state completeness: islands render their static content in a no-JS render (React Testing
-  Library without firing effects) — e.g. guide shows the `ielts` Q&A, checklist shows 2/6.
+- Rest-state completeness (per artifact): islands render their static content in a no-JS render
+  (React Testing Library without firing effects) — verdict panel's final cost + "Sample profile"
+  label, plan step 02's detail, checklist at 2/6 with real checkboxes, the guide's `ielts` exchange
+  + citation, and all five freshness rows with visible source + verified + next-check.
+- **Signed-in redirect:** a `getUser()` returning a user redirects to `/dashboard` before any
+  landing markup renders (invariant 10).
+- **No dead links:** no rendered `href="#"`; hero CTA and closing sparkle CTA both resolve to
+  `/assess`; "Sign in" resolves to `/auth`.
+- **Checklist semantics:** rows are queryable as `role="checkbox"`; two are checked at rest;
+  toggling a third updates the live count to "3 of 6".
+- **Terminology guard:** the marketing copy modules contain no user-facing "GTE" / "Genuine
+  Temporary Entrant" string (current official term only — §6).
+- **Hydration parity:** an SSR-then-hydrate render produces no React hydration warning; no
+  `Math.random` / `matchMedia` / IntersectionObserver call during initial render (deferred to
+  effects).
+- **Theme parity:** `:root[data-theme="dark"]` overrides the `prefers-color-scheme` media query in
+  both directions (a stamped `data-theme` wins).
 - A repo-wide guard test: no em-dash (`—`) in the marketing copy modules.
 - Gate green before review: `npm run typecheck`, `npm run lint`, `npm test`.
 
@@ -262,6 +453,35 @@ TDD per task. Assert **structure, content, and the honesty invariant** — not p
 - `tailwind.config.*` + a scoped marketing global CSS — tokens, keyframes, grain, marker, sparkle.
 - Tests under the existing marketing test location.
 - Reference kept at `docs/superpowers/specs/assets/2026-07-08-landing-v7-reference.html`.
+
+## 14. Changelog — Codex review fold-in (2026-07-08)
+
+Codex (GPT-5.5, xhigh) reviewed this spec against the reference; verdict **BUILDABLE-WITH-FIXES**.
+All blockers + should-fixes are folded in:
+
+- **B1** dangling artifact refs → added §4.4–4.8 (verdict / plan / checklist / guide / freshness),
+  each with SSR rest state, enhancement, reduced-motion + no-JS, a11y, and an acceptance test.
+- **B2** rest-state not operationalized → invariant 6 + §7 now require a *server-rendered filled*
+  rest state and explicitly reject the reference's JS-builds-empty pattern; each §4.x pins its rest
+  DOM (step 02 open, 2/6 checked, `ielts` shown, rows pre-verified, fills set inline).
+- **B3** undefined links → §3a link map + invariant 11 (no `href="#"`; both CTAs → `/assess`; Sign
+  in → `/auth`; closing CTA a real navigation).
+- **B4** signed-in redirect omitted → invariant 10 + §8 (keep `getUser()` → `/dashboard`) + §11 test.
+- **B5** honesty split not airtight → invariant 3 + §6: sample cost carries no `verified` citation;
+  discriminated `kind: 'sample' | 'sourced'` type; freshness rows expose source + verified + next
+  check at rest (§4.8).
+- **B6** hydration under-specified → §4 shared rule + §7 hydration-parity bullet (no matchMedia / IO
+  / rAF / Math.random during render; particles seeded post-mount).
+- **S1** checklist a11y → native checkboxes + single live count (§4.6, §10).
+- **S2** guide announce → `aria-live="off"` thread, completed-exchange-only polite region, autoplay
+  pauses on chip click (§4.7, §10).
+- **S3** legal terminology → §6 corrects GTE → **Genuine Student (GS)**, source-confirmed, pinned in
+  the data module; §11 terminology guard.
+- **S4** missing tests → §11 adds redirect, dead-link, checklist-semantics, terminology, hydration,
+  and theme-parity tests.
+- **S5** `TrustStrip` fate → §9 (removed from this page; delete only if sole importer).
+- **Notes:** native `<details>/<summary>` recommended for accordions; discriminated data types;
+  real font loading (§5); responsive contract pulled forward as §3b.
 
 ---
 
