@@ -1442,13 +1442,25 @@
     },
     {
       "id": "MV-111",
+      "col": "done",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "DONE — merged to master (PR #71) + deployed to production 2026-07-08. MV-105 Layer B, Option 1: inline goal trade-off note, score-inert + order-inert. Gate was green (typecheck 0, lint 0, vitest 281 files / 1824 tests, 0 failures).",
+      "file": "cards/MV-111.md",
+      "title": "MV-105 Layer B — honest goal trade-off note (Option 1)",
+      "summary": "DONE. Turns the inert Layer A secondaryGoals capture into ONE honest, score-inert + order-inert trade-off note when the primary goal and a secondary goal pull in different directions. New pure lib/goals/conflicts.ts goalTradeoffNote() mirrors lib/scoring/field-note.ts competitivenessNote (returns at most one note from an ORDERED tension table); presentational components/matches/goal-tradeoff-note.tsx (sibling of PreferenceNote, never a modal); carried on the anon AssessmentPayload (assemble.ts + results.tsx) + computed inline on signed-in matches (page.tsx). v1 shipped 2 framing-only tension pairs (permanent-residency<->highest-ranked > lowest-cost<->highest-ranked) that assert no external fact; fastest-admission<->research + synergy pairs + best-employment deliberately DEFERRED to a sourced follow-up. Inertness is structural (applyPreference never receives secondaries) + guarded by the untouched secondary-goals-inert test. Plan: docs/superpowers/plans/2026-07-07-goal-tradeoff-note.md. Dossier: cards/MV-111.md.",
+      "created": "2026-07-08",
+      "entered": "2026-07-08"
+    },
+    {
+      "id": "MV-112",
       "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "badge": "In Review on branch mv-111-goal-tradeoff-note (off origin/master; FOUNDER-GATED merge). MV-105 Layer B, Option 1. Two-stage review both PASSED (spec ✅ + code-quality ✅). Gate green: typecheck 0, lint 0 errors (pre-existing build.mjs warn only), vitest 281 files / 1824 tests, 0 failures (+9 conflicts cases; secondary-goals-inert untouched + green).",
-      "file": "cards/MV-111.md",
-      "title": "MV-105 Layer B — honest goal trade-off note (Option 1)",
-      "summary": "SHIPPED to In Review (founder merges to close). Turns the inert Layer A secondaryGoals capture into ONE honest, score-inert + order-inert trade-off note when the primary goal and a secondary goal pull in different directions. New pure lib/goals/conflicts.ts goalTradeoffNote() mirrors lib/scoring/field-note.ts competitivenessNote (returns at most one note from an ORDERED tension table); presentational components/matches/goal-tradeoff-note.tsx (sibling of PreferenceNote, never a modal); carried on the anon AssessmentPayload (assemble.ts + results.tsx) + computed inline on signed-in matches (page.tsx). v1 ships 2 framing-only tension pairs (permanent-residency<->highest-ranked > lowest-cost<->highest-ranked) that assert no external fact — no citation needed (same bar as competitivenessNote); fastest-admission<->research + synergy pairs + best-employment deliberately DEFERRED to a sourced follow-up. Inertness is structural (applyPreference never receives secondaries) + guarded by the untouched secondary-goals-inert test. No scoring-engine change, no migration, goldens untouched. Plan: docs/superpowers/plans/2026-07-07-goal-tradeoff-note.md. Dossier: cards/MV-111.md.",
+      "badge": "In Review. All 20 TDD tasks shipped on branch mv-112-landing-redesign via subagent-driven-development. Gate green: typecheck clean, lint 0 errors, 1890 tests pass. Page preview-verified live (0 hydration errors across 8 islands, filled rest state, freshness figures + Jun 2026 at rest, CTAs -> /assess). Final adversarial whole-impl review = SHIP-WITH-NITS: all 11 locked invariants hold; finding-1 (em-dashes in landing.css comments) fixed 626b59b + copy guard extended to landing.css; 2 cosmetic nits documented (unmount timer cleanup, 150ms re-click race). PR #73 open, FOUNDER-GATED merge to master (auto-deploys prod).",
+      "file": "cards/MV-112.md",
+      "title": "Landing page redesign — v7 Cursor cadence",
+      "summary": "Rebuild the signed-out marketing landing (app/(marketing)/page.tsx) in the premium v7 'Cursor cadence' style: confident hero + alternating product sections each anchored by ONE real interactive artifact (live verdict panel -> plan-step accordion -> documents checklist -> autoplay guide typewriter -> freshness verify-sweep table -> sparkle close). New client islands components/marketing/* (verdict-panel, plan-steps, documents-checklist, guide-thread, freshness-table, sparkle-cta, reveal, hero-marker) + typed data lib/marketing/* (sample-profiles, plan-steps, checklist-items, guide-answers, freshness-rows); delete superseded hero-preview/how-it-works/tile/trust-callout + drop TrustStrip from the page. LOCKED invariants: server-rendered FILLED rest state (not the reference's JS-builds-empty), hydration parity (no matchMedia/IO/rAF/Math.random in render), honesty split (sample cost = no verified citation; kind:'sample'|'sourced'; freshness provenance visible at rest), Genuine Student (GS) terminology, no href=# (CTAs -> /assess, Sign in -> /auth), preserve getUser()->/dashboard redirect, no em-dashes, both themes, 1160px. Presentational only (no scoring/API/DB/Zod). Spec: docs/superpowers/specs/2026-07-08-landing-redesign-design.md. Reference: docs/superpowers/specs/assets/2026-07-08-landing-v7-reference.html. Dossier: cards/MV-112.md.",
       "created": "2026-07-08",
       "entered": "2026-07-08"
     }

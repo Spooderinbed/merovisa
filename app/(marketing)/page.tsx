@@ -1,117 +1,124 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { TrustStrip } from "@/components/layout/trust-strip";
-import { Eyebrow } from "@/components/marketing/eyebrow";
-import { HeroPreview } from "@/components/marketing/hero-preview";
-import { HowItWorks } from "@/components/marketing/how-it-works";
-import { Tile } from "@/components/marketing/tile";
-import { TrustCallout } from "@/components/marketing/trust-callout";
-
-function IconShield() {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-    </svg>
-  );
-}
-function IconGuide() {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="8" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-function IconDoc() {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
-      <path d="M14 2v6h6" />
-    </svg>
-  );
-}
+import { HeroMarker } from "@/components/marketing/hero-marker";
+import { Reveal } from "@/components/marketing/reveal";
+import { VerdictPanel } from "@/components/marketing/verdict-panel";
+import { PlanSteps } from "@/components/marketing/plan-steps";
+import { DocumentsChecklist } from "@/components/marketing/documents-checklist";
+import { GuideThread } from "@/components/marketing/guide-thread";
+import { FreshnessTable } from "@/components/marketing/freshness-table";
+import { SparkleCta } from "@/components/marketing/sparkle-cta";
+import "./landing.css";
 
 export default async function HomePage() {
-  // Signed-in users skip the marketing landing — drop them on the dashboard.
+  // Signed-in users skip the marketing landing; drop them on the dashboard.
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect("/dashboard");
 
   return (
-    <>
-      <TrustStrip />
+    <div className="mv-landing">
+      {/* hidden SVG filter for the hand-drawn hero marker (§4.1) */}
+      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden focusable="false">
+        <filter id="hero-rough" x="-10%" y="-10%" width="120%" height="130%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
 
-      {/* hero */}
-      <section className="mx-auto w-full max-w-[1120px] px-5 pb-6 pt-[72px]">
-        <div className="max-w-[760px]">
-          <Eyebrow className="animate-rise">For students applying abroad</Eyebrow>
-          <h1 className="mt-5 animate-rise text-[clamp(42px,6vw,68px)] leading-[1.05]">
-            An honest answer before
-            <br />
-            you pay anyone.
-          </h1>
-          <p className="mt-6 max-w-[58ch] animate-settle text-[clamp(18px,1.5vw,21px)] text-ink-soft">
-            Can I get in? What will it really cost? What&apos;s my visa risk? Answer 9 quick questions to see where you
-            stand — free, and no sign-up to start.
-          </p>
-          <p className="mt-4 max-w-[58ch] animate-settle text-body text-ink-soft">
-            Built on official Home Affairs and university data — every figure shows its source and date.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3 animate-settle">
-            <Link
-              href="/assess"
-              className="inline-flex items-center gap-2 rounded-pill bg-primary px-7 py-[15px] text-lead font-medium text-on-primary hover:bg-primary-ink transition-[background-color,transform] duration-fast ease-calm active:translate-y-px"
-            >
-              Check your eligibility →
-            </Link>
-            <span className="inline-flex items-center gap-2 text-body text-ink-soft">
-              <svg aria-hidden viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-ink-faint">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 7v5l3 2" />
-              </svg>
-              9 quick questions · no account needed
-            </span>
+      {/* HERO */}
+      <section className="hero">
+        <div className="wrap">
+          <div className="hero-top">
+            <div className="eyebrow">For students applying abroad</div>
+            <h1>An honest answer before you <HeroMarker>pay anyone.</HeroMarker></h1>
+            <p className="sub">Where do you actually stand academically, financially, and on visa risk?</p>
+            <p className="prov">Built on official Home Affairs and university data. Every figure shows its source and date.</p>
+            <div className="cta-row">
+              <Link className="cta" href="/assess">Check your eligibility <span className="arw">→</span></Link>
+              <span className="meta">9 quick questions · no account needed</span>
+            </div>
+          </div>
+
+          <div className="stage"><VerdictPanel /></div>
+
+          <div className="proof">
+            <div className="pf"><span className="dot" />Official Home Affairs & university data</div>
+            <div className="pf"><span className="dot" />Every figure sourced and dated</div>
+            <div className="pf"><span className="dot" />Free, no sign-up to start</div>
           </div>
         </div>
+      </section>
 
-        <div className="mt-16 animate-fade">
-          <HeroPreview />
+      {/* PLAN */}
+      <section className="psec" id="how">
+        <div className="wrap">
+          <div className="split">
+            <div className="s-copy">
+              <div className="section-eyebrow">From verdict to plan</div>
+              <h2>The answer becomes a plan.</h2>
+              <p className="s-lede">Not a generic to-do list. A sequenced path built from your verdict, one step live at a time.</p>
+              <Link className="lnk" href="/assess">See a sample plan <span className="arw">→</span></Link>
+            </div>
+            <Reveal><PlanSteps /></Reveal>
+          </div>
         </div>
       </section>
 
-      {/* tiles */}
-      <section className="mx-auto w-full max-w-[1120px] px-5 pt-20 animate-rise">
-        <Eyebrow>What you get</Eyebrow>
-        <h2 className="mt-4 max-w-[600px] text-[clamp(28px,3.4vw,38px)]">Three quiet tools, no clutter.</h2>
-        <div className="mt-9 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          <Tile
-            title="Eligibility & checklist"
-            body="A banded verdict — strong, possible, or reach — built from official thresholds, plus a document checklist with real deadlines."
-            iconSvg={<IconShield />}
-          />
-          <Tile
-            title="An AI guide that remembers you"
-            body="Not a popup bot. A calm companion that powers a feed of matches, visa updates for your country, and your next best step."
-            iconSvg={<IconGuide />}
-            badge="Soon"
-          />
-          <Tile
-            title="SOP coach"
-            body="Coaching on your own draft — structure, clarity, how you explain a study gap. A coach, never a ghostwriter."
-            iconSvg={<IconDoc />}
-            badge="Soon"
-          />
+      {/* DOCUMENTS */}
+      <section className="psec" id="what">
+        <div className="wrap">
+          <div className="split rev">
+            <div className="s-copy">
+              <div className="section-eyebrow">Documents</div>
+              <h2>Every requirement, sourced.</h2>
+              <p className="s-lede">Your verdict becomes a per-program checklist. As you tick things off, the readiness bar moves with you.</p>
+              <Link className="lnk" href="/assess">See the checklist <span className="arw">→</span></Link>
+            </div>
+            <Reveal><DocumentsChecklist /></Reveal>
+          </div>
         </div>
       </section>
 
-      {/* how it works */}
-      <section className="mx-auto mt-24 w-full max-w-[1120px] px-5 animate-rise">
-        <HowItWorks />
+      {/* GUIDE */}
+      <section className="psec">
+        <div className="wrap">
+          <div className="split">
+            <div className="s-copy">
+              <div className="section-eyebrow">The guide</div>
+              <h2>A guide that remembers you.</h2>
+              <p className="s-lede">Ask the awkward questions you&apos;d hesitate to ask an agent. Answers are grounded in your own numbers, with the source attached.</p>
+              <Link className="lnk" href="/assess">Meet the guide <span className="arw">→</span></Link>
+            </div>
+            <Reveal><GuideThread /></Reveal>
+          </div>
+        </div>
       </section>
 
-      <TrustCallout />
-      <div className="h-20" />
-    </>
+      {/* FRESHNESS */}
+      <section className="fresh">
+        <div className="wrap">
+          <Reveal className="fh">
+            <div className="section-eyebrow" style={{ textAlign: "center" }}>Sourced & dated</div>
+            <h2>Every figure shows its source and date.</h2>
+            <p className="lede">Here, the numbers a consultancy quotes from memory carry their origin and a verified date you can check.</p>
+          </Reveal>
+          <Reveal><FreshnessTable /></Reveal>
+          <p className="foot">If a figure ages past its check date, we re-verify it before you see it.</p>
+        </div>
+      </section>
+
+      {/* CLOSE */}
+      <section className="close">
+        <div className="wrap">
+          <Reveal>
+            <h2>Know, instead of hoping.</h2>
+            <SparkleCta>Check your eligibility</SparkleCta>
+            <p className="meta">9 quick questions · no account needed · free</p>
+          </Reveal>
+        </div>
+      </section>
+    </div>
   );
 }

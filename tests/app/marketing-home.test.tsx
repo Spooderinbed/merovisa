@@ -9,44 +9,55 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import HomePage from "@/app/(marketing)/page";
 
-describe("Marketing homepage", () => {
-  it("renders the headline, all three tiles, how-it-works, hero preview and trust callout", async () => {
-    const ui = await HomePage();
-    render(ui);
-    expect(screen.getByText(/An honest answer before/i)).toBeInTheDocument();
-    expect(screen.getByText(/Three quiet tools, no clutter/i)).toBeInTheDocument();
-    expect(screen.getByText(/Eligibility & checklist/i)).toBeInTheDocument();
-    expect(screen.getByText(/An AI guide that remembers you/i)).toBeInTheDocument();
-    expect(screen.getByText(/SOP coach/i)).toBeInTheDocument();
-    expect(screen.getByText(/Tell us about you/i)).toBeInTheDocument();
-    expect(screen.getByText(/A preview of your feed/i)).toBeInTheDocument();
-    expect(screen.getByText(/We sit before the consultancy/i)).toBeInTheDocument();
+describe("Marketing homepage (v7)", () => {
+  it("renders the hero H1, sub-line, provenance line, and the three proof claims", async () => {
+    render(await HomePage());
+    expect(screen.getByText(/An honest answer before you/i)).toBeInTheDocument();
+    expect(screen.getByText(/pay anyone\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Where do you actually stand academically/i)).toBeInTheDocument();
+    expect(screen.getByText(/Built on official Home Affairs and university data/i)).toBeInTheDocument();
+    expect(screen.getByText(/Official Home Affairs & university data/i)).toBeInTheDocument();
+    expect(screen.getByText(/Every figure sourced and dated/i)).toBeInTheDocument();
+    expect(screen.getByText(/Free, no sign-up to start/i)).toBeInTheDocument();
   });
 
-  it("frames the flow honestly (9 questions, not a ~2 minute claim) and shows the data-authority line", async () => {
-    const ui = await HomePage();
-    render(ui);
-    expect(screen.getByText(/9 quick questions · no account needed/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Built on official Home Affairs and university data/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/two minutes/i)).toBeNull();
-    expect(screen.queryByText(/About 2 minutes/i)).toBeNull();
+  it("renders each product section heading and the freshness/close copy", async () => {
+    render(await HomePage());
+    expect(screen.getByText(/The answer becomes a plan\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Every requirement, sourced\./i)).toBeInTheDocument();
+    expect(screen.getByText(/A guide that remembers you\./i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Every figure shows its source and date\./i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Know, instead of hoping\./i)).toBeInTheDocument();
   });
 
-  it("renders the primary hero CTA pointing to /assess", async () => {
-    const ui = await HomePage();
-    render(ui);
-    const ctas = screen.getAllByRole("link", { name: /Check your eligibility/i });
-    expect(ctas.length).toBeGreaterThanOrEqual(1);
-    expect(ctas[0]).toHaveAttribute("href", "/assess");
+  it("exposes #how and #what in-page anchor targets", async () => {
+    const { container } = render(await HomePage());
+    expect(container.querySelector("#how")).not.toBeNull();
+    expect(container.querySelector("#what")).not.toBeNull();
   });
 
-  it("redirects signed-in users to /dashboard", async () => {
+  it("has no dead links: no href='#'; both eligibility CTAs + See full breakdown -> /assess", async () => {
+    render(await HomePage());
+    const links = screen.getAllByRole("link");
+    for (const a of links) expect(a.getAttribute("href")).not.toBe("#");
+    const assess = links.filter((a) => a.getAttribute("href") === "/assess");
+    // hero CTA + 3 section soft links + verdict "See full breakdown" + closing sparkle CTA
+    expect(assess.length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByRole("link", { name: /See full breakdown/i })).toHaveAttribute("href", "/assess");
+    const eligibilityCtas = screen.getAllByRole("link", { name: /Check your eligibility/i });
+    expect(eligibilityCtas.length).toBeGreaterThanOrEqual(2);
+    for (const cta of eligibilityCtas) expect(cta.getAttribute("href")).toBe("/assess");
+  });
+
+  it("does not render the removed TrustStrip / tiles copy", async () => {
+    render(await HomePage());
+    expect(screen.queryByText(/Three quiet tools, no clutter/i)).toBeNull();
+    expect(screen.queryByText(/A preview of your feed/i)).toBeNull();
+  });
+
+  it("redirects signed-in users to /dashboard before rendering", async () => {
     vi.resetModules();
-    const redirectSpy = vi.fn((url: string) => {
-      throw new Error(`REDIRECT:${url}`);
-    });
+    const redirectSpy = vi.fn((url: string) => { throw new Error(`REDIRECT:${url}`); });
     vi.doMock("next/navigation", () => ({ redirect: redirectSpy }));
     vi.doMock("@/lib/supabase/server", () => ({
       createSupabaseServerClient: async () => ({
