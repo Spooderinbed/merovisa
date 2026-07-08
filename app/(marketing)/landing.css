@@ -1,4 +1,4 @@
-/* Landing v7 — scoped marketing CSS (MV-112).
+/* Landing v7 - scoped marketing CSS (MV-112).
    Ported verbatim from the v7 reference mockup, scoped under .mv-landing so
    nothing leaks into the rest of the app. Tokens are themed three ways (media
    query + both data-theme directions) for parity. */
@@ -249,13 +249,13 @@
 @keyframes cta-float{to{rotate:360deg}}
 @media (prefers-reduced-motion:reduce){.mv-landing .sparkle-cta .spark,.mv-landing .sparkle-cta .spark:before,.mv-landing .sparkle-cta .particle,.mv-landing .sparkle-cta .sparkle path{animation:none}.mv-landing .sparkle-cta .particle-pen{display:none}}
 
-/* scroll reveals — hidden state only after JS sets .hidden (never hides no-JS content) */
+/* scroll reveals - hidden state only after JS sets .hidden (never hides no-JS content) */
 @media (prefers-reduced-motion:no-preference){
   .mv-landing .mv-reveal.hidden{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
   .mv-landing .mv-reveal.in{opacity:1;transform:none;transition:opacity .7s var(--ease),transform .7s var(--ease)}
 }
 
-/* responsive — breakpoint of record 860px */
+/* responsive - breakpoint of record 860px */
 @media (max-width:860px){
   .mv-landing .panel-body{grid-template-columns:1fr;gap:26px}
   .mv-landing .p-side{border-left:0;border-top:1px solid var(--line-soft);padding-left:0;padding-top:24px}

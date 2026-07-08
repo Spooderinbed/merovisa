@@ -44,6 +44,9 @@ describe("landing component + page copy integrity", () => {
       .filter((f) => f.endsWith(".tsx"))
       .map((f) => join(dir, f)),
     join(process.cwd(), "app/(marketing)/page.tsx"),
+    // Scoped landing stylesheet: its comments are "landing copy modules" under
+    // invariant 7 (no em-dash, including code comments), so guard them too.
+    join(process.cwd(), "app/(marketing)/landing.css"),
   ];
 
   it("has marketing files to guard (components + page)", () => {
