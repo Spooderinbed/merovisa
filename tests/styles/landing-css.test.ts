@@ -51,6 +51,20 @@ describe("app/(marketing)/landing.css", () => {
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   });
 
+  it("plan + freshness accordions open via a JS .open class, never native details[open] (so grid-rows can animate)", () => {
+    // MV-117: a closed native <details> display:none's its content, so the
+    // grid-template-rows 0fr→1fr ease has no prior frame to interpolate and the
+    // body snaps open while the chevron rotates. Driving the expand with a .open
+    // class (like .dim) keeps the detail rendered so it animates. Guard: the
+    // step/freshness open + chevron selectors are class-based, and NO details[open]
+    // selector drives the landing accordions any more.
+    expect(css).toMatch(/\.mv-landing\s+\.step\.open\s+\.step-detail\s*\{[^}]*grid-template-rows:\s*1fr/);
+    expect(css).toMatch(/\.mv-landing\s+\.fitem\.open\s+\.fdetail\s*\{[^}]*grid-template-rows:\s*1fr/);
+    expect(css).toMatch(/\.mv-landing\s+\.step\.open\s+\.chev/);
+    expect(css).toMatch(/\.mv-landing\s+\.fitem\.open\s+\.fchev/);
+    expect(css).not.toMatch(/details\[open\]/);
+  });
+
   it("reveal pre-reveal state is .mv-reveal.off, never .mv-reveal.hidden (Tailwind display:none collision)", () => {
     // The class MUST be .off. `.hidden` collides with Tailwind's global
     // .hidden{display:none}, which removes the element from layout so
