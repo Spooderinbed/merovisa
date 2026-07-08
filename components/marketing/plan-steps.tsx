@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { PLAN_STEPS } from "@/lib/marketing/plan-steps";
+import { verifiedCitation, isSourced } from "@/lib/marketing/provenance";
 
 /** Plan-step accordion (spec §4.5). Native <details name="mv-plan"> gives a
  *  single-open accordion with zero JS; step 02 is open at rest. Server component. */
@@ -20,7 +21,7 @@ export function PlanSteps() {
             <span className="chev" aria-hidden>›</span>
           </summary>
           <div className="step-detail"><div className="step-detail-inner">
-            <p>{s.detail} <span className="cite">{s.cite}</span></p>
+            <p>{s.detail} <span className="cite">{isSourced(s.cite) ? verifiedCitation(s.cite) : s.cite.label}</span></p>
           </div></div>
         </details>
       ))}

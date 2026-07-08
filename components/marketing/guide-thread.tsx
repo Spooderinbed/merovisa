@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { GUIDE_ANSWERS, GUIDE_ORDER } from "@/lib/marketing/guide-answers";
-import type { GuideKey } from "@/lib/marketing/provenance";
+import { verifiedCitation, type GuideKey } from "@/lib/marketing/provenance";
 
 const REST: GuideKey = "ielts";
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -28,7 +28,7 @@ export function GuideThread() {
   function showFinal(key: GuideKey) {
     const it = GUIDE_ANSWERS[key];
     setDisplay({ q: it.q, a: it.a, cite: true });
-    setStatus(`${it.q} ${it.a} ${it.source} · ${it.verified}`);
+    setStatus(`${it.q} ${it.a} ${verifiedCitation(it)}`);
   }
 
   async function play(key: GuideKey): Promise<number> {
@@ -50,7 +50,7 @@ export function GuideThread() {
     if (!(await type("a", it.a, 15))) return my;
     await wait(220); if (my !== runId.current) return my;
     setDisplay((d) => ({ ...d, cite: true }));
-    setStatus(`${it.q} ${it.a} ${it.source} · ${it.verified}`);
+    setStatus(`${it.q} ${it.a} ${verifiedCitation(it)}`);
     return my;
   }
 
@@ -111,7 +111,7 @@ export function GuideThread() {
           <div className="g-a">
             {display.a}
             <span className={cn("cite", display.cite && "in")}>
-              {GUIDE_ANSWERS[activeKey].source} · {GUIDE_ANSWERS[activeKey].verified}
+              {verifiedCitation(GUIDE_ANSWERS[activeKey])}
             </span>
           </div>
         )}

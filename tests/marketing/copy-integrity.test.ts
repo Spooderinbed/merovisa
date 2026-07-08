@@ -7,6 +7,7 @@ import { PLAN_STEPS } from "@/lib/marketing/plan-steps";
 import { CHECKLIST_ITEMS } from "@/lib/marketing/checklist-items";
 import { GUIDE_ANSWERS } from "@/lib/marketing/guide-answers";
 import { FRESHNESS_ROWS } from "@/lib/marketing/freshness-rows";
+import { verifiedCitation, isSourced } from "@/lib/marketing/provenance";
 
 const ALL = JSON.stringify({ SAMPLE_PROFILES, PLAN_STEPS, CHECKLIST_ITEMS, GUIDE_ANSWERS, FRESHNESS_ROWS });
 
@@ -20,6 +21,32 @@ describe("landing copy integrity", () => {
       expect(r.kind).toBe("sourced");
       expect(r.source.length).toBeGreaterThan(0);
       expect(r.verified.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every sourced surface routes through verifiedCitation (checklist + guide + plan)", () => {
+    for (const item of CHECKLIST_ITEMS) {
+      expect(item.kind).toBe("sourced");
+      expect(item.source.length).toBeGreaterThan(0);
+      expect(item.verified.length).toBeGreaterThan(0);
+      expect(verifiedCitation(item)).toMatch(/verified/);
+    }
+    for (const g of Object.values(GUIDE_ANSWERS)) {
+      expect(g.kind).toBe("sourced");
+      expect(g.source.length).toBeGreaterThan(0);
+      expect(g.verified.length).toBeGreaterThan(0);
+      expect(verifiedCitation(g)).toMatch(/verified/);
+    }
+    for (const step of PLAN_STEPS) {
+      if (isSourced(step.cite)) {
+        expect(step.cite.source.length).toBeGreaterThan(0);
+        expect(step.cite.verified.length).toBeGreaterThan(0);
+        expect(verifiedCitation(step.cite)).toMatch(/verified/);
+      } else {
+        expect(step.cite.kind).toBe("status");
+        expect(step.cite.label.length).toBeGreaterThan(0);
+        expect(step.cite.label).not.toMatch(/verified/i);
+      }
     }
   });
 

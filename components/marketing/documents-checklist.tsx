@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { CHECKLIST_ITEMS } from "@/lib/marketing/checklist-items";
+import { verifiedCitation } from "@/lib/marketing/provenance";
 
 export function DocumentsChecklist() {
   const [checked, setChecked] = useState<boolean[]>(() => CHECKLIST_ITEMS.map((i) => i.done));
@@ -28,7 +29,7 @@ export function DocumentsChecklist() {
           />
           <span className="ck-box" aria-hidden />
           <span className="ck-label">{item.label}</span>
-          <span className="ck-src">{item.source}</span>
+          <span className="ck-src">{verifiedCitation(item)}</span>
         </label>
       ))}
     </div>

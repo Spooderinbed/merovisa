@@ -7,11 +7,11 @@ import { GuideThread } from "@/components/marketing/guide-thread";
 describe("GuideThread", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("SSR rest: the ielts exchange is fully rendered with its bare citation; thread is aria-live=off", () => {
+  it("SSR rest: the ielts exchange is fully rendered with its verified citation; thread is aria-live=off", () => {
     const html = renderToStaticMarkup(<GuideThread />);
     expect(html).toContain("I got 6.5 overall. Is that actually enough?");
     expect(html).toContain("already meets the bar");
-    expect(html).toContain("Home Affairs · Jun 2026");
+    expect(html).toContain("Home Affairs · verified Jun 2026");
     expect(html).not.toContain("Source:");
     expect(html).toMatch(/aria-live="off"/);
   });

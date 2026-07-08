@@ -1,17 +1,16 @@
 // lib/marketing/guide-answers.ts
-import type { GuideKey } from "./provenance";
+import type { GuideKey, Sourced } from "./provenance";
 
-export interface GuideExchange {
+export interface GuideExchange extends Sourced {
   key: GuideKey;
   chip: string;
   q: string;
   a: string;
-  source: string;
-  verified: string;
 }
 
 export const GUIDE_ANSWERS: Record<GuideKey, GuideExchange> = {
   ielts: {
+    kind: "sourced",
     key: "ielts",
     chip: "Is 6.5 enough?",
     q: "I got 6.5 overall. Is that actually enough?",
@@ -20,6 +19,7 @@ export const GUIDE_ANSWERS: Record<GuideKey, GuideExchange> = {
     verified: "Jun 2026",
   },
   funds: {
+    kind: "sourced",
     key: "funds",
     chip: "Does the money have to be mine?",
     q: "Does the bank balance have to be my own money?",
@@ -28,6 +28,7 @@ export const GUIDE_ANSWERS: Record<GuideKey, GuideExchange> = {
     verified: "Jun 2026",
   },
   gte: {
+    kind: "sourced",
     key: "gte",
     chip: "What if they think I'll migrate?",
     q: "What if they think I just want to migrate, not study?",

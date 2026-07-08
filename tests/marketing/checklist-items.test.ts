@@ -8,8 +8,12 @@ describe("checklist items", () => {
     expect(CHECKLIST_ITEMS.filter((i) => i.done)).toHaveLength(2);
   });
 
-  it("every item carries a source label", () => {
-    for (const i of CHECKLIST_ITEMS) expect(i.source).toMatch(/·\s*\w+\s*\d{4}$/);
+  it("every item is a sourced claim with an org and a verified month", () => {
+    for (const i of CHECKLIST_ITEMS) {
+      expect(i.kind).toBe("sourced");
+      expect(i.source.length).toBeGreaterThan(0);
+      expect(i.verified).toMatch(/\w+\s+\d{4}$/);
+    }
   });
 
   it("uses Genuine Student (GS), never GTE", () => {

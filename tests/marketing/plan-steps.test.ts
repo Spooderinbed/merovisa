@@ -1,6 +1,7 @@
 // tests/marketing/plan-steps.test.ts
 import { describe, it, expect } from "vitest";
 import { PLAN_STEPS } from "@/lib/marketing/plan-steps";
+import { verifiedCitation, isSourced } from "@/lib/marketing/provenance";
 
 describe("plan steps", () => {
   it("ships exactly five steps numbered 01..05", () => {
@@ -15,9 +16,15 @@ describe("plan steps", () => {
     expect(open[0]!.state).toBe("Now");
   });
 
-  it("every sourced step renders a 'Source: ... · <month>' citation", () => {
+  it("every sourced step routes through verifiedCitation; the status step carries a label", () => {
     for (const s of PLAN_STEPS) {
-      if (s.cite.startsWith("Source:")) expect(s.cite).toMatch(/·\s*\w+\s*\d{4}$/);
+      if (isSourced(s.cite)) {
+        expect(s.cite.source.length).toBeGreaterThan(0);
+        expect(verifiedCitation(s.cite)).toMatch(/·\s*verified\s+\w+\s+\d{4}$/);
+      } else {
+        expect(s.cite.kind).toBe("status");
+        expect(s.cite.label.length).toBeGreaterThan(0);
+      }
     }
   });
 });
