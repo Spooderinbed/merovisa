@@ -1487,6 +1487,18 @@
       "summary": "Follow-up polish on the MV-112 landing after user-reported 'buttons aren't spaced properly and the animation is laggy' on the Your-assessment profile toggle. Two issues jsdom (no layout engine) missed. Spacing: the .toggle segmented control had padding but no gap between the two .toggle-opt pills, so the fully-rounded (border-radius:999px) pills touched and the active plum pill read as cramped; fixed with .mv-landing .toggle{gap:3px} in app/(marketing)/landing.css. Lag: components/marketing/verdict-panel.tsx's select() delayed setActiveId by 150ms and activeId drove both the pill highlight AND the rendered profile content, so the pill lagged the click; introduced a separate selectedId state (set synchronously on click) for the pill + radio checked, leaving activeId for the delayed content crossfade — matches the v7 reference where aria-pressed flips instantly and only render() is delayed. Added a swapRef timer cleared on re-tap and unmount to prevent flicker now that the pill is instant. Presentational only. Dossier: cards/MV-114.md.",
       "created": "2026-07-08",
       "entered": "2026-07-08"
+    },
+    {
+      "id": "MV-115",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "IN REVIEW (founder-gated merge) — fix #1 of the jsdom-blind fix phase. Move signed-in chrome (AppBar + JourneyMarker) INSIDE the min-h-dvh flex column so the footer pins and the ~103px dead scrollbar is gone on every short signed-in page + the streamed loading fallback. The chrome sat above the 100dvh column because its wrapper is display:contents (boxless), making the document ~103px taller than one viewport (bug class G, CONFIRMED medium). Mirrors app/(marketing)/layout.tsx (already correct in prod). MobileTabBar stays a fixed sibling; contents corridor scope unchanged. Structural DOM-contract guard added to tests/app/app-layout.test.tsx (RED→GREEN). Gate green: typecheck 0, lint 0 errors, 295 files / 1897 tests. Auth-gated shell not renderable headless → authed visual pass founder-owed; contract locked by test + marketing-layout parity. Branch mv-115-app-chrome-column; PR pending.",
+      "file": "cards/MV-115-app-chrome-column.md",
+      "title": "Signed-in chrome inside the min-h-dvh column (footer pins, no dead scrollbar)",
+      "summary": "Audit finding #1 (docs/audits/2026-07-08-jsdom-blind-audit.md, Tier 1, CONFIRMED medium, bug class G). The (app) layout wrapped the chrome in a display:contents div (boxless corridor-token carrier) and placed AppBar (~66px) + JourneyMarker (~37px) as siblings ABOVE the min-h-dvh flex column that holds main + Footer — so those two chrome elements became flow children of <body> sitting above the 100dvh column, making the document always ~100dvh + ~103px tall: a persistent dead scrollbar on every short signed-in page (empty states) and on the streamed loading.tsx fallback during every route transition, with the footer below the fold. Marketing/focused layouts put the header inside the column (correct); (app) had regressed the MV-98 footer-pin invariant while keeping its comment. Fix: move AppBar + JourneyMarker inside the flex min-h-dvh flex-col column before <main>, mirroring app/(marketing)/layout.tsx. MobileTabBar (position:fixed, no flow height) stays a sibling; the contents corridor scope still wraps everything so the data-corridor accent hook is unchanged. Structure-contract guard added to tests/app/app-layout.test.tsx (the parent of main contains footer + appbar + journey-marker), RED on the pre-fix tree → GREEN. Presentational/structural only — no scoring/API/DB/Zod; goldens untouched. Dossier: cards/MV-115-app-chrome-column.md.",
+      "created": "2026-07-08",
+      "entered": "2026-07-08"
     }
   ]
 }
