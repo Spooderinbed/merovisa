@@ -1,7 +1,7 @@
 # MV-115 — Signed-in chrome inside the min-h-dvh column (footer pins, no dead scrollbar)
 
 **Priority:** P2 · **Owner:** agent
-**Branch:** `mv-115-app-chrome-column` (off `master`)
+**Branch:** `mv-115-app-chrome-column` (off `master`) · **PR:** [#76](https://github.com/Spooderinbed/merovisa/pull/76) (founder-gated merge)
 **Goal:** On every signed-in page — including short/empty states and the streamed
 `loading.tsx` fallback during route transitions — the footer pins to the viewport
 bottom and there is no persistent dead scrollbar.
