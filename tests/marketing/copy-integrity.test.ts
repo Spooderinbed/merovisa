@@ -33,30 +33,25 @@ describe("landing copy integrity", () => {
   });
 });
 
-describe("landing component copy integrity", () => {
+describe("landing component + page copy integrity", () => {
   const dir = join(process.cwd(), "components/marketing");
-  // Pre-MV-112 landing components (MV-108 restyle). Superseded by this rebuild:
-  // Task 18 stops importing them and Task 19 deletes them. Each is already
-  // covered by its own component test, so they are excluded from this rebuild's
-  // copy guard. Once Task 19 removes them, this filter becomes a harmless no-op
-  // and the guard covers the whole directory.
-  const LEGACY_SUPERSEDED = new Set([
-    "eyebrow.tsx",
-    "hero-preview.tsx",
-    "how-it-works.tsx",
-    "tile.tsx",
-    "trust-callout.tsx",
-  ]);
-  const files = readdirSync(dir)
-    .filter((f) => f.endsWith(".tsx"))
-    .filter((f) => !LEGACY_SUPERSEDED.has(f));
+  // Task 19 deleted the superseded pre-MV-112 components, so the guard now covers
+  // the whole marketing component directory (glob via readdirSync) plus the
+  // rebuilt page shell. This catches an em-dash / user-facing GTE that lives in
+  // JSX copy or a code comment, not just the lib/marketing data modules above.
+  const targets = [
+    ...readdirSync(dir)
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => join(dir, f)),
+    join(process.cwd(), "app/(marketing)/page.tsx"),
+  ];
 
-  it("has marketing component files to guard", () => {
-    expect(files.length).toBeGreaterThan(0);
+  it("has marketing files to guard (components + page)", () => {
+    expect(targets.length).toBeGreaterThan(1);
   });
 
-  it.each(files)("%s: no em-dash, no user-facing GTE / Genuine Temporary Entrant", (file) => {
-    const src = readFileSync(join(dir, file), "utf8");
+  it.each(targets)("%s: no em-dash, no user-facing GTE / Genuine Temporary Entrant", (file) => {
+    const src = readFileSync(file, "utf8");
     // Em-dash (U+2014). The data uses en-dash (U+2013) and ≈, which are allowed.
     expect(src).not.toContain("—");
     // Match the human-readable term only: word-boundary uppercase "GTE" and the
