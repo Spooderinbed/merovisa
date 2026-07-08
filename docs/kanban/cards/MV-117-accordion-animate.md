@@ -1,7 +1,7 @@
 # MV-117 — Plan + freshness accordions animate open (kill the native-<details> snap)
 
 **Priority:** P2 · **Owner:** agent
-**Branch:** `mv-117-accordion-animate` (off `master`)
+**Branch:** `mv-117-accordion-animate` (off `master`) · **PR:** [#78](https://github.com/Spooderinbed/merovisa/pull/78) (founder-gated merge)
 **Goal:** On the landing, expanding a plan step or a freshness row animates smoothly
 (body eases open in sync with the chevron), instead of snapping open instantly.
 
