@@ -1,7 +1,7 @@
 # Landing redesign — v7 "Cursor cadence on our own skin"
 
 **Date:** 2026-07-08
-**Status:** Design spec — founder-locked ("yes go", 2026-07-08). Codex (GPT-5.5, xhigh) adversarially reviewed 2026-07-08 → **BUILDABLE-WITH-FIXES**; all 6 blockers + 5 should-fixes folded in (changelog §14). Awaiting founder review of this written spec before an implementation plan is written.
+**Status:** Design spec — founder-locked ("looks good to me", 2026-07-08). Codex (GPT-5.5, xhigh) adversarially reviewed twice: round 1 → **BUILDABLE-WITH-FIXES** (6 blockers + 5 should-fixes), round 2 re-verify → 3 narrow residual items, all folded in (changelog §14). Founder-approved; build unblocked.
 **Slice:** MV-112 · branch `mv-112-landing-redesign` off `origin/master` (merge founder-gated).
 **Surface:** `app/(marketing)/page.tsx` + `components/marketing/*` (the signed-out home page).
 **Design source of truth (exact markup / CSS / copy):**
@@ -75,10 +75,12 @@ The reference is the canonical order. Sections:
    copy: the **live verdict panel** (§4.4) in a bordered stage. Under the stage: a quiet 3-item
    **proof strip** ("Official Home Affairs & university data", "Every figure sourced and dated",
    "Free, no sign-up to start").
-3. **"From verdict to plan"** — split (copy left, artifact right): heading "The answer becomes a
-   plan.", lede, "See a sample plan →" link; artifact = the **plan-step accordion** (§4.5).
-4. **"Documents"** — reversed split (artifact left, copy right): heading "Every requirement,
-   sourced.", lede, link; artifact = the **interactive checklist** (§4.6).
+3. **"From verdict to plan"** (`id="how"`, the "How it works" anchor target) — split (copy left,
+   artifact right): heading "The answer becomes a plan.", lede, "See a sample plan →" link;
+   artifact = the **plan-step accordion** (§4.5).
+4. **"Documents"** (`id="what"`, the "What you get" anchor target) — reversed split (artifact left,
+   copy right): heading "Every requirement, sourced.", lede, link; artifact = the **interactive
+   checklist** (§4.6).
 5. **"The guide"** — split: heading "A guide that remembers you.", lede, "Meet the guide →" link;
    artifact = the **autoplay guide typewriter** (§4.7).
 6. **"Sourced & dated"** (freshness band, full-width, tinted): centred heading "Every figure shows
@@ -100,8 +102,10 @@ The reference uses `href="#"` throughout; production must use real targets:
 - Hero primary CTA "Check your eligibility →" → `/assess`.
 - Section soft links ("See a sample plan →", "See the checklist →", "Meet the guide →") → `/assess`
   (they funnel into the same assessment, not separate pages).
-- Closing **sparkle CTA** → `/assess`, as a real navigation (an `<a>`/`Link` styled as the sparkle
-  button, or a button that pushes the route) — never a non-navigating button.
+- Closing **sparkle CTA** → `/assess`, rendered as a **real `<Link href="/assess">`** styled as the
+  sparkle button (not a router-push button), so it is a genuine anchor in the DOM.
+- Verdict panel **"See full breakdown →"** affordance → `/assess` (funnels into the same assessment
+  as the section soft links); a real link, never `href="#"`.
 - Footer is text only (no links required).
 
 A test asserts no rendered `href="#"` and that both eligibility CTAs point at `/assess`.
@@ -186,11 +190,18 @@ cost, and a profile toggle.
 - **Enhancement (JS + motion):** on first in-view, dimension fills animate from 0 and the cost
   counts up (rAF); the toggle swaps Aarav⇄Shruti with a short `.swapping` fade and re-runs
   fill/count. Dimension rows expand for the per-dimension blurb.
-- **Reduced motion / no-JS:** final widths and final cost shown instantly; the toggle still switches
-  data (no fade); no count-up, no fill animation.
+- **No-JS:** the panel stands complete on the default profile (Aarav) with final widths and final
+  cost. If the toggle is built as a **native radio pair** (two `<input type="radio">` + CSS
+  `:checked` sibling selectors, recommended), profile switching also works with zero JS; if it is a
+  JS button instead, no-JS shows Aarav only and switching is a progressive enhancement. Either way
+  the rest state is complete and correct.
+- **Reduced motion (JS present):** the toggle switches Aarav⇄Shruti with **no** fade; final widths
+  and final cost appear instantly; no count-up, no fill animation. Interaction is preserved, only
+  animation is suppressed.
 - **Honesty:** the cost line is labelled a **sample estimate** and carries **no** sourced `verified`
   citation (§6) — a "Sample profile" label and the `≈` marker sit adjacent to the number. Carry the
-  reference's side content ("See full breakdown" affordance + the explanatory hint).
+  reference's side content: the explanatory hint plus a **"See full breakdown →" link to `/assess`**
+  (§3a), a real link, never `href="#"`.
 - **A11y:** the verdict word is an `aria-live="polite"` status announced on swap; the toggle is a
   labelled `role="group"` (or radio pair); dimension expanders are `<details>` or `<button
   aria-expanded>`.
@@ -205,7 +216,10 @@ Five plan steps (state pill, title, detail, citation), one expandable at a time.
 - **Enhancement:** clicking a step expands it (smooth `grid-template-rows` height transition) and
   collapses the previously open one.
 - **Reduced motion / no-JS:** native `<details>` (recommended) makes this work with zero JS — step
-  02 carries `open`; expand/collapse is instant under reduced motion.
+  02 carries `open`; expand/collapse is instant under reduced motion. To preserve the
+  one-open-at-a-time behaviour without JS, give every `<details>` a shared `name="plan"` (native
+  exclusive-accordion grouping); if one-open is not required with no JS, plain `<details>` is fine
+  and JS enforces the single-open rule.
 - **A11y:** each header is a `<summary>` (or `<button aria-expanded>`); one detail region per step.
 - **Data:** `lib/marketing/plan-steps.ts` (§6). Sourced citations render `source · verified`.
 - **Acceptance test:** SSR shows all five titles and step 02's detail; the data module has exactly
@@ -237,8 +251,13 @@ answer, with clickable chips to jump between them.
 - **Enhancement:** in-view autoplay (IO threshold 0.35) types Q → typing dots → types A → reveals
   the citation, then advances through `order = [ielts, funds, gte]`; a chip click interrupts the run
   (run-id guard) and plays that exchange.
-- **Reduced motion / no-JS:** no typing; the `ielts` exchange stands as the static rest state; chips
-  still navigate (each chip swaps which exchange is shown, working without the typewriter).
+- **No-JS:** no typing; the `ielts` exchange stands as the complete static rest state. Chip
+  switching is a progressive enhancement — either build the chips as a **native radio group** (CSS
+  `:checked` reveals the matching exchange, so switching works with zero JS) or accept that with no
+  JS only `ielts` shows. The rest state is always complete and correct.
+- **Reduced motion (JS present):** no typewriter and no typing dots; a chip click swaps to that
+  exchange **instantly** as final text. Interaction (chip switching, autoplay-pause-on-click) is
+  preserved, only the typing animation is suppressed.
 - **Honesty:** every answer carries its citation; the three questions are the founder-approved set,
   verbatim in `lib/marketing/guide-answers.ts` (§6).
 - **A11y:** the thread is `aria-live="off"` (no character-by-character spam); a separate visually
@@ -421,8 +440,8 @@ TDD per task. Assert **structure, content, and the honesty invariant** — not p
   + citation, and all five freshness rows with visible source + verified + next-check.
 - **Signed-in redirect:** a `getUser()` returning a user redirects to `/dashboard` before any
   landing markup renders (invariant 10).
-- **No dead links:** no rendered `href="#"`; hero CTA and closing sparkle CTA both resolve to
-  `/assess`; "Sign in" resolves to `/auth`.
+- **No dead links:** no rendered `href="#"`; the hero CTA, the verdict panel "See full breakdown"
+  link, and the closing sparkle CTA all resolve to `/assess`; "Sign in" resolves to `/auth`.
 - **Checklist semantics:** rows are queryable as `role="checkbox"`; two are checked at rest;
   toggling a third updates the live count to "3 of 6".
 - **Terminology guard:** the marketing copy modules contain no user-facing "GTE" / "Genuine
@@ -430,6 +449,10 @@ TDD per task. Assert **structure, content, and the honesty invariant** — not p
 - **Hydration parity:** an SSR-then-hydrate render produces no React hydration warning; no
   `Math.random` / `matchMedia` / IntersectionObserver call during initial render (deferred to
   effects).
+- **Reduced-motion behaviour:** with `matchMedia('(prefers-reduced-motion: reduce)')` mocked to
+  match, the artifacts render their **final static** states (no count-up, no fill-grow, no typing,
+  no verify-sweep, no `.reveal` transition) while interaction that does not depend on animation is
+  preserved (profile toggle switches, guide chips switch exchange, checkboxes toggle).
 - **Theme parity:** `:root[data-theme="dark"]` overrides the `prefers-color-scheme` media query in
   both directions (a stamped `data-theme` wins).
 - A repo-wide guard test: no em-dash (`—`) in the marketing copy modules.
@@ -482,6 +505,19 @@ All blockers + should-fixes are folded in:
 - **S5** `TrustStrip` fate → §9 (removed from this page; delete only if sole importer).
 - **Notes:** native `<details>/<summary>` recommended for accordions; discriminated data types;
   real font loading (§5); responsive contract pulled forward as §3b.
+
+**Round 2 (2026-07-08, re-verify pass):** Codex re-reviewed the revised spec → **STILL-HAS-BLOCKERS**
+(narrow, 2 blockers + 1 should-fix), now folded in:
+- **R2-B1** no-JS vs reduced-motion conflated for the profile toggle (§4.4) and guide chips (§4.7) →
+  contracts split: no-JS = complete default rest state (native radio path offered for zero-JS
+  switching); reduced-motion-with-JS = interaction preserved, animation suppressed.
+- **R2-B2** verdict panel "See full breakdown" was an unmapped link-like affordance → mapped to
+  `/assess` in §3a + §4.4, added to the §11 dead-link test.
+- **R2-S1** §11 lacked the reduced-motion test §14 claimed → added an explicit reduced-motion DOM/
+  behaviour test.
+- Nice-to-haves also folded: `#how`/`#what` ids pinned inline in §3; closing CTA pinned as a real
+  `<Link href="/assess">` (not router-push); native `<details name="plan">` specified for no-JS
+  one-open accordions (§4.5).
 
 ---
 
