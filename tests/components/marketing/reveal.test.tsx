@@ -20,4 +20,32 @@ describe("Reveal", () => {
     render(<Reveal><p>content</p></Reveal>);
     expect(screen.getByText("content").closest(".mv-reveal")!.className).not.toMatch(/hidden|in\b/);
   });
+
+  it("with motion allowed, the post-mount pre-reveal class is 'off', never 'hidden'", () => {
+    // Regression guard for the shipped bug: the pre-reveal state was named
+    // "hidden", which collides with Tailwind's global `.hidden{display:none}`.
+    // display:none removes the element from layout, so IntersectionObserver can
+    // NEVER report it intersecting -> the reveal is stuck hidden forever and the
+    // whole section's artifact is invisible. The class must be "off" (opacity-only
+    // hide that keeps the layout box observable). jsdom has no layout engine, so
+    // this asserts the class contract rather than the visual outcome.
+    vi.spyOn(window, "matchMedia").mockReturnValue({ matches: false } as MediaQueryList);
+    const observe = vi.fn();
+    class IO {
+      observe = observe;
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    }
+    const prev = window.IntersectionObserver;
+    window.IntersectionObserver = IO as unknown as typeof IntersectionObserver;
+    try {
+      render(<Reveal><p>content</p></Reveal>);
+      const el = screen.getByText("content").closest(".mv-reveal")!;
+      expect(el.className).toMatch(/\boff\b/);
+      expect(el.className).not.toMatch(/\bhidden\b/);
+      expect(observe).toHaveBeenCalled();
+    } finally {
+      window.IntersectionObserver = prev;
+    }
+  });
 });

@@ -51,6 +51,20 @@ describe("app/(marketing)/landing.css", () => {
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   });
 
+  it("reveal pre-reveal state is .mv-reveal.off, never .mv-reveal.hidden (Tailwind display:none collision)", () => {
+    // The class MUST be .off. `.hidden` collides with Tailwind's global
+    // .hidden{display:none}, which removes the element from layout so
+    // IntersectionObserver can never reveal it (shipped bug: all artifacts hidden).
+    expect(css).toMatch(/\.mv-reveal\.off\s*\{[^}]*opacity:\s*0/);
+    expect(css).not.toMatch(/\.mv-reveal\.hidden/);
+  });
+
+  it("the dimension meter .bar is display:block so its 6px height is honored (not an inline span)", () => {
+    // Shipped bug: .bar is a <span> (inline by default), so height:6px was ignored
+    // and the thin meter ballooned to line-box height, overlapping the next row.
+    expect(css).toMatch(/\.mv-landing\s+\.bar\s*\{[^}]*display:\s*block[^}]*height:\s*6px/);
+  });
+
   it("caps width at the reference 1160px and clips horizontal overflow", () => {
     expect(css).toMatch(/--maxw:\s*1160px/);
     expect(css).toMatch(/overflow-x:\s*clip/);
