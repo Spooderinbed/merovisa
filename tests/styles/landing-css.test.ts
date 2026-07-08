@@ -59,6 +59,12 @@ describe("app/(marketing)/landing.css", () => {
     expect(css).not.toMatch(/\.mv-reveal\.hidden/);
   });
 
+  it("the sample-profile toggle spaces its two option pills with a gap (they must not touch)", () => {
+    // Shipped bug: .toggle had padding but no gap, so the two full-radius pills sat
+    // flush at 0px and the active plum pill was jammed against its neighbour.
+    expect(css).toMatch(/\.mv-landing\s+\.toggle\s*\{[^}]*gap:\s*\d/);
+  });
+
   it("the dimension meter .bar is display:block so its 6px height is honored (not an inline span)", () => {
     // Shipped bug: .bar is a <span> (inline by default), so height:6px was ignored
     // and the thin meter ballooned to line-box height, overlapping the next row.

@@ -80,7 +80,7 @@
 .mv-landing .panel-head.swapping .verdict,.mv-landing .panel-head.swapping .p-note{opacity:.2}
 .mv-landing .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
 .mv-landing .p-badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);border:1px solid var(--line);border-radius:999px;padding:5px 11px;white-space:nowrap}
-.mv-landing .toggle{display:inline-flex;background-color:var(--frame);border:1px solid var(--line);border-radius:999px;padding:3px}
+.mv-landing .toggle{display:inline-flex;gap:3px;background-color:var(--frame);border:1px solid var(--line);border-radius:999px;padding:3px}
 .mv-landing .toggle-opt{display:inline-flex}
 .mv-landing .toggle-opt > span{font-size:12.5px;padding:7px 14px;border-radius:999px;color:var(--ink-soft);transition:background .3s var(--ease),color .3s var(--ease);white-space:nowrap}
 .mv-landing .toggle-opt.on > span{background-color:var(--plum);color:var(--cta-ink)}
