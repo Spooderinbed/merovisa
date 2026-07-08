@@ -1,7 +1,7 @@
 # MV-116 — Disclosure trigger focus ring visible under overflow-hidden (WCAG 2.4.7)
 
 **Priority:** P2 · **Owner:** agent
-**Branch:** `mv-116-disclosure-focus-ring` (off `master`)
+**Branch:** `mv-116-disclosure-focus-ring` (off `master`) · **PR:** [#77](https://github.com/Spooderinbed/merovisa/pull/77) (founder-gated merge)
 **Goal:** Keyboard focus on every profile section header (and any `Disclosure`) shows
 a visible focus outline.
 
