@@ -7,6 +7,7 @@ import { Wizard } from "@/components/wizard/wizard";
 import { WIZARD_STORAGE_KEY } from "@/components/wizard/use-wizard-state";
 import { ProfileRecap } from "./profile-recap";
 import { Results } from "@/components/results/results";
+import { formatExpiryLabel } from "@/lib/assessments/expiry";
 import { corridorForHomeCountry } from "@/lib/theme/corridor";
 import { track } from "@/lib/analytics/events";
 
@@ -21,6 +22,9 @@ interface PersistedResults {
   profile: StudentProfile;
   payload: AssessmentPayload;
   assessmentId: string | null;
+  // Stored expiry instant (created + 3d) so a refresh keeps the real expiry day
+  // instead of dropping it or re-deriving from the clock (MV-118 #4).
+  expiresAt?: string | null;
 }
 
 function readPersistedResults(): PersistedResults | null {
@@ -50,20 +54,43 @@ export function AssessFlow({
   signedIn = false,
   fresh = false,
 }: { signedIn?: boolean; fresh?: boolean } = {}) {
-  // A fresh start (e.g. /assess?new=1) must not resurrect a stale assessment.
-  // Signed-in users persist server-side, so client recovery is anonymous-only.
-  const restored = !signedIn && !fresh ? readPersistedResults() : null;
-  if (fresh) clearPersisted();
-
-  const [phase, setPhase] = useState<Phase>(restored ? "results" : "wizard");
-  const [profile, setProfile] = useState<StudentProfile | null>(restored?.profile ?? null);
-  const [payload, setPayload] = useState<AssessmentPayload | null>(restored?.payload ?? null);
-  const [assessmentId, setAssessmentId] = useState<string | null>(restored?.assessmentId ?? null);
+  // SSR-stable seeds: never read sessionStorage during render, or the server
+  // ("wizard") and the first client render (restored "results") would diverge and
+  // React would report a whole-subtree hydration mismatch (MV-118 #3). Restoration
+  // happens in the mount effect below instead.
+  const [phase, setPhase] = useState<Phase>("wizard");
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [payload, setPayload] = useState<AssessmentPayload | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [recapElapsed, setRecapElapsed] = useState(false);
   const [error, setError] = useState(false);
   // True while a save POST is in flight — lets the persist-miss recovery button on
   // the results screen show "Saving…" / disable so a retry can't be double-fired.
   const [retryingSave, setRetryingSave] = useState(false);
+
+  // Restore persisted anonymous results after mount (never during render), so SSR
+  // and the first client render both emit the wizard shell (MV-118 #3). A fresh
+  // start (/assess?new=1) clears stale state instead of restoring; signed-in users
+  // recover server-side, so client recovery is anonymous-only (MV-28 half a).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-time client-only restore of
+     persisted results; SSR + the first client render already emitted the stable wizard
+     shell, so this post-commit seed is intended, not a render loop (MV-118 #3). */
+  useEffect(() => {
+    if (signedIn) return;
+    if (fresh) {
+      clearPersisted();
+      return;
+    }
+    const restored = readPersistedResults();
+    if (!restored) return;
+    setProfile(restored.profile);
+    setPayload(restored.payload);
+    setAssessmentId(restored.assessmentId);
+    setExpiresAt(restored.expiresAt ?? null);
+    setPhase("results");
+  }, [signedIn, fresh]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (phase !== "recap" || !payload || !recapElapsed) return;
@@ -79,12 +106,12 @@ export function AssessFlow({
     try {
       window.sessionStorage.setItem(
         RESULTS_STORAGE_KEY,
-        JSON.stringify({ profile, payload, assessmentId } satisfies PersistedResults),
+        JSON.stringify({ profile, payload, assessmentId, expiresAt } satisfies PersistedResults),
       );
     } catch {
       // Private mode / quota — degrade to in-memory only.
     }
-  }, [signedIn, phase, payload, profile, assessmentId]);
+  }, [signedIn, phase, payload, profile, assessmentId, expiresAt]);
 
   // Persists the profile to /api/assess. Kept separate from handleComplete so the
   // error screen can re-attempt the save in place (MV-31) without re-running the
@@ -100,9 +127,14 @@ export function AssessFlow({
         body: JSON.stringify(completed),
       });
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      const data = (await res.json()) as { id: string | null; payload: AssessmentPayload };
+      const data = (await res.json()) as {
+        id: string | null;
+        payload: AssessmentPayload;
+        expiresAt?: string | null;
+      };
       setAssessmentId(data.id);
       setPayload(data.payload);
+      setExpiresAt(data.expiresAt ?? null);
     } catch {
       setError(true);
     } finally {
@@ -129,6 +161,7 @@ export function AssessFlow({
           destination={profile.destination}
           mode={signedIn ? "owned" : "anonymous"}
           assessmentId={assessmentId}
+          expiryLabel={expiresAt ? formatExpiryLabel(expiresAt) : undefined}
           // Persist-miss recovery is anonymous-only — signed-in users save server-side.
           // Re-POSTs the in-memory answers in place; the wizard is never re-run.
           onRetrySave={signedIn ? undefined : () => void save(profile)}
@@ -160,5 +193,5 @@ export function AssessFlow({
     return <ProfileRecap profile={profile} onDone={() => setRecapElapsed(true)} />;
   }
 
-  return <Wizard onComplete={handleComplete} persist={!signedIn} />;
+  return <Wizard onComplete={handleComplete} persist={!signedIn} fresh={fresh} />;
 }

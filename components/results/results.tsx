@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { AssessmentPayload } from "@/lib/results/types";
 import type { Destination } from "@/lib/scoring/types";
+import type { IntakeTimelinePoint } from "@/lib/timing/intake";
 import { isDestinationSupported } from "@/lib/scoring/types";
 import { track } from "@/lib/analytics/events";
 import { UnsupportedDestinationNotice, NotSureFramingNotice } from "./destination-notice";
@@ -30,6 +31,8 @@ export function Results({
   destination,
   mode = "anonymous",
   assessmentId = null,
+  expiryLabel,
+  intakeTimeline,
   onRetrySave,
   retryingSave = false,
 }: {
@@ -37,6 +40,10 @@ export function Results({
   destination: Destination;
   mode?: "anonymous" | "owned";
   assessmentId?: string | null;
+  /** Preformatted assessment expiry day, threaded to ConversionPaths (MV-118 #4). */
+  expiryLabel?: string;
+  /** Server-computed intake timeline, threaded to IntakeTimingCard (MV-118 #11). */
+  intakeTimeline?: IntakeTimelinePoint[];
   /** Anonymous persist-miss recovery: re-saves in place (AssessFlow-supplied). */
   onRetrySave?: () => void;
   retryingSave?: boolean;
@@ -88,7 +95,7 @@ export function Results({
           The heavy government-reference panels follow, folded into a collapsed
           "Know before you go" disclosure so a first-time anonymous student is not met
           by a wall of reference cards. No content is removed — it is all trust-defense. */}
-      <IntakeTimingCard intake={payload.intake} />
+      <IntakeTimingCard intake={payload.intake} timeline={intakeTimeline} />
       <PreferenceNote note={payload.preferenceNote} />
       <GoalTradeoffNote note={payload.goalTradeoffNote} />
       <UniversityMatches
@@ -128,7 +135,7 @@ export function Results({
         <NextSteps />
       ) : (
         <div ref={conversionRef}>
-          <ConversionPaths assessmentId={assessmentId} onRetrySave={onRetrySave} retryingSave={retryingSave} />
+          <ConversionPaths assessmentId={assessmentId} expiryLabel={expiryLabel} onRetrySave={onRetrySave} retryingSave={retryingSave} />
         </div>
       )}
     </div>

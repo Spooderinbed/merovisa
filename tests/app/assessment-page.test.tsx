@@ -39,6 +39,12 @@ vi.mock("@/components/results/results", () => ({
 
 import AssessmentPage from "@/app/(focused)/assessment/[id]/page";
 
+// Minimal valid intake timing — page.tsx computes the SSR timeline from it (MV-118 #11).
+const INTAKE = {
+  nearest: { name: "February", year: 2027, month: 2, status: "open", note: "n" },
+  alternatives: [],
+};
+
 describe("/assessment/[id]", () => {
   beforeEach(() => {
     getUser.mockReset();
@@ -52,7 +58,7 @@ describe("/assessment/[id]", () => {
 
   it("renders recoverable anonymous results (with the assessment id) when signed out", async () => {
     getUser.mockResolvedValue({ data: { user: null } });
-    getRecoverableAssessment.mockResolvedValue({ id: "aid", owner: null, result: { result: { verdict: "possible" } } });
+    getRecoverableAssessment.mockResolvedValue({ id: "aid", owner: null, expires_at: "2027-01-01T00:00:00.000Z", result: { result: { verdict: "possible" }, intake: INTAKE } });
     const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
     render(ui);
     // Anonymous recovery shows the conversion/claim path keyed by the assessment id.
@@ -77,7 +83,7 @@ describe("/assessment/[id]", () => {
 
   it("renders owned results from the stored payload", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getOwnedAssessment.mockResolvedValue({ id: "aid", owner: "u1", result: { result: { verdict: "possible" } } });
+    getOwnedAssessment.mockResolvedValue({ id: "aid", owner: "u1", result: { result: { verdict: "possible" }, intake: INTAKE } });
     const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
     render(ui);
     expect(screen.getByText("results:owned:none")).toBeInTheDocument();
@@ -91,7 +97,7 @@ describe("/assessment/[id]", () => {
     getOwnedAssessment.mockResolvedValue({
       id: "aid",
       owner: "u1",
-      result: { result: { verdict: "possible" }, matches: [{ university: { id: "u0" }, matchLevel: "possible" }] },
+      result: { result: { verdict: "possible" }, intake: INTAKE, matches: [{ university: { id: "u0" }, matchLevel: "possible" }] },
       profile_snapshot: { grade: 72, gradeSystem: "percentage-nepal", educationLevel: "bachelors" },
     });
     assembleAssessment.mockReturnValue({ matches: [], matchedCount: 0, preferenceNote: null });

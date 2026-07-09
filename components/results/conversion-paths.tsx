@@ -2,20 +2,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ASSESSMENT_TTL_DAYS } from "@/lib/assessments/expiry";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
-
-function expiryDate(now: Date = new Date()): string {
-  const d = new Date(now.getTime() + ASSESSMENT_TTL_DAYS * 24 * 60 * 60 * 1000);
-  return d.toLocaleString("en-US", { month: "short", day: "numeric" });
-}
 
 export function ConversionPaths({
   assessmentId,
+  expiryLabel,
   onRetrySave,
   retryingSave = false,
 }: {
   assessmentId: string | null;
+  /** Preformatted expiry day (e.g. "Jul 12"), derived server-side from the stored
+   *  expires_at so the label never reads the view-time clock (MV-118 #4). */
+  expiryLabel?: string;
   /** Re-POSTs the already-computed answers in place — supplied by AssessFlow. */
   onRetrySave?: () => void;
   retryingSave?: boolean;
@@ -56,8 +54,8 @@ export function ConversionPaths({
       <Card padding="lg">
         <h3 className="text-headline">Keep your assessment</h3>
         <p className="mt-2 text-body text-ink-soft">
-          Your assessment expires in 3 days (by {expiryDate()}). Create a free account with Google to keep it and
-          get updates as visa rules change.
+          Your assessment expires in 3 days{expiryLabel ? ` (by ${expiryLabel})` : ""}. Create a free
+          account with Google to keep it and get updates as visa rules change.
         </p>
         <div className="mt-4">
           <Button size="lg" onClick={() => void startClaimOAuth(assessmentId)}>

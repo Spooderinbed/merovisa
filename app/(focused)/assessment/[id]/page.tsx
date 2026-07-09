@@ -3,8 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getOwnedAssessment, getRecoverableAssessment } from "@/lib/assessments/repo";
+import { formatExpiryLabel } from "@/lib/assessments/expiry";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { assembleAssessment } from "@/lib/results/assemble";
+import { buildIntakeTimeline } from "@/lib/timing/intake";
 import { hasLegacyMatchShape } from "@/lib/results/legacy";
 import { Results } from "@/components/results/results";
 import type { Database } from "@/lib/supabase/types";
@@ -47,12 +49,20 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
       payload = { ...payload, matches: [], matchedCount: 0 };
     }
   }
+  // Compute the intake tick positions once on the server so the SSR markup and the
+  // client hydration render identical left:% — the client never recomputes from its
+  // own clock/timezone (MV-118 #11).
+  const intakeTimeline = buildIntakeTimeline(payload.intake);
   return (
     <Results
       payload={payload}
       destination={row.destination_id as Destination}
       mode={signedIn ? "owned" : "anonymous"}
       assessmentId={signedIn ? null : id}
+      // Derived server-side from the stored expires_at (created + 3d), so the day
+      // reflects the assessment's real age and is identical server + client (MV-118 #4).
+      expiryLabel={signedIn ? undefined : formatExpiryLabel(row.expires_at)}
+      intakeTimeline={intakeTimeline}
     />
   );
 }
