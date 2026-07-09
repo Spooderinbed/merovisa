@@ -43,4 +43,25 @@ describe("useWizardState sessionStorage persistence (MV-28 half a)", () => {
     expect(second.result.current.stepKey).toBe("homeCountry");
     expect(second.result.current.stepIndex).toBe(0);
   });
+
+  it("does NOT restore saved answers when fresh (?new=1), even with sessionStorage populated", () => {
+    // A prior session is mid-wizard and persisted.
+    const first = renderHook(() => useWizardState(undefined, { persist: true }));
+    act(() => first.result.current.setField({ graduationYear: currentYear }));
+    act(() => void first.result.current.next()); // homeCountry -> destination
+    act(() => void first.result.current.next()); // destination -> education
+    expect(first.result.current.stepKey).toBe("education");
+    first.unmount();
+
+    // A fresh start must deterministically SKIP restore. React runs this child
+    // restore effect before AssessFlow's parent clear effect, so relying on the
+    // clear would resurrect the stale answers for one commit (MV-28 fresh
+    // contract, MV-118). `fresh` short-circuits the restore instead.
+    const second = renderHook(() =>
+      useWizardState(undefined, { persist: true, fresh: true }),
+    );
+    expect(second.result.current.stepKey).toBe("homeCountry");
+    expect(second.result.current.stepIndex).toBe(0);
+    expect(second.result.current.profile.graduationYear).toBeUndefined();
+  });
 });

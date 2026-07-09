@@ -50,20 +50,37 @@ export function AssessFlow({
   signedIn = false,
   fresh = false,
 }: { signedIn?: boolean; fresh?: boolean } = {}) {
-  // A fresh start (e.g. /assess?new=1) must not resurrect a stale assessment.
-  // Signed-in users persist server-side, so client recovery is anonymous-only.
-  const restored = !signedIn && !fresh ? readPersistedResults() : null;
-  if (fresh) clearPersisted();
-
-  const [phase, setPhase] = useState<Phase>(restored ? "results" : "wizard");
-  const [profile, setProfile] = useState<StudentProfile | null>(restored?.profile ?? null);
-  const [payload, setPayload] = useState<AssessmentPayload | null>(restored?.payload ?? null);
-  const [assessmentId, setAssessmentId] = useState<string | null>(restored?.assessmentId ?? null);
+  // SSR-stable seeds: never read sessionStorage during render, or the server
+  // ("wizard") and the first client render (restored "results") would diverge and
+  // React would report a whole-subtree hydration mismatch (MV-118 #3). Restoration
+  // happens in the mount effect below instead.
+  const [phase, setPhase] = useState<Phase>("wizard");
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [payload, setPayload] = useState<AssessmentPayload | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [recapElapsed, setRecapElapsed] = useState(false);
   const [error, setError] = useState(false);
   // True while a save POST is in flight — lets the persist-miss recovery button on
   // the results screen show "Saving…" / disable so a retry can't be double-fired.
   const [retryingSave, setRetryingSave] = useState(false);
+
+  // Restore persisted anonymous results after mount (never during render), so SSR
+  // and the first client render both emit the wizard shell (MV-118 #3). A fresh
+  // start (/assess?new=1) clears stale state instead of restoring; signed-in users
+  // recover server-side, so client recovery is anonymous-only (MV-28 half a).
+  useEffect(() => {
+    if (signedIn) return;
+    if (fresh) {
+      clearPersisted();
+      return;
+    }
+    const restored = readPersistedResults();
+    if (!restored) return;
+    setProfile(restored.profile);
+    setPayload(restored.payload);
+    setAssessmentId(restored.assessmentId);
+    setPhase("results");
+  }, [signedIn, fresh]);
 
   useEffect(() => {
     if (phase !== "recap" || !payload || !recapElapsed) return;
@@ -160,5 +177,5 @@ export function AssessFlow({
     return <ProfileRecap profile={profile} onDone={() => setRecapElapsed(true)} />;
   }
 
-  return <Wizard onComplete={handleComplete} persist={!signedIn} />;
+  return <Wizard onComplete={handleComplete} persist={!signedIn} fresh={fresh} />;
 }

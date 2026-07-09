@@ -35,11 +35,13 @@ const STEP_COMPONENTS: Record<WizardStepKey, ComponentType<StepProps>> = {
 export function Wizard({
   onComplete,
   persist = false,
+  fresh = false,
 }: {
   onComplete: (profile: StudentProfile) => void;
   persist?: boolean;
+  fresh?: boolean;
 }) {
-  const w = useWizardState(undefined, { persist });
+  const w = useWizardState(undefined, { persist, fresh });
   useEffect(() => {
     track("wizard_step_viewed", { step: w.stepKey });
   }, [w.stepKey]);

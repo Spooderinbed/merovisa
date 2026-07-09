@@ -97,19 +97,42 @@ export interface WizardState {
 
 export function useWizardState(
   initial: Partial<StudentProfile> = DEFAULT_PROFILE,
-  options: { persist?: boolean } = {},
+  options: { persist?: boolean; fresh?: boolean } = {},
 ): WizardState {
   const persist = options.persist ?? false;
-  // Rehydrate once at mount from sessionStorage when persistence is on.
-  const restored = persist ? readPersistedWizard() : null;
-  const [profile, setProfile] = useState<Partial<StudentProfile>>(restored?.profile ?? initial);
-  const [index, setIndex] = useState(restored?.index ?? 0);
+  const fresh = options.fresh ?? false;
+  // SSR-stable seeds: never read sessionStorage during render, or the server
+  // ("Step 1") and the first client render (restored step) would diverge and
+  // React would report a hydration mismatch (MV-118 #7). Restore runs in the
+  // mount effect below instead.
+  const [profile, setProfile] = useState<Partial<StudentProfile>>(initial);
+  const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState<"fwd" | "back">("fwd");
+  // Gate the persist WRITE on restore having run, so the mount-time default write
+  // can't clobber persisted answers before the restore effect below reads them.
+  const [hydrated, setHydrated] = useState(false);
+
+  // Rehydrate from sessionStorage after mount (never during render). `fresh`
+  // (/assess?new=1) deterministically SKIPS restore: React runs this child effect
+  // before AssessFlow's parent clear effect, so relying on the clear would
+  // resurrect stale answers for one commit (MV-28 fresh contract, MV-118 #7).
+  useEffect(() => {
+    if (!persist || fresh) {
+      setHydrated(true);
+      return;
+    }
+    const restored = readPersistedWizard();
+    if (restored) {
+      setProfile(restored.profile);
+      setIndex(restored.index);
+    }
+    setHydrated(true);
+  }, [persist, fresh]);
 
   useEffect(() => {
-    if (!persist) return;
+    if (!persist || !hydrated) return;
     writePersistedWizard({ profile, index });
-  }, [persist, profile, index]);
+  }, [persist, hydrated, profile, index]);
 
   const visible = useMemo(() => visibleStepsFor(profile), [profile]);
   const clampedIndex = Math.min(index, visible.length - 1);
