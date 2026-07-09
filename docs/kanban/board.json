@@ -1487,6 +1487,18 @@
       "summary": "Follow-up polish on the MV-112 landing after user-reported 'buttons aren't spaced properly and the animation is laggy' on the Your-assessment profile toggle. Two issues jsdom (no layout engine) missed. Spacing: the .toggle segmented control had padding but no gap between the two .toggle-opt pills, so the fully-rounded (border-radius:999px) pills touched and the active plum pill read as cramped; fixed with .mv-landing .toggle{gap:3px} in app/(marketing)/landing.css. Lag: components/marketing/verdict-panel.tsx's select() delayed setActiveId by 150ms and activeId drove both the pill highlight AND the rendered profile content, so the pill lagged the click; introduced a separate selectedId state (set synchronously on click) for the pill + radio checked, leaving activeId for the delayed content crossfade — matches the v7 reference where aria-pressed flips instantly and only render() is delayed. Added a swapRef timer cleared on re-tap and unmount to prevent flicker now that the pill is instant. Presentational only. Dossier: cards/MV-114.md.",
       "created": "2026-07-08",
       "entered": "2026-07-08"
+    },
+    {
+      "id": "MV-118",
+      "col": "in-progress",
+      "pri": "P1",
+      "owner": "agent",
+      "badge": "IN PROGRESS — hydration-hardening slice (jsdom-blind audit #3/#7/#4/#11). Branch mv-118-hydration-hardening off master. Stops reading window/the wall clock in render bodies on the anon assess->results trust paths; includes the 'always 3 days from now' expiry TRUST bug (#4). Must not regress MV-28 anon results recovery.",
+      "file": "cards/MV-118.md",
+      "title": "Hydration hardening — stop reading window/clock in render (assess-flow, wizard, conversion-paths expiry trust bug, intake)",
+      "summary": "Fourth jsdom-blind slice: move impure render-body reads of window/the clock to the server (compute into the payload) or behind a mount effect, on the anonymous assess->results trust paths where SSR->hydrate mismatches are invisible to the no-layout-engine jsdom suite. #3 components/assess/assess-flow.tsx readPersistedResults() (reads window.sessionStorage) seeds useState(phase) in render -> SSR phase='wizard' vs client 'results' whole-subtree mismatch + wizard flash on the MV-28 recovery path; #7 components/wizard/use-wizard-state.ts readPersistedWizard() same pattern (step-1 flash) folded in; #4 components/results/conversion-paths.tsx expiryDate() reads new Date() + formats in render (UTC vs Asia/Kathmandu TZ mismatch) AND the adjacent TRUST bug — expiry derived from the live clock at view time not the stored creation timestamp, so the recovery route always shows '3 days from now' regardless of real age; fix derives expiry from the stored creation timestamp (server-computed, threaded via props, 3-day product window); #11 components/results/intake-timing.tsx buildIntakeTimeline default now=new Date() -> inline left:% float mismatch, fix computes offsetPct server-side. HARD CONSTRAINT: must not regress MV-28 (change WHEN restore happens, not WHETHER). Guards assert the SSR-stable / prop-derived contract jsdom can see. Dossier: cards/MV-118.md.",
+      "created": "2026-07-09",
+      "entered": "2026-07-09"
     }
   ]
 }
