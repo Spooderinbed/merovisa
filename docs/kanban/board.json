@@ -1487,6 +1487,18 @@
       "summary": "Follow-up polish on the MV-112 landing after user-reported 'buttons aren't spaced properly and the animation is laggy' on the Your-assessment profile toggle. Two issues jsdom (no layout engine) missed. Spacing: the .toggle segmented control had padding but no gap between the two .toggle-opt pills, so the fully-rounded (border-radius:999px) pills touched and the active plum pill read as cramped; fixed with .mv-landing .toggle{gap:3px} in app/(marketing)/landing.css. Lag: components/marketing/verdict-panel.tsx's select() delayed setActiveId by 150ms and activeId drove both the pill highlight AND the rendered profile content, so the pill lagged the click; introduced a separate selectedId state (set synchronously on click) for the pill + radio checked, leaving activeId for the delayed content crossfade — matches the v7 reference where aria-pressed flips instantly and only render() is delayed. Added a swapRef timer cleared on re-tap and unmount to prevent flicker now that the pill is instant. Presentational only. Dossier: cards/MV-114.md.",
       "created": "2026-07-08",
       "entered": "2026-07-08"
+    },
+    {
+      "id": "MV-119",
+      "col": "in-progress",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "Fifth and final jsdom-blind slice (cosmetic): #8 journey-rail connector top-[13px]->top-[9px] (dot centre = py-1 4px + half h-2.5 5px = 9px); #9 matches-tab active-width jitter — keep the active font-medium WCAG cue but reserve the bold width on every tab via a hidden aria-hidden font-medium ghost grid-stacked under the visible label (0px reflow vs the old 14.4px); #6 freshness verify-pulse was hardcoded at mount so all five vpulses fired below the fold — now staged from the on-scroll IO sweep per row (reduced-motion/no-IO get the static end-state); #10 guide-thread IO cleanup now bumps runId.current so the in-flight typewriter bails instead of setState-after-unmount.",
+      "file": "cards/MV-119.md",
+      "title": "Cosmetic hardening — rail dot / tab jitter / freshness pulse / guide cleanup",
+      "summary": "The fifth jsdom-blind slice (audit #8/#9/#6/#10): four cosmetic defects a green ~1900-test jsdom suite cannot catch (no layout engine, no real animation/scroll timers). #8 components/dashboard/journey-rail.tsx: the baseline connector was top-[13px] but each dot centre sits at 9px (py-1 + half h-2.5) -> top-[9px] (matches the outcome-funnel top-[5px] pattern). #9 components/matches/matches-tabs.tsx: the active tab's font-medium made it wider so the tablist reflowed on every switch; keep the bold active cue but reserve the bold width on every tab with a hidden aria-hidden font-medium ghost grid-stacked under the visible label. #6 components/marketing/freshness-table.tsx: verified was hardcoded at mount, firing all five vdot vpulses below the fold; drive it from the on-scroll IO sweep so each pulse fires in view, with reduced-motion/no-IO applying the static end-state at once (provenance text unchanged, no-JS-safe). #10 components/marketing/guide-thread.tsx: the IO cleanup did not bump runId.current, so the in-flight autoplay typewriter kept scheduling setState after unmount; bump it in cleanup. Presentational only, no trust dimension. Dossier: cards/MV-119.md.",
+      "created": "2026-07-09",
+      "entered": "2026-07-09"
     }
   ]
 }
