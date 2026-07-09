@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PlanSteps } from "@/components/marketing/plan-steps";
 
 describe("PlanSteps", () => {
-  it("SSR shows all five titles and step 02's detail open with its citation", () => {
+  it("SSR shows all five titles and step 02 open at rest (JS single-open .open class, not native <details>)", () => {
     const html = renderToStaticMarkup(<PlanSteps />);
     for (const t of [
       "Confirm your eligibility",
@@ -12,12 +12,17 @@ describe("PlanSteps", () => {
       "Prepare financial evidence",
       "Lodge your student visa",
     ]) expect(html).toContain(t);
-    // exactly one <details ... open> and it is step 02
-    const openCount = (html.match(/<details[^>]*\sopen/g) ?? []).length;
+    // Exactly one step is open at rest, and it is step 02 (the "Now" step).
+    const openCount = (html.match(/aria-expanded="true"/g) ?? []).length;
     expect(openCount).toBe(1);
+    expect(html).toMatch(/class="step open now"/);
+    // MV-117: the native <details name="mv-plan"> accordion snapped open (a closed
+    // <details> display:none's its content, so grid-rows 0fr→1fr can't interpolate).
+    // Replaced by a JS .open-class accordion so the expand animates. No <details> left.
+    expect(html).not.toMatch(/<details/);
+    expect(html).not.toMatch(/name="mv-plan"/);
     expect(html).toContain("University data · verified Jun 2026");
     expect(html).not.toContain("Source:");
-    expect(html).toMatch(/name="mv-plan"/); // native exclusive accordion
   });
 
   it("renders a verified citation for every sourced step; the status step keeps its label", () => {

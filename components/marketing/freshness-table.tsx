@@ -8,6 +8,20 @@ import { verifiedCitation } from "@/lib/marketing/provenance";
 export function FreshnessTable() {
   const ref = useRef<HTMLDivElement>(null);
   const [lit, setLit] = useState<number[]>([]);
+  // Expanded rows, driven by a JS `.open` class (NOT native <details>): a closed
+  // <details> display:none's its content, so the grid-rows 0fr→1fr ease has no
+  // prior frame to interpolate and snaps open (MV-117). Keeping .fdetail rendered
+  // lets it animate. Independent (multi-open) rows, so a Set of keys.
+  const [openRows, setOpenRows] = useState<Set<string>>(() => new Set());
+
+  function toggleRow(key: string) {
+    setOpenRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -38,22 +52,30 @@ export function FreshnessTable() {
 
   return (
     <div className="ftable" ref={ref}>
-      {FRESHNESS_ROWS.map((row, i) => (
-        <details className="fitem" key={row.key}>
-          <summary className={cn("frow", "verified", lit.includes(i) && "lit")}>
-            <span className="fk">{row.key}</span>
-            <span className="fv">{row.value}</span>
-            <span className="fd">
-              <span className="vdot" />
-              {verifiedCitation(row)} · next check {row.nextCheck}
-            </span>
-            <span className="fchev" aria-hidden>›</span>
-          </summary>
-          <div className="fdetail"><div className="fdetail-inner">
-            <p>{row.detail}<span className="fmeta">Verified {row.verified} · Next check {row.nextCheck}</span></p>
-          </div></div>
-        </details>
-      ))}
+      {FRESHNESS_ROWS.map((row, i) => {
+        const open = openRows.has(row.key);
+        return (
+          <div className={cn("fitem", open && "open")} key={row.key}>
+            <button
+              type="button"
+              className={cn("frow", "verified", lit.includes(i) && "lit")}
+              aria-expanded={open}
+              onClick={() => toggleRow(row.key)}
+            >
+              <span className="fk">{row.key}</span>
+              <span className="fv">{row.value}</span>
+              <span className="fd">
+                <span className="vdot" />
+                {verifiedCitation(row)} · next check {row.nextCheck}
+              </span>
+              <span className="fchev" aria-hidden>›</span>
+            </button>
+            <div className="fdetail"><div className="fdetail-inner">
+              <p>{row.detail}<span className="fmeta">Verified {row.verified} · Next check {row.nextCheck}</span></p>
+            </div></div>
+          </div>
+        );
+      })}
     </div>
   );
 }
