@@ -13,6 +13,10 @@ export function FreshnessTable() {
   // prior frame to interpolate and snaps open (MV-117). Keeping .fdetail rendered
   // lets it animate. Independent (multi-open) rows, so a Set of keys.
   const [openRows, setOpenRows] = useState<Set<string>>(() => new Set());
+  // `verified` lights the provenance dot (and, for motion users, its one-shot
+  // vpulse). It is applied as the on-scroll sweep reaches each row so the pulse
+  // fires in view, never hardcoded at mount, which would burn it off-screen (MV-119).
+  const [verified, setVerified] = useState<number[]>([]);
 
   function toggleRow(key: string) {
     setOpenRows((prev) => {
@@ -25,7 +29,13 @@ export function FreshnessTable() {
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || typeof IntersectionObserver === "undefined") return;
+    if (reduce || typeof IntersectionObserver === "undefined") {
+      // No sweep to ride: apply the end-state at once. The vpulse @keyframes is
+      // gated behind prefers-reduced-motion:no-preference, so the dot is static.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVerified(FRESHNESS_ROWS.map((_, i) => i));
+      return;
+    }
     const el = ref.current;
     if (!el) return;
     let swept = false;
@@ -38,6 +48,7 @@ export function FreshnessTable() {
           obs.disconnect();
           FRESHNESS_ROWS.forEach((_, i) => {
             timers.push(window.setTimeout(() => {
+              setVerified((v) => (v.includes(i) ? v : [...v, i]));
               setLit((l) => [...l, i]);
               timers.push(window.setTimeout(() => setLit((l) => l.filter((x) => x !== i)), 520));
             }, 130 * i));
@@ -58,7 +69,7 @@ export function FreshnessTable() {
           <div className={cn("fitem", open && "open")} key={row.key}>
             <button
               type="button"
-              className={cn("frow", "verified", lit.includes(i) && "lit")}
+              className={cn("frow", verified.includes(i) && "verified", lit.includes(i) && "lit")}
               aria-expanded={open}
               onClick={() => toggleRow(row.key)}
             >

@@ -45,4 +45,14 @@ describe("JourneyRail", () => {
     expect(dot?.className).toContain("ease-calm");
     expect(dot?.className ?? "").not.toMatch(/duration-\[/);
   });
+
+  it("centres the baseline connector on the dot centres (py-1 + half h-2.5 = 9px)", () => {
+    // The Link pads py-1 (4px) above the h-2.5 (10px) dot, so each dot's centre
+    // sits 4 + 5 = 9px from the top of the ol — the connector must line up there,
+    // not the old 13px which floated it 4px below the dots.
+    const { container } = render(<JourneyRail signals={signals()} />);
+    const connector = container.querySelector("ol > div");
+    expect(connector?.className).toContain("top-[9px]");
+    expect(connector?.className ?? "").not.toContain("top-[13px]");
+  });
 });

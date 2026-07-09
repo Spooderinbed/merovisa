@@ -79,11 +79,16 @@ export function MatchesTabs({
               data-active={active ? "true" : "false"}
               onClick={() => select(key)}
               onKeyDown={(event) => onTabKeyDown(event, index)}
-              className={`rounded-pill px-4 py-2 text-meta ${
+              className={`grid place-items-center rounded-pill px-4 py-2 text-meta ${
                 active ? "bg-primary text-on-primary font-medium" : "text-ink-soft hover:bg-bg-tint"
               }`}
             >
-              {label}
+              {/* A hidden, always-bold ghost pins the cell to the active (font-medium)
+                  width, so selecting a tab never widens it and nudges its siblings. */}
+              <span aria-hidden className="invisible col-start-1 row-start-1 font-medium">
+                {label}
+              </span>
+              <span className="col-start-1 row-start-1">{label}</span>
             </button>
           );
         })}
