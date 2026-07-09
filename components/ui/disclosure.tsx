@@ -37,7 +37,13 @@ export function Disclosure({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors duration-fast ease-calm hover:bg-bg-tint"
+        // The Card is overflow-hidden (clips the hover-bg to the card's rounded
+        // corners), and this trigger's box is flush with that clip box. The global
+        // focus ring paints at outline-offset:2px — *outside* the box — so the clip
+        // eats it and keyboard focus was invisible (WCAG 2.4.7). Inset the ring so
+        // it paints inside the clip; border-radius:inherit (from the global rule)
+        // already rounds it to match the card.
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors duration-fast ease-calm hover:bg-bg-tint focus-visible:[outline-offset:-2px]"
       >
         <span className="flex flex-col gap-0.5">
           <span className="text-control font-medium text-ink">{title}</span>

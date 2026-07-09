@@ -75,4 +75,21 @@ describe("Disclosure", () => {
     expect(badge).toBeInTheDocument();
     expect(trigger).toContainElement(badge);
   });
+
+  it("insets the trigger focus ring so keyboard focus stays visible inside the overflow-hidden card (WCAG 2.4.7)", () => {
+    // The global focus ring is outline-offset:2px — painted OUTSIDE the element
+    // box. The Disclosure Card is overflow-hidden (load-bearing: it clips the
+    // header's hover-bg to the card's rounded corners), and the trigger button's
+    // box is flush with that clip box, so the outside ring gets clipped away —
+    // every profile section header showed NO visible keyboard focus outline. The
+    // trigger insets its own ring (negative outline-offset) so it paints inside
+    // the clip. jsdom has no layout engine, so guard the class contract, not px.
+    render(
+      <Disclosure title="Know before you go">
+        <p>Body</p>
+      </Disclosure>,
+    );
+    const trigger = screen.getByRole("button", { name: /Know before you go/ });
+    expect(trigger.className).toContain("focus-visible:[outline-offset:-2px]");
+  });
 });
