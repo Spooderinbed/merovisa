@@ -82,7 +82,15 @@ export function GuideThread() {
       { threshold: 0.35 },
     );
     obs.observe(el);
-    return () => obs.disconnect();
+    // Bump runId on teardown so any in-flight play()/typewriter loop sees its id go
+    // stale and bails, instead of scheduling setState after the component unmounts.
+    // We deliberately read the LIVE counter here (not a setup-time snapshot), so the
+    // ref-in-cleanup lint below is expected and correct.
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      runId.current++;
+      obs.disconnect();
+    };
     // Run once on mount. `play` closes only over refs + stable setState, so it is
     // effect-stable; adding it to deps would recreate the observer each render and
     // re-trigger autoplay.

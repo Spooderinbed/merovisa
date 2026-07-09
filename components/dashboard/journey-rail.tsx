@@ -40,7 +40,7 @@ export function JourneyRail({ signals }: { signals: JourneySignals }) {
       <ol className="relative flex">
         {/* Baseline runs through the dot centres; hollow dots sit on bg-surface so
             the line doesn't show through their middle. */}
-        <div aria-hidden className="absolute left-[8.33%] right-[8.33%] top-[13px] h-px bg-line" />
+        <div aria-hidden className="absolute left-[8.33%] right-[8.33%] top-[9px] h-px bg-line" />
         {journey.stages.map((stage) => (
           <li key={stage.key} className="relative flex flex-1">
             <Link

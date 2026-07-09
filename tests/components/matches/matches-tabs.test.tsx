@@ -49,6 +49,21 @@ describe("MatchesTabs", () => {
     expect(activeTab.className).toMatch(/font-medium/);
   });
 
+  it("reserves the bold (active) width on every tab so selection never nudges siblings", () => {
+    // The active tab is font-medium (wider) while inactive tabs are not; without a
+    // reserved width the tablist reflows on every switch. Each tab carries a hidden,
+    // aria-hidden bold ghost of its own label that pins the width to the bold size,
+    // so an *inactive* tab is not itself bold yet still occupies the bold footprint.
+    renderTabs();
+    const inactive = screen.getByRole("tab", { name: /Scholarships/i });
+    expect(inactive.className).not.toMatch(/font-medium/);
+    const ghost = inactive.querySelector('[aria-hidden="true"]');
+    expect(ghost).not.toBeNull();
+    expect(ghost).toHaveTextContent("Scholarships");
+    expect(ghost?.className).toMatch(/font-medium/);
+    expect(ghost?.className).toMatch(/invisible/);
+  });
+
   it("switches panels on click and moves selection", async () => {
     const user = userEvent.setup();
     renderTabs();
