@@ -1490,7 +1490,7 @@
     },
     {
       "id": "MV-115",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "IN REVIEW (founder-gated merge) — fix #1 of the jsdom-blind fix phase. Move signed-in chrome (AppBar + JourneyMarker) INSIDE the min-h-dvh flex column so the footer pins and the ~103px dead scrollbar is gone on every short signed-in page + the streamed loading fallback. The chrome sat above the 100dvh column because its wrapper is display:contents (boxless), making the document ~103px taller than one viewport (bug class G, CONFIRMED medium). Mirrors app/(marketing)/layout.tsx (already correct in prod). MobileTabBar stays a fixed sibling; contents corridor scope unchanged. Structural DOM-contract guard added to tests/app/app-layout.test.tsx (RED→GREEN). Gate green: typecheck 0, lint 0 errors, 295 files / 1897 tests. Auth-gated shell not renderable headless → authed visual pass founder-owed; contract locked by test + marketing-layout parity. Branch mv-115-app-chrome-column; PR #76.",
@@ -1498,11 +1498,11 @@
       "title": "Signed-in chrome inside the min-h-dvh column (footer pins, no dead scrollbar)",
       "summary": "Audit finding #1 (docs/audits/2026-07-08-jsdom-blind-audit.md, Tier 1, CONFIRMED medium, bug class G). The (app) layout wrapped the chrome in a display:contents div (boxless corridor-token carrier) and placed AppBar (~66px) + JourneyMarker (~37px) as siblings ABOVE the min-h-dvh flex column that holds main + Footer — so those two chrome elements became flow children of <body> sitting above the 100dvh column, making the document always ~100dvh + ~103px tall: a persistent dead scrollbar on every short signed-in page (empty states) and on the streamed loading.tsx fallback during every route transition, with the footer below the fold. Marketing/focused layouts put the header inside the column (correct); (app) had regressed the MV-98 footer-pin invariant while keeping its comment. Fix: move AppBar + JourneyMarker inside the flex min-h-dvh flex-col column before <main>, mirroring app/(marketing)/layout.tsx. MobileTabBar (position:fixed, no flow height) stays a sibling; the contents corridor scope still wraps everything so the data-corridor accent hook is unchanged. Structure-contract guard added to tests/app/app-layout.test.tsx (the parent of main contains footer + appbar + journey-marker), RED on the pre-fix tree → GREEN. Presentational/structural only — no scoring/API/DB/Zod; goldens untouched. Dossier: cards/MV-115-app-chrome-column.md.",
       "created": "2026-07-08",
-      "entered": "2026-07-08"
+      "entered": "2026-07-09"
     },
     {
       "id": "MV-116",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "IN REVIEW (founder-gated merge) — fix #2 of the jsdom-blind fix phase. Disclosure trigger keyboard-focus ring was invisible (WCAG 2.4.7): the global ring is outline-offset:2px (painted OUTSIDE the box) but the Disclosure Card is overflow-hidden (load-bearing — clips the header hover-bg to the card's rounded corners) and the trigger box is flush with the clip box, so the outside ring was clipped away on every profile section header (bug class E, CONFIRMED medium). Fix: inset the ring on the trigger (focus-visible:[outline-offset:-2px]) so it paints inside the clip; global border-radius:inherit already rounds it to the card. overflow-hidden preserved. Class-contract guard added to tests/components/disclosure.test.tsx (RED->GREEN). Live-verified the served stylesheet contains the compiled rule with winning specificity (0,2,0 > global 0,1,0). Gate green: typecheck 0, lint 0 errors, 295 files / 1897 tests. Branch mv-116-disclosure-focus-ring; PR #77. NOTE: board.json tail will conflict trivially with MV-115 at sequential merge (both append after MV-114).",
@@ -1510,11 +1510,11 @@
       "title": "Disclosure trigger focus ring visible under overflow-hidden (WCAG 2.4.7)",
       "summary": "Audit finding #2 (docs/audits/2026-07-08-jsdom-blind-audit.md, Tier 2, CONFIRMED medium, bug class E). Disclosure wraps its trigger + panel in <Card overflow-hidden>; Card defaults to rounded-lg + border + no padding and the trigger button is w-full with px-5 py-4, so the button box is flush with the Card's clip box. The global focus ring (globals.css:242) is outline:2px solid primary; outline-offset:2px — painted 2px OUTSIDE the box — so overflow-hidden clipped it away and every collapsed profile section header (8 groups via section-accordion.tsx) showed no visible keyboard focus outline. overflow-hidden is load-bearing (clips the header hover:bg-bg-tint to the card's rounded top corners), so it can't be dropped. Fix: inset the ring on the trigger only — append focus-visible:[outline-offset:-2px] so it paints 2px inside the box, within the clip; the global rule's border-radius:inherit makes the inset outline inherit the card's 16px radius (concentric). Class-contract guard in tests/components/disclosure.test.tsx asserts the trigger carries the inset utility (RED->GREEN). Presentational only — no scoring/API/DB/Zod; goldens untouched. Dossier: cards/MV-116-disclosure-focus-ring.md.",
       "created": "2026-07-08",
-      "entered": "2026-07-08"
+      "entered": "2026-07-09"
     },
     {
       "id": "MV-117",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "IN REVIEW (founder-gated merge) — fix #3 (last landing medium) of the jsdom-blind fix phase. Plan + freshness landing accordions snapped open instead of animating: the grid-template-rows 0fr->1fr ease sat on a child of a native <details>, which display:none's its closed content, so there was no prior frame to interpolate and the body popped while the chevron rotated 0.3s (bug class G, CONFIRMED medium). Fix: drive both expands with a JS .open class (like verdict-panel .dim) so the detail stays rendered and animates. plan-steps.tsx server->client single-open; freshness-table.tsx multi-open Set; landing.css details[open] selectors -> .step.open/.fitem.open; removed orphaned ::-webkit-details-marker + list-style:none. Server-rendered filled rest state (step 02 open) preserved; buttons keep the .mv-landing button:focus-visible ring. Guards: plan-steps.test (no <details>, one aria-expanded=true on step-open-now) + landing-css.test (class-based open selectors, no details[open]). LIVE-VERIFIED on /: 0 <details>, closed .step-detail is display:grid grid-rows:0px transition:grid-template-rows, a click caught grid-rows mid-transition at 53.48px (interpolating 0->94 — a snap would only read 0 or 94). Gate green: typecheck 0, lint 0 errors, 295 files / 1897 tests. Branch mv-117-accordion-animate; PR #78. NOTE: board.json tail conflicts trivially with MV-115/116 at sequential merge.",
@@ -1522,11 +1522,11 @@
       "title": "Plan + freshness accordions animate open (kill the native-<details> snap)",
       "summary": "Audit finding #5 (docs/audits/2026-07-08-jsdom-blind-audit.md, Tier 3, CONFIRMED medium, bug class G) — the last remaining landing medium. Both landing accordions used native <details>/<summary> with a grid-template-rows:0fr->1fr ease on the collapsible child (landing.css .step-detail / .fdetail). A closed native <details> display:none's its non-summary content, so the grid-rows transition has no prior laid-out frame to interpolate from — the body snaps open in one frame while the chevron rotates over 0.3s (visible mismatch on the landing's primary interaction). verdict-panel's .dim (a <div> + JS .open class, detail always rendered) animates, proving intent. Fix: drive both expands with a JS .open class. plan-steps.tsx became a client component (single-open, openN seeded from the data's open step 02, <button className=step-head aria-expanded>); freshness-table.tsx uses an openRows Set (multi-open), keeping the IO lit sweep + verified/vdot untouched (finding #6 is a separate slice); landing.css three details[open] selectors -> class-based .step.open/.fitem.open (grid-rows + chevron), and removed the ::-webkit-details-marker + list-style:none rules orphaned by summary->button. .step-detail/.fdetail are now always display:grid (0fr at rest) so the transition interpolates; buttons inherit font/colour via Tailwind preflight (like .dim-head) and get the existing .mv-landing button:focus-visible ring; the open step is server-rendered filled (useState initial from static data, no window/clock in render), so MV-112 FILLED-rest + hydration invariants hold. Presentational only — no scoring/API/DB/Zod; goldens untouched. Dossier: cards/MV-117-accordion-animate.md.",
       "created": "2026-07-08",
-      "entered": "2026-07-08"
+      "entered": "2026-07-09"
     },
     {
       "id": "MV-118",
-      "col": "in-review",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "badge": "IN REVIEW — founder-gated PR #79. Hydration-hardening slice (jsdom-blind audit #3/#7/#4/#11): #3/#7 assess-flow+wizard stop reading sessionStorage in render (SSR-stable seeds + mount restore; `fresh` threaded into useWizardState so the child restore effect deterministically SKIPS — an MV-28 fresh-contract regression the map's adversarial verify caught, since React runs child effects before AssessFlow's parent clear); #4 expiry derived from the stored expires_at + formatted with a pinned Asia/Kathmandu zone (fixes the hydration TZ mismatch AND the 'always 3 days from now' TRUST bug), threaded via props + the /api/assess response + persisted-results blob; #11 intake timeline computed once server-side and threaded down. Commits 865d0fc/468ba09/905f3fc. Gate green: typecheck 0, lint 0 errors, 297 files/1903 tests; MV-28 + wizard-persist suites unchanged. Live-verified on /assess (Step 1 SSR, restores to step 3 after mount, no hydration mismatch). board.json card tail conflicts trivially with MV-115/116/117 at sequential merge (keep all card entries).",
@@ -1538,7 +1538,7 @@
     },
     {
       "id": "MV-119",
-      "col": "in-review",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "badge": "In Review — founder-gated PR #80 (https://github.com/Spooderinbed/merovisa/pull/80); gate green (typecheck 0, lint 0 errors, 295 files / 1901 tests) + live-verified on / (no console/server errors, .frow renders class=frow at rest so the pulse is no longer burned at mount, #9 width reservation measured 0px reflow vs the old 14.4px). Fifth and final jsdom-blind slice (cosmetic): #8 journey-rail connector top-[13px]->top-[9px] (dot centre = py-1 4px + half h-2.5 5px = 9px); #9 matches-tab active-width jitter — keep the active font-medium WCAG cue but reserve the bold width on every tab via a hidden aria-hidden font-medium ghost grid-stacked under the visible label (0px reflow vs the old 14.4px); #6 freshness verify-pulse was hardcoded at mount so all five vpulses fired below the fold — now staged from the on-scroll IO sweep per row (reduced-motion/no-IO get the static end-state); #10 guide-thread IO cleanup now bumps runId.current so the in-flight typewriter bails instead of setState-after-unmount.",
