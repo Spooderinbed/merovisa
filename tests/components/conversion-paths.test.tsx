@@ -23,6 +23,16 @@ describe("ConversionPaths", () => {
     expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
   });
 
+  it("renders the server-provided expiry date verbatim and never reads the clock (MV-118 #4)", () => {
+    // Force the wall clock far from the prop: the old code derived the date from
+    // new Date() (so it would show "Jan 4"), the fix renders the passed label.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-01T00:00:00Z"));
+    render(<ConversionPaths assessmentId={ASSESSMENT_UUID} expiryLabel="Jul 12" />);
+    expect(screen.getByText(/expires in 3 days \(by Jul 12\)/i)).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
   it("fetches a signed claim token and includes it in the OAuth redirectTo", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       if (typeof input === "string" && input.includes("sign-claim")) {

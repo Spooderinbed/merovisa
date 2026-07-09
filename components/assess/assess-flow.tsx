@@ -7,6 +7,7 @@ import { Wizard } from "@/components/wizard/wizard";
 import { WIZARD_STORAGE_KEY } from "@/components/wizard/use-wizard-state";
 import { ProfileRecap } from "./profile-recap";
 import { Results } from "@/components/results/results";
+import { formatExpiryLabel } from "@/lib/assessments/expiry";
 import { corridorForHomeCountry } from "@/lib/theme/corridor";
 import { track } from "@/lib/analytics/events";
 
@@ -21,6 +22,9 @@ interface PersistedResults {
   profile: StudentProfile;
   payload: AssessmentPayload;
   assessmentId: string | null;
+  // Stored expiry instant (created + 3d) so a refresh keeps the real expiry day
+  // instead of dropping it or re-deriving from the clock (MV-118 #4).
+  expiresAt?: string | null;
 }
 
 function readPersistedResults(): PersistedResults | null {
@@ -58,6 +62,7 @@ export function AssessFlow({
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [payload, setPayload] = useState<AssessmentPayload | null>(null);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [recapElapsed, setRecapElapsed] = useState(false);
   const [error, setError] = useState(false);
   // True while a save POST is in flight — lets the persist-miss recovery button on
@@ -79,6 +84,7 @@ export function AssessFlow({
     setProfile(restored.profile);
     setPayload(restored.payload);
     setAssessmentId(restored.assessmentId);
+    setExpiresAt(restored.expiresAt ?? null);
     setPhase("results");
   }, [signedIn, fresh]);
 
@@ -96,12 +102,12 @@ export function AssessFlow({
     try {
       window.sessionStorage.setItem(
         RESULTS_STORAGE_KEY,
-        JSON.stringify({ profile, payload, assessmentId } satisfies PersistedResults),
+        JSON.stringify({ profile, payload, assessmentId, expiresAt } satisfies PersistedResults),
       );
     } catch {
       // Private mode / quota — degrade to in-memory only.
     }
-  }, [signedIn, phase, payload, profile, assessmentId]);
+  }, [signedIn, phase, payload, profile, assessmentId, expiresAt]);
 
   // Persists the profile to /api/assess. Kept separate from handleComplete so the
   // error screen can re-attempt the save in place (MV-31) without re-running the
@@ -117,9 +123,14 @@ export function AssessFlow({
         body: JSON.stringify(completed),
       });
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      const data = (await res.json()) as { id: string | null; payload: AssessmentPayload };
+      const data = (await res.json()) as {
+        id: string | null;
+        payload: AssessmentPayload;
+        expiresAt?: string | null;
+      };
       setAssessmentId(data.id);
       setPayload(data.payload);
+      setExpiresAt(data.expiresAt ?? null);
     } catch {
       setError(true);
     } finally {
@@ -146,6 +157,7 @@ export function AssessFlow({
           destination={profile.destination}
           mode={signedIn ? "owned" : "anonymous"}
           assessmentId={assessmentId}
+          expiryLabel={expiresAt ? formatExpiryLabel(expiresAt) : undefined}
           // Persist-miss recovery is anonymous-only — signed-in users save server-side.
           // Re-POSTs the in-memory answers in place; the wizard is never re-run.
           onRetrySave={signedIn ? undefined : () => void save(profile)}

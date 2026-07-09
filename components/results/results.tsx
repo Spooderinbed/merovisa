@@ -30,6 +30,7 @@ export function Results({
   destination,
   mode = "anonymous",
   assessmentId = null,
+  expiryLabel,
   onRetrySave,
   retryingSave = false,
 }: {
@@ -37,6 +38,8 @@ export function Results({
   destination: Destination;
   mode?: "anonymous" | "owned";
   assessmentId?: string | null;
+  /** Preformatted assessment expiry day, threaded to ConversionPaths (MV-118 #4). */
+  expiryLabel?: string;
   /** Anonymous persist-miss recovery: re-saves in place (AssessFlow-supplied). */
   onRetrySave?: () => void;
   retryingSave?: boolean;
@@ -128,7 +131,7 @@ export function Results({
         <NextSteps />
       ) : (
         <div ref={conversionRef}>
-          <ConversionPaths assessmentId={assessmentId} onRetrySave={onRetrySave} retryingSave={retryingSave} />
+          <ConversionPaths assessmentId={assessmentId} expiryLabel={expiryLabel} onRetrySave={onRetrySave} retryingSave={retryingSave} />
         </div>
       )}
     </div>

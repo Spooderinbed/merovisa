@@ -67,6 +67,7 @@ export async function POST(request: Request): Promise<Response> {
   const payload = assembleAssessment(parsed.data, programs, universities);
 
   let id: string | null = null;
+  let expiresAt: string | null = null;
   let persistFailed = false;
   let user: User | null = null;
   try {
@@ -117,12 +118,15 @@ export async function POST(request: Request): Promise<Response> {
         }
       }
     } else {
+      // Capture the stored expiry so the client (TREE-2 fresh flow) can show the
+      // real created+3d day without reading its own clock (MV-118 #4).
+      expiresAt = assessmentExpiry();
       id = await createAnonymousAssessment(adminDb, {
         profileSnapshot: parsed.data as unknown as Json,
         destinationId: parsed.data.destination,
         result: payload as unknown as Json,
         ruleVersion: payload.result.ruleVersion,
-        expiresAt: assessmentExpiry(),
+        expiresAt,
       });
       // Anonymous assessments are ephemeral (3-day) — a persist miss still shows
       // the payload (id:null) by design, but log it so the funnel gap is visible.
@@ -143,5 +147,5 @@ export async function POST(request: Request): Promise<Response> {
       { status: 500 },
     );
   }
-  return NextResponse.json({ id, payload }, { status: 200 });
+  return NextResponse.json({ id, payload, expiresAt }, { status: 200 });
 }
