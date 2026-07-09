@@ -87,6 +87,26 @@ describe("(app) layout", () => {
     expect(wrapper.className).toContain("md:pb-0");
   });
 
+  it("nests the app bar + journey marker inside the min-h-dvh column with main and footer (no chrome stacked above it)", async () => {
+    // Structure contract jsdom CAN see (parent/child nesting), guarding the
+    // MV-115 fix for a bug jsdom canNOT (geometry): the chrome (AppBar ~66px +
+    // JourneyMarker ~37px) used to sit ABOVE the 100dvh column because its
+    // wrapper is display:contents (boxless), so the document was always
+    // ~103px taller than one viewport -> a dead scrollbar on every short
+    // signed-in page and on the streamed loading fallback, with the footer
+    // pushed below the fold. The fix moves the chrome inside the column, so it
+    // shares the same full-height flex parent as main + footer.
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    const ui = await AppLayout({ children: <div data-testid="kid">kid</div> });
+    const { container } = render(ui);
+    const column = container.querySelector("main")!.parentElement!;
+    expect(column.className).toContain("min-h-dvh");
+    // The full-height column owns the footer AND the chrome now.
+    expect(column.querySelector('[data-testid="footer"]')).not.toBeNull();
+    expect(column.querySelector('[data-testid="appbar"]')).not.toBeNull();
+    expect(column.querySelector('[data-testid="journey-marker"]')).not.toBeNull();
+  });
+
   it("mounts the persistent journey marker in the signed-in chrome", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     const ui = await AppLayout({ children: <div>kid</div> });

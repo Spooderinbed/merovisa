@@ -36,14 +36,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           included so Phase-2 surfaces can consume corridor accents without
           re-wiring. `contents` = token carrier only, no layout box. */}
       <div className="contents" data-corridor={DEFAULT_CORRIDOR}>
-        <AppBar variant="app" user={data.user} />
-        {journey && <JourneyMarker journey={journey} />}
         {/* Full-height flex column pins the footer to the viewport bottom, so a short
             streamed loading fallback doesn't paint the footer high and then jump it
-            down when the taller real page streams in (MV-98 CLS fix). `contents`
-            above carries no box, so the flex context lives on this real element.
-            Padded below md so the fixed tab bar never covers content or footer. */}
+            down when the taller real page streams in (MV-98 CLS fix). The chrome
+            (AppBar + JourneyMarker) lives INSIDE this column, not above it: the
+            `contents` wrapper is boxless, so any chrome placed as its sibling would
+            stack ~103px *outside* the 100dvh column, leaving the document taller
+            than one viewport — a dead scrollbar on every short signed-in page and on
+            the loading fallback, with the footer below the fold (MV-115 fix; mirrors
+            app/(marketing)/layout.tsx). Padded below md so the fixed tab bar never
+            covers content or footer. */}
         <div className="flex min-h-dvh flex-col pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
+          <AppBar variant="app" user={data.user} />
+          {journey && <JourneyMarker journey={journey} />}
           <main className="flex-1">{children}</main>
           <Footer />
         </div>
