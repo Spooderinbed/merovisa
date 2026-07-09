@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { IntakeTimingCard } from "@/components/results/intake-timing";
-import type { IntakeTiming } from "@/lib/timing/intake";
+import type { IntakeTiming, IntakeTimelinePoint } from "@/lib/timing/intake";
 
 const intake: IntakeTiming = {
   nearest: {
@@ -47,5 +47,16 @@ describe("IntakeTimingCard tick-timeline (MV-72 / audit #16)", () => {
   it("hides the visual timeline from assistive tech (the text list is the accessible source)", () => {
     render(<IntakeTimingCard intake={intake} />);
     expect(screen.getByTestId("intake-timeline")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("renders a server-provided timeline verbatim instead of recomputing offsets from the clock (MV-118 #11)", () => {
+    // The offset is computed once on the SSR route and passed down, so the client
+    // renders identical left:% and does not diverge on now/timezone (hydration mismatch).
+    const timeline: IntakeTimelinePoint[] = [
+      { name: "February", year: 2027, month: 2, status: "open", note: "n", offsetPct: 42.5 },
+      { name: "July", year: 2027, month: 7, status: "closed", note: "n", offsetPct: 100 },
+    ];
+    render(<IntakeTimingCard intake={intake} timeline={timeline} />);
+    expect(screen.getByText("Feb 2027").closest("div")).toHaveStyle({ left: "42.5%" });
   });
 });

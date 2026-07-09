@@ -1,4 +1,4 @@
-import type { IntakeTiming } from "@/lib/timing/intake";
+import type { IntakeTiming, IntakeTimelinePoint } from "@/lib/timing/intake";
 import { buildIntakeTimeline } from "@/lib/timing/intake";
 import { Card } from "@/components/ui/card";
 
@@ -15,8 +15,18 @@ const TICK_CLS = {
   closed: "bg-reach",
 } as const;
 
-export function IntakeTimingCard({ intake }: { intake: IntakeTiming }) {
-  const timeline = buildIntakeTimeline(intake);
+export function IntakeTimingCard({
+  intake,
+  timeline: timelineProp,
+}: {
+  intake: IntakeTiming;
+  /** Server-computed timeline points (MV-118 #11): passed on the SSR /assessment/[id]
+   *  route so the client renders identical offsets instead of recomputing left:% from
+   *  its own clock/timezone (a hydration mismatch). The client-only fresh flow omits it. */
+  timeline?: IntakeTimelinePoint[];
+}) {
+  // Fall back to a client-side compute only on the client-only fresh flow (no SSR).
+  const timeline = timelineProp ?? buildIntakeTimeline(intake);
   return (
     <Card as="section" padding="lg">
       <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Intake timing</span>

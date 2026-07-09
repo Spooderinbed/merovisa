@@ -116,6 +116,9 @@ export function useWizardState(
   // (/assess?new=1) deterministically SKIPS restore: React runs this child effect
   // before AssessFlow's parent clear effect, so relying on the clear would
   // resurrect stale answers for one commit (MV-28 fresh contract, MV-118 #7).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-time client-only restore of
+     persisted answers; SSR + the first client render already emitted the stable step-1
+     seeds, so this post-commit seed is intended, not a render loop (MV-118 #7). */
   useEffect(() => {
     if (!persist || fresh) {
       setHydrated(true);
@@ -128,6 +131,7 @@ export function useWizardState(
     }
     setHydrated(true);
   }, [persist, fresh]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!persist || !hydrated) return;

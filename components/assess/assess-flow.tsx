@@ -73,6 +73,9 @@ export function AssessFlow({
   // and the first client render both emit the wizard shell (MV-118 #3). A fresh
   // start (/assess?new=1) clears stale state instead of restoring; signed-in users
   // recover server-side, so client recovery is anonymous-only (MV-28 half a).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-time client-only restore of
+     persisted results; SSR + the first client render already emitted the stable wizard
+     shell, so this post-commit seed is intended, not a render loop (MV-118 #3). */
   useEffect(() => {
     if (signedIn) return;
     if (fresh) {
@@ -87,6 +90,7 @@ export function AssessFlow({
     setExpiresAt(restored.expiresAt ?? null);
     setPhase("results");
   }, [signedIn, fresh]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (phase !== "recap" || !payload || !recapElapsed) return;
