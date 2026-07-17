@@ -4,6 +4,8 @@ import type { EducationLevel } from "@/lib/scoring/types";
 import type { ProgramLevel } from "@/lib/programs/types";
 import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
 import { toAud } from "@/lib/data/policy/fx-rates";
+import { dependentsFromFamily } from "@/lib/scoring/from-sections";
+import { auFinancialCapacity } from "./capacity";
 
 /**
  * Maps a student's *current* education level to the program level they
@@ -65,7 +67,13 @@ export function sectionsToMatchInputs(
     userField: sections["intended-study"]?.field ?? null,
     alsoFields: sections["intended-study"]?.alsoConsidering ?? [],
     userTargetLevel: targetLevel(sections),
-    policy,
+    // The capacity is derived here rather than taken from the caller: the adapter is what
+    // owns section→input mapping, and dependents come from the same canonical
+    // `dependentsFromFamily` the scoring engine uses, so the two cannot drift.
+    policy: {
+      ...policy,
+      financialCapacity: auFinancialCapacity(dependentsFromFamily(sections.family)),
+    },
   };
 }
 

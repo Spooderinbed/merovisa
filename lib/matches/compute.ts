@@ -1,6 +1,14 @@
 import type { Program, University } from "@/lib/programs/types";
 import type { MatchResult, MatchInputs, MatchReason } from "./types";
 
+/**
+ * Reach cliff for the tuition-only fallback (`policy.financialCapacity === null`): a
+ * budget under half the tuition forces a reach. Preserves the pre-MV-120 behaviour
+ * exactly for callers with no destination capacity model. Corridors that supply a
+ * capacity bring their own sourced ratio instead of this bare default.
+ */
+const TUITION_ONLY_REACH_RATIO = 0.5;
+
 export function computeMatches(
   inputs: MatchInputs,
   programs: Program[],
@@ -80,18 +88,28 @@ function computeOne(
   const minBand = p.minEnglishBand ?? minEnglish;
   const tuitionMin = p.tuitionMin ?? 0;
 
+  // The budget the wizard collects means tuition PLUS living costs, so tuition alone is
+  // not what it has to clear (MV-120 / audit C-3). The living + dependents floor and the
+  // reach ratio arrive via the policy seam rather than a country constant imported here,
+  // keeping this engine destination-agnostic.
+  const capacity = inputs.policy.financialCapacity;
+  const livingCost = capacity ? capacity.livingAud + capacity.dependentsAud : 0;
+  const reachRatio = capacity ? capacity.reachRatio : TUITION_ONLY_REACH_RATIO;
+  const requiredTotal = tuitionMin + livingCost;
+
   const gradeGap = Math.max(0, minGrade - userGrade);
   const englishGap = Math.max(0, minEnglish - userOverall);
   const bandGap = userBand < minBand ? minBand - userBand : 0;
   const tuitionGap = Math.max(0, tuitionMin - budget);
+  const costGap = Math.max(0, requiredTotal - budget);
 
   let verdict: "strong" | "possible" | "reach";
-  if (gradeGap === 0 && englishGap === 0 && bandGap === 0 && tuitionGap === 0) {
+  if (gradeGap === 0 && englishGap === 0 && bandGap === 0 && costGap === 0) {
     verdict = "strong";
   } else if (
     gradeGap > 10 ||
     englishGap > 1 ||
-    (tuitionMin > 0 && tuitionGap / tuitionMin > 0.5)
+    (requiredTotal > 0 && budget < reachRatio * requiredTotal)
   ) {
     verdict = "reach";
   } else {
@@ -136,16 +154,25 @@ function computeOne(
     });
   }
 
-  if (tuitionGap === 0 && budget > 0) {
+  // Name what was actually compared. Saying "budget covers AUD 40,000 tuition" to a
+  // student who is short of the real floor is arithmetically true but reads as an
+  // affordability guarantee — the implicature, not the arithmetic, was the C-3 bug.
+  if (costGap === 0 && budget > 0) {
     reasons.push({
       kind: "tuition",
-      text: `Budget covers AUD ${tuitionMin.toLocaleString()} tuition.`,
+      text:
+        livingCost > 0
+          ? `Budget covers AUD ${tuitionMin.toLocaleString()} tuition + AUD ${livingCost.toLocaleString()} living costs.`
+          : `Budget covers AUD ${tuitionMin.toLocaleString()} tuition.`,
       positive: true,
     });
-  } else if (tuitionGap > 0) {
+  } else if (costGap > 0) {
     reasons.push({
       kind: "tuition",
-      text: `Budget below tuition by AUD ${Math.round(tuitionGap).toLocaleString()}.`,
+      text:
+        livingCost > 0
+          ? `Budget short by AUD ${Math.round(costGap).toLocaleString()} for tuition + living costs.`
+          : `Budget below tuition by AUD ${Math.round(costGap).toLocaleString()}.`,
       positive: false,
     });
   }
@@ -186,6 +213,6 @@ function computeOne(
     university: u,
     verdict,
     reasons,
-    scoreSnapshot: { gradeGap, englishGap, bandGap, tuitionGap },
+    scoreSnapshot: { gradeGap, englishGap, bandGap, tuitionGap, costGap },
   };
 }

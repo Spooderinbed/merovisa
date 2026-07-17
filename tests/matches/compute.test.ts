@@ -32,7 +32,24 @@ const p = (over: Partial<Program> = {}): Program => ({
   ...over,
 });
 
-const policy = { nepalAssessmentLevel: "L3" as const };
+/**
+ * Tuition-only policy: the explicit `financialCapacity: null` opt-out. The verdict then
+ * compares the budget against tuition alone, which is the pre-MV-120 behaviour, preserved
+ * for non-AU / unknown-destination callers. Tests using this fixture are pinning the
+ * FALLBACK contract, not the AU contract — see `policyAu` for the real corridor.
+ */
+const policy = { nepalAssessmentLevel: "L3" as const, financialCapacity: null };
+
+/** DHA Subclass 500 12-month living-capacity figure (lib/data/policy/au-cost-of-living.ts). */
+const AU_LIVING = 29_710;
+/** AU_DHA_CAPACITY_GATE.reachRatio — shared with lib/scoring/financial.ts so both engines band alike. */
+const AU_REACH_RATIO = 0.75;
+
+/** The real Nepal→Australia corridor policy: tuition + living is the floor a budget is judged against. */
+const policyAu = {
+  nepalAssessmentLevel: "L3" as const,
+  financialCapacity: { livingAud: AU_LIVING, dependentsAud: 0, reachRatio: AU_REACH_RATIO },
+};
 
 describe("computeMatch (single program, no list filter — used to freeze a prediction)", () => {
   const inputs = {
@@ -57,7 +74,12 @@ describe("computeMatch (single program, no list filter — used to freeze a pred
 });
 
 describe("computeMatches verdict", () => {
-  it("strong when grade, english and budget all meet minimums", () => {
+  // MV-120 / audit C-3: this test previously used the AU-shaped budget 45,000 against
+  // tuition 40,000 and asserted "strong" — which PINNED THE BUG (the wizard collects
+  // tuition+living, so 45,000 does not in fact cover a 69,710 AU floor). It is kept, but
+  // re-scoped to what it now honestly asserts: the tuition-only fallback contract. The
+  // AU corridor behaviour it used to misdescribe is covered in the C-3 block below.
+  it("strong when grade, english and budget all meet minimums (tuition-only policy)", () => {
     const m = computeMatches(
       {
         userGradePercent: 72,
@@ -249,5 +271,107 @@ describe("computeMatches verdict", () => {
       [],
     );
     expect(m).toEqual([]);
+  });
+});
+
+/**
+ * MV-120 / audit C-3: the wizard asks for a yearly budget meaning "tuition plus living
+ * costs" (components/wizard/steps/budget-step.tsx:83-84), but the matcher compared that
+ * whole number against tuition ALONE. A student on 45,000 was told "Strong — budget covers
+ * AUD 40,000 tuition" while lib/scoring/financial.ts, reading the same number, called it a
+ * reach. Two surfaces, one number, opposite answers. These tests pin the corrected contract.
+ */
+describe("computeMatches financial capacity (C-3: budget means tuition + living)", () => {
+  const clears = {
+    userGradePercent: 72,
+    userEnglishOverall: 7,
+    userEnglishBand: 7,
+    userField: "computer-science",
+    userTargetLevel: "masters" as const,
+  };
+  // tuition 40,000 + living 29,710 = a real floor of 69,710.
+  const REQUIRED_TOTAL = 40000 + AU_LIVING;
+  const run = (userBudgetAud: number, pol: typeof policyAu | typeof policy = policyAu) =>
+    computeMatches({ ...clears, userBudgetAud, policy: pol }, [p()], [uni])[0]!;
+
+  it("does NOT call a budget that covers tuition but not living costs 'strong'", () => {
+    // The exact case the audit found: 45,000 clears the 40,000 tuition, so the old code
+    // said strong. It is ~24,710 short of what the student actually needs.
+    const m = run(45000);
+    expect(m.verdict).not.toBe("strong");
+  });
+
+  it("never claims the budget covers costs when the student is short", () => {
+    const m = run(45000);
+    const tuition = m.reasons.find((r) => r.kind === "tuition")!;
+    expect(tuition.positive).toBe(false);
+    expect(tuition.text).not.toMatch(/covers/i);
+  });
+
+  it("names living costs, not just tuition, in the shortfall copy", () => {
+    const m = run(45000);
+    const tuition = m.reasons.find((r) => r.kind === "tuition")!;
+    expect(tuition.text).toMatch(/living costs/i);
+    // The gap is the real one (69,710 - 45,000), not the tuition-only 0.
+    expect(tuition.text).toContain("24,710");
+  });
+
+  it("is strong when the budget covers tuition AND living costs", () => {
+    const m = run(REQUIRED_TOTAL);
+    expect(m.verdict).toBe("strong");
+    const tuition = m.reasons.find((r) => r.kind === "tuition")!;
+    expect(tuition.positive).toBe(true);
+    expect(tuition.text).toMatch(/tuition/i);
+    expect(tuition.text).toMatch(/living costs/i);
+  });
+
+  it("is possible (not reach) just inside the reach ratio", () => {
+    // reachRatio 0.75 → reach below 52,282.5. 53,000 is short but not catastrophically.
+    const m = run(53000);
+    expect(m.verdict).toBe("possible");
+  });
+
+  it("is reach below the shared reachRatio, matching financial.ts's own band", () => {
+    // financial.ts forces reach at budget < 0.75 × floor; the matcher must agree.
+    const m = run(Math.floor(REQUIRED_TOTAL * AU_REACH_RATIO) - 1);
+    expect(m.verdict).toBe("reach");
+  });
+
+  it("raises the floor for declared dependents, as financial.ts already does", () => {
+    // A partner adds 10,394 to the DHA capacity floor, so a budget that was exactly
+    // enough alone is no longer enough with family.
+    const withPartner = {
+      ...policyAu,
+      financialCapacity: { ...policyAu.financialCapacity, dependentsAud: 10_394 },
+    };
+    expect(run(REQUIRED_TOTAL).verdict).toBe("strong");
+    expect(run(REQUIRED_TOTAL, withPartner).verdict).not.toBe("strong");
+  });
+
+  it("carries costGap in the snapshot and KEEPS tuitionGap (persisted on frozen predictions)", () => {
+    // lib/outcomes/repo.ts persists scoreSnapshot untyped in the score_snapshot Json
+    // column; renaming tuitionGap would silently orphan the key on historical rows.
+    const m = run(45000);
+    expect(m.scoreSnapshot.tuitionGap).toBe(0); // budget does clear tuition alone
+    expect(m.scoreSnapshot.costGap).toBe(24710); // ...but not the real floor
+  });
+
+  describe("tuition-only fallback (financialCapacity: null)", () => {
+    it("reproduces the pre-MV-120 verdict exactly", () => {
+      expect(run(45000, policy).verdict).toBe("strong");
+    });
+
+    it("never over-claims: copy names tuition only, and costGap collapses to tuitionGap", () => {
+      const m = run(45000, policy);
+      const tuition = m.reasons.find((r) => r.kind === "tuition")!;
+      expect(tuition.text).toMatch(/covers AUD 40,000 tuition\./);
+      expect(tuition.text).not.toMatch(/living/i);
+      expect(m.scoreSnapshot.costGap).toBe(m.scoreSnapshot.tuitionGap);
+    });
+
+    it("keeps the legacy 0.5 tuition cliff", () => {
+      expect(run(19999, policy).verdict).toBe("reach");
+      expect(run(20001, policy).verdict).toBe("possible");
+    });
   });
 });

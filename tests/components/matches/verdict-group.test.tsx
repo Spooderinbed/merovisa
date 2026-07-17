@@ -39,7 +39,7 @@ function makeMatches(n: number, verdict: MatchVerdict): MatchResult[] {
     },
     verdict,
     reasons: [{ kind: "academic", text: "Grade meets minimum", positive: true }],
-    scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0 },
+    scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0, costGap: 0 },
   }));
 }
 

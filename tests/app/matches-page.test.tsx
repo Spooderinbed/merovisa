@@ -139,7 +139,10 @@ describe("/matches page", () => {
       sections: {
         academic: { gradePercent: 72 },
         english: { overall: 7 },
-        finance: { total: 45000, currency: "AUD" },
+        // MV-120: 70,000 clears tuition 40,000 + living 29,710 = 69,710. Was 45,000 back
+        // when a budget was judged against tuition alone; that student is really a reach
+        // (see the C-3 test below), so this fixture would no longer render a strong group.
+        finance: { total: 70000, currency: "AUD" },
         "intended-study": { field: "computer-science" },
       },
     });
@@ -181,5 +184,64 @@ describe("/matches page", () => {
     render(ui);
     expect(screen.getByText(/Strong matches \(1\)/i)).toBeInTheDocument();
     expect(screen.getByText("Master of IT")).toBeInTheDocument();
+  });
+
+  /**
+   * MV-120 / audit C-3, asserted at the surface the student actually reads. This is the
+   * audit's exact case: a 45,000 AUD budget -- which the wizard defines as tuition PLUS
+   * living costs -- against a 40,000 tuition. The page headed it "Strong matches (1)"
+   * while lib/scoring/financial.ts, reading the same number, called the same student a
+   * reach. A page-level guard that the fix is not merely engine-deep.
+   */
+  it("does not call a budget that covers tuition but not living costs a strong match (C-3)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue({
+      sections: {
+        academic: { gradePercent: 72 },
+        english: { overall: 7 },
+        finance: { total: 45000, currency: "AUD" },
+        "intended-study": { field: "computer-science" },
+      },
+    });
+    listAllUniversities.mockResolvedValue([
+      {
+        id: "u1",
+        country: "AU",
+        name: "Monash",
+        city: "Melbourne",
+        rankingTier: 1,
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+      },
+    ]);
+    listAllPrograms.mockResolvedValue([
+      {
+        id: "p1",
+        universityId: "u1",
+        name: "Master of IT",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 40000,
+        tuitionMax: 40000,
+        tuitionCurrency: "AUD",
+        minGrade: 65,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+    ]);
+    listShortlistForUser.mockResolvedValue([]);
+
+    const ui = await MatchesPage();
+    render(ui);
+    // They need 40,000 + 29,710 = 69,710 and are ~24,710 short, so the honest band is
+    // Reach. (Its groupLabel is "Reach", not "Reach matches" -- see verdict-labels.)
+    expect(screen.getByText(/Reach \(1\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Strong matches/i)).not.toBeInTheDocument();
   });
 });

@@ -64,7 +64,7 @@ export function makeMatchResult(overrides: Partial<MatchResult> = {}): MatchResu
     university,
     verdict: "possible",
     reasons: [{ kind: "academic", text: "A realistic target.", positive: true }],
-    scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0 },
+    scoreSnapshot: { gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0, costGap: 0 },
     ...overrides,
   };
 }

@@ -64,7 +64,18 @@ describe("anonymous == signed-in match set (equivalent profile)", () => {
     const { anonMatches, signedInMatches } = bothPaths({ ...anon, gradeSystem: "cgpa-4", grade: 3.5 });
     expect(anonMatches).toEqual(signedInMatches);
     // And the CGPA student is no longer forced to all-'reach' (the funnel bug).
-    expect(anonMatches.some((m) => m.verdict === "strong" || m.verdict === "possible")).toBe(true);
+    //
+    // MV-120: this used to assert `some(verdict !== 'reach')`, but verdict is no longer a
+    // valid instrument for a GRADE bug. This fixture holds ~50k AUD against catalogue
+    // tuitions of 41-51k, i.e. real floors of 70,710-80,710, so every card is now an
+    // honest reach on FINANCE alone (lib/scoring/financial.ts independently agrees) and
+    // the assertion would fail even with grade normalization working perfectly.
+    // Asserting gradeGap directly proves what this test is named for -- CGPA 3.5 is
+    // normalized to a percentage at the boundary instead of collapsing to a 3% grade --
+    // and does so more precisely than the verdict proxy ever did, without being hostage
+    // to an unrelated budget figure.
+    expect(anonMatches.length).toBeGreaterThan(0);
+    expect(anonMatches.every((m) => m.scoreSnapshot.gradeGap === 0)).toBe(true);
   });
 
   it("matches for an off-field student", () => {

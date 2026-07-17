@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-03",
+  "updated": "2026-07-17",
   "staleDays": 7,
   "columns": [
     {
@@ -40,6 +40,55 @@
     }
   ],
   "cards": [
+    {
+      "id": "MV-124",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "2026-07-10 audit: slices 2-9 (tracking)",
+      "file": "cards/MV-124-audit-remainder-slices-2-9.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-123",
+      "col": "ready",
+      "pri": "P2",
+      "owner": "agent",
+      "title": "board.json duplicate card ids will corrupt the next batch flip",
+      "file": "cards/MV-123-board-duplicate-id-collision.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-122",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "/trust claims uploads verify your assessment; they do not (C-1c)",
+      "file": "cards/MV-122-trust-page-upload-claim.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-121",
+      "col": "blocked",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "An all-Reach student opens an empty matches page (MV-120 fallout)",
+      "file": "cards/MV-121-reach-group-collapsed-dead-end.md",
+      "entered": "2026-07-17",
+      "note": "Blocked on the founder merging MV-120/PR #81; design decided (option 1). No other input needed."
+    },
+    {
+      "id": "MV-120",
+      "col": "inreview",
+      "pri": "P0",
+      "owner": "agent",
+      "badge": "Slice 1 of 9 from the 2026-07-10 comprehensive audit (finding C-3, checklist #4). Re-verified STILL_LIVE 2026-07-17 (high confidence, not refuted on adversarial recheck). Founder picked this slice 2026-07-17 and acknowledged the verdict-deflation heads-up.",
+      "file": "cards/MV-120-matches-budget-living-costs.md",
+      "title": "Matches budget must mean tuition + living costs, not tuition alone (audit C-3) -- the app currently contradicts itself on the same number",
+      "summary": "P0 live decision-correctness bug. The wizard asks for one yearly figure meaning 'Tuition plus living costs' (budget-step.tsx:83-84), but the matches engine compares that whole number against tuitionMin ALONE (compute.ts:81-86), uses tuitionGap===0 as an affordability gate promoting cards to 'strong' (compute.ts:89-95), and prints a green 'Budget covers AUD X tuition.' (compute.ts:139-151). SELF-CONTRADICTION: budget A$45,000 vs tuitionMin A$40,000 -> matches says 'Strong / budget covers', while scoring's financial.ts:80 on the SAME number builds capacityAud = 29,710 living + 44,500 tuition = 74,210 and forces 'reach / well below DHA financial-capacity requirement'. Student is really ~A$24,710 short. Isolated to the matches engine -- financial.ts already models the full floor correctly and even prices dependents, so the sourced constant (AU_DHA_LIVING_CAPACITY_AUD, DHA-sourced + freshness-tracked) already exists; no new data research. FIX: additive userLivingCostAud on MatchInputs (null => today's tuition-only fallback); add costGap to scoreSnapshot and KEEP tuitionGap (persisted untyped in score_snapshot Json on frozen MV-08 predictions -- a rename orphans historical rows); drive the verdict off costGap; rebase the reach cliff on requiredTotal; copy names both components; thread the constant in at BOTH adapters (anonymous + signed-in), keeping it OUT of compute.ts so the engine stays destination-agnostic. LOAD-BEARING: the verdict condition at line 89 is the defect, the copy is the symptom -- a copy-only fix still ships 'Strong'. WARNING: a currently-GREEN test pins the bug (tests/matches/compute.test.ts:60-75 asserts strong for 45,000 vs 40,000); ~13 test files affected -- goldens need reasoned justification, not mechanical re-baselining. Live browser pass required (jsdom is blind to this cross-page consistency claim). Codex plan review in flight.",
+      "created": "2026-07-17",
+      "entered": "2026-07-17"
+    },
     {
       "id": "MV-61",
       "col": "done",
@@ -1406,10 +1455,10 @@
     },
     {
       "id": "MV-99",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
-      "badge": "In Review on branch mv-99-profile-restyle (STACKED off #66 mv-110-dashboard-restyle -> 6-deep #62->#63->#64->#65->#66->this; PR base=#66 so diff is profile-only; rebase --onto master once the chain merges). Gate green: typecheck 0 + lint 0 (pre-existing build.mjs warn only) + vitest 278 files/1769 passed (was 278/1767; +2 test guards). All style ratchets (type-scale, motion-tokens, card-shell) green.",
+      "badge": "Merged to master 2026-07-07 (PR #67, commit 2dc11db, master 3570cf8). Board-hygiene correction 2026-07-17: this card was stranded in In Review because the batch flip (a4a881b) stamped its merge badge onto the OTHER card sharing id MV-99 (step4-multi-subject). Verified in master by code, not prose: completeness-ring.tsx:11 carries animate-rise.",
       "file": "MV-99-profile-restyle.md",
       "title": "Overhaul Phase 2: profile shell restyle -- completeness-ring entrance reveal (ring/accordion/type-scale already shipped) (non-mascot MV-99)",
       "summary": "Phase-2 continuation after the dashboard slice (MV-110). Ships the NON-MASCOT portion of spec MV-99 (Profile). A ground-truth pass found ALL THREE spec checklist items already shipped by prior slices: (1) CompletenessRing already tokenised text-primary (dusk-plum, MV-84) with transition-[stroke-dashoffset] duration-slower ease-calm -- nothing to re-tint, zero raw hex in components/profile/**; (2) section-accordion already folds onto the shared components/ui/disclosure.tsx primitive (chevron transition-transform duration-medium ease-calm + rotate-90, from Audit #21); (3) editors already on the type scale (text-[ grep NONE; MV-106 ratchet cleared all text-[Npx]). The genuine delta = entrance-reveal PARITY with the dashboard: added ONE animate-rise to the CompletenessRing <Card> shell root (the single stable root in components/profile/** that mounts once on navigation). Reduced-motion-safe (one reveal per root, no per-child animationDelay stagger; SectionAccordion deliberately NOT given animate-rise -- 13 rows would be a multi-sibling stagger). Presentational only -- no data/logic/save-flow change; no use client added. FLAGGED no-change (founder calls): ring text-primary tint (deliberate token); accordion-list container reveal lives in app/(app)/profile/page.tsx (out of components/profile/** scope) = a deferred one-line touch. TDD: extended completeness-ring.test (reveal + tint/dashoffset preservation) + NEW section-accordion guard (stays on the disclosure primitive's tokenised transition). Not browser-verified (profile auth-gated) -- suite + 3 style ratchets, per prior slices. Remaining Phase-2 non-mascot: MV-100 guide, MV-101 chrome.",
@@ -1430,10 +1479,10 @@
     },
     {
       "id": "MV-101",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
-      "badge": "In Review on branch mv-101-chrome-cleanup (STACKED off #68 mv-100-guide-restyle -> 8-deep #62->#63->#64->#65->#66->#67->#68->this; PR base=#68 so diff is chrome-only; rebase --onto master once the chain merges). Gate green: typecheck 0 + lint 0 (pre-existing build.mjs warn only) + vitest 278 files/1775 passed (was 278/1771; +4 test guards). Orchestrator re-verified: SVGs unreferenced, all tests/styles ratchets green (12 files/41), app-layout green (mocks the tab bar), no golden captures this chrome.",
+      "badge": "Merged to master 2026-07-07 (PR #69, commit 4efb379, master 3570cf8). Board-hygiene correction 2026-07-17: this card was stranded in In Review because the batch flip (a4a881b) stamped its merge badge onto the OTHER card sharing id MV-101 (results-competitiveness-note). Verified in master by code, not prose: mobile-tab-bar.tsx:42 accent bar + logo.tsx:5 hover present, 5 scaffold SVGs gone.",
       "file": "MV-101-chrome-cleanup.md",
       "title": "Overhaul Phase 2: chrome + cleanup -- mobile-tab-bar active-accent transition + calm logo hover + delete 5 unused scaffold SVGs (opengraph-image DEFERRED, Gate-G) -- the LAST non-mascot slice",
       "summary": "Phase-2 continuation after the guide slice (MV-100); the LAST non-mascot Phase-2 slice. Ships spec MV-101 (Chrome + cleanup). Ground-truth: (1) wordmark/logo ALREADY refreshed to dusk-plum tokens + type scale via MV-84 -- a new mark is Gate-G brand-asset work, so only a calm hover affordance added (transition-opacity duration-fast ease-calm hover:opacity-80 on the Link); (2) mobile-tab-bar had transition-colors ease-calm but no duration token + no active indicator -> added duration-fast timing + an always-present aria-hidden accent bar (h-0.5 bg-primary, transition-opacity, opacity-100/opacity-0 toggle) that FADES on the active tab (reduced-motion-safe transition, not a delay stagger); (3) deleted 5 verified-unreferenced create-next-app scaffold SVGs (file/globe/next/vercel/window). DEFERRED: opengraph-image.tsx (optional + outward-facing brand asset, founder-owned Gate-G). Presentational only -- no data/logic/nav change. FLAGGED (visual judgment calls): logo hover:opacity-80 + the 2px top accent-bar placement (both one-class reverts). TDD: +4 tests (tab-bar duration token + active/inactive accent-bar opacity + motion ratchets; logo hover classes + structure preserved). Not browser-verified (auth-gated chrome) -- suite + ratchets, per prior slices. After MV-101 the overhaul has ONLY the Gate-G mascot tail left (MV-85/86 + SVGs).",
