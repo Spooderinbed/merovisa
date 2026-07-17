@@ -1,22 +1,33 @@
 import { describe, it, expect } from "vitest";
 import { buildPrediction } from "@/lib/outcomes/predict";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
+import { auFinancialCapacity } from "@/lib/matches/capacity";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { RULE_VERSION } from "@/lib/scoring/engine";
 import type { MatchInputs } from "@/lib/matches/types";
 import type { Program, University } from "@/lib/programs/types";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
-// Inputs for a student who comfortably clears the base program (grade 72%,
-// IELTS 7, ~50k AUD budget, masters target). Mirrors tests/matches fixtures.
+// Inputs for a student who comfortably clears the base program (grade 72%, IELTS 7,
+// masters target). Mirrors tests/matches fixtures.
+//
+// MV-120: the budget was ~50k when a budget was judged against tuition alone. Under the
+// real AU capacity model that student needs tuition (40k) + living (29,710) = 69,710, so
+// 50k is in fact a reach and the "comfortably clears" premise was false. The fixture
+// carries the real capacity (this path runs through sectionsToMatchInputs in production)
+// and a budget that genuinely clears the floor, rather than opting out of the model to
+// keep an inaccurate number green.
 const strongInputs: MatchInputs = {
   userGradePercent: 72,
   userEnglishOverall: 7,
   userEnglishBand: 7,
-  userBudgetAud: 50000,
+  userBudgetAud: 70000,
   userField: "computer-science",
   userTargetLevel: "masters",
-  policy: { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL },
+  policy: {
+    nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL,
+    financialCapacity: auFinancialCapacity(undefined),
+  },
 };
 
 const uni: University = {
@@ -54,7 +65,14 @@ describe("buildPrediction (F16: verdict recomputed server-side to freeze)", () =
   it("freezes the per-program verdict + gap snapshot + rule version for a strong fit", () => {
     const pred = buildPrediction(strongInputs, program(), uni);
     expect(pred.verdict).toBe("strong");
-    expect(pred.scoreSnapshot).toEqual({ gradeGap: 0, englishGap: 0, bandGap: 0, tuitionGap: 0 });
+    // costGap 0: the 70k budget clears tuition 40k + living 29,710 = 69,710 exactly.
+    expect(pred.scoreSnapshot).toEqual({
+      gradeGap: 0,
+      englishGap: 0,
+      bandGap: 0,
+      tuitionGap: 0,
+      costGap: 0,
+    });
     expect(pred.ruleVersion).toBe(RULE_VERSION);
   });
 

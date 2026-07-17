@@ -42,7 +42,10 @@ const baseInputs = (over: Partial<MatchInputs> = {}): MatchInputs => ({
   userBudgetAud: 45000,
   userField: null,
   userTargetLevel: null,
-  policy: { nepalAssessmentLevel: "L3" },
+  // Tuition-only: this suite is about the LEVEL/field eligibility passes, not the
+  // financial floor, so it opts out of the capacity model rather than let a budget
+  // shift silently re-band its fixtures (MV-120).
+  policy: { nepalAssessmentLevel: "L3", financialCapacity: null },
   ...over,
 });
 

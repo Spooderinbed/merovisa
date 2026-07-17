@@ -11,8 +11,11 @@ type FamilySection = NonNullable<ProfileSections["family"]>;
  * floors at one child — the situation already asserts ≥1, so a contradictory zero
  * and legacy rows that predate the count field fall back to it. `other` is
  * ambiguous, so it doesn't raise the floor on a guess.
+ *
+ * Exported so the matches adapter reads dependents through this same mapping rather
+ * than inventing a second one (MV-120 / audit C-3).
  */
-function dependentsFromFamily(family: FamilySection | undefined): StudentProfile["dependents"] {
+export function dependentsFromFamily(family: FamilySection | undefined): StudentProfile["dependents"] {
   switch (family?.situation) {
     case "spouse":
       return { partner: true, children: 0 };

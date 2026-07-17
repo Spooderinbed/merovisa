@@ -1567,15 +1567,66 @@
     },
     {
       "id": "MV-128",
-      "col": "blocked",
+      "col": "ready",
       "pri": "P2",
       "owner": "agent",
-      "badge": "blocked: PR #81",
       "file": "cards/MV-128-dossier-column-drift.md",
       "title": "46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)",
       "summary": "Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: \"This is why dossiers have no Column: field.\" Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said \"In review\" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge.",
       "created": "2026-07-17",
       "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-124",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "2026-07-10 audit: slices 2-9 (tracking)",
+      "file": "cards/MV-124-audit-remainder-slices-2-9.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-123",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "title": "board.json duplicate card ids will corrupt the next batch flip",
+      "file": "cards/MV-123-board-duplicate-id-collision.md",
+      "entered": "2026-07-17",
+      "badge": "In Review: PR #82. Guard shipped (8 rules, fail-closed) + the board repair it forced: MV-99/100/101 renumbered to MV-125/126/127 with a greppable formerId, the deleted MV-100 (matches progressive disclosure, PR #55) restored, 13 dead pointers + MV-69 null fixed, and two cards master still showed In Review flipped to done after verifying by code."
+    },
+    {
+      "id": "MV-122",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "/trust claims uploads verify your assessment; they do not (C-1c)",
+      "file": "cards/MV-122-trust-page-upload-claim.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-121",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "An all-Reach student opens an empty matches page (MV-120 fallout)",
+      "file": "cards/MV-121-reach-group-collapsed-dead-end.md",
+      "entered": "2026-07-17",
+      "note": "Blocked on the founder merging MV-120/PR #81; design decided (option 1). No other input needed.",
+      "badge": "next"
+    },
+    {
+      "id": "MV-120",
+      "col": "done",
+      "pri": "P0",
+      "owner": "agent",
+      "badge": "Merged to master 2026-07-17 (PR #81, merge commit e190d2a). Judges a budget against tuition + living costs, closing audit C-3.",
+      "file": "cards/MV-120-matches-budget-living-costs.md",
+      "title": "Matches budget must mean tuition + living costs, not tuition alone (audit C-3) -- the app currently contradicts itself on the same number",
+      "summary": "P0 live decision-correctness bug. The wizard asks for one yearly figure meaning 'Tuition plus living costs' (budget-step.tsx:83-84), but the matches engine compares that whole number against tuitionMin ALONE (compute.ts:81-86), uses tuitionGap===0 as an affordability gate promoting cards to 'strong' (compute.ts:89-95), and prints a green 'Budget covers AUD X tuition.' (compute.ts:139-151). SELF-CONTRADICTION: budget A$45,000 vs tuitionMin A$40,000 -> matches says 'Strong / budget covers', while scoring's financial.ts:80 on the SAME number builds capacityAud = 29,710 living + 44,500 tuition = 74,210 and forces 'reach / well below DHA financial-capacity requirement'. Student is really ~A$24,710 short. Isolated to the matches engine -- financial.ts already models the full floor correctly and even prices dependents, so the sourced constant (AU_DHA_LIVING_CAPACITY_AUD, DHA-sourced + freshness-tracked) already exists; no new data research. FIX: additive userLivingCostAud on MatchInputs (null => today's tuition-only fallback); add costGap to scoreSnapshot and KEEP tuitionGap (persisted untyped in score_snapshot Json on frozen MV-08 predictions -- a rename orphans historical rows); drive the verdict off costGap; rebase the reach cliff on requiredTotal; copy names both components; thread the constant in at BOTH adapters (anonymous + signed-in), keeping it OUT of compute.ts so the engine stays destination-agnostic. LOAD-BEARING: the verdict condition at line 89 is the defect, the copy is the symptom -- a copy-only fix still ships 'Strong'. WARNING: a currently-GREEN test pins the bug (tests/matches/compute.test.ts:60-75 asserts strong for 45,000 vs 40,000); ~13 test files affected -- goldens need reasoned justification, not mechanical re-baselining. Live browser pass required (jsdom is blind to this cross-page consistency claim). Codex plan review in flight.",
+      "created": "2026-07-17",
+      "entered": "2026-07-17",
+      "done": "2026-07-17"
     }
   ]
 }
