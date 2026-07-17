@@ -7,7 +7,7 @@
 > master while the board forgot it existed. Restored as [MV-100](MV-100-matches-progressive-disclosure.md).
 > This card's branch, commits and PR still say `mv-100` / MV-100.
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-100-guide-restyle` — **stacked off #67** (`mv-99-profile-restyle`),
 which carries #62 (MV-106 type) + #63 (MV-107 motion) + #64 (MV-108 landing) +
 #65 (MV-109 auth) + #66 (MV-110 dashboard) + #67 (MV-99 profile). **7-deep stack**;

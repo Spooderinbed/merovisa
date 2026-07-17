@@ -19,6 +19,7 @@ const problems = validateBoard(board, {
   dossiers: readdirSync(join(here, "cards"))
     .filter((f) => f.endsWith(".md"))
     .map((f) => `cards/${f}`),
+  readHeading: (f) => readFileSync(join(here, f), "utf8").match(/^#\s.*/m)?.[0] ?? null,
 });
 if (problems.length) {
   console.error(`\n✗ board.json failed ${problems.length} integrity check(s). Nothing was regenerated.\n`);

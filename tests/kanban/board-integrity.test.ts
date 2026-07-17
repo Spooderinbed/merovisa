@@ -77,6 +77,87 @@ describe("validateBoard", () => {
     expect(errors[0]).toMatch(/inprogres/);
   });
 
+  it("rejects two cards that swap each other's dossiers (existence alone passes this)", () => {
+    // Codex's counterexample against an existence-only check: both files exist and both
+    // are referenced, so the resolve rule AND the orphan rule pass while the board tells
+    // the wrong story about both cards. The original bug was an identity bug (a merge
+    // badge stamped onto the wrong card), so identity is the rule that matters.
+    const board = {
+      columns: COLUMNS,
+      cards: [
+        card({ id: "MV-125", file: "cards/MV-126-guide-restyle.md" }),
+        card({ id: "MV-126", file: "cards/MV-125-profile-restyle.md" }),
+      ],
+    };
+    const errors = validateBoard(board, {
+      ...allExist,
+      dossiers: ["cards/MV-125-profile-restyle.md", "cards/MV-126-guide-restyle.md"],
+    });
+    expect(errors).toHaveLength(2);
+    expect(errors.every((e) => /named for a different card/.test(e))).toBe(true);
+  });
+
+  it("rejects two cards pointing at the same dossier", () => {
+    const board = {
+      columns: COLUMNS,
+      cards: [card({ id: "MV-1", file: "cards/MV-1-x.md" }), card({ id: "MV-2", file: "cards/MV-1-x.md" })],
+    };
+    const errors = validateBoard(board, allExist);
+    // The shared pointer, plus MV-2 being named for MV-1.
+    expect(errors.some((e) => /both point at/.test(e))).toBe(true);
+  });
+
+  it("does not let MV-1 claim MV-12's dossier (the id must end at a separator)", () => {
+    const board = { columns: COLUMNS, cards: [card({ id: "MV-1", file: "cards/MV-12-other.md" })] };
+    expect(validateBoard(board, allExist)).toHaveLength(1);
+  });
+
+  it("accepts both `MV-N.md` and `MV-N-slug.md` naming", () => {
+    const board = {
+      columns: COLUMNS,
+      cards: [card({ id: "MV-111", file: "cards/MV-111.md" }), card({ id: "MV-2", file: "cards/MV-2-slug.md" })],
+    };
+    expect(validateBoard(board, allExist)).toEqual([]);
+  });
+
+  it("exempts explicit evidence pointers outside cards/ from the naming rule", () => {
+    // MV-D0 points at an audit and MV-57 at a spec. Those are deliberate links, not dossiers.
+    const board = {
+      columns: COLUMNS,
+      cards: [card({ id: "MV-D0", file: "../audits/2026-06-18-EXECUTION-CHECKPOINT.md" })],
+    };
+    expect(validateBoard(board, allExist)).toEqual([]);
+  });
+
+  it("rejects an active-column card with no dossier, but allows a done one", () => {
+    // MV-69 sat on `file: null` while its dossier existed on disk, unreferenced.
+    const cols = [...COLUMNS, { key: "inreview", name: "In review", wip: 3, active: true }];
+    expect(validateBoard({ columns: cols, cards: [card({ id: "MV-69", col: "inreview", file: null })] }, allExist))
+      .toHaveLength(1);
+    // Done and Backlog cards legitimately have no dossier: 25 of them do not.
+    expect(validateBoard({ columns: cols, cards: [card({ id: "MV-69", col: "done", file: null })] }, allExist))
+      .toEqual([]);
+  });
+
+  it("rejects a dossier whose own heading claims a different card", () => {
+    // Exactly the mistake renaming a file invites: pointer right, first line wrong.
+    const board = { columns: COLUMNS, cards: [card({ id: "MV-125", file: "cards/MV-125-profile-restyle.md" })] };
+    const errors = validateBoard(board, {
+      ...allExist,
+      readHeading: () => "# MV-99 — Overhaul Phase 2 / profile shell restyle",
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/opens with "MV-99"/);
+  });
+
+  it("compares whole paths, so ../elsewhere/MV-10.md does not satisfy cards/MV-10.md", () => {
+    // Basename comparison would call the orphan referenced and miss a forgotten card.
+    const board = { columns: COLUMNS, cards: [card({ id: "MV-D0", file: "../audits/MV-10.md" })] };
+    const errors = validateBoard(board, { ...allExist, dossiers: ["cards/MV-10.md"] });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/no card points at/);
+  });
+
   it("rejects an orphan dossier that no card points at", () => {
     // The costliest lie of all: MV-100 (matches progressive disclosure) shipped and
     // merged as PR #55, then lost its board row in a board.json union. The dossier
@@ -114,6 +195,7 @@ describe("the real board.json", () => {
       dossiers: readdirSync(join(KANBAN, "cards"))
         .filter((f) => f.endsWith(".md"))
         .map((f) => `cards/${f}`),
+      readHeading: (f: string) => readFileSync(join(KANBAN, f), "utf8").match(/^#\s.*/m)?.[0] ?? null,
     });
     expect(errors).toEqual([]);
   });

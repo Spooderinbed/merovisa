@@ -103,14 +103,21 @@ The founder accepts (→ Done) or sends it back (→ In Progress with notes).
 ## The integrity guard (`npm run board` can refuse)
 
 Since MV-123, [validate.mjs](validate.mjs) runs before anything is generated and **exits 1
-without writing** if `board.json` fails any of four rules. It reports every problem at once:
+without writing** if `board.json` fails any of these rules. It reports every problem at once:
 
 | Rule | Why it exists |
 |---|---|
 | Card ids are unique | Two cards under one id means every lookup-by-id silently takes the first. This stamped merge badges onto the wrong card and stranded MV-99/MV-101 in In Review for ten days. |
 | Every `col` is a real column key | The generator renders by filtering per column, so a typo'd `col` makes the card render nowhere: a silent drop. |
+| Active cards have a dossier | Ready / In Progress / In Review cards must link one (the Definition of Ready already says so). Done and Backlog cards may have none, so the rule is state-aware. |
 | Every `file:` pointer resolves | 16 dossiers were unreachable because the pointer omitted `cards/`. The rule is **existence, not a `cards/` prefix** — MV-D0 and MV-57 legitimately point at an audit and a spec. |
+| A dossier belongs to one card | Existence alone passes a board where two cards point at each other's dossiers. |
+| A dossier is named for its card | The rule that makes a swapped pair impossible: a swap keeps every file existing and referenced, so only identity catches it. Pointers outside `cards/` are exempt (they are evidence links, not dossiers). |
+| A dossier's heading agrees with the board | A renamed file whose heading still claims the old id tells a cold agent the wrong story from its first line. |
 | No orphan dossiers | A dossier no card points at is work the board has forgotten. MV-100 shipped and merged as PR #55, then lost its row in a `board.json` union and vanished from the board entirely. |
+
+Renumbered cards carry a **`formerId`** in `board.json` so the old id stays greppable: branches,
+commits and PRs permanently use it. `MV-125` records `formerId: "MV-99"`, and so on.
 
 **This is why the merge recipe is an APPEND-ONLY union.** A dedup-union of `board.json` has
 already dropped cards. When two branches both touch `board.json`, take every card from both

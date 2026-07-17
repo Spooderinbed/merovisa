@@ -1418,18 +1418,21 @@
     },
     {
       "id": "MV-125",
-      "col": "inreview",
+      "formerId": "MV-99",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
-      "badge": "In Review on branch mv-99-profile-restyle (STACKED off #66 mv-110-dashboard-restyle -> 6-deep #62->#63->#64->#65->#66->this; PR base=#66 so diff is profile-only; rebase --onto master once the chain merges). Gate green: typecheck 0 + lint 0 (pre-existing build.mjs warn only) + vitest 278 files/1769 passed (was 278/1767; +2 test guards). All style ratchets (type-scale, motion-tokens, card-shell) green. Renumbered MV-99 -> MV-125 on 2026-07-17 (MV-123): it carried the elevated-calm SPEC id (spec MV-99) into a card-id namespace the 2026-07-04 cards already held. Commits and PRs still say MV-99.",
+      "badge": "Merged to master 2026-07-07 (PR #67, commit 2dc11db). Stranded in In Review for ten days: the 2026-07-07 batch flip (a4a881b) stamped this card's merge badge onto the OTHER card sharing id MV-99, so the board still showed it awaiting review. Re-verified in master by code, not prose, on 2026-07-17: 2dc11db is an ancestor of master and components/profile/completeness-ring.tsx:11 carries animate-rise. Renumbered MV-99 -> MV-125 on 2026-07-17 (MV-123): it carried the elevated-calm SPEC id (spec MV-99) into a card-id namespace the 2026-07-04 cards already held. Its branch, commits and PR still say MV-99.",
       "file": "cards/MV-125-profile-restyle.md",
       "title": "Overhaul Phase 2: profile shell restyle -- completeness-ring entrance reveal (ring/accordion/type-scale already shipped) (non-mascot MV-99)",
       "summary": "Phase-2 continuation after the dashboard slice (MV-110). Ships the NON-MASCOT portion of spec MV-99 (Profile). A ground-truth pass found ALL THREE spec checklist items already shipped by prior slices: (1) CompletenessRing already tokenised text-primary (dusk-plum, MV-84) with transition-[stroke-dashoffset] duration-slower ease-calm -- nothing to re-tint, zero raw hex in components/profile/**; (2) section-accordion already folds onto the shared components/ui/disclosure.tsx primitive (chevron transition-transform duration-medium ease-calm + rotate-90, from Audit #21); (3) editors already on the type scale (text-[ grep NONE; MV-106 ratchet cleared all text-[Npx]). The genuine delta = entrance-reveal PARITY with the dashboard: added ONE animate-rise to the CompletenessRing <Card> shell root (the single stable root in components/profile/** that mounts once on navigation). Reduced-motion-safe (one reveal per root, no per-child animationDelay stagger; SectionAccordion deliberately NOT given animate-rise -- 13 rows would be a multi-sibling stagger). Presentational only -- no data/logic/save-flow change; no use client added. FLAGGED no-change (founder calls): ring text-primary tint (deliberate token); accordion-list container reveal lives in app/(app)/profile/page.tsx (out of components/profile/** scope) = a deferred one-line touch. TDD: extended completeness-ring.test (reveal + tint/dashoffset preservation) + NEW section-accordion guard (stays on the disclosure primitive's tokenised transition). Not browser-verified (profile auth-gated) -- suite + 3 style ratchets, per prior slices. Remaining Phase-2 non-mascot: MV-100 guide, MV-101 chrome.",
       "created": "2026-07-07",
-      "entered": "2026-07-07"
+      "entered": "2026-07-07",
+      "done": "2026-07-07"
     },
     {
       "id": "MV-126",
+      "formerId": "MV-100",
       "col": "done",
       "pri": "P2",
       "owner": "agent",
@@ -1442,15 +1445,17 @@
     },
     {
       "id": "MV-127",
-      "col": "inreview",
+      "formerId": "MV-101",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
-      "badge": "In Review on branch mv-101-chrome-cleanup (STACKED off #68 mv-100-guide-restyle -> 8-deep #62->#63->#64->#65->#66->#67->#68->this; PR base=#68 so diff is chrome-only; rebase --onto master once the chain merges). Gate green: typecheck 0 + lint 0 (pre-existing build.mjs warn only) + vitest 278 files/1775 passed (was 278/1771; +4 test guards). Orchestrator re-verified: SVGs unreferenced, all tests/styles ratchets green (12 files/41), app-layout green (mocks the tab bar), no golden captures this chrome. Renumbered MV-101 -> MV-127 on 2026-07-17 (MV-123): it carried the elevated-calm SPEC id (spec MV-101) into a card-id namespace the 2026-07-04 cards already held. Commits and PRs still say MV-101.",
+      "badge": "Merged to master 2026-07-07 (PR #69, commit 4efb379). Stranded in In Review for ten days: the 2026-07-07 batch flip (a4a881b) stamped this card's merge badge onto the OTHER card sharing id MV-101, so the board still showed it awaiting review. Re-verified in master by code, not prose, on 2026-07-17: 4efb379 is an ancestor of master and components/layout/mobile-tab-bar.tsx carries the h-0.5 bg-primary accent bar with the opacity-100/opacity-0 toggle, components/layout/logo.tsx:5 carries hover:opacity-80, and all 5 scaffold SVGs are gone from public/. Renumbered MV-101 -> MV-127 on 2026-07-17 (MV-123): it carried the elevated-calm SPEC id (spec MV-101) into a card-id namespace the 2026-07-04 cards already held. Its branch, commits and PR still say MV-101.",
       "file": "cards/MV-127-chrome-cleanup.md",
       "title": "Overhaul Phase 2: chrome + cleanup -- mobile-tab-bar active-accent transition + calm logo hover + delete 5 unused scaffold SVGs (opengraph-image DEFERRED, Gate-G) -- the LAST non-mascot slice",
       "summary": "Phase-2 continuation after the guide slice (MV-100); the LAST non-mascot Phase-2 slice. Ships spec MV-101 (Chrome + cleanup). Ground-truth: (1) wordmark/logo ALREADY refreshed to dusk-plum tokens + type scale via MV-84 -- a new mark is Gate-G brand-asset work, so only a calm hover affordance added (transition-opacity duration-fast ease-calm hover:opacity-80 on the Link); (2) mobile-tab-bar had transition-colors ease-calm but no duration token + no active indicator -> added duration-fast timing + an always-present aria-hidden accent bar (h-0.5 bg-primary, transition-opacity, opacity-100/opacity-0 toggle) that FADES on the active tab (reduced-motion-safe transition, not a delay stagger); (3) deleted 5 verified-unreferenced create-next-app scaffold SVGs (file/globe/next/vercel/window). DEFERRED: opengraph-image.tsx (optional + outward-facing brand asset, founder-owned Gate-G). Presentational only -- no data/logic/nav change. FLAGGED (visual judgment calls): logo hover:opacity-80 + the 2px top accent-bar placement (both one-class reverts). TDD: +4 tests (tab-bar duration token + active/inactive accent-bar opacity + motion ratchets; logo hover classes + structure preserved). Not browser-verified (auth-gated chrome) -- suite + ratchets, per prior slices. After MV-101 the overhaul has ONLY the Gate-G mascot tail left (MV-85/86 + SVGs).",
       "created": "2026-07-07",
-      "entered": "2026-07-07"
+      "entered": "2026-07-07",
+      "done": "2026-07-07"
     },
     {
       "id": "MV-111",
@@ -1559,6 +1564,18 @@
       "summary": "The fifth jsdom-blind slice (audit #8/#9/#6/#10): four cosmetic defects a green ~1900-test jsdom suite cannot catch (no layout engine, no real animation/scroll timers). #8 components/dashboard/journey-rail.tsx: the baseline connector was top-[13px] but each dot centre sits at 9px (py-1 + half h-2.5) -> top-[9px] (matches the outcome-funnel top-[5px] pattern). #9 components/matches/matches-tabs.tsx: the active tab's font-medium made it wider so the tablist reflowed on every switch; keep the bold active cue but reserve the bold width on every tab with a hidden aria-hidden font-medium ghost grid-stacked under the visible label. #6 components/marketing/freshness-table.tsx: verified was hardcoded at mount, firing all five vdot vpulses below the fold; drive it from the on-scroll IO sweep so each pulse fires in view, with reduced-motion/no-IO applying the static end-state at once (provenance text unchanged, no-JS-safe). #10 components/marketing/guide-thread.tsx: the IO cleanup did not bump runId.current, so the in-flight autoplay typewriter kept scheduling setState after unmount; bump it in cleanup. Presentational only, no trust dimension. Dossier: cards/MV-119.md.",
       "created": "2026-07-09",
       "entered": "2026-07-09"
+    },
+    {
+      "id": "MV-128",
+      "col": "blocked",
+      "pri": "P2",
+      "owner": "agent",
+      "badge": "blocked: PR #81",
+      "file": "cards/MV-128-dossier-column-drift.md",
+      "title": "46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)",
+      "summary": "Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: \"This is why dossiers have no Column: field.\" Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said \"In review\" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge.",
+      "created": "2026-07-17",
+      "entered": "2026-07-17"
     }
   ]
 }
