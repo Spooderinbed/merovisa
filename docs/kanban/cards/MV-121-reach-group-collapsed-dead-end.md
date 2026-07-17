@@ -1,7 +1,24 @@
 # MV-121 — An all-Reach student opens an empty matches page
 
-**Column:** Ready · **Priority:** P1 · **Owner:** agent
+**Column:** Blocked · **Priority:** P1 · **Owner:** agent
 **Branch:** `mv-121-reach-group-collapsed` (off `origin/master`, AFTER MV-120 merges) · **Merge:** _founder-gated_
+
+## ⛔ BLOCKED — and this is the only thing stopping the build
+
+**Waiting on the founder to merge MV-120 / PR #81.** Decided 2026-07-17: branch cleanly off master
+once #81 lands, rather than stacking on `mv-120-matches-budget-living` (our own stack-merge lesson:
+chained-base PRs + `--delete-branch` silently CLOSES the dependent). Nothing else is unresolved —
+the design question below is answered and the test plan is written. **On resume: check whether #81
+is merged; if yes, branch off master and build. No further founder input needed.**
+
+## ✅ Design decision — MADE 2026-07-17 (founder): **Option 1**
+
+**Reveal Reach when it is all there is.** If `strong.length === 0 && possible.length === 0`, render
+the Reach group expanded (or `initialVisible={3}`); otherwise keep it collapsed exactly as today.
+Chosen over always-show-3 (partly undoes disclosure for everyone) and over the empty-state rewrite
+(bigger build; may still be worth its own card later, but is NOT this slice).
+
+Build option 1 only. Do not re-open the choice.
 **Found:** 2026-07-17, during the MV-120 live browser pass. **Not in any audit** — jsdom could not
 see it, and it did not exist until MV-120 corrected the verdicts.
 **Depends on:** MV-120 (PR #81). This is a direct consequence of that slice's deflation.
@@ -42,22 +59,18 @@ cards, and the header still shows the true total. The premise it relied on (Stro
 the page; Reach is an afterthought students rarely want) stopped being true when MV-120 landed.
 **Do not simply delete it** — the wall-of-cards problem it solves is real and will come back.
 
-## The design question (needs a founder call — do not guess)
+## The design question — ANSWERED (kept for the reasoning)
 
-The honest options are not equivalent, and this is a product decision, not a correctness one:
+The options were not equivalent, so this went to the founder rather than being guessed:
 
-1. **Reveal Reach when it is all there is.** If `strong.length === 0 && possible.length === 0`,
-   render Reach expanded (or `initialVisible={3}`). Smallest change; keeps the collapse for
+1. **Reveal Reach when it is all there is** — ✅ **CHOSEN**. Smallest change; keeps the collapse for
    students who do have better bands. Does not pretend a reach is not a reach.
-2. **Always show N reach cards** (`initialVisible={3}` unconditionally). Simpler rule, but partly
-   undoes the disclosure win for everyone.
-3. **Empty-state copy instead of cards.** Say plainly "nothing clears your budget yet — here is the
-   gap and what would close it", and let Reach stay collapsed behind it. Most honest framing,
-   biggest build, and arguably the most useful: it answers "what do I do now?" rather than showing
-   60 cards the student cannot afford.
-
-**Recommendation: option 1 first** (it removes the dead-end with the least product surface), with
-option 3 as its own follow-up if the founder wants the guidance surface. Confirm before building.
+2. Always show N reach cards (`initialVisible={3}` unconditionally) — rejected: partly undoes the
+   disclosure win for everyone, including students the collapse was written for.
+3. Empty-state copy instead of cards ("nothing clears your budget yet — here is the gap and what
+   would close it") — **not rejected on merit**, deferred as too big for this slice. It is arguably
+   the most useful answer to "what do I do now?", and is worth its own card if the founder wants a
+   guidance surface later.
 
 ## Acceptance criteria
 
