@@ -41,6 +41,42 @@
   ],
   "cards": [
     {
+      "id": "MV-124",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "2026-07-10 audit: slices 2-9 (tracking)",
+      "file": "cards/MV-124-audit-remainder-slices-2-9.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-123",
+      "col": "ready",
+      "pri": "P2",
+      "owner": "agent",
+      "title": "board.json duplicate card ids will corrupt the next batch flip",
+      "file": "cards/MV-123-board-duplicate-id-collision.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-122",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "/trust claims uploads verify your assessment; they do not (C-1c)",
+      "file": "cards/MV-122-trust-page-upload-claim.md",
+      "entered": "2026-07-17"
+    },
+    {
+      "id": "MV-121",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "An all-Reach student opens an empty matches page (MV-120 fallout)",
+      "file": "cards/MV-121-reach-group-collapsed-dead-end.md",
+      "entered": "2026-07-17"
+    },
+    {
       "id": "MV-120",
       "col": "inreview",
       "pri": "P0",
