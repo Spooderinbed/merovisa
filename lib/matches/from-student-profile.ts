@@ -4,6 +4,7 @@ import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
 import { normalizeGradeToPercentage } from "@/lib/scoring/grade-normalize";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { budgetToAud, TARGET_LEVEL_BY_CURRENT_EDUCATION } from "./from-sections";
+import { auFinancialCapacity } from "./capacity";
 
 /**
  * The English band the matcher should use for an anonymous profile. Unlike the
@@ -42,6 +43,9 @@ export function profileToMatchInputs(profile: StudentProfile): MatchInputs {
     userField: profile.fieldOfStudy,
     alsoFields: profile.alsoConsidering ?? [],
     userTargetLevel: TARGET_LEVEL_BY_CURRENT_EDUCATION[profile.educationLevel],
-    policy: { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL },
+    policy: {
+      nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL,
+      financialCapacity: auFinancialCapacity(profile.dependents),
+    },
   };
 }

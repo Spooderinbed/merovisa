@@ -51,12 +51,18 @@ const program: Program = {
   notes: null,
 };
 
-// A strong-fit signed-in profile (grade 72, IELTS 7, ~50k AUD budget).
+// A strong-fit signed-in profile (grade 72, IELTS 7, ~72k AUD budget).
+//
+// MV-120: the budget was 4.5M NPR (~50k AUD) back when a budget was judged against
+// tuition alone. Under the real AU capacity model this student needs tuition (40k) +
+// living (29,710) = 69,710 AUD, so ~50k is a reach and "strong-fit" was false. Raised to
+// 6.5M NPR (~72,222 AUD) so the fixture means what its name says, rather than opting out
+// of the capacity model to keep the old number green.
 const strongSections = {
   academic: { degree: "bachelors", gradeSystem: "percentage-nepal", gradePercent: 72 },
   english: { test: "ielts", overall: 7, listening: 7, reading: 7, writing: 7, speaking: 7 },
   "intended-study": { field: "computer-science", level: "masters" },
-  finance: { total: 4_500_000, currency: "NPR" },
+  finance: { total: 6_500_000, currency: "NPR" },
 };
 
 describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-derived assessment)", () => {

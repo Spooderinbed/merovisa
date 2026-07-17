@@ -28,6 +28,22 @@ function toUsd(amount: number, currency: string): number {
   return rate === undefined ? amount : amount / rate;
 }
 
+/**
+ * Additional DHA financial capacity required for declared dependents (AUD). A partner and
+ * each child each add their gov-sourced Subclass 500 figure. School costs are deferred —
+ * they need child ages the wizard does not capture.
+ *
+ * Exported because the matches engine must price dependents identically (lib/matches/
+ * capacity.ts): two independent copies of this sum drifting apart is precisely the class
+ * of bug MV-120 / audit C-3 fixed.
+ */
+export function auDependentsCapacityAud(dependents: StudentProfile["dependents"]): number {
+  return (
+    (dependents?.partner ? AU_DHA_PARTNER_CAPACITY_AUD : 0) +
+    (dependents?.children ?? 0) * AU_DHA_CHILD_CAPACITY_AUD
+  );
+}
+
 export function scoreFinancial(profile: StudentProfile): DimensionScore {
   const budgetUsd = toUsd(profile.budget, profile.budgetCurrency);
   const typical = TYPICAL_YEARLY_USD[profile.destination];
@@ -69,14 +85,9 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
   // thresholds (50 blocks "strong", 30 forces "reach"), reusing those floors
   // rather than inventing new verdict logic. The gate only ever lowers the score.
   if (profile.destination === "australia") {
-    // Declared dependents raise the DHA financial-capacity floor: a partner and
-    // each child each add their gov-sourced Subclass 500 figure, so bringing
-    // family honestly requires more provable funds (school costs are deferred —
-    // they need child ages the wizard doesn't capture).
-    const dependents = profile.dependents;
-    const dependentsAud =
-      (dependents?.partner ? AU_DHA_PARTNER_CAPACITY_AUD : 0) +
-      (dependents?.children ?? 0) * AU_DHA_CHILD_CAPACITY_AUD;
+    // Declared dependents raise the DHA financial-capacity floor, so bringing family
+    // honestly requires more provable funds. Shared with the matches engine.
+    const dependentsAud = auDependentsCapacityAud(profile.dependents);
     const capacityAud = AU_DHA_LIVING_CAPACITY_AUD + AU_REPRESENTATIVE_TUITION_AUD + dependentsAud;
     const fxAud = FX_RATES.AUD ?? 1;
     const capacityUsd = capacityAud / fxAud;

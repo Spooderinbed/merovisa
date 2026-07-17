@@ -29,8 +29,42 @@ export interface MatchResult {
     gradeGap: number;
     englishGap: number;
     bandGap: number;
+    /**
+     * Budget shortfall against tuition ALONE. Retained despite `costGap` superseding it
+     * for the verdict: this key is persisted untyped in the `score_snapshot` Json column
+     * (lib/outcomes/repo.ts) on frozen outcome predictions, so removing or renaming it
+     * would silently orphan the key on historical rows.
+     */
     tuitionGap: number;
+    /**
+     * Budget shortfall against what the student actually needs — tuition + living +
+     * dependents. This is what the verdict is driven from. Collapses to `tuitionGap`
+     * when the policy supplies no financial capacity.
+     */
+    costGap: number;
   };
+}
+
+/**
+ * The destination's financial-capacity model, supplied by the adapters from the policy
+ * layer so `computeOne` never imports a country constant and stays destination-agnostic.
+ * Deliberately mirrors the model lib/scoring/financial.ts already applies to the same
+ * student: the two engines answer different questions (this program's tuition vs the
+ * destination's median), but they must not disagree about what a budget has to cover.
+ * Sourced via lib/matches/capacity.ts.
+ */
+export interface FinancialCapacity {
+  /** 12-month living-cost floor for one student, in AUD (DHA Subclass 500 figure for AU). */
+  livingAud: number;
+  /** Additional capacity required for a declared partner/children, in AUD. Zero when none. */
+  dependentsAud: number;
+  /**
+   * Fraction of the required total a budget must reach to avoid a forced "reach".
+   * Shared with the scoring gate (AU_DHA_CAPACITY_GATE.reachRatio) so both engines put
+   * the same student in the same band. A ratio is scale-invariant, so it transfers
+   * correctly even though the two engines' floors legitimately differ.
+   */
+  reachRatio: number;
 }
 
 /** A short note explaining how the chosen goal shaped (or could not shape) the order. */
@@ -71,5 +105,15 @@ export interface MatchInputs {
    */
   userTargetLevel: ProgramLevel | null;
   /** Policy flags */
-  policy: { nepalAssessmentLevel: "L2" | "L3" };
+  policy: {
+    nepalAssessmentLevel: "L2" | "L3";
+    /**
+     * What the student's budget must actually cover. Required (not optional) so that no
+     * call site can silently inherit the pre-MV-120 bug of judging a tuition+living
+     * budget against tuition alone — TypeScript forces every seam to decide. `null` is
+     * the explicit tuition-only opt-out for a non-AU or unknown destination, and never
+     * over-claims: the copy then speaks only of tuition.
+     */
+    financialCapacity: FinancialCapacity | null;
+  };
 }
