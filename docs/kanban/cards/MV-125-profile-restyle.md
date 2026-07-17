@@ -1,4 +1,10 @@
-# MV-99 — Overhaul Phase 2 / profile shell restyle
+# MV-125 — Overhaul Phase 2 / profile shell restyle
+
+> **Renumbered MV-99 → MV-125 on 2026-07-17 (MV-123).** This card was filed under the
+> elevated-calm *spec's* numbering (spec MV-99 = Profile), which collided with the
+> 2026-07-04 card MV-99 (step 4 multi-subject) already holding that id. Two cards under
+> one id stranded this one in In Review for ten days after a batch flip stamped its merge
+> badge onto the other. Its branch, commits and PR still say `mv-99` / MV-99.
 
 **Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-99-profile-restyle` — **stacked off #66** (`mv-110-dashboard-restyle`),

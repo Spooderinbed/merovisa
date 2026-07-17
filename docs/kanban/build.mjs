@@ -3,12 +3,29 @@
 // STATE; cards/*.md are the source of truth for card DETAIL. Do not hand-edit the
 // generated files — edit board.json + the dossiers, then regenerate.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { validateBoard } from "./validate.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const board = JSON.parse(readFileSync(join(here, "board.json"), "utf8"));
+
+// MV-123: refuse to generate from a board that lies. Silently rendering a duplicate
+// id, a dead dossier link, or a forgotten card is how the board lost MV-100 and
+// stranded MV-99/MV-101 in the wrong column for ten days. Fail loudly instead.
+const problems = validateBoard(board, {
+  exists: (f) => existsSync(join(here, f)),
+  dossiers: readdirSync(join(here, "cards"))
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => `cards/${f}`),
+});
+if (problems.length) {
+  console.error(`\n✗ board.json failed ${problems.length} integrity check(s). Nothing was regenerated.\n`);
+  for (const p of problems) console.error(`  · ${p}`);
+  console.error(`\nFix board.json (or the dossiers), then re-run \`npm run board\`.\n`);
+  process.exit(1);
+}
 
 const DAY = 86_400_000;
 const now = Date.now();
