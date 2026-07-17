@@ -164,6 +164,46 @@ the copy is the symptom.
 - [ ] Gate green: `npm run typecheck` + `npm run lint` + `npm test`.
 - [ ] **Live browser pass** (jsdom is blind; this is a cross-page consistency claim): drive the wizard at a budget between `tuitionMin` and `tuitionMin + 29,710`, confirm matches card and results financial factor agree.
 
+## Evidence (build complete 2026-07-17)
+
+**Gate green.** `npm run typecheck` 0 errors · `npm run lint` 0 errors (1 pre-existing
+warning in `docs/kanban/build.mjs`, untouched) · `npm test` **1923 passed / 297 files, 0
+failed** (was 1922; net +1 after adding the C-3 blocks and folding one over-loaded page
+assertion into a dedicated test).
+
+Commits: `5caacfa` (adjudicated plan) · `eff337c` (the fix).
+
+**Live browser pass — DONE, and it is the real proof.** jsdom cannot see cross-page
+consistency, so the anonymous wizard was driven end-to-end on the dev server at the audit's
+exact number (budget A$45,000, seeded via `sessionStorage["myvisa.wizard.v1"]` then
+submitted through the real `See where I stand` button → `POST /api/assess` 200).
+
+Result at `/assess`, all on one screen, no contradiction left:
+
+| Surface | Before (bug) | Now |
+|---|---|---|
+| Banner verdict | Reach | **Reach** |
+| Financial readiness | Building | **Building** |
+| Match cards (60) | **Strong** + _"Budget covers AUD 45,000 tuition."_ | **Reach** + _"Budget short by AUD 29,710 for tuition + living costs."_ |
+
+Arithmetic verified live against two real catalogue programs:
+- Adelaide `tuitionMin` 45,000 → 45,000 + 29,710 − 45,000 = **29,710** ✓ matches the copy
+- UQ `tuitionMin` 49,000 → 49,000 + 29,710 − 45,000 = **33,710** ✓ matches the copy
+
+Console clean (0 errors). Screenshot capture timed out twice (renderer-side; page itself
+responsive) — the extracted copy above is the stronger artifact and is kept instead.
+
+### ⚠️ Follow-up found during the live pass (NOT fixed here — needs a founder call)
+
+`app/(app)/matches/page.tsx:80` renders the Reach group with `initialVisible={0}`, i.e.
+collapsed behind its count. That was a sensible default when Reach was a small tail. After
+this fix many students deflate to **all-Reach**, and for them the signed-in `/matches` page
+opens with every group collapsed — a heading and a "Show 60 reach matches" button, and no
+cards. An apparently-empty matches page is a self-serve dead-end, which is exactly the
+bounce-to-a-consultancy the product exists to prevent. The anonymous `/assess` results page
+is unaffected (it renders reach cards inline, verified above). Deliberately out of scope for
+a correctness slice; worth its own card.
+
 ## Test plan (TDD — write these red first)
 
 1. Budget ≥ tuition but < tuition+living → **not strong**, copy names living costs. (The inverse of the currently-green pinned test.)

@@ -42,7 +42,7 @@
   "cards": [
     {
       "id": "MV-120",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P0",
       "owner": "agent",
       "badge": "Slice 1 of 9 from the 2026-07-10 comprehensive audit (finding C-3, checklist #4). Re-verified STILL_LIVE 2026-07-17 (high confidence, not refuted on adversarial recheck). Founder picked this slice 2026-07-17 and acknowledged the verdict-deflation heads-up.",
