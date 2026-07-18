@@ -1,6 +1,6 @@
 # MV-22 — Surface program notes (AHPRA etc.) on the anonymous results MatchCard
 
-**Column:** Ready · **Priority:** P2 · **Owner:** agent · **Gate:** none (pure component + test)
+**Priority:** P2 · **Owner:** agent · **Gate:** none (pure component + test)
 **Created:** 2026-06-22
 **Related:** [[MV-07]] (CRICOS render precedent on the program card), the 2026-06-18 full-app
 evaluation Q11 (`docs/audits/2026-06-18-full-app-evaluation.md`).

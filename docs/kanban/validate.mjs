@@ -13,12 +13,15 @@ const ACTIVE_COLUMNS = ["ready", "inprogress", "inreview"];
  *   exists?: (file: string) => boolean,
  *   dossiers?: string[],
  *   readHeading?: (file: string) => string | null,
+ *   hasColumnField?: (file: string) => boolean,
  * }} [opts]
  *   `exists` resolves a card's `file:` pointer relative to docs/kanban/; defaults to
  *   accepting every pointer. `dossiers` is every dossier path on disk (relative to
  *   docs/kanban/); when given, any dossier no card points at is reported. `readHeading`
  *   returns a dossier's first markdown heading; when given, its id must match the card.
- *   Omit either to skip that rule.
+ *   `hasColumnField` is true when a dossier carries a `**Column:**` line; when given,
+ *   any dossier under cards/ that has one is reported (board state lives only in
+ *   board.json). Omit any of these to skip that rule.
  * @returns {string[]} human-readable problems; empty means the board is trustworthy.
  */
 export function validateBoard(board, opts = {}) {
@@ -123,6 +126,25 @@ export function validateBoard(board, opts = {}) {
     for (const d of opts.dossiers) {
       if (!pointedAt.has(normalize(d))) {
         errors.push(`"${d}" is a dossier no card points at. Either add its card to the board or delete the file.`);
+      }
+    }
+  }
+
+  // 9. No dossier carries a **Column:** field. board.json is the SOLE source of board
+  //    STATE (README anti-drift rule 1: "this is why dossiers have no Column: field").
+  //    A Column: line in a dossier is a second copy of `col` that drifts out of sync —
+  //    MV-123 nearly "resumed" finished work off two dossiers that still read
+  //    "In review" for code merged 2026-07-07, and only a git check settled the truth.
+  //    Governs dossiers under cards/ only; evidence pointers (MV-D0 → an audit,
+  //    MV-57 → a spec) may legitimately contain the substring and are exempt.
+  if (opts.hasColumnField) {
+    for (const c of board.cards) {
+      if (!c.file || !normalize(c.file).startsWith("cards/")) continue;
+      if (opts.hasColumnField(c.file)) {
+        errors.push(
+          `${c.id}'s dossier "${c.file}" carries a **Column:** field. Board state lives ` +
+            `only in board.json — delete the field (README anti-drift rule 1).`,
+        );
       }
     }
   }

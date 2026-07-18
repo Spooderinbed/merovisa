@@ -1,6 +1,6 @@
 # MV-23 — Plan vs Checklist mental-model copy
 
-**Column:** In review · **Priority:** P3 · **Owner:** founder+agent · **Gate:** none for part (1)
+**Priority:** P3 · **Owner:** founder+agent · **Gate:** none for part (1)
 **Created:** 2026-06-22
 **Related:** 2026-06-18 audit Q14; reconciliation `wf_4b1a3438-b21`; [[MV-22]] (sibling residual).
 

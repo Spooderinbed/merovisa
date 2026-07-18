@@ -1,6 +1,6 @@
 # MV-25 — Nepal evidence level on the anonymous results MatchCard
 
-**Column:** In progress · **Priority:** P3 · **Owner:** agent · **Size:** S
+**Priority:** P3 · **Owner:** agent · **Size:** S
 **Gate:** none (agent-ownable; presentational, no DB, no scorer).
 **Created:** 2026-06-22
 **Related:** [[MV-24]] (the data + the dashboard ProgramCard line this mirrors); [[MV-22]] (the prior anon-results parity slice — same pattern); 2026-06-18 audit Q13b.

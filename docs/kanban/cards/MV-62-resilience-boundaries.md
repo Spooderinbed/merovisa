@@ -1,6 +1,6 @@
 # MV-62 — Resilience: error + loading boundaries and no more silently-swallowed taps
 
-**Column:** In Review · **Priority:** P1 · **Owner:** agent
+**Priority:** P1 · **Owner:** agent
 **Branch:** `mv-62-resilience-boundaries` · **Shipped:** 2026-06-26
 **Source:** Tier-1 journey-completeness (founder steer "do tier 1 and tier 2 first"); resilience scoping from the 2026-06-25 design-division polish audit.
 

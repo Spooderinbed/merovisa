@@ -1,6 +1,6 @@
 # MV-21 — Surface verified program English requirements (RMIT type-field + Deakin)
 
-**Column:** Backlog · **Priority:** P3 · **Owner:** founder+agent · **Gate:** founder DB approval (prod write)
+**Priority:** P3 · **Owner:** founder+agent · **Gate:** founder DB approval (prod write)
 **Created:** 2026-06-21
 **Related:** [[MV-13]] (the DB bridge this extends — same prod-write gate), [[MV-20]] (the disposition
 pass that scoped this out), [[MV-07]] (CRICOS render precedent on the program card).

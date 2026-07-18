@@ -1,6 +1,6 @@
 # MV-72 — Progression visual #16: intake tick-timeline
 
-**Column:** In Review · **Priority:** P1 · **Owner:** agent · **Branch:** `mv-72-intake-timeline` (off master)
+**Priority:** P1 · **Owner:** agent · **Branch:** `mv-72-intake-timeline` (off master)
 
 Second sub-slice carved out of the over-scoped **MV-45** umbrella (after MV-71).
 

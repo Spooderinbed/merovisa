@@ -1,6 +1,6 @@
 # MV-108 — Overhaul Wave A / A3: landing (marketing) non-mascot restyle
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-108-landing-restyle` — **stacked** on the A1 + A2 token branches
 (created off `mv-107` @ cea3f6e, then merged `origin/mv-106-type-scale-apply` so
 the base carries BOTH the A1 `text-*` type tokens and the A2 `duration-*` /

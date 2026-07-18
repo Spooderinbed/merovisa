@@ -1,6 +1,6 @@
 # MV-93 — Overhaul Phase 0c (doc): Motion v2 ADR
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
+**Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
 **Branch:** `mv-93-motion-v2-adr` off `origin/master f6cada8`
 **Deliverable:** `docs/design/2026-07-03-motion-v2-adr.md`
 

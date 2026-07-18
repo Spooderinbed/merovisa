@@ -1,6 +1,6 @@
 # MV-122 — /trust claims uploads verify your assessment; they don't (C-1c)
 
-**Column:** Backlog · **Priority:** P1 · **Owner:** agent
+**Priority:** P1 · **Owner:** agent
 **Merge:** _founder-gated_ (trust copy — founder owns the wording)
 **Source:** **NOT in the 2026-07-10 audit.** Found 2026-07-17 by the verification workflow that
 re-checked the audit against live code. Filed as **C-1c** in

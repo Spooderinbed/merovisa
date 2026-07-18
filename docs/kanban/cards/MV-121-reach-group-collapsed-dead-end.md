@@ -1,6 +1,6 @@
 # MV-121 — An all-Reach student opens an empty matches page
 
-**Column:** In Review · **Priority:** P1 · **Owner:** agent
+**Priority:** P1 · **Owner:** agent
 **Branch:** `mv-121-reach-group-collapsed` (off `origin/master` `13a0775`) · **Merge:** _founder-gated_
 
 ## ✅ BUILT 2026-07-18 — In Review

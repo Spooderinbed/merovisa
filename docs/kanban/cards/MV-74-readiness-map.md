@@ -1,6 +1,6 @@
 # MV-74 — Dashboard "readiness map" (decomposed verdict)
 
-**Column:** In Review · **Priority:** P2 · **Owner:** agent · **Branch:** `mv-74-readiness-map` (off master)
+**Priority:** P2 · **Owner:** agent · **Branch:** `mv-74-readiness-map` (off master)
 
 A dashboard card titled **"Your readiness"** that decomposes the single banded verdict into an
 honest map — **what's strong, what needs work, what's a risk** — each row backed by a signal the

@@ -1,6 +1,6 @@
 # MV-95 — Overhaul Phase 1: honest recap (drop the fake 3000ms "Analyzing" theatre)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-04
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-04
 **Branch:** `mv-95-honest-recap` off `origin/master f6cada8`
 **Carves:** the *honest recap* half of the overhaul spec's Phase-1 "MV-90 — Motion v2 + honest recap" item (kills audit #18). The motion-system halves (wizard slide transitions, micro-interactions) stay gated on the Motion v2 ADR (PR #48).
 

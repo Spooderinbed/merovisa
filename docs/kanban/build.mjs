@@ -20,6 +20,7 @@ const problems = validateBoard(board, {
     .filter((f) => f.endsWith(".md"))
     .map((f) => `cards/${f}`),
   readHeading: (f) => readFileSync(join(here, f), "utf8").match(/^#\s.*/m)?.[0] ?? null,
+  hasColumnField: (f) => /^\*\*Column:\*\*/m.test(readFileSync(join(here, f), "utf8")),
 });
 if (problems.length) {
   console.error(`\n✗ board.json failed ${problems.length} integrity check(s). Nothing was regenerated.\n`);

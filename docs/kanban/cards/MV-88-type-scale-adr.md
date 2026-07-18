@@ -1,6 +1,6 @@
 # MV-88 — Overhaul Phase 0c (doc): type-scale ADR
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
+**Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
 **Branch:** `mv-88-type-scale-adr` off `origin/master f6cada8`
 **Deliverable:** `docs/design/2026-07-03-type-scale-adr.md`
 

@@ -1,6 +1,6 @@
 # MV-102 — Per-field verdicts (Option C)
 
-**Column:** In Review · **Branch:** `mv-102-per-field-verdicts` (off `origin/master`) · **Built:** 2026-07-04
+**Branch:** `mv-102-per-field-verdicts` (off `origin/master`) · **Built:** 2026-07-04
 **Spec:** `docs/superpowers/specs/2026-07-04-per-field-verdicts-design.md` (rev 3)
 **Plan:** `docs/superpowers/plans/2026-07-04-per-field-verdicts.md`
 

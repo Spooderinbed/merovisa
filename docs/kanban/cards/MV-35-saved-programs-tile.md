@@ -1,6 +1,6 @@
 # MV-35 — Fix the dashboard "Universities" tile (counted programs, mislabeled)
 
-**Column:** In Review · **Priority:** P1 · **Owner:** agent
+**Priority:** P1 · **Owner:** agent
 **Branch:** `mv-35-saved-programs-tile` · **Shipped:** 2026-06-26
 **Evidence:** product-review audit `wf_5fb5dfa7-009` (#5).
 

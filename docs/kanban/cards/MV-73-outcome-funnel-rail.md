@@ -1,6 +1,6 @@
 # MV-73 — Progression visual #15: outcome-funnel journey rail
 
-**Column:** In Review · **Priority:** P1 · **Owner:** agent · **Branch:** `mv-73-outcome-funnel-rail` (off master)
+**Priority:** P1 · **Owner:** agent · **Branch:** `mv-73-outcome-funnel-rail` (off master)
 
 Third sub-slice carved out of the over-scoped **MV-45** umbrella (after MV-71 + MV-72).
 Design-division audit **#15**. Design **Codex-locked (gpt-5.5, Option A)** before build.

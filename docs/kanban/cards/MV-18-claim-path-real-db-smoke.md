@@ -1,6 +1,6 @@
 # MV-18 — Real-DB claim-path integration smoke (catch the swallowed-index class)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder)
+**Priority:** P2 · **Owner:** agent · **Gate:** human (founder)
 **Created:** 2026-06-20 · **Entered review:** 2026-06-20
 **Related:** [[MV-16]] — the bug this test would have caught (swallowed `assessments_primary_idx` violation). [[MV-14]] — the lead-insert this test also asserts. [[MV-17]] — the routing change that removes the duplicate-row path entirely.
 

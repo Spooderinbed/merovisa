@@ -1,6 +1,6 @@
 # MV-104 — Wizard funnel follow-ups (founder testing): AUD living-cost callout + recap slowdown
 
-**Column:** In Progress → In Review · **Priority:** P2 · **Owner:** agent · **Branch:** `mv-104-wizard-funnel-fixes` (off `origin/master`)
+**Priority:** P2 · **Owner:** agent · **Branch:** `mv-104-wizard-funnel-fixes` (off `origin/master`)
 
 ## Why
 

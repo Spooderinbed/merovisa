@@ -1,6 +1,6 @@
 # MV-20 — Category-E pending-findings disposition pass
 
-**Column:** In review · **Priority:** P3 · **Owner:** agent · **Gate:** human (founder)
+**Priority:** P3 · **Owner:** agent · **Gate:** human (founder)
 **Created:** 2026-06-21 · **Entered review:** 2026-06-21
 **Disposition outcome:** **ZERO ledger edits — and that is the correct result.** Substantive E value
 already integrated (MV-13); nothing mis-parked or autonomously rejectable; the one genuine follow-on

@@ -1,6 +1,6 @@
 # MV-120 — Matches budget must mean tuition + living costs (audit C-3)
 
-**Column:** In progress · **Priority:** P0 · **Owner:** agent
+**Priority:** P0 · **Owner:** agent
 **Branch:** `mv-120-matches-budget-living` (off `origin/master`) · **Merge:** _founder-gated_
 **Source of truth:** `docs/audits/2026-07-10-comprehensive/REPORT.md` (finding **C-3**, §4 Sol-unique live decision-correctness cluster; ranked **#4** on the 25-item checklist, **Slice 1** of the 9-slice build order)
 **Verification:** re-verified against the tree 2026-07-17 by a 10-finding / 21-agent workflow — verdict `STILL_LIVE`, confidence **high**, **not refuted** on adversarial recheck. All 10 audit P0s re-verified live; 0 already fixed.

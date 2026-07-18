@@ -1,6 +1,6 @@
 # MV-36 — Honest CRICOS link (provider-code framing; subject deep-link is infeasible)
 
-**Column:** In Review · **Priority:** P2 · **Owner:** agent · **Gate:** typecheck/lint/suite green
+**Priority:** P2 · **Owner:** agent · **Gate:** typecheck/lint/suite green
 **Created:** 2026-06-24 · **Branch:** `mv-36-cricos-honesty` · **Shipped:** 2026-06-26
 **Related:** [[MV-07]] (shipped the `CRICOS <code>` link; deliberately chose the register homepage),
 [[MV-24]] (harvested the provider directory). Evidence: product-review audit `wf_5fb5dfa7-009` + live probe

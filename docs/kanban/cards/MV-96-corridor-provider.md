@@ -1,6 +1,6 @@
 # MV-96 — Overhaul Phase 1: corridor theme provider (np-au, expansion-ready)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-04
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-04
 **Branch:** `mv-96-corridor-provider` off `origin/master f6cada8`
 **Carves:** overhaul spec's Phase-1 "MV-91 — Corridor theme provider" (the personalization architecture). The LAST Phase-1 slice not gated on the type-scale ADR (PR #47), Motion v2 ADR (PR #48), or the mascot (MV-85 ✋).
 

@@ -1,6 +1,6 @@
 # MV-17 — Route logged-in re-assessment to profile-edit/reScore (stop minting duplicate wizard rows)
 
-**Column:** Backlog · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder — product/routing decision)
+**Priority:** P2 · **Owner:** agent · **Gate:** human (founder — product/routing decision)
 **Created:** 2026-06-20
 **Related:** [[MV-16]] — the claim-path fix (newest-wins) handles the *fallback*; this is the *primary* path Codex recommended. [[MV-14]] (lead-insert) and [[MV-08]]/[[MV-15]] (the outcome loop reads the primary assessment) all sit on the same claim/primary plumbing.
 

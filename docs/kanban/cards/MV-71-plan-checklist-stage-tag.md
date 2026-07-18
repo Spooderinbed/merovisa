@@ -1,6 +1,6 @@
 # MV-71 — Progression visual #28b: checklist-stage tag on PlanItemCard
 
-**Column:** In Review · **Priority:** P1 · **Owner:** agent · **Branch:** `mv-71-plan-checklist-stage-tag` (off master)
+**Priority:** P1 · **Owner:** agent · **Branch:** `mv-71-plan-checklist-stage-tag` (off master)
 
 First sub-slice carved out of the over-scoped **MV-45** (founder picked #28).
 

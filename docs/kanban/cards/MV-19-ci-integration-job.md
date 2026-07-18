@@ -1,6 +1,6 @@
 # MV-19 — Wire `test:integration` into CI (real-DB claim-path smoke runs on GitHub)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder — confirm the CI run goes green on GitHub; decide required-vs-advisory)
+**Priority:** P2 · **Owner:** agent · **Gate:** human (founder — confirm the CI run goes green on GitHub; decide required-vs-advisory)
 **Created:** 2026-06-21 · **Entered review:** 2026-06-21
 **Related:** [[MV-18]] — built the smoke + raised the open question "wire `test:integration` into CI later, or keep it a local pre-merge gate." This card answers it: wired in, as a separate advisory job. [[MV-16]] — the regression class the smoke guards.
 

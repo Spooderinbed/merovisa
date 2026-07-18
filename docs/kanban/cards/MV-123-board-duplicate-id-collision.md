@@ -1,6 +1,6 @@
 # MV-123 — board.json has duplicate card ids; the next batch flip will corrupt state
 
-**Column:** Ready · **Priority:** P2 · **Owner:** agent
+**Priority:** P2 · **Owner:** agent
 **Merge:** _founder-gated_ · **Tooling, not product** — no student-facing effect.
 
 ## The bug (verified 2026-07-17, still live)

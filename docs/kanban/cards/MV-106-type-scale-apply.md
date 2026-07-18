@@ -1,6 +1,6 @@
 # MV-106 — Overhaul Phase 1: apply the type scale (`text-[Npx]` → named 9-step tokens)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-06
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-06
 **Branch:** `mv-106-type-scale-apply` off `origin/master 92a5c77`
 **Applies:** `docs/design/2026-07-03-type-scale-adr.md` (MV-88 decision, PR #47 shipped the doc only). This is the follow-on "application" slice the ADR explicitly deferred — Wave A step 1 of continuing the elevated-calm overhaul.
 

@@ -1,6 +1,6 @@
 # MV-24 — DHA evidentiary-tool harvest (CRICOS directory + Nepal evidence map)
 
-**Column:** In review · **Priority:** P3 · **Owner:** agent · **Size:** L
+**Priority:** P3 · **Owner:** agent · **Size:** L
 **Gate:** none for the TS-data + GS-surface render (agent-ownable). DB-catalogue surfacing is founder-DB-gated (out of scope here, like [[MV-13]]/[[MV-21]]).
 **Created:** 2026-06-22
 **Related:** 2026-06-18 audit Q13b (docs/audits/2026-06-18-full-app-evaluation.md:161); reconciliation `wf_4b1a3438-b21`; [[MV-07]] (CRICOS-code-on-card, the sibling surface).
