@@ -19,6 +19,7 @@ import { IntakeTimingCard } from "./intake-timing";
 import { PreferenceNote } from "@/components/matches/preference-note";
 import { GoalTradeoffNote } from "@/components/matches/goal-tradeoff-note";
 import { UniversityMatches } from "./university-matches";
+import { FieldCoverageNotice } from "./field-coverage-notice";
 import { GatedTeasers } from "./gated-teasers";
 import { AccuracyMeter } from "./accuracy-meter";
 import { ConversionPaths } from "./conversion-paths";
@@ -98,6 +99,9 @@ export function Results({
       <IntakeTimingCard intake={payload.intake} timeline={intakeTimeline} />
       <PreferenceNote note={payload.preferenceNote} />
       <GoalTradeoffNote note={payload.goalTradeoffNote} />
+      {/* When the intended field has no catalogue coverage, say so before the list, so the
+          off-field programs below don't read as matches in the student's field (C-10). */}
+      <FieldCoverageNotice field={payload.fieldCoverageNotice} />
       <UniversityMatches
         matches={payload.matches}
         total={payload.matchedCount}

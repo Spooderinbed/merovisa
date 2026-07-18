@@ -178,9 +178,13 @@ function computeOne(
   }
 
   if (inputs.policy.nepalAssessmentLevel === "L3") {
+    // Recommendation voice, not DHA's authority voice (audit C-5). "expected" reads as a
+    // rule the student has already failed; this mirrors the PolicyBanner's approved phrasing
+    // ("we recommend planning for around 6 months of bank seasoning"). Both the signed-in
+    // and anonymous match paths run through here, so one edit keeps them identical.
     reasons.push({
       kind: "policy",
-      text: "Genuine Student narrative + 6 months bank seasoning expected (Nepal AL3).",
+      text: "We recommend a Genuine Student narrative and around 6 months of bank seasoning (Nepal AL3).",
       positive: false,
     });
   }
@@ -204,6 +208,16 @@ function computeOne(
     reasons.push({
       kind: "field-exploring",
       text: `In a field you're also considering — not your primary field.`,
+      positive: false,
+    });
+  } else if (inputs.userField) {
+    // Neither the primary field nor an "also considering" one — a pure off-field program,
+    // surfaced only because field is a soft sort, not a hard filter (rankByField). Before
+    // this branch the card carried NO field reason at all, letting an off-field program
+    // read as aligned with the verdict's field. Say plainly it is outside it (audit C-10).
+    reasons.push({
+      kind: "field-outside",
+      text: `Outside your intended field (${inputs.userField}).`,
       positive: false,
     });
   }

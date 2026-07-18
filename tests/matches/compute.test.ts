@@ -253,7 +253,57 @@ describe("computeMatches verdict", () => {
       [p()],
       [uni],
     )[0]!;
-    expect(m.reasons.some((r) => r.kind === "policy")).toBe(true);
+    const policyReason = m.reasons.find((r) => r.kind === "policy")!;
+    expect(policyReason).toBeDefined();
+    // C-5: the AL3 line must speak in recommendation voice (matching the PolicyBanner),
+    // not DHA's authority voice. "expected" reads as a rule the student has already failed.
+    expect(policyReason.text).toMatch(/recommend/i);
+    expect(policyReason.text).toMatch(/bank seasoning/i);
+    expect(policyReason.text).not.toMatch(/expected/i);
+  });
+
+  it("marks a pure off-field program as outside the intended field (audit C-10)", () => {
+    // Field is a soft sort, not a hard filter, so a nursing program still surfaces for a
+    // CS student. Before C-10 it carried NO field reason at all — reading as aligned. It
+    // must now say plainly it is outside the field the verdict speaks to.
+    const m = computeMatches(
+      {
+        userGradePercent: 72,
+        userEnglishOverall: 7,
+        userEnglishBand: 7,
+        userBudgetAud: 45000,
+        userField: "computer-science",
+        userTargetLevel: "masters",
+        policy,
+      },
+      [p({ id: "nurse", field: "nursing" })],
+      [uni],
+    )[0]!;
+    const outside = m.reasons.find((r) => r.kind === "field-outside");
+    expect(outside).toBeDefined();
+    expect(outside!.positive).toBe(false);
+    expect(outside!.text).toMatch(/outside your intended field/i);
+    // It must not simultaneously claim alignment or exploratory (also-considering) status.
+    expect(m.reasons.some((r) => r.kind === "field")).toBe(false);
+    expect(m.reasons.some((r) => r.kind === "field-exploring")).toBe(false);
+  });
+
+  it("keeps a primary-field program aligned, with no off-field reason", () => {
+    const m = computeMatches(
+      {
+        userGradePercent: 72,
+        userEnglishOverall: 7,
+        userEnglishBand: 7,
+        userBudgetAud: 45000,
+        userField: "computer-science",
+        userTargetLevel: "masters",
+        policy,
+      },
+      [p({ field: "computer-science" })],
+      [uni],
+    )[0]!;
+    expect(m.reasons.some((r) => r.kind === "field")).toBe(true);
+    expect(m.reasons.some((r) => r.kind === "field-outside")).toBe(false);
   });
 
   it("returns [] when programs reference a missing university", () => {
