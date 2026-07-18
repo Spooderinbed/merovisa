@@ -2,6 +2,7 @@ import type { StudentProfile } from "@/lib/scoring/types";
 import type { Program, University } from "@/lib/programs/types";
 import { runAssessment } from "@/lib/scoring/engine";
 import { computeMatches } from "@/lib/matches/compute";
+import { uncoveredField } from "@/lib/matches/coverage";
 import { profileToMatchInputs } from "@/lib/matches/from-student-profile";
 import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/preference";
 import { attachNepalEvidence } from "@/lib/matches/evidence";
@@ -68,5 +69,9 @@ export function assembleAssessment(
     // Real banded verdicts for each also-considering field (Option C / MV-102). The
     // primary verdict above is passed in and never recomputed; null when no extras.
     secondaryVerdicts: computeSecondaryVerdicts(scored, result),
+    // Honest disclosure when the intended field has no programs in the catalogue we just
+    // matched against (audit C-10). Derived from the SAME injected catalogue, so the
+    // anonymous and signed-in paths disclose identically. Never touches the verdict/matches.
+    fieldCoverageNotice: uncoveredField(scored.fieldOfStudy, programs),
   };
 }

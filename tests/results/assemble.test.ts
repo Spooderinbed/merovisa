@@ -185,4 +185,17 @@ describe("assembleAssessment", () => {
       ),
     ).toBe(true);
   });
+
+  it("flags an uncovered intended field so the results page can disclose it (audit C-10)", () => {
+    // A Law applicant: the fixture catalogue lists no Law, so the payload names the field
+    // as uncovered — the results page says plainly we don't list it yet instead of passing
+    // off other-field programs as this student's matches.
+    const payload = assemble({ ...aarav, fieldOfStudy: "law" }, new Date("2026-06-03"));
+    expect(payload.fieldCoverageNotice).toBe("law");
+  });
+
+  it("carries no field-coverage notice when the intended field IS in the catalogue", () => {
+    const payload = assemble(aarav, new Date("2026-06-03")); // computer-science is covered
+    expect(payload.fieldCoverageNotice ?? null).toBeNull();
+  });
 });

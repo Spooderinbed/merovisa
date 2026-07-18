@@ -4,7 +4,18 @@ import type { NepalEvidenceLevel } from "@/lib/data/source/au-nepal-evidence-lev
 export type MatchVerdict = "strong" | "possible" | "reach";
 
 export interface MatchReason {
-  kind: "academic" | "english" | "english-band" | "tuition" | "policy" | "field" | "field-exploring";
+  kind:
+    | "academic"
+    | "english"
+    | "english-band"
+    | "tuition"
+    | "policy"
+    | "field"
+    | "field-exploring"
+    // A program neither in the primary field nor an "also considering" one. Field is a
+    // soft sort (not a hard filter), so off-field programs still surface — this kind lets
+    // the card say plainly it is outside the field the verdict speaks to (audit C-10).
+    | "field-outside";
   text: string;
   positive: boolean;
 }
