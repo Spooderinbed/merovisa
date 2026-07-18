@@ -75,9 +75,18 @@ export default async function MatchesPage() {
           <GoalTradeoffNote note={goalNote} />
           <VerdictGroup verdict="strong" matches={strong} statusById={statusById} />
           <VerdictGroup verdict="possible" matches={possible} statusById={statusById} />
-          {/* Reach = the stretch schools; collapse them by default so the page opens on
-              realistic picks. The count stays visible and they're one click away. */}
-          <VerdictGroup verdict="reach" matches={reach} statusById={statusById} initialVisible={0} />
+          {/* Reach = the stretch schools; normally collapsed behind their count so the page
+              opens on realistic picks. But when Reach is ALL there is — every match deflated
+              to a reach, common since MV-120 judged budgets against tuition + living — a
+              collapse leaves the page with nothing but a heading and a Show button at the
+              moment the student most needs to read why they're short. In that case show the
+              reach cards like any band (their honest shortfall reasons are the point). */}
+          <VerdictGroup
+            verdict="reach"
+            matches={reach}
+            statusById={statusById}
+            initialVisible={strong.length === 0 && possible.length === 0 ? 3 : 0}
+          />
           {matches.length === 0 ? (
             <p className="text-body text-ink-soft">
               No programs found yet. Complete your profile to surface matches.

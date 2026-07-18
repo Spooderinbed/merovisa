@@ -244,4 +244,150 @@ describe("/matches page", () => {
     expect(screen.getByText(/Reach \(1\)/i)).toBeInTheDocument();
     expect(screen.queryByText(/Strong matches/i)).not.toBeInTheDocument();
   });
+
+  /**
+   * MV-121. MV-120 deflated most students to all-Reach (the C-3 case above is exactly
+   * one: 45,000 budget, one program, a single reach). The page collapsed Reach behind
+   * `initialVisible={0}`, so an all-Reach student saw only a heading and a "Show 1 reach
+   * match" button -- zero cards -- at the moment they most need to read *why* they're
+   * short. When Reach is all there is, its cards must actually render.
+   */
+  it("renders the reach cards (not just a heading + Show button) when every match is a Reach (MV-121)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue({
+      sections: {
+        academic: { gradePercent: 72 },
+        english: { overall: 7 },
+        finance: { total: 45000, currency: "AUD" }, // short of tuition + living -> all reach
+        "intended-study": { field: "computer-science" },
+      },
+    });
+    listAllUniversities.mockResolvedValue([
+      {
+        id: "u1",
+        country: "AU",
+        name: "Monash",
+        city: "Melbourne",
+        rankingTier: 1,
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+      },
+    ]);
+    listAllPrograms.mockResolvedValue([
+      {
+        id: "p1",
+        universityId: "u1",
+        name: "Master of IT",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 40000,
+        tuitionMax: 40000,
+        tuitionCurrency: "AUD",
+        minGrade: 65,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+    ]);
+    listShortlistForUser.mockResolvedValue([]);
+
+    const ui = await MatchesPage();
+    render(ui);
+    // The band is unchanged (still Reach) -- this card does not re-inflate verdicts.
+    expect(screen.getByText(/Reach \(1\)/i)).toBeInTheDocument();
+    // The actual reach card is on screen, not hidden behind a collapse.
+    expect(screen.getByText("Master of IT")).toBeInTheDocument();
+    // And the page is not just a heading + a "Show 1 reach match" button.
+    expect(
+      screen.queryByRole("button", { name: /Show \d+ reach match/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * MV-121 must not undo the wall-of-cards protection for students who DO have better
+   * bands. When a Strong (or Possible) exists, Reach stays collapsed exactly as before.
+   */
+  it("keeps the reach group collapsed when the student has a stronger band (MV-121)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue({
+      sections: {
+        academic: { gradePercent: 72 },
+        english: { overall: 7 },
+        // Budget 70,000 clears 40,000 + 29,710 = 69,710, so p1 (minGrade 65) is a strong.
+        // p2 demands minGrade 90, a 18-point gap (> 10) -> an unambiguous reach regardless
+        // of budget. A mixed student, so Reach should stay behind its count.
+        finance: { total: 70000, currency: "AUD" },
+        "intended-study": { field: "computer-science" },
+      },
+    });
+    listAllUniversities.mockResolvedValue([
+      {
+        id: "u1",
+        country: "AU",
+        name: "Monash",
+        city: "Melbourne",
+        rankingTier: 1,
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+      },
+    ]);
+    listAllPrograms.mockResolvedValue([
+      {
+        id: "p1",
+        universityId: "u1",
+        name: "Master of IT",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 40000,
+        tuitionMax: 40000,
+        tuitionCurrency: "AUD",
+        minGrade: 65,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+      {
+        id: "p2",
+        universityId: "u1",
+        name: "Master of Data Science",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 55000,
+        tuitionMax: 55000,
+        tuitionCurrency: "AUD",
+        minGrade: 90,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+    ]);
+    listShortlistForUser.mockResolvedValue([]);
+
+    const ui = await MatchesPage();
+    render(ui);
+    // Strong carries the page and is visible.
+    expect(screen.getByText(/Strong matches \(1\)/i)).toBeInTheDocument();
+    expect(screen.getByText("Master of IT")).toBeInTheDocument();
+    // Reach is present but collapsed: its count shows, its card does not, and the reveal
+    // button is there.
+    expect(screen.getByText(/Reach \(1\)/i)).toBeInTheDocument();
+    expect(screen.queryByText("Master of Data Science")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Show 1 reach match/i }),
+    ).toBeInTheDocument();
+  });
 });

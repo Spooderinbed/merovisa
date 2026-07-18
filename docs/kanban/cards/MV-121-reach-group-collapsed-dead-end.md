@@ -1,15 +1,14 @@
 # MV-121 — An all-Reach student opens an empty matches page
 
-**Column:** Blocked · **Priority:** P1 · **Owner:** agent
-**Branch:** `mv-121-reach-group-collapsed` (off `origin/master`, AFTER MV-120 merges) · **Merge:** _founder-gated_
+**Column:** In Review · **Priority:** P1 · **Owner:** agent
+**Branch:** `mv-121-reach-group-collapsed` (off `origin/master` `13a0775`) · **Merge:** _founder-gated_
 
-## ⛔ BLOCKED — and this is the only thing stopping the build
+## ✅ BUILT 2026-07-18 — In Review
 
-**Waiting on the founder to merge MV-120 / PR #81.** Decided 2026-07-17: branch cleanly off master
-once #81 lands, rather than stacking on `mv-120-matches-budget-living` (our own stack-merge lesson:
-chained-base PRs + `--delete-branch` silently CLOSES the dependent). Nothing else is unresolved —
-the design question below is answered and the test plan is written. **On resume: check whether #81
-is merged; if yes, branch off master and build. No further founder input needed.**
+Unblocked once #81/#82/#83 all merged (master `13a0775`). Branched cleanly off `origin/master`,
+built option 1 via TDD. **The fix is one conditional prop** in `app/(app)/matches/page.tsx`:
+`initialVisible={strong.length === 0 && possible.length === 0 ? 3 : 0}` on the Reach `VerdictGroup`.
+Gate green (typecheck 0, lint 0 errors, **1943 tests**). See Evidence below.
 
 ## ✅ Design decision — MADE 2026-07-17 (founder): **Option 1**
 
@@ -74,17 +73,26 @@ The options were not equivalent, so this went to the founder rather than being g
 
 ## Acceptance criteria
 
-- [ ] A student whose every match is a Reach sees actual cards (or a real empty-state), never a
-      page whose only content is a heading and a Show button.
-- [ ] A student who has Strong/Possible cards still gets the Reach group collapsed — the
-      wall-of-cards protection survives for the population it was written for.
-- [ ] The verdict itself is unchanged. This card must not re-inflate any band; MV-120's deflation
-      is correct and is not under review here.
-- [ ] Reason copy stays honest and visible (the shortfall line is the point of the card).
-- [ ] Gate green: `npm run typecheck` + `npm run lint` + `npm test`.
-- [ ] **Live browser pass** — jsdom cannot see this (it is exactly what MV-120's live pass caught
-      and the suite did not). Drive the signed-in `/matches` page at a budget that deflates every
-      card to Reach and confirm cards render.
+- [x] A student whose every match is a Reach sees actual cards (or a real empty-state), never a
+      page whose only content is a heading and a Show button. — new page test "renders the reach
+      cards … when every match is a Reach (MV-121)".
+- [x] A student who has Strong/Possible cards still gets the Reach group collapsed — the
+      wall-of-cards protection survives for the population it was written for. — new page test
+      "keeps the reach group collapsed when the student has a stronger band (MV-121)".
+- [x] The verdict itself is unchanged. This card must not re-inflate any band; MV-120's deflation
+      is correct and is not under review here. — the C-3 verdict test is untouched and still green;
+      the diff touches only `initialVisible`, never the scorer.
+- [x] Reason copy stays honest and visible (the shortfall line is the point of the card). — the
+      shortfall reason lives on `ProgramCard`, which now renders for the all-Reach student.
+- [x] Gate green: `npm run typecheck` (0) + `npm run lint` (0 errors) + `npm test` (1943 passed).
+- [⚠] **Live browser pass** — NOT self-serviceable: the signed-in `/matches` page is behind
+      Google-only OAuth and the repo has no dev-auth bypass, so an agent cannot authenticate to
+      drive it. **Mitigation:** unlike the MV-120 layout case, this bug is a mount/don't-mount
+      decision, and the new test renders the *real* `MatchesPage` server component and asserts the
+      reach `ProgramCard` is in the DOM — the exact assertion the old heading-only test lacked.
+      `VerdictGroup` mounts cards (never CSS-hides them), so DOM presence == on-screen. **Founder
+      one-look confirm:** sign in, set finance total to ~AUD 45,000, open `/matches` → the Reach
+      cards (with the "Budget short by …" line) should now render instead of a bare Show button.
 
 ## Test plan (TDD — red first)
 
@@ -93,6 +101,35 @@ The options were not equivalent, so this went to the founder rather than being g
 3. `VerdictGroup` unit: `initialVisible={0}` with a non-empty list still renders its heading + count
    (guards the existing contract while the page-level rule changes).
 4. No verdict changes: a fixture's banded verdict is identical before and after.
+
+## Evidence (2026-07-18)
+
+**Diff — one file, one conditional prop:**
+- `app/(app)/matches/page.tsx` — Reach `VerdictGroup` now takes
+  `initialVisible={strong.length === 0 && possible.length === 0 ? 3 : 0}` (was a bare `{0}`). When
+  Strong and Possible are both empty, Reach shows like any band; otherwise it stays collapsed. No
+  other file changed; the scorer and `VerdictGroup` are untouched.
+
+**Tests — `tests/app/matches-page.test.tsx` (+2, TDD red→green):**
+1. "renders the reach cards … when every match is a Reach (MV-121)" — 45,000 budget, one program,
+   all-Reach. **Watched RED** ("Unable to find text: Master of IT" — the card was collapsed), then
+   green after the fix. Asserts `Reach (1)` heading, the `ProgramCard` text on screen, and **no**
+   "Show N reach match" button.
+2. "keeps the reach group collapsed when the student has a stronger band (MV-121)" — 70,000 budget,
+   p1 strong + p2 (minGrade 90 → an 18-pt gap → unambiguous reach). Asserts Strong visible, Reach
+   collapsed (card absent, "Show 1 reach match" present). Passed before and after → proves the fix
+   does not over-reach and undo the disclosure win.
+- Test-plan item 3 is already covered by the existing `verdict-group.test.tsx` "defaults a Reach
+  band to fully collapsed when initialVisible is 0". Item 4 (no verdict change) is covered by the
+  untouched C-3 test staying green.
+
+**Gate:** `npm run typecheck` 0 · `npm run lint` 0 errors (1 pre-existing `build.mjs` warning from
+#82, unrelated) · full suite **1943 passed / 298 files** (1941 at the merged tip + these 2).
+
+**Reach-fixture gotcha (recorded for next time):** a mere budget shortfall bands as *Possible*, not
+*Reach* — `compute.ts` only forces reach on `gradeGap > 10`, `englishGap > 1`, or
+`budget < reachRatio × requiredTotal`. To make a deterministic reach fixture, miss the grade by
+>10 rather than relying on the exact `reachRatio`.
 
 ## Resume notes
 
