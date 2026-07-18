@@ -1587,12 +1587,12 @@
     },
     {
       "id": "MV-123",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "title": "board.json duplicate card ids will corrupt the next batch flip",
       "file": "cards/MV-123-board-duplicate-id-collision.md",
-      "entered": "2026-07-17",
+      "entered": "2026-07-18",
       "badge": "In Review: PR #82. Guard shipped (8 rules, fail-closed) + the board repair it forced: MV-99/100/101 renumbered to MV-125/126/127 with a greppable formerId, the deleted MV-100 (matches progressive disclosure, PR #55) restored, 13 dead pointers + MV-69 null fixed, and two cards master still showed In Review flipped to done after verifying by code."
     },
     {
@@ -1606,12 +1606,12 @@
     },
     {
       "id": "MV-121",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "title": "An all-Reach student opens an empty matches page (MV-120 fallout)",
       "file": "cards/MV-121-reach-group-collapsed-dead-end.md",
-      "entered": "2026-07-17",
+      "entered": "2026-07-18",
       "note": "Blocked on the founder merging MV-120/PR #81; design decided (option 1). No other input needed.",
       "badge": "next"
     },
