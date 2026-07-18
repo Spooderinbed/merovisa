@@ -107,6 +107,17 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
     );
   });
 
+  it("returns a not-enough-data status and persists no prediction when the profile lacks verdict inputs (C-4)", async () => {
+    // A name-only signed-in profile: no grade/English/budget. buildPrediction would run
+    // computeMatch on inputs floored to 0 and freeze a fabricated "Reach" verdict-of-
+    // record. Abstain instead — return a 422 and write nothing (audit C-4).
+    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getProfile.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
+    const r = await freezePredictionForProgram(db, "owner1", "p1");
+    expect(r).toEqual({ ok: false, status: 422, error: expect.any(String) });
+    expect(insertPrediction).not.toHaveBeenCalled();
+  });
+
   it("is idempotent — a re-freeze returns the existing prediction (created: false)", async () => {
     getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
     insertPrediction.mockResolvedValue({

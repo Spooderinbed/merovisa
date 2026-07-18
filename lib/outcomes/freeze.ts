@@ -6,6 +6,7 @@ import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { getProfile } from "@/lib/profiles/repo";
 import { getProgram, listAllUniversities } from "@/lib/programs/repo";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
+import { hasSufficientInputs } from "@/lib/matches/sufficiency";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { buildPrediction } from "./predict";
 import { insertPrediction, type PredictionRow } from "./repo";
@@ -14,7 +15,9 @@ type DB = SupabaseClient<Database>;
 
 export type FreezeResult =
   | { ok: true; prediction: PredictionRow; created: boolean }
-  | { ok: false; status: 404 | 409; error: string };
+  // 422: the profile carries no verdict-driving input (grade/English/budget all
+  // absent), so there is nothing to freeze but a fabricated zero-floored verdict.
+  | { ok: false; status: 404 | 409 | 422; error: string };
 
 /**
  * Freeze the per-program prediction for a signed-in user (MV-08, F16).
@@ -53,6 +56,19 @@ export async function freezePredictionForProgram(
   const profile = await getProfile(db, owner);
   const sections = (profile?.sections as ProfileSections | undefined) ?? {};
   const inputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
+
+  // Unknown is not zero (audit C-4): buildPrediction runs computeMatch, which floors
+  // every unknown input to 0. Freezing that would make a fabricated "Reach" the
+  // prediction-of-record for a student who never entered a grade, English score, or
+  // budget. Abstain — persist nothing — until there is something real to freeze.
+  if (!hasSufficientInputs(inputs)) {
+    return {
+      ok: false,
+      status: 422,
+      error: "not enough profile data to freeze a prediction — add your grade, English score, or budget first",
+    };
+  }
+
   const frozen = buildPrediction(inputs, program, university);
 
   const result = await insertPrediction(db, {

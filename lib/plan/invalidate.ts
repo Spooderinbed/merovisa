@@ -6,6 +6,7 @@ import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { listDocumentsForUser } from "@/lib/documents/repo";
 import { computeMatches } from "@/lib/matches/compute";
+import { hasSufficientInputs } from "@/lib/matches/sufficiency";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
 import { generatePlan } from "./generator";
@@ -33,7 +34,13 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
 
   const sections = (profileRow?.sections as ProfileSections | undefined) ?? {};
   const matchInputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
-  const matches = computeMatches(matchInputs, programs, universities);
+  // Unknown is not zero (audit C-4): a profile with no grade/English/budget would have
+  // every input floored to 0 by computeMatches and every program called a reach, seeding
+  // the plan with add-safer-options off a fabricated verdict. Skip the match-driven items
+  // when there is nothing real to score — the profile-completeness prompts still generate.
+  const matches = hasSufficientInputs(matchInputs)
+    ? computeMatches(matchInputs, programs, universities)
+    : [];
 
   const items = generatePlan({
     sections,

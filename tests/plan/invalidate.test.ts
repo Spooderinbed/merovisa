@@ -162,6 +162,79 @@ describe("invalidatePlan", () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
+  // A reach-forcing program used by the two C-4 gate tests below.
+  const uni = {
+    id: "u1",
+    country: "AU",
+    name: "Monash",
+    city: "Melbourne",
+    rankingTier: 1,
+    source: "https://x",
+    lastVerified: "2026-01-01",
+    dataQuality: "primary",
+  };
+  const program = {
+    id: "p1",
+    universityId: "u1",
+    name: "Master of IT",
+    level: "masters",
+    field: "computer-science",
+    tuitionMin: 40000,
+    tuitionMax: 40000,
+    tuitionCurrency: "AUD",
+    minGrade: 65,
+    minEnglish: 6.5,
+    minEnglishBand: 6,
+    intakes: ["feb"],
+    source: "https://x",
+    lastVerified: "2026-01-01",
+    dataQuality: "primary",
+    notes: null,
+  };
+
+  it("does not seed match-driven plan items off a name-only profile, but still emits profile prompts (C-4)", async () => {
+    // Audit C-4 "Unknown is not zero": a name-only profile has no grade/English/budget,
+    // so computeMatches would floor them to 0 and call every program a reach — seeding
+    // add-safer-options ("your current matches are all reach") off a fabricated verdict.
+    // The gate skips the match-driven items; the profile-completeness prompts still fire.
+    getProfile.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
+    getPrimaryAssessmentForUser.mockResolvedValue({ destination_id: "australia" });
+    listAllPrograms.mockResolvedValue([program]);
+    listAllUniversities.mockResolvedValue([uni]);
+
+    await invalidatePlan(fakeAdmin, "u1");
+
+    const rows = insert.mock.calls[0]![0] as Array<{ kind: string }>;
+    const kinds = rows.map((r) => r.kind);
+    // The match-driven item is suppressed — no plan seeded off a fabricated reach.
+    expect(kinds).not.toContain("add-safer-options");
+    // But the plan is NOT walled: the real completeness prompts still generate.
+    expect(kinds).toContain("add-grade");
+    expect(kinds).toContain("add-english-score");
+  });
+
+  it("still seeds add-safer-options from real matches when the profile has verdict inputs (no over-gating)", async () => {
+    // A sufficient profile (grade + English + budget present) whose tiny budget makes the
+    // one program a genuine reach with no strong. The match-driven item must still fire —
+    // the gate abstains only when there is nothing real to score.
+    getProfile.mockResolvedValue({
+      sections: {
+        academic: { gradePercent: 72 },
+        english: { overall: 7 },
+        finance: { total: 10000, currency: "AUD" },
+        "intended-study": { field: "computer-science" },
+      },
+    });
+    getPrimaryAssessmentForUser.mockResolvedValue({ destination_id: "australia" });
+    listAllPrograms.mockResolvedValue([program]);
+    listAllUniversities.mockResolvedValue([uni]);
+
+    await invalidatePlan(fakeAdmin, "u1");
+
+    const rows = insert.mock.calls[0]![0] as Array<{ kind: string }>;
+    expect(rows.map((r) => r.kind)).toContain("add-safer-options");
+  });
+
   it("does not emit start-passport-process once a passport is uploaded, and auto-closes an open one", async () => {
     listDocumentsForUser.mockResolvedValue([{ kind: "passport" }]);
     openTodos([{ id: 5, kind: "start-passport-process" }]);

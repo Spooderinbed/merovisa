@@ -6,6 +6,7 @@ import { getProfile } from "@/lib/profiles/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { listShortlistForUser } from "@/lib/matches/repo";
 import { computeMatches } from "@/lib/matches/compute";
+import { hasSufficientInputs } from "@/lib/matches/sufficiency";
 import { uncoveredField } from "@/lib/matches/coverage";
 import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/preference";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
@@ -44,19 +45,23 @@ export default async function MatchesPage() {
 
   const sections: ProfileSections = (profile?.sections as ProfileSections | undefined) ?? {};
 
-  // Gate the empty/never-filled profile: computing verdicts off fields the user
-  // never entered fabricates "Reach · Grade short by 60%" off zeroed inputs. Mirror
-  // the dashboard's gate (PromptCard "profile-incomplete") instead. The dashboard's
-  // pickPrompt uses the same signal — no profile data — to render this card.
-  const profileEmpty = Object.keys(sections).length === 0;
+  const inputs = sectionsToMatchInputs(sections, {
+    nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL,
+  });
 
-  const universitiesPanel = profileEmpty ? (
+  // Gate the profile that carries nothing to score. Not just the empty/never-filled
+  // profile — a name-only student (grade, English and budget all absent) has a
+  // NON-empty profile, yet computeMatches floors every unknown to 0 and fabricates
+  // "Reach · Grade short by 60%" off inputs they never entered (audit C-4, "Unknown
+  // is not zero"). hasSufficientInputs abstains upstream; any one verdict input
+  // present ⇒ we still render cards (never over-gate). Mirror the dashboard's gate
+  // (PromptCard "profile-incomplete"), whose pickPrompt uses the same signal.
+  const insufficient = !hasSufficientInputs(inputs);
+
+  const universitiesPanel = insufficient ? (
     <PromptCard prompt={{ kind: "profile-incomplete" }} />
   ) : (
     (() => {
-      const inputs = sectionsToMatchInputs(sections, {
-        nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL,
-      });
       const { items: matches, note: preferenceNote } = applyPreference(
         computeMatches(inputs, programs, universities),
         sections.career?.goal ?? null,
