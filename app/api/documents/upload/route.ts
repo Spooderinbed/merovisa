@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DOCUMENT_KINDS, type DocumentKind } from "@/lib/documents/types";
-import { getDocumentByKind, insertDocument, deleteDocument } from "@/lib/documents/repo";
+import { getDocumentByKind, upsertDocument } from "@/lib/documents/repo";
 import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSection } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
@@ -62,15 +62,18 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   }
 
+  // Look up the document this upload would replace, but DO NOT delete it yet.
+  // The original must survive every failure path below (bad magic bytes, a failed
+  // Storage upload, a failed row write) — it is only removed after the
+  // replacement is validated, stored, and committed. Destroying it up front is
+  // how a rejected re-upload silently erased a student's passport scan while the
+  // card still read "Uploaded" (audit C-8).
   const existing = await getDocumentByKind(admin, userId, docKind);
-  if (existing) {
-    await admin.storage.from("documents").remove([existing.file_path]);
-    await deleteDocument(admin, existing.id, userId);
-  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  // Magic-byte check — defense against MIME spoofing.
+  // Magic-byte check — defense against MIME spoofing. Runs before anything is
+  // written or removed, so a spoofed replacement leaves the original intact.
   if (!verifyFileMagic(buffer, file.type)) {
     return NextResponse.json(
       { error: "File contents do not match the declared file type" },
@@ -82,6 +85,8 @@ export async function POST(request: Request): Promise<Response> {
   const storageName = `${crypto.randomUUID()}.${extensionFor(file.type)}`;
   const filePath = `${userId}/${docKind}/${storageName}`;
 
+  // Fresh UUID path, so the replacement never collides with the object it
+  // supersedes — the original bytes stay readable until the row is swapped.
   const { error: uploadError } = await admin.storage
     .from("documents")
     .upload(filePath, buffer, { contentType: file.type, upsert: false });
@@ -91,7 +96,9 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
-  const docId = await insertDocument(admin, {
+  // Atomic replace on the unique (owner, kind) index — no delete-then-insert
+  // window. If this fails, the original row is untouched.
+  const docId = await upsertDocument(admin, {
     owner: userId,
     kind: docKind,
     filePath,
@@ -99,12 +106,19 @@ export async function POST(request: Request): Promise<Response> {
     originalName: safeOriginalName,
   });
 
-  // A failed row insert leaves the uploaded bytes orphaned in Storage — roll the
-  // object back and surface the failure rather than reporting a stored document.
+  // The row write failed — roll back the bytes we just uploaded and surface the
+  // failure. The original document (row + object) is still fully intact.
   if (!docId) {
-    console.error("[documents/upload] insertDocument failed", { userId, docKind, filePath });
+    console.error("[documents/upload] upsertDocument failed", { userId, docKind, filePath });
     await admin.storage.from("documents").remove([filePath]);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
+
+  // Replacement committed (its row overwrote the old one via the upsert above) —
+  // only now is it safe to remove the superseded object. A failure here merely
+  // leaks an orphaned object; the student's current document stays correct.
+  if (existing && existing.file_path !== filePath) {
+    await admin.storage.from("documents").remove([existing.file_path]);
   }
 
   // Auto-flip profile boolean flag if this kind drives one

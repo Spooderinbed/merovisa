@@ -7,23 +7,27 @@ const {
   checkRateLimit,
   getDocumentByKind,
   insertDocument,
+  upsertDocument,
   deleteDocument,
   patchProfileSection,
   invalidatePlan,
   reScoreAssessment,
   storageUpload,
   storageRemove,
+  verifyFileMagic,
 } = vi.hoisted(() => ({
   getUser: vi.fn(),
   checkRateLimit: vi.fn(),
   getDocumentByKind: vi.fn(),
   insertDocument: vi.fn(),
+  upsertDocument: vi.fn(),
   deleteDocument: vi.fn(),
   patchProfileSection: vi.fn(),
   invalidatePlan: vi.fn(),
   reScoreAssessment: vi.fn(),
   storageUpload: vi.fn(),
   storageRemove: vi.fn(),
+  verifyFileMagic: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -34,15 +38,21 @@ vi.mock("@/lib/supabase/admin", () => ({
     storage: { from: () => ({ upload: storageUpload, remove: storageRemove }) },
   }),
 }));
-vi.mock("@/lib/documents/repo", () => ({ getDocumentByKind, insertDocument, deleteDocument }));
+vi.mock("@/lib/documents/repo", () => ({
+  getDocumentByKind,
+  insertDocument,
+  upsertDocument,
+  deleteDocument,
+}));
 vi.mock("@/lib/profiles/repo", () => ({ patchProfileSection }));
 vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
 vi.mock("@/lib/assessments/re-score", () => ({ reScoreAssessment }));
 vi.mock("@/lib/rate-limit/upstash", () => ({ checkRateLimit }));
-// Magic-byte check passes so we reach the flag-flip block.
+// verifyFileMagic is a controllable mock — most tests let it pass (set in
+// beforeEach); the C-8 tests flip it to false to exercise the reject path.
 vi.mock("@/lib/documents/upload-validation", () => ({
   sanitizeFilename: (n: string) => n,
-  verifyFileMagic: () => true,
+  verifyFileMagic,
   extensionFor: () => "png",
 }));
 
@@ -66,7 +76,8 @@ describe("POST /api/documents/upload", () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     checkRateLimit.mockResolvedValue(true);
     getDocumentByKind.mockResolvedValue(null);
-    insertDocument.mockResolvedValue("doc-1");
+    upsertDocument.mockResolvedValue("doc-1");
+    verifyFileMagic.mockReturnValue(true);
     patchProfileSection.mockResolvedValue(undefined);
     invalidatePlan.mockResolvedValue(undefined);
     storageUpload.mockResolvedValue({ error: null });
@@ -111,10 +122,10 @@ describe("POST /api/documents/upload", () => {
     expect(reScoreAssessment).not.toHaveBeenCalled();
   });
 
-  it("returns 500 and removes the orphaned file when the row insert fails", async () => {
+  it("returns 500 and removes the orphaned file when the row write fails", async () => {
     // The file uploaded to Storage but the documents row never persisted — the
     // route must not report success (id:null/stored) and must clean up the orphan.
-    insertDocument.mockResolvedValue(null);
+    upsertDocument.mockResolvedValue(null);
     const res = await POST(uploadReq("bank-statement"));
     expect(res.status).toBe(500);
     const json = await res.json();
@@ -123,6 +134,65 @@ describe("POST /api/documents/upload", () => {
     expect(storageRemove).toHaveBeenCalled();
     // No false flag-flip after a failed primary write.
     expect(patchProfileSection).not.toHaveBeenCalled();
+  });
+
+  // --- C-8: an upload that fails must never destroy the document it replaces ---
+  // A student who re-uploads over a stored passport/bank-statement and hits any
+  // failure must keep the original, not be silently left with nothing while the
+  // card still reads "Uploaded".
+
+  const EXISTING = {
+    id: "old-1",
+    owner: "u1",
+    kind: "passport",
+    file_path: "u1/passport/old.png",
+  };
+
+  it("keeps the existing document when the replacement fails the magic-byte check", async () => {
+    getDocumentByKind.mockResolvedValue(EXISTING);
+    verifyFileMagic.mockReturnValue(false); // a renamed HEIC — contents don't match
+    const res = await POST(uploadReq("passport"));
+    expect(res.status).toBe(422);
+    // The original was never removed from Storage, never deleted from the table,
+    // and no replacement row was written — it is fully intact.
+    expect(storageRemove).not.toHaveBeenCalled();
+    expect(deleteDocument).not.toHaveBeenCalled();
+    expect(upsertDocument).not.toHaveBeenCalled();
+  });
+
+  it("keeps the existing document when the replacement upload fails", async () => {
+    getDocumentByKind.mockResolvedValue(EXISTING);
+    storageUpload.mockResolvedValue({ error: { message: "network" } });
+    const res = await POST(uploadReq("passport"));
+    expect(res.status).toBe(500);
+    expect(storageRemove).not.toHaveBeenCalled();
+    expect(deleteDocument).not.toHaveBeenCalled();
+    expect(upsertDocument).not.toHaveBeenCalled();
+  });
+
+  it("rolls back only the new object, keeping the original, when the row upsert fails", async () => {
+    getDocumentByKind.mockResolvedValue(EXISTING);
+    upsertDocument.mockResolvedValue(null);
+    const res = await POST(uploadReq("passport"));
+    expect(res.status).toBe(500);
+    // The freshly-uploaded object is rolled back once...
+    expect(storageRemove).toHaveBeenCalledTimes(1);
+    // ...but never the original's path — the stored passport survives.
+    expect(storageRemove).not.toHaveBeenCalledWith(["u1/passport/old.png"]);
+  });
+
+  it("uploads the replacement before removing the superseded object", async () => {
+    getDocumentByKind.mockResolvedValue(EXISTING);
+    const res = await POST(uploadReq("passport"));
+    expect(res.status).toBe(200);
+    // On success the superseded object is cleaned up by its old path...
+    expect(storageRemove).toHaveBeenCalledWith(["u1/passport/old.png"]);
+    // ...but only AFTER the replacement was uploaded — never destroyed up front.
+    // Number() keeps this honest: an uncalled mock coerces to NaN, which fails
+    // the comparison rather than passing spuriously.
+    expect(Number(storageUpload.mock.invocationCallOrder[0])).toBeLessThan(
+      Number(storageRemove.mock.invocationCallOrder[0]),
+    );
   });
 
   it("accepts a PDF — the real format of transcripts, offers, and loan letters", async () => {
