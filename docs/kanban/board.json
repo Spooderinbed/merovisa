@@ -1602,7 +1602,8 @@
       "owner": "agent",
       "title": "/trust claims uploads verify your assessment; they do not (C-1c)",
       "file": "cards/MV-122-trust-page-upload-claim.md",
-      "entered": "2026-07-18"
+      "entered": "2026-07-18",
+      "badge": "In Review — PR #87 (a283d6e), founder-gated. Copy fix: /trust no longer claims uploads verify your assessment (audit C-1c). Guarded by tests/marketing/trust-page-claims.test.ts."
     },
     {
       "id": "MV-121",
