@@ -29,4 +29,11 @@ export interface AssessmentPayload {
   /** Banded verdicts for each "also considering" field, re-scored server-side (Option C / MV-102).
    *  Null when no extras or on legacy stored payloads. Never affects the primary verdict. */
   secondaryVerdicts?: SecondaryVerdicts | null;
+  /**
+   * The student's intended field id when the catalogue carries no programs for it, so the
+   * results page can say plainly we don't list it yet instead of presenting off-field
+   * programs as their matches (audit C-10). Absent/null when the field is covered. Never
+   * affects the verdict or the match list — display only.
+   */
+  fieldCoverageNotice?: string | null;
 }

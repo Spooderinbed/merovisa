@@ -1570,6 +1570,8 @@
       "col": "done",
       "pri": "P2",
       "owner": "agent",
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #86, 737eda5). validate.mjs now fails the board if any dossier carries a Column: field; the 46 stale ones were stripped.",
       "file": "cards/MV-128-dossier-column-drift.md",
       "title": "46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)",
       "summary": "Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: \"This is why dossiers have no Column: field.\" Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said \"In review\" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge.",
@@ -1605,8 +1607,8 @@
       "title": "/trust claims uploads verify your assessment; they do not (C-1c)",
       "file": "cards/MV-122-trust-page-upload-claim.md",
       "entered": "2026-07-18",
-      "badge": "Merged to master 2026-07-18 (PR #87, 7bebae6). Copy fix: /trust no longer claims uploads verify your assessment (audit C-1c). Guarded by tests/marketing/trust-page-claims.test.ts.",
-      "done": "2026-07-18"
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #87, 7bebae6). Copy fix: /trust no longer claims uploads verify your assessment (audit C-1c). Guarded by tests/marketing/trust-page-claims.test.ts."
     },
     {
       "id": "MV-121",
@@ -1755,7 +1757,7 @@
       "created": "2026-07-18",
       "entered": "2026-07-18",
       "done": "2026-07-18",
-      "badge": "Merged to master 2026-07-18 (PR #88, b5c7924). Anonymous wizard asks prior visa refusals as a final step so the verdict is honest up front (audit F-1)."
+      "badge": "Merged to master 2026-07-18 (PR #88, b5c7924). The anonymous wizard now asks about prior visa refusals as its final step, so the verdict is honest up front instead of dropping a band only after a voluntary editor disclosure."
     },
     {
       "id": "MV-141",
@@ -1768,6 +1770,18 @@
       "created": "2026-07-18",
       "entered": "2026-07-18",
       "badge": "In Review — PR #90 (9cacccf), founder-gated. Reorders the document upload to validate + store the replacement (atomic upsert on the unique (owner,kind) index) BEFORE removing the original, so a rejected or failed re-upload no longer erases a stored document (audit C-8). Guarded by tests/documents/repo.test.ts + tests/api/documents/upload.test.ts."
+    },
+    {
+      "id": "MV-140",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-140-match-reasons-must-be-true.md",
+      "title": "A match card's reasons must all be true (audit C-10 + C-5)",
+      "summary": "MV-124 Slice 4 (audit C-10 + C-5), split off when the slice started. Field is a soft sort, not a hard filter (rankByField), so off-field programs surface for everyone. Two honesty defects rode on that: (C-10) the field branch had no else arm, so a pure off-field program carried NO field reason at all -> read as aligned; and 5 of 12 wizard fields have zero catalogue programs (law/arts/hospitality/agriculture/other), so a Law student saw a page of nursing/IT presented as their matches with nothing saying we don't list Law. (C-5) every card's Nepal AL3 line said seasoning was 'expected' -- DHA authority voice contradicting the PolicyBanner's recommendation voice on the same page. Fix: added a truthful field-outside reason kind (else arm); softened the AL3 line to recommendation voice (one edit, both callers, anon-equivalence stays green); a shared uncoveredField(userField, programs) helper derived from the INJECTED catalogue (never a hardcoded list; empty catalogue discloses nothing -- that's MV-133's outage concern) feeding a new calm FieldCoverageNotice on BOTH the anonymous results page and the signed-in matches page. Per MV-124 corrections: C-10 was understated, C-5 overstated (plan/checklist recommendation voice is correct + research-mandated to keep -- left untouched); the soft sort was NOT converted to a hard filter (that trades a dishonest list for an empty page). TDD red->green; gate typecheck 0, lint 0, 1994 tests/304 files (incl. a real signed-in page-render test, not jsdom-blind to the mount). Live pixel pass deferred (verbatim PolicyBanner Card reuse; reason renderer keys off positive only).",
+      "created": "2026-07-18",
+      "entered": "2026-07-18",
+      "badge": "In Review — PR #89 (64df909), founder-gated. Off-field match cards now say so (field-outside reason) + a FieldCoverageNotice discloses fields with no catalogue programs on both the anon results and signed-in matches pages; the AL3 line moved from DHA authority voice to recommendation voice. Gate: typecheck 0, lint 0, 1994 tests/304 files."
     }
   ]
 }
