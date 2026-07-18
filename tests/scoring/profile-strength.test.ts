@@ -53,3 +53,48 @@ describe("scoreProfileStrength", () => {
     );
   });
 });
+
+describe("scoreProfileStrength with englishTest conversion", () => {
+  // englishScore lives in the test's OWN scale (PTE 10–90, TOEFL 0–120). It must be
+  // converted to an IELTS band before the 7.5/7.0 strong-English thresholds — otherwise
+  // a raw PTE 58 (≈ IELTS 6.5) reads as ">= 7.5" and EVERY PTE/TOEFL taker is silently
+  // over-awarded the bonus. Mirrors tests/scoring/english-test-type.test.ts (visa).
+  it("does not over-award the strong-English bonus for a PTE 58 (IELTS 6.5)", () => {
+    const ielts65 = scoreProfileStrength({ ...baseProfile, englishScore: 6.5 });
+    const pte58 = scoreProfileStrength({ ...baseProfile, englishTest: "pte", englishScore: 58 });
+    expect(pte58.value).toBe(ielts65.value);
+  });
+
+  it("does not over-award the strong-English bonus for a TOEFL 79 (IELTS 6.5)", () => {
+    const ielts65 = scoreProfileStrength({ ...baseProfile, englishScore: 6.5 });
+    const toefl79 = scoreProfileStrength({
+      ...baseProfile,
+      englishTest: "toefl",
+      englishScore: 79,
+    });
+    expect(toefl79.value).toBe(ielts65.value);
+  });
+
+  it("scores a PTE 73 identically to an IELTS 7.5, factors and all", () => {
+    const ielts = scoreProfileStrength({ ...baseProfile, englishScore: 7.5 });
+    const pte = scoreProfileStrength({ ...baseProfile, englishTest: "pte", englishScore: 73 });
+    expect(pte.value).toBe(ielts.value);
+    expect(pte.factors).toEqual(ielts.factors);
+  });
+
+  it("labels the English factor as the IELTS-equivalent band, never the raw test score", () => {
+    const pte = scoreProfileStrength({ ...baseProfile, englishTest: "pte", englishScore: 73 });
+    const factor = pte.factors.find((f) => /English/i.test(f.label));
+    expect(factor?.label).toBe("Strong English (7.5)");
+  });
+
+  it("an explicit englishTest 'ielts' behaves like an omitted one", () => {
+    const omitted = scoreProfileStrength({ ...baseProfile, englishScore: 7.5 });
+    const explicit = scoreProfileStrength({
+      ...baseProfile,
+      englishTest: "ielts",
+      englishScore: 7.5,
+    });
+    expect(explicit).toEqual(omitted);
+  });
+});

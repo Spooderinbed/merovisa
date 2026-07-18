@@ -1,5 +1,6 @@
 import type { StudentProfile } from "@/lib/scoring/types";
 import { computeGapYears } from "@/lib/scoring/gap";
+import { toIeltsEquivalent } from "@/lib/scoring/english-equivalent";
 import { toAud } from "@/lib/data/policy/fx-rates";
 import { AU_DHA_LIVING_CAPACITY_AUD } from "@/lib/data/policy/au-cost-of-living";
 import type { Callout, CalloutStep } from "./types";
@@ -57,7 +58,11 @@ export function evaluateWizardCallouts(
 
   if (step === "english") {
     if (profile.englishStatus === "taken" && profile.englishScore !== undefined) {
-      if (profile.englishScore < 6.5 && profile.destination === "australia") {
+      // Compare on the IELTS band the score concords to — a raw PTE 42 (≈ IELTS 5.5) is
+      // below 6.5, but "42 < 6.5" is false, so a struggling PTE/TOEFL taker would never
+      // see this warning. Omitted test ⇒ IELTS (raw score passes through unchanged).
+      const englishBand = toIeltsEquivalent(profile.englishScore, profile.englishTest);
+      if (englishBand < 6.5 && profile.destination === "australia") {
         callouts.push({
           id: "ielts-low-au",
           step,

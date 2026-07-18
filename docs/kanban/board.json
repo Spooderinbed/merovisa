@@ -1630,12 +1630,12 @@
     },
     {
       "id": "MV-129",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-129-english-editor-scale-cap.md",
       "title": "English editor caps PTE/TOEFL sub-scores to the IELTS scale (audit C-7)",
-      "summary": "Audit C-7, confirmed uncarded 2026-07-17. The profile English editor (components/profile/editors/english-editor.tsx) + wizard english-step validate every sub-score against IELTS 0-9/0.5 regardless of test, so a PTE 79 / TOEFL 100 has no honest input, forcing mis-entry or a bounce. Fix: per-test min/max/step keyed off the selected test; store native scale and let scoring (F-3 / MV-124 slice 2) map bands. Distinct surface from slice 2 (input vs scoring).",
+      "summary": "Audit C-7, confirmed uncarded 2026-07-17. Built 'Scoring + input' (founder choice): the live harm was the raw PTE/TOEFL-vs-IELTS SCORING bug (profile-strength.ts over-awarded every non-IELTS taker; callouts/rules.ts never warned them) — routed both through toIeltsEquivalent. Input: the profile editor's overall already scaled per-test, so the fix hides the IELTS-only per-band sub-inputs for PTE/TOEFL (wizard english-step was already correct). Gate green: 298 files/1954 tests, typecheck clean, lint 0 errors.",
       "created": "2026-07-18",
       "entered": "2026-07-18"
     },
