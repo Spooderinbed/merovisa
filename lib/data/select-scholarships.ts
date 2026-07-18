@@ -74,12 +74,28 @@ function formatIsoDate(iso: string): string {
   return `${day} ${MONTHS[month - 1]} ${year}`;
 }
 
-/** Build the readable application-window line from the held open/close dates. */
+/** Build the readable application-window line for a window that is still open. */
 function formatWindow(opens: string, closes: string): string {
   return `Applications open ${formatIsoDate(opens)}, close ${formatIsoDate(closes)}`;
 }
 
-export function selectScholarships(): ScholarshipRow[] {
+/**
+ * Build the window line for a window whose close date has passed. It states the
+ * close date (a permanent, verifiable fact) and points the student to the funder for
+ * the next round — rather than asserting the next round is "not yet published", a
+ * publication-status claim the record cannot support and that would silently go false
+ * the day DFAT publishes it. The next intake's dates are deliberately NOT invented.
+ */
+function formatClosedWindow(closes: string): string {
+  return `Applications closed ${formatIsoDate(closes)} — check DFAT for the next round's dates.`;
+}
+
+/**
+ * @param today ISO date ("YYYY-MM-DD"), injected by the caller. Read here, never via
+ *   `new Date()` — a clock read inside the selector makes the suite self-expiring, the
+ *   exact trap that let a closed window render in the present tense (audit F-19).
+ */
+export function selectScholarships(today: string): ScholarshipRow[] {
   // Australia Awards first — the Nepal-scoped, fully-funded award leads the list.
   const awardsRows: ScholarshipRow[] = AUSTRALIA_AWARDS_SCHOLARSHIPS.map((s) => ({
     id: s.id,
@@ -89,8 +105,16 @@ export function selectScholarships(): ScholarshipRow[] {
     amount: "Fully funded",
     source: s.source,
     lastVerified: s.lastVerified,
-    // The Australia Awards record holds a fixed application window; surface it.
-    applicationWindow: formatWindow(s.applicationOpens, s.applicationCloses),
+    // The Australia Awards record holds a fixed application window; surface it, but
+    // once the close date has arrived, say the window is closed rather than showing
+    // "Applications open …" in the present tense. The record holds only a calendar
+    // date (no intra-day cutoff), so we treat the close date itself as closed —
+    // erring toward "closed" so we never tell a student a shut window is still open,
+    // which is the exact F-19 failure. ISO dates compare lexicographically.
+    applicationWindow:
+      today >= s.applicationCloses
+        ? formatClosedWindow(s.applicationCloses)
+        : formatWindow(s.applicationOpens, s.applicationCloses),
   }));
 
   const otherRows: ScholarshipRow[] = AU_SCHOLARSHIPS.map((s) => ({

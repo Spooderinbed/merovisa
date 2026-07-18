@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { selectScholarships } from "@/lib/data/select-scholarships";
 
 describe("selectScholarships", () => {
-  const rows = selectScholarships();
+  // A within-window `today`, so the generic assertions below see the open key-dates
+  // line. The closed-awareness cases inject their own `today`.
+  const rows = selectScholarships("2026-03-01");
 
   it("leads with the Nepal-scoped, fully-funded Australia Awards Scholarship", () => {
     expect(rows[0]?.id).toBe("australia-awards-nepal");
@@ -93,5 +95,46 @@ describe("selectScholarships", () => {
     ]) {
       expect(rows.find((r) => r.id === id)?.studyEligibility, id).toBeUndefined();
     }
+  });
+});
+
+describe("selectScholarships — application window closed-awareness (F-19)", () => {
+  const awardsAt = (today: string) =>
+    selectScholarships(today).find((r) => r.id === "australia-awards-nepal");
+
+  it("renders the window in the present tense while it is still open", () => {
+    expect(awardsAt("2026-03-01")?.applicationWindow).toBe(
+      "Applications open 1 Feb 2026, close 30 Apr 2026",
+    );
+  });
+
+  it("reads as closed ON the close date — with only a calendar date on record, err toward closed", () => {
+    // The record holds no intra-day cutoff time, so we cannot know the deadline has
+    // NOT passed on the close day. Showing "open" after a window has actually shut is
+    // the F-19 failure, so on the close date itself we render closed (the safe way to
+    // be wrong when the data is date-only).
+    const window = awardsAt("2026-04-30")?.applicationWindow;
+    expect(window).toBe(
+      "Applications closed 30 Apr 2026 — check DFAT for the next round's dates.",
+    );
+    expect(window).not.toMatch(/applications open/i);
+  });
+
+  it("reads as closed once today is past the close date — never present-tense open", () => {
+    const window = awardsAt("2026-07-18")?.applicationWindow;
+    expect(window).toBe(
+      "Applications closed 30 Apr 2026 — check DFAT for the next round's dates.",
+    );
+    expect(window).not.toMatch(/applications open/i);
+  });
+
+  it("points to the funder rather than claiming a publication status that can go stale", () => {
+    // Durable copy: state the permanent closed fact and point to DFAT — never assert
+    // the next round is "unpublished" (a claim the record can't support, which goes
+    // false the day DFAT publishes it) and never fabricate a future intake date.
+    const window = awardsAt("2026-07-18")?.applicationWindow;
+    expect(window).toMatch(/check DFAT for the next round's dates/i);
+    expect(window).not.toMatch(/not yet published|unpublished/i);
+    expect(window).not.toMatch(/202[7-9]|20[3-9]\d/);
   });
 });

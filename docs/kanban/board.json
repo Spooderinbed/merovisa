@@ -1567,14 +1567,16 @@
     },
     {
       "id": "MV-128",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "file": "cards/MV-128-dossier-column-drift.md",
       "title": "46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)",
       "summary": "Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: \"This is why dossiers have no Column: field.\" Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said \"In review\" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge.",
       "created": "2026-07-17",
-      "entered": "2026-07-18"
+      "entered": "2026-07-18",
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #86, 737eda5). Stripped stale Column: field from dossiers + added fail-closed guard rule 9 (board.json is the sole source of board state)."
     },
     {
       "id": "MV-124",
@@ -1597,13 +1599,14 @@
     },
     {
       "id": "MV-122",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "title": "/trust claims uploads verify your assessment; they do not (C-1c)",
       "file": "cards/MV-122-trust-page-upload-claim.md",
       "entered": "2026-07-18",
-      "badge": "In Review — PR #87 (a283d6e), founder-gated. Copy fix: /trust no longer claims uploads verify your assessment (audit C-1c). Guarded by tests/marketing/trust-page-claims.test.ts."
+      "badge": "Merged to master 2026-07-18 (PR #87, 7bebae6). /trust no longer claims uploads verify your assessment (audit C-1c); guarded by tests/marketing/trust-page-claims.test.ts.",
+      "done": "2026-07-18"
     },
     {
       "id": "MV-121",
@@ -1743,14 +1746,28 @@
     },
     {
       "id": "MV-139",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-139-wizard-prior-refusals.md",
       "title": "Wizard asks about prior visa refusals before predicting on them (audit F-1)",
       "summary": "MV-124 Slice 9 (audit F-1), split off when the slice started. The scoring engine penalises prior visa refusals (one -15, multiple -35, a band drop) and the profile editor collects them, but the anonymous 9-step wizard never asked -> an optimistic anonymous verdict that silently dropped a band the moment a student voluntarily declared the refusal in the editor (the app punished honesty). Founder + Codex both picked the full fix over disclosure-only: added priorRefusals to ProfileSchema (closes the zod-strip risk so the answer reaches scoreVisa), a new FINAL wizard step (explicit selection required, no silent 'none', no-shame framing), and a from-assessment mapping for claim-time symmetry. TDD red->green; wizard step-count goldens updated 8->9 / 9->10 with justification. Gate: typecheck 0, lint 0, 1979 tests/302 files. Live-verified (Step 9 of 9 renders, CTA disabled->enabled on selection).",
       "created": "2026-07-18",
-      "entered": "2026-07-18"
+      "entered": "2026-07-18",
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #88, b5c7924). Wizard asks about prior visa refusals before predicting (audit F-1); priorRefusals in ProfileSchema + final wizard step + from-assessment mapping."
+    },
+    {
+      "id": "MV-142",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "title": "Closed scholarship application windows read as closed (audit F-19)",
+      "file": "cards/MV-142-closed-scholarship-window.md",
+      "summary": "MV-124 Slice 6 (audit F-19), split off when the slice started. The Australia Awards row under Scholarships renders its application window unconditionally in the present tense (\"Applications open 1 Feb 2026, close 30 Apr 2026\") — but that window closed 2026-04-30, so 79 days later it still tells a Nepal student a shut door is open. Fix (Parts 2+3, ship without founder): inject today into selectScholarships(today); once today > applicationCloses render \"Applications closed 30 Apr 2026 — next round's dates not yet published\" (never invent the next intake); ScholarshipsPanel gains an optional today prop defaulting to the real date; a clock-independent display-freshness guard so a passed window can never render present-tense again. Part 1 (a reverifyBy date on the record) stays founder-gated — needs a DFAT next-intake check.",
+      "created": "2026-07-18",
+      "entered": "2026-07-18",
+      "badge": "In Review — founder-gated. Closed-aware scholarship application window (audit F-19, MV-124 Slice 6): selectScholarships now takes an injected today; on/after the close date a window reads \"Applications closed 30 Apr 2026 — check DFAT for the next round's dates\" instead of present-tense open. Boundary >= (err toward closed) and durable copy adopted from a Codex adversarial review. Parts 2+3; Part 1 (reverifyBy) founder-gated. Gate green."
     }
   ]
 }

@@ -11,8 +11,12 @@ import { SourceAnchor } from "@/components/analytics/source-anchor";
  * No "you qualify" / "you're eligible" copy; eligibility and criteria live with
  * the provider.
  */
-export function ScholarshipsPanel() {
-  const rows = selectScholarships();
+export function ScholarshipsPanel({ today }: { today?: string } = {}) {
+  // `today` is where "now" legitimately enters — the selector stays pure. Production
+  // renders the real date; tests inject a fixed one so the closed/open window
+  // rendering is deterministic (audit F-19).
+  const iso = today ?? new Date().toISOString().slice(0, 10);
+  const rows = selectScholarships(iso);
 
   return (
     <div className="flex flex-col gap-4">

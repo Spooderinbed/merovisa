@@ -31,11 +31,19 @@ describe("ScholarshipsPanel", () => {
     }
   });
 
-  it("renders the held Australia Awards application window as a key-dates line", () => {
-    render(<ScholarshipsPanel />);
+  it("renders the held Australia Awards application window as a key-dates line while it is open", () => {
+    render(<ScholarshipsPanel today="2026-03-01" />);
     expect(
       screen.getByText(/applications open 1 Feb 2026, close 30 Apr 2026/i),
     ).toBeInTheDocument();
+  });
+
+  it("renders a passed window as closed, not present-tense open (F-19)", () => {
+    render(<ScholarshipsPanel today="2026-07-18" />);
+    expect(screen.getByText(/applications closed 30 Apr 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/check DFAT for the next round's dates/i)).toBeInTheDocument();
+    // The misleading present-tense line is gone once the deadline has passed.
+    expect(screen.queryByText(/applications open 1 Feb 2026/i)).not.toBeInTheDocument();
   });
 
   it("frames the list as may-apply, not personalized eligibility, and points criteria to the provider", () => {
