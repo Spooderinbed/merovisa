@@ -36,7 +36,7 @@ export type AnalyticsEvents = {
   gate_cta_clicked: undefined;
   /** Dashboard prompt-card CTA. `kind` is the plan-item kind id when state is "next". */
   dashboard_cta_clicked: {
-    state: "profile-incomplete" | "next" | "waiting" | "caught-up";
+    state: "profile-incomplete" | "matches-need-inputs" | "next" | "waiting" | "caught-up";
     kind?: string;
   };
   /** Plan card mutation confirmed by the API. `kind` is the plan-item kind id. */

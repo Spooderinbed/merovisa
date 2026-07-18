@@ -8,6 +8,11 @@ import { track } from "@/lib/analytics/events";
 
 export type PromptState =
   | { kind: "profile-incomplete" }
+  // The /matches abstain gate (audit C-4): distinct from profile-incomplete because it
+  // must name the specific verdict inputs and promise no invented verdict, and because the
+  // dashboard's profile-incomplete also covers a missing primary assessment — a different
+  // problem with different copy.
+  | { kind: "matches-need-inputs" }
   | { kind: "next"; item: PlanItemRow }
   | { kind: "waiting"; openCount: number }
   | { kind: "caught-up" };
@@ -85,6 +90,27 @@ export function PromptCard({ prompt }: { prompt: PromptState }) {
           onClick={() => track("dashboard_cta_clicked", { state: "next", kind: prompt.item.kind })}
         >
           {meta.cta}
+        </Link>
+      </Card>
+    );
+  }
+
+  if (prompt.kind === "matches-need-inputs") {
+    return (
+      <Card tone="primary" border="transparent" padding="lg" className="animate-rise flex flex-col gap-3">
+        <Eyebrow tone="dark" />
+        <h3 className="text-headline">See your program matches</h3>
+        <p className="text-body opacity-90">
+          We compare programs against your grade, English score, and study budget. Add any one of
+          them and your matches appear here — we won&apos;t invent a verdict from numbers you
+          haven&apos;t entered.
+        </p>
+        <Link
+          href="/profile"
+          className={CTA_CLASSES}
+          onClick={() => track("dashboard_cta_clicked", { state: "matches-need-inputs" })}
+        >
+          Add your details →
         </Link>
       </Card>
     );

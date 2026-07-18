@@ -235,6 +235,27 @@ describe("invalidatePlan", () => {
     expect(rows.map((r) => r.kind)).toContain("add-safer-options");
   });
 
+  it("never auto-closes an existing add-safer-options as done when the matcher abstains (C-4 regression)", async () => {
+    // The abstain gate sets matches=[] for a name-only profile, so the generator stops
+    // emitting the match-driven add-safer-options. That absence must NOT be read by the
+    // auto-close as 'condition satisfied': a legacy row seeded by the very zero-floor bug
+    // this slice fixes would otherwise be struck 'Done', telling the student they added
+    // safer options when they never did — a fresh fabrication in place of the old one.
+    getProfile.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
+    getPrimaryAssessmentForUser.mockResolvedValue({ destination_id: "australia" });
+    listAllPrograms.mockResolvedValue([program]);
+    listAllUniversities.mockResolvedValue([uni]);
+    openTodos([{ id: 9, kind: "add-safer-options" }]);
+
+    await invalidatePlan(fakeAdmin, "u1");
+
+    // No auto-close write at all — the match-driven row is left untouched, not completed.
+    expect(updateEqIn).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: "done" }),
+    );
+  });
+
   it("does not emit start-passport-process once a passport is uploaded, and auto-closes an open one", async () => {
     listDocumentsForUser.mockResolvedValue([{ kind: "passport" }]);
     openTodos([{ id: 5, kind: "start-passport-process" }]);

@@ -25,6 +25,15 @@ export interface GeneratorInputs {
   hasPassport?: boolean;         // from the user's uploaded document kinds; gates start-passport-process. Omitted => not emitted.
 }
 
+/**
+ * Plan kinds whose EMISSION depends on the match set. When the matcher abstains on an
+ * insufficient profile (audit C-4, `matches` passed as `[]`), the generator stops
+ * emitting these — but that absence means "we didn't score", not "the condition is
+ * satisfied". `invalidatePlan` must exclude them from its auto-close so a legacy row is
+ * never falsely completed. Keep this in sync with the match-gated `out.push` calls below.
+ */
+export const MATCH_DRIVEN_KINDS = ["add-safer-options"] as const;
+
 const EVIDENCE_PATHS = AU_FINANCIAL_EVIDENCE.filter((e) => e.kind === "evidence-path").map((e) => e.summary);
 
 /** Join phrases as "a, b, c, or d" (Oxford "or"). */

@@ -9,7 +9,7 @@ import { computeMatches } from "@/lib/matches/compute";
 import { hasSufficientInputs } from "@/lib/matches/sufficiency";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
-import { generatePlan } from "./generator";
+import { generatePlan, MATCH_DRIVEN_KINDS } from "./generator";
 import type { ProfileSections } from "@/lib/profiles/sections";
 
 type DB = SupabaseClient<Database>;
@@ -36,11 +36,12 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
   const matchInputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
   // Unknown is not zero (audit C-4): a profile with no grade/English/budget would have
   // every input floored to 0 by computeMatches and every program called a reach, seeding
-  // the plan with add-safer-options off a fabricated verdict. Skip the match-driven items
-  // when there is nothing real to score — the profile-completeness prompts still generate.
-  const matches = hasSufficientInputs(matchInputs)
-    ? computeMatches(matchInputs, programs, universities)
-    : [];
+  // the plan with add-safer-options off a fabricated verdict. Abstain — skip the match-driven
+  // items when there is nothing real to score — while the profile-completeness prompts still
+  // generate. `abstained` is threaded into the auto-close below so this absence is never
+  // mistaken for a satisfied condition.
+  const abstained = !hasSufficientInputs(matchInputs);
+  const matches = abstained ? [] : computeMatches(matchInputs, programs, universities);
 
   const items = generatePlan({
     sections,
@@ -62,7 +63,14 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
 
   // Auto-close: an open todo whose kind the generator no longer emits means its
   // condition is now met. Mark it done so it leaves the open plan but stays in history.
-  const satisfiedIds = open.filter((r) => !generatedKinds.has(r.kind)).map((r) => r.id);
+  // EXCEPT match-driven kinds while abstaining (audit C-4): the matcher stayed silent
+  // because there was nothing to score, not because the todo was completed — closing it
+  // would fabricate a completion (Codex review, MV-143).
+  const matchDriven = new Set<string>(MATCH_DRIVEN_KINDS);
+  const satisfiedIds = open
+    .filter((r) => !generatedKinds.has(r.kind))
+    .filter((r) => !(abstained && matchDriven.has(r.kind)))
+    .map((r) => r.id);
   if (satisfiedIds.length > 0) {
     await adminDb
       .from("plan_items")

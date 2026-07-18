@@ -18,8 +18,9 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
-// Mirror the dashboard-page test: surface the shared empty-profile gate's `kind`
-// so we can assert /matches reuses the SAME PromptCard("profile-incomplete") gate.
+// Surface the gate PromptCard's `kind` so we can assert /matches renders the
+// matches-specific "matches-need-inputs" abstain gate (audit C-4), not the vague
+// dashboard "profile-incomplete" copy.
 vi.mock("@/components/dashboard/prompt-card", () => ({
   PromptCard: ({ prompt }: { prompt: { kind: string } }) => (
     <div data-testid="prompt">{prompt.kind}</div>
@@ -46,7 +47,7 @@ describe("/matches page", () => {
     );
   });
 
-  it("gates an empty profile with the dashboard's profile-incomplete gate, never fabricated verdicts", async () => {
+  it("gates an empty profile with the matches-need-inputs abstain gate, never fabricated verdicts", async () => {
     // A signed-in user who never filled their profile must NOT see verdicts
     // computed off fields they never entered (audit fix #3 — /matches empty-profile gate).
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
@@ -87,8 +88,8 @@ describe("/matches page", () => {
     listShortlistForUser.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
-    // Same gate the dashboard renders.
-    expect(screen.getByTestId("prompt")).toHaveTextContent("profile-incomplete");
+    // The matches-specific abstain gate — names the missing inputs, never a verdict.
+    expect(screen.getByTestId("prompt")).toHaveTextContent("matches-need-inputs");
     // No fabricated verdict groups or short-by reasons off never-entered fields.
     expect(screen.queryByText(/Strong matches/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Reach matches/i)).not.toBeInTheDocument();
@@ -96,7 +97,7 @@ describe("/matches page", () => {
     expect(screen.queryByText("Master of IT")).not.toBeInTheDocument();
   });
 
-  it("gates a name-only profile (non-empty sections, no verdict inputs) with the same prompt (C-4)", async () => {
+  it("gates a name-only profile (non-empty sections, no verdict inputs) with the matches-need-inputs gate (C-4)", async () => {
     // Audit C-4 "Unknown is not zero": a signed-in student who typed only their name
     // has a NON-empty profile, so the old `Object.keys(sections).length === 0` gate let
     // them fall through to the matcher, which floors every unknown to 0 and fabricated
@@ -143,8 +144,8 @@ describe("/matches page", () => {
     listShortlistForUser.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
-    // Same profile-incomplete gate the empty profile renders — never fabricated bands.
-    expect(screen.getByTestId("prompt")).toHaveTextContent("profile-incomplete");
+    // Same matches-need-inputs gate the empty profile renders — never fabricated bands.
+    expect(screen.getByTestId("prompt")).toHaveTextContent("matches-need-inputs");
     expect(screen.queryByText(/short by/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Master of IT")).not.toBeInTheDocument();
   });

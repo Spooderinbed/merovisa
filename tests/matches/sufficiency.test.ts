@@ -57,9 +57,12 @@ describe("hasSufficientInputs", () => {
     ).toBe(false);
   });
 
-  // English presence keys on userEnglishOverall, not the per-band proxy. (The adapter
-  // never yields band-without-overall — minBand falls back to overall — so this only
-  // pins the chosen presence signal.)
+  // A bands-only profile (all four IELTS bands entered, no overall) CAN occur: the adapter
+  // sets userEnglishBand from min(bands) while userEnglishOverall stays null. We still gate
+  // it, and that is honest under Layer A — compute.ts derives the English verdict from the
+  // 0-floored overall (englishGap = minEnglish - 0), so scoring a bands-only profile would
+  // fabricate an "IELTS overall short by X" reason and a reach. Deriving a verdict from
+  // bands alone is deferred Layer B; here, abstaining beats fabricating.
   it("is false when a per-band value is set but the English overall is absent", () => {
     expect(hasSufficientInputs({ ...base, userEnglishBand: 6.5 })).toBe(false);
   });

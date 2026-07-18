@@ -54,12 +54,14 @@ export default async function MatchesPage() {
   // NON-empty profile, yet computeMatches floors every unknown to 0 and fabricates
   // "Reach · Grade short by 60%" off inputs they never entered (audit C-4, "Unknown
   // is not zero"). hasSufficientInputs abstains upstream; any one verdict input
-  // present ⇒ we still render cards (never over-gate). Mirror the dashboard's gate
-  // (PromptCard "profile-incomplete"), whose pickPrompt uses the same signal.
+  // present ⇒ we still render cards (never over-gate). The gate renders a matches-specific
+  // prompt that names the missing inputs — NOT the dashboard's profile-incomplete card,
+  // whose pickPrompt keys off a different signal (profile-row + primary-assessment existence)
+  // and whose copy speaks of "sharpening a verdict" we don't show here.
   const insufficient = !hasSufficientInputs(inputs);
 
   const universitiesPanel = insufficient ? (
-    <PromptCard prompt={{ kind: "profile-incomplete" }} />
+    <PromptCard prompt={{ kind: "matches-need-inputs" }} />
   ) : (
     (() => {
       const { items: matches, note: preferenceNote } = applyPreference(
