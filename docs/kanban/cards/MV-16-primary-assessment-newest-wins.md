@@ -1,6 +1,6 @@
 # MV-16 — Re-assessing never updates the dashboard (primary-assessment newest-wins)
 
-**Column:** Done · **Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
+**Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
 **Created:** 2026-06-20 · **Entered review:** 2026-06-20 · **Done:** 2026-06-20
 **Related:** [[MV-14]] — found while live-smoking the OAuth claim; same `claim.ts` function. [[MV-17]] — the product-level follow-up (route logged-in re-assessment to profile-edit instead of new wizard rows).
 

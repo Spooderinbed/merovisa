@@ -1,6 +1,6 @@
 # MV-14 — Wire lead-insert into the OAuth claim (`leads = 0` fix)
 
-**Column:** Done · **Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
+**Priority:** P1 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
 **Created:** 2026-06-20 · **Entered review:** 2026-06-20 · **Done:** 2026-06-20
 
 ## Why

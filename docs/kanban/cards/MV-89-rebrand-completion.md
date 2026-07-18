@@ -1,6 +1,6 @@
 # MV-89 — Overhaul Phase 0c-2: rebrand completion (off-globals surfaces + permanent contrast guard)
 
-**Column:** In Review (founder-gated merge) · **Priority:** P1 · **Owner:** agent
+**Priority:** P1 · **Owner:** agent
 **Branch:** `mv-89-rebrand-completion` (STACKED on `mv-84-dusk-plum-tokens`) · **Merge after PR #41.**
 **Spec:** docs/design/2026-07-03-elevated-calm-overhaul-spec.md (Phase 0c hand-off) · Umbrella: MV-87.
 

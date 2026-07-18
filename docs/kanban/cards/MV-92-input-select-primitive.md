@@ -1,6 +1,6 @@
 # MV-92 — Overhaul Phase 1: Input / Select field primitive
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
+**Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
 **Branch:** `mv-92-input-primitive` off `origin/master f6cada8`
 
 ## Why

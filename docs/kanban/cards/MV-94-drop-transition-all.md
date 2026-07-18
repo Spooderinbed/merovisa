@@ -1,6 +1,6 @@
 # MV-94 — Overhaul Phase 1 (apply): drop the last `transition-all`
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-04
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-04
 **Branch:** `mv-94-drop-transition-all` off `origin/master f6cada8`
 **Implements:** [Motion v2 ADR](../../design/2026-07-03-motion-v2-adr.md) adoption item 1.
 

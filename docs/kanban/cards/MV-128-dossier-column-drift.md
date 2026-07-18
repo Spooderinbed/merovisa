@@ -53,11 +53,29 @@ So this card is correctly sequenced **after** #81 lands, not folded into MV-123.
 
 ## Acceptance criteria
 
-- [ ] Zero dossiers contain a `Column:` line.
-- [ ] `npm run board` **fails** on a dossier with a `Column:` line reintroduced (prove the
-      rule; the rule is the actual deliverable).
-- [ ] Card count before == card count after.
-- [ ] Gate green: `npm run typecheck` + `npm run lint` + `npm test`.
+- [x] Zero dossiers contain a `Column:` line. (**61**, not 46 — the board grew since this
+      card was written; stripped all of them.)
+- [x] `npm run board` **fails** on a dossier with a `Column:` line reintroduced — proven
+      end-to-end (injected one into MV-120's dossier → guard exited 1, "Nothing was
+      regenerated", then reverted) and pinned by four unit tests.
+- [x] Card count before == card count after: **140 == 140**.
+- [x] Gate green: typecheck clean · lint 0 errors · **1960 tests / 298 files** · guard green.
+
+## Evidence (2026-07-18)
+
+- **The rule is guard rule 9** (`docs/kanban/validate.mjs`), not "rule 5" — the guard already
+  had 8 rules when this card was written. Injected reader `hasColumnField`, wired in
+  `build.mjs`, governs dossiers under `cards/` only (evidence pointers like MV-D0 → an audit
+  are exempt), and is **line-anchored** (`/^\*\*Column:\*\*/m`) so it never trips on the
+  backticked prose mentions in this card or MV-123.
+- TDD red→green: the rule-9 unit test failed for the right reason (`length 1 but got 0`),
+  then the real-board regression test went red against all 61 dossiers once the rule was
+  live, driving the cleanup to green.
+- Cleanup handled two line shapes: `**Column:** value · **Priority:** …` (strip the field +
+  its separator, keep the rest) and a Column-only line (remove the whole line). One dossier
+  (MV-105) had a wrapped two-line metadata block and needed a dangling-`· ` fix by hand.
+- Same commit flips **MV-121 + MV-129 → Done** (both merged to production 2026-07-18), which
+  is what let this card's own rule pass on their now-clean dossiers.
 
 ## Resume notes
 

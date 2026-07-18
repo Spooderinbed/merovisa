@@ -1,6 +1,6 @@
 # MV-84 — Rebrand token swap: Dusk plum → `app/globals.css` (names frozen)
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Branch:** `mv-84-dusk-plum-tokens` (off `origin/master` `095110a`)
+**Priority:** P1 · **Owner:** agent · **Branch:** `mv-84-dusk-plum-tokens` (off `origin/master` `095110a`)
 
 Overhaul Phase 0c. The direct hand-off from **MV-83** (founder picked **Dusk plum** — `docs/design/2026-07-04-palette-candidates.md`). This is the values-only rebrand of the design system: every surface in the app reads its colour from these 23 semantic tokens, so swapping the values here re-skins the whole product without touching a single component. It **unblocks every Phase 1 surface** (landing, wizard, results, auth) — they build on top of the new palette.
 

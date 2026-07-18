@@ -1,6 +1,6 @@
 # MV-90 — Overhaul Phase 1: Card + VerdictPill primitives
 
-**Column:** In progress · **Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
+**Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
 **Branch:** `mv-90-card-primitives` off `origin/master f6cada8`
 
 ## Why

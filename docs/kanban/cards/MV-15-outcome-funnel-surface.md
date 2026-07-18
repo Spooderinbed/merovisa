@@ -1,6 +1,6 @@
 # MV-15 — Read-side outcome surface (make the moat loop visible)
 
-**Column:** Done · **Priority:** P2 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
+**Priority:** P2 · **Owner:** agent · **Gate:** human (founder live-smoke) — PASSED 2026-06-20
 **Created:** 2026-06-20 · **Entered review:** 2026-06-20 · **Done:** 2026-06-20
 **Related:** [[MV-08]] — this is the user-facing read half of the outcome-validation loop.
 

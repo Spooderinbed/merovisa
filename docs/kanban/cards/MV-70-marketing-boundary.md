@@ -1,6 +1,6 @@
 # MV-70 — Resilience: error + loading boundaries for the (marketing) group
 
-**Column:** In Review · **Priority:** P2 · **Owner:** agent · **Branch:** `mv-70-marketing-boundary` (off master)
+**Priority:** P2 · **Owner:** agent · **Branch:** `mv-70-marketing-boundary` (off master)
 
 ## Why (student outcome)
 

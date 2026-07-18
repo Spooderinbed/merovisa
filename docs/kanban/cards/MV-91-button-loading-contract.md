@@ -1,6 +1,6 @@
 # MV-91 — Overhaul Phase 1: Button `loading` contract
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
+**Priority:** P1 · **Owner:** agent · **Created:** 2026-07-03
 **Branch:** `mv-91-button-loading` off `origin/master f6cada8`
 
 ## Why

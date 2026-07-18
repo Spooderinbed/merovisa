@@ -1,7 +1,6 @@
 # MV-105 — Wizard step 8: multi-select goals (primary + secondary)
 
-**Column:** In Review (Layer A built on `mv-105-step8-multi-goal`, founder-gated merge; founder chose Option 1 on 2026-07-07)
-· **Priority:** P3 · **Owner:** agent
+**Priority:** P3 · **Owner:** agent
 
 ## Why
 

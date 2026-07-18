@@ -1,6 +1,6 @@
 # MV-26 — Freshness guard for the harvested DHA DISPLAY datasets
 
-**Column:** Done (founder-accepted 2026-06-23) · **Priority:** P3 · **Owner:** agent · **Size:** S
+**Priority:** P3 · **Owner:** agent · **Size:** S
 **Gate:** none (agent-ownable; data-provenance + CI test, no scorer, no DB, no UI).
 **Created:** 2026-06-22
 **Related:** [[MV-24]] (the harvest these stamps guard); [[MV-04]] (the stale-fact / freshness pattern this mirrors); `tests/data/freshness.test.ts`.

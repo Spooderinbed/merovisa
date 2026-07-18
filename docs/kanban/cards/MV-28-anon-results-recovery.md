@@ -1,6 +1,6 @@
 # MV-28 — Recoverable anonymous results (P0)
 
-**Column:** In Review · **Priority:** P0 · **Owner:** founder+agent · **Size:** M–L
+**Priority:** P0 · **Owner:** founder+agent · **Size:** M–L
 **Gate:** half (a) agent-ownable (DONE, 51fd70e); half (b) authored on branch `mv-28b-anon-read` (DONE, 39c716c) — **NO migration** (Option C); remaining gate is a **founder anon-read *policy* nod + merge to master** (the security fork the audit reserved).
 **Created:** 2026-06-23
 **Source:** `docs/audits/2026-06-23-real-user-audit.md` (the audit's #1 / P0).

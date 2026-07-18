@@ -1,6 +1,6 @@
 # MV-37 — Rework "My plan" into a guided sequential timeline
 
-**Column:** Backlog · **Priority:** P2 · **Owner:** founder+agent · **Gate:** founder design sign-off (DESIGN-FIRST)
+**Priority:** P2 · **Owner:** founder+agent · **Gate:** founder design sign-off (DESIGN-FIRST)
 **Created:** 2026-06-24
 **Related:** SUPERSEDES the framing of [[MV-23]] (which shipped "this is your action queue — *not* a strict
 timeline" copy); couples with [[MV-27]] (mirrored rows) and [[MV-38]] (the dashboard "next step" inherits plan

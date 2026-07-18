@@ -1,6 +1,6 @@
 # MV-103 — Persistent "where am I" journey marker (MV-45 #3b)
 
-**Column:** In Review · **Priority:** P2 · **Owner:** agent · **Branch:** `mv-103-journey-marker` (off `origin/master`)
+**Priority:** P2 · **Owner:** agent · **Branch:** `mv-103-journey-marker` (off `origin/master`)
 
 ## Why
 

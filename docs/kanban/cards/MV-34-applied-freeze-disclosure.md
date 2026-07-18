@@ -1,6 +1,6 @@
 # MV-34 — Disclose the "Applied" prediction-freeze + explain the triage states
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Gate:** none (presentational copy)
+**Priority:** P1 · **Owner:** agent · **Gate:** none (presentational copy)
 **Created:** 2026-06-24
 **Related:** [[MV-08]] (the outcome loop whose capture trigger this discloses), [[MV-33]] (the funnel that
 consumes the frozen prediction). Evidence: product-review audit `wf_5fb5dfa7-009` (2026-06-24).

@@ -183,12 +183,42 @@ describe("validateBoard", () => {
     };
     expect(validateBoard(board, allExist).length).toBe(2);
   });
+
+  // MV-128. board.json is the SOLE source of board STATE (README anti-drift rule 1:
+  // "this is why dossiers have no Column: field"). A `**Column:**` line in a dossier is
+  // a second copy of col that drifts — MV-123 nearly "resumed" finished work off two
+  // dossiers that still read "In review" for code merged 2026-07-07.
+  it("rejects a dossier under cards/ that carries a **Column:** field", () => {
+    const board = { columns: COLUMNS, cards: [card({ id: "MV-1", file: "cards/MV-1-x.md" })] };
+    const errors = validateBoard(board, { ...allExist, hasColumnField: () => true });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/MV-1/);
+    expect(errors[0]).toMatch(/Column/);
+  });
+
+  it("passes a dossier with no Column field", () => {
+    const board = { columns: COLUMNS, cards: [card({ id: "MV-1", file: "cards/MV-1-x.md" })] };
+    expect(validateBoard(board, { ...allExist, hasColumnField: () => false })).toEqual([]);
+  });
+
+  it("skips the Column-field rule when no reader is supplied", () => {
+    const board = { columns: COLUMNS, cards: [card({ id: "MV-1", file: "cards/MV-1-x.md" })] };
+    expect(validateBoard(board, allExist)).toEqual([]);
+  });
+
+  it("governs only dossiers under cards/, exempting evidence pointers", () => {
+    // MV-D0 -> an audit, MV-57 -> a spec: not dossiers, and free to contain the substring.
+    const board = { columns: COLUMNS, cards: [card({ id: "MV-D0", file: "../audits/x.md" })] };
+    expect(validateBoard(board, { ...allExist, hasColumnField: () => true })).toEqual([]);
+  });
 });
 
 describe("the real board.json", () => {
-  it("has no duplicate ids, no dead dossier pointers, no unknown columns, and no orphan dossiers", () => {
+  it("has no duplicate ids, no dead/orphan dossiers, no unknown columns, and no dossier Column field", () => {
     // The regression guard. Red on the board as it stood (MV-99 + MV-101 collided,
     // 16 pointers were dead, 2 dossiers were orphaned) and the reason this slice exists.
+    // MV-128 adds the Column-field check: red again on the 61 dossiers that carried a
+    // stale `**Column:**` line duplicating board.json's col.
     const board = JSON.parse(readFileSync(join(KANBAN, "board.json"), "utf8"));
     const errors = validateBoard(board, {
       exists: (f: string) => existsSync(join(KANBAN, f)),
@@ -196,6 +226,7 @@ describe("the real board.json", () => {
         .filter((f) => f.endsWith(".md"))
         .map((f) => `cards/${f}`),
       readHeading: (f: string) => readFileSync(join(KANBAN, f), "utf8").match(/^#\s.*/m)?.[0] ?? null,
+      hasColumnField: (f: string) => /^\*\*Column:\*\*/m.test(readFileSync(join(KANBAN, f), "utf8")),
     });
     expect(errors).toEqual([]);
   });

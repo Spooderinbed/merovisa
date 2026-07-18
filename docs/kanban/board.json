@@ -1567,14 +1567,14 @@
     },
     {
       "id": "MV-128",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "file": "cards/MV-128-dossier-column-drift.md",
       "title": "46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)",
       "summary": "Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: \"This is why dossiers have no Column: field.\" Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said \"In review\" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge.",
       "created": "2026-07-17",
-      "entered": "2026-07-17"
+      "entered": "2026-07-18"
     },
     {
       "id": "MV-124",
@@ -1606,14 +1606,14 @@
     },
     {
       "id": "MV-121",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "title": "An all-Reach student opens an empty matches page (MV-120 fallout)",
       "file": "cards/MV-121-reach-group-collapsed-dead-end.md",
       "entered": "2026-07-18",
-      "note": "Blocked on the founder merging MV-120/PR #81; design decided (option 1). No other input needed.",
-      "badge": "next"
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #84, c265c94). Reveals the reach cards when every match is a reach, instead of an empty page + a Show button."
     },
     {
       "id": "MV-120",
@@ -1630,14 +1630,16 @@
     },
     {
       "id": "MV-129",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-129-english-editor-scale-cap.md",
       "title": "English editor caps PTE/TOEFL sub-scores to the IELTS scale (audit C-7)",
       "summary": "Audit C-7, confirmed uncarded 2026-07-17. Built 'Scoring + input' (founder choice): the live harm was the raw PTE/TOEFL-vs-IELTS SCORING bug (profile-strength.ts over-awarded every non-IELTS taker; callouts/rules.ts never warned them) — routed both through toIeltsEquivalent. Input: the profile editor's overall already scaled per-test, so the fix hides the IELTS-only per-band sub-inputs for PTE/TOEFL (wizard english-step was already correct). Gate green: 298 files/1954 tests, typecheck clean, lint 0 errors.",
       "created": "2026-07-18",
-      "entered": "2026-07-18"
+      "entered": "2026-07-18",
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #85, cf62bd0). Scores PTE/TOEFL English on its IELTS equivalent (was over-awarding every non-IELTS taker) + hides IELTS-only per-band inputs for PTE/TOEFL."
     },
     {
       "id": "MV-130",

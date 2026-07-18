@@ -1,6 +1,6 @@
 # MV-124 — 2026-07-10 audit: slices 2-9 (tracking card)
 
-**Column:** Backlog · **Priority:** P1 · **Owner:** agent
+**Priority:** P1 · **Owner:** agent
 **Source of truth for the work:** `docs/audits/2026-07-10-comprehensive/VERIFIED-BUILD-ORDER.md`
 **Source of truth for the findings:** `docs/audits/2026-07-10-comprehensive/REPORT.md`
 

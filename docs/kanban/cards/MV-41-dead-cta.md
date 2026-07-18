@@ -1,6 +1,6 @@
 # MV-41 — Conversion seam: kill the silent `id:null` dead-CTA
 
-**Column:** In Review · **Priority:** P0 · **Owner:** agent
+**Priority:** P0 · **Owner:** agent
 **Branch:** `mv-41-dead-cta` · **Shipped:** 2026-06-26
 **Spec:** `docs/audits/2026-06-25-design-division-polish-audit.md` #2 (re-flagged from the 2026-06-23 real-user audit)
 

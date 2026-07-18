@@ -1,6 +1,6 @@
 # MV-110 — Overhaul Phase 2 / dashboard shell motion restyle
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-110-dashboard-restyle` — **stacked off #65** (`mv-109-auth-restyle`),
 which carries #62 (MV-106 type) + #63 (MV-107 motion) + #64 (MV-108 landing) + A4.
 5-deep stack; rebase `--onto master` once that chain merges → clean dashboard-only

@@ -1,6 +1,6 @@
 # MV-67 — Fix global-error.tsx false "saved data is safe" claim
 
-**Column:** Backlog · **Priority:** P2 · **Owner:** agent · **Branch (when built):** `mv-67-global-error-copy` (off master)
+**Priority:** P2 · **Owner:** agent · **Branch (when built):** `mv-67-global-error-copy` (off master)
 
 A tiny, self-contained **trust-copy** fix. Sourced from the founder 2026-06-28.
 

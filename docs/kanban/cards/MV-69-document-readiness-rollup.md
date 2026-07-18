@@ -1,6 +1,6 @@
 # MV-69 — Document-readiness rollup ("X of Y required → ready to apply")
 
-**Column:** In Review · **Priority:** P1 · **Owner:** agent · **Branch:** `mv-69-readiness-rollup` (off master)
+**Priority:** P1 · **Owner:** agent · **Branch:** `mv-69-readiness-rollup` (off master)
 
 ## Why (student outcome)
 

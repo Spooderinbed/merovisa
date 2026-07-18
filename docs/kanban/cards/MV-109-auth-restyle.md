@@ -1,6 +1,6 @@
 # MV-109 — Overhaul Wave A / A4: auth non-mascot restyle
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-109-auth-restyle` — **stacked** on the A1 + A2 token branches and A3,
 created off `mv-108-landing-restyle` (PR #64), which already carries BOTH the A1
 `text-*` type tokens and the A2 `duration-*` / `animate-*` motion tokens (plus the

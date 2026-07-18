@@ -1,6 +1,6 @@
 # MV-33 — Honest "Your applications" funnel (subtitle + self-report control)
 
-**Column:** In review · **Priority:** P1 · **Owner:** agent · **Gate:** none (agent-ownable; part B is UI over an already-built+tested backend)
+**Priority:** P1 · **Owner:** agent · **Gate:** none (agent-ownable; part B is UI over an already-built+tested backend)
 **Created:** 2026-06-24
 **Related:** [[MV-08]] (the outcome-validation loop this completes the read/write UI for), [[MV-15]]
 (the read-side funnel surface this extends), [[MV-39]] (Part B carved out). Evidence: product-review

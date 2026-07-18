@@ -1,6 +1,6 @@
 # MV-27 — Strip vs keep the mirrored visa-prep rows (checklist ↔ plan)
 
-**Column:** Backlog · **Priority:** P4 · **Owner:** founder (product call) · **Size:** S
+**Priority:** P4 · **Owner:** founder (product call) · **Size:** S
 **Gate:** founder product/UX decision — do NOT build before the founder picks a direction.
 **Created:** 2026-06-23
 **Spun from:** [[MV-23]] part (2) (accepted 2026-06-23). Full spec lives in the MV-23 dossier.

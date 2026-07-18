@@ -1,6 +1,6 @@
 # MV-38 — Proof-of-funds as "next step" + what `/documents` is FOR
 
-**Column:** Backlog · **Priority:** P2 · **Owner:** founder · **Gate:** founder product decision (DECIDE-FIRST)
+**Priority:** P2 · **Owner:** founder · **Gate:** founder product decision (DECIDE-FIRST)
 **Created:** 2026-06-24
 **Related:** couples with [[MV-37]] (the dashboard "next step" is the top plan item, so plan ordering drives
 this), [[MV-08]] / Phase 5 documents. Evidence: product-review audit `wf_5fb5dfa7-009` (2026-06-24).

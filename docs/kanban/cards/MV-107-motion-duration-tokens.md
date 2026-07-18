@@ -1,6 +1,6 @@
 # MV-107 — Overhaul Wave A / A2: motion duration tokens + fence the ban rules
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-107-motion-duration-tokens` off `origin/master 92a5c77`
 **Applies:** `docs/design/2026-07-03-motion-v2-adr.md` — resolves the ADR's
 **open question 1** (tokenise durations = yes) and lands adoption items **1**
