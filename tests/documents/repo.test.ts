@@ -6,6 +6,7 @@ import {
   listDocumentsForUser,
   getDocumentByKind,
   insertDocument,
+  upsertDocument,
   deleteDocument,
 } from "@/lib/documents/repo";
 import { fakeSupabase } from "@/tests/helpers/fake-supabase";
@@ -82,5 +83,35 @@ describe("documents repo", () => {
     expect(calls.some((c) => c.method === "delete")).toBe(true);
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "id" && c.args[1] === "d1")).toBe(true);
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner" && c.args[1] === "u1")).toBe(true);
+  });
+
+  test("upsertDocument replaces on the (owner,kind) index and returns id", async () => {
+    const { client, calls } = fakeSupabase({ data: { id: "d3" }, error: null });
+    const id = await upsertDocument(client, {
+      owner: "u1",
+      kind: "passport",
+      filePath: "u1/passport/new.png",
+      fileSize: 4096,
+      originalName: "new.png",
+    });
+    expect(id).toBe("d3");
+    const upsert = calls.find((c) => c.method === "upsert");
+    expect(upsert).toBeDefined();
+    // The crux of the C-8 fix: an atomic replace on the unique (owner,kind)
+    // index — never a delete-then-insert window that can leave the owner
+    // with no document row at all.
+    expect(upsert?.args[1]).toEqual({ onConflict: "owner,kind" });
+  });
+
+  test("upsertDocument returns null when the write errors", async () => {
+    const { client } = fakeSupabase({ data: null, error: { message: "upsert failed" } });
+    const id = await upsertDocument(client, {
+      owner: "u1",
+      kind: "passport",
+      filePath: "u1/passport/p.jpg",
+      fileSize: 512,
+      originalName: "p.jpg",
+    });
+    expect(id).toBeNull();
   });
 });

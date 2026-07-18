@@ -18,7 +18,7 @@ confidence, 0 already fixed, 0 refuted.
 |---|---|---|---|
 | 1 | C-3 | Budget means tuition **plus** living costs | **DONE** - MV-120, PR #81 |
 | 2 | C-4 | Score the English band we actually claim | open |
-| 3 | C-1/C-2 | Never destroy a document before validating its replacement | open |
+| 3 | C-8 | Never destroy a document before validating its replacement | **DONE** - MV-141 |
 | 4 | C-10, C-5 | A match card's reasons must all be true | open |
 | 5 | C-4 Layer B | Unknown is not zero | open |
 | 6 | - | Closed application windows read as closed | open |

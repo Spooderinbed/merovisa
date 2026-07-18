@@ -75,6 +75,38 @@ export async function insertDocument(
   return (data as { id: string } | null)?.id ?? null;
 }
 
+export async function upsertDocument(
+  db: DB,
+  doc: {
+    owner: string;
+    kind: DocumentKind;
+    filePath: string;
+    fileSize: number;
+    originalName: string;
+  },
+): Promise<string | null> {
+  // Atomic replace on the unique (owner, kind) index — no delete-then-insert
+  // window, so a failed replacement can never leave the owner with no row
+  // (audit C-8). created_at is refreshed so a re-uploaded document reads as
+  // freshly stored, matching the vault ordering the old delete+insert produced.
+  const { data } = await db
+    .from("documents")
+    .upsert(
+      {
+        owner: doc.owner,
+        kind: doc.kind,
+        file_path: doc.filePath,
+        file_size: doc.fileSize,
+        original_name: doc.originalName,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "owner,kind" },
+    )
+    .select("id")
+    .single();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
 export async function deleteDocument(db: DB, docId: string, userId: string): Promise<void> {
   await db.from("documents").delete().eq("id", docId).eq("owner", userId);
 }

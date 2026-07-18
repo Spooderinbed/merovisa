@@ -1567,14 +1567,16 @@
     },
     {
       "id": "MV-128",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "file": "cards/MV-128-dossier-column-drift.md",
       "title": "46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)",
       "summary": "Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: \"This is why dossiers have no Column: field.\" Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said \"In review\" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge.",
       "created": "2026-07-17",
-      "entered": "2026-07-18"
+      "entered": "2026-07-18",
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #86, 737eda5). Stripped the stale Column: field from dossiers + added guard rule 9 (fails the board if any dossier carries one)."
     },
     {
       "id": "MV-124",
@@ -1597,13 +1599,14 @@
     },
     {
       "id": "MV-122",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "title": "/trust claims uploads verify your assessment; they do not (C-1c)",
       "file": "cards/MV-122-trust-page-upload-claim.md",
       "entered": "2026-07-18",
-      "badge": "In Review — PR #87 (a283d6e), founder-gated. Copy fix: /trust no longer claims uploads verify your assessment (audit C-1c). Guarded by tests/marketing/trust-page-claims.test.ts."
+      "badge": "Merged to master 2026-07-18 (PR #87, 7bebae6). Copy fix: /trust no longer claims uploads verify your assessment (audit C-1c). Guarded by tests/marketing/trust-page-claims.test.ts.",
+      "done": "2026-07-18"
     },
     {
       "id": "MV-121",
@@ -1743,12 +1746,25 @@
     },
     {
       "id": "MV-139",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-139-wizard-prior-refusals.md",
       "title": "Wizard asks about prior visa refusals before predicting on them (audit F-1)",
       "summary": "MV-124 Slice 9 (audit F-1), split off when the slice started. The scoring engine penalises prior visa refusals (one -15, multiple -35, a band drop) and the profile editor collects them, but the anonymous 9-step wizard never asked -> an optimistic anonymous verdict that silently dropped a band the moment a student voluntarily declared the refusal in the editor (the app punished honesty). Founder + Codex both picked the full fix over disclosure-only: added priorRefusals to ProfileSchema (closes the zod-strip risk so the answer reaches scoreVisa), a new FINAL wizard step (explicit selection required, no silent 'none', no-shame framing), and a from-assessment mapping for claim-time symmetry. TDD red->green; wizard step-count goldens updated 8->9 / 9->10 with justification. Gate: typecheck 0, lint 0, 1979 tests/302 files. Live-verified (Step 9 of 9 renders, CTA disabled->enabled on selection).",
+      "created": "2026-07-18",
+      "entered": "2026-07-18",
+      "done": "2026-07-18",
+      "badge": "Merged to master 2026-07-18 (PR #88, b5c7924). Anonymous wizard asks prior visa refusals as a final step so the verdict is honest up front (audit F-1)."
+    },
+    {
+      "id": "MV-141",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-141-upload-atomicity.md",
+      "title": "Never destroy a document before validating its replacement (audit C-8)",
+      "summary": "MV-124 Slice 3 (audit C-8), split off when the slice started. A document upload that failed validation DESTROYED the original: the route deleted the existing Storage object + row up front (route.ts:65-69), THEN checked magic bytes / uploaded / inserted -- so a renamed HEIC over a stored passport scan returned 'contents do not match' while the passport was already erased, and the vault card still read 'Uploaded' until reload (permanent data loss). Fix: reordered to validate -> upload the replacement to a fresh UUID path -> atomic upsertDocument on the unique (owner,kind) index -> only THEN remove the superseded object. Every failure path (bad magic bytes, failed Storage upload, failed row write) now leaves the original fully intact; new upsertDocument helper closes the delete-then-insert window per the build-order risk note. TDD red->green; gate: typecheck 0, lint 0, 2000 tests/304 files.",
       "created": "2026-07-18",
       "entered": "2026-07-18"
     }
