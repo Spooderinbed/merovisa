@@ -51,6 +51,11 @@ export const WIZARD_STEPS = [
   "english",
   "budget",
   "goal",
+  // Asked last, immediately before results: a prior-refusal answer materially changes
+  // the verdict (a real DHA Subclass 500 risk factor), so the anonymous verdict must
+  // reflect it up front instead of silently dropping a band later, when a signed-in
+  // student volunteers it in the profile editor (F-1). No default — explicit choice.
+  "refusals",
 ] as const;
 
 export type WizardStepKey = (typeof WIZARD_STEPS)[number];

@@ -19,6 +19,7 @@ import { EnglishStep } from "./steps/english-step";
 import { DestinationStep } from "./steps/destination-step";
 import { BudgetStep } from "./steps/budget-step";
 import { GoalStep } from "./steps/goal-step";
+import { RefusalsStep } from "./steps/refusals-step";
 
 const STEP_COMPONENTS: Record<WizardStepKey, ComponentType<StepProps>> = {
   homeCountry: HomeCountryStep,
@@ -30,6 +31,7 @@ const STEP_COMPONENTS: Record<WizardStepKey, ComponentType<StepProps>> = {
   destination: DestinationStep,
   budget: BudgetStep,
   goal: GoalStep,
+  refusals: RefusalsStep,
 };
 
 export function Wizard({

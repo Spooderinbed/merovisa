@@ -15,10 +15,11 @@ describe("visibleStepsFor", () => {
 });
 
 describe("useWizardState", () => {
-  it("starts on homeCountry with 8 steps and Nepal preselected", () => {
+  it("starts on homeCountry with 9 steps and Nepal preselected", () => {
     const { result } = renderHook(() => useWizardState());
     expect(result.current.stepKey).toBe("homeCountry");
-    expect(result.current.totalSteps).toBe(8);
+    // 9 with gap hidden (F-1 added a final prior-refusals step: 8 -> 9).
+    expect(result.current.totalSteps).toBe(9);
     expect(result.current.profile.homeCountry).toBe("Nepal");
     expect(result.current.isFirst).toBe(true);
   });
@@ -43,35 +44,36 @@ describe("useWizardState", () => {
   it("reveals the gap step after a gap-inducing graduation year", () => {
     const { result } = renderHook(() => useWizardState());
     act(() => result.current.setField({ graduationYear: currentYear - 4 }));
-    expect(result.current.totalSteps).toBe(9);
+    // Gap visible + the F-1 prior-refusals step: 9 -> 10.
+    expect(result.current.totalSteps).toBe(10);
     expect(visibleStepsFor(result.current.profile)).toContain("gap");
   });
 
   it("exposes a single live step label derived from the current position", () => {
     const { result } = renderHook(() => useWizardState());
-    // No gap: 8 steps. The label is the one source of truth for the counter.
-    expect(result.current.stepLabel).toBe("Step 1 of 8");
+    // No gap: 9 steps. The label is the one source of truth for the counter.
+    expect(result.current.stepLabel).toBe("Step 1 of 9");
     act(() => void result.current.next());
-    expect(result.current.stepLabel).toBe("Step 2 of 8");
+    expect(result.current.stepLabel).toBe("Step 2 of 9");
   });
 
   it("keeps the step label consistent with the live total when the gap step appears", () => {
     const { result } = renderHook(() => useWizardState());
     act(() => result.current.setField({ graduationYear: currentYear - 4 }));
-    // Gap step now visible -> total is 9, and the label tracks it, never a stale count.
-    expect(result.current.totalSteps).toBe(9);
-    expect(result.current.stepLabel).toBe("Step 1 of 9");
+    // Gap step now visible -> total is 10, and the label tracks it, never a stale count.
+    expect(result.current.totalSteps).toBe(10);
+    expect(result.current.stepLabel).toBe("Step 1 of 10");
   });
 
   it("numbers each step from its visible position, so the eyebrow agrees with the live counter (MV-64)", () => {
     const { result } = renderHook(() => useWizardState());
-    // No gap (default profile carries no graduationYear) -> 8 visible steps, gap
+    // No gap (default profile carries no graduationYear) -> 9 visible steps, gap
     // hidden. Advance to the english step (visible index 5).
     for (let i = 0; i < 5; i++) act(() => void result.current.next());
     expect(result.current.stepKey).toBe("english");
     // The eyebrow and the counter must share the same number: english is the 6th
     // visible step here, not the absolute "Step 7" it sat at when gap was present.
-    expect(result.current.stepLabel).toBe("Step 6 of 8");
+    expect(result.current.stepLabel).toBe("Step 6 of 9");
     expect(result.current.stepEyebrow).toBe("Step 6");
   });
 
@@ -88,7 +90,9 @@ describe("useWizardState", () => {
 
   it("reports done on the final step", () => {
     const { result } = renderHook(() => useWizardState());
-    for (let i = 0; i < 7; i++) act(() => void result.current.next());
+    // 9 visible steps (no gap): the last is the F-1 prior-refusals step at index 8.
+    for (let i = 0; i < 8; i++) act(() => void result.current.next());
+    expect(result.current.stepKey).toBe("refusals");
     expect(result.current.isLast).toBe(true);
     let done = false;
     act(() => {

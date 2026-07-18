@@ -98,5 +98,11 @@ export function profileSectionsFromAssessment(
     };
   }
 
+  // immigration — carry a declared prior-refusal answer into the claimed profile so
+  // the editor reflects the student's real answer (F-1 claim-time symmetry), rather
+  // than showing "none" and surprising them with a band drop on their next edit.
+  const priorRefusals = get<"none" | "one" | "multiple">("priorRefusals");
+  if (priorRefusals) out.immigration = { refusals: priorRefusals };
+
   return out;
 }

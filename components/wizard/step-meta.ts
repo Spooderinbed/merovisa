@@ -37,6 +37,9 @@ export function isStepComplete(step: WizardStepKey, p: Partial<StudentProfile>):
       return typeof p.budget === "number" && Boolean(p.budgetCurrency) && Boolean(p.fundingSource);
     case "goal":
       return Boolean(p.goal);
+    case "refusals":
+      // Explicit selection required — we never assume "none" on the student's behalf.
+      return Boolean(p.priorRefusals);
     default:
       return false;
   }

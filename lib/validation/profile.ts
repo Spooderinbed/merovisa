@@ -40,6 +40,11 @@ export const ProfileSchema = z
     dependents: z
       .object({ partner: z.boolean(), children: z.number().int().min(0).max(10) })
       .optional(),
+    // F-1 — prior student-visa refusals (none/one/multiple). Optional so existing
+    // assess payloads stay valid, but present in the schema so the wizard's answer
+    // is NOT stripped before scoring. Mirrors StudentProfile.priorRefusals; the visa
+    // dimension penalises one (−15) / multiple (−35) in lib/scoring/visa.ts.
+    priorRefusals: z.enum(["none", "one", "multiple"]).optional(),
   })
   .refine(
     (data) => {
