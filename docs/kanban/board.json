@@ -1630,7 +1630,7 @@
     },
     {
       "id": "MV-129",
-      "col": "backlog",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-129-english-editor-scale-cap.md",
