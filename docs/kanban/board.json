@@ -1766,7 +1766,8 @@
       "title": "Never destroy a document before validating its replacement (audit C-8)",
       "summary": "MV-124 Slice 3 (audit C-8), split off when the slice started. A document upload that failed validation DESTROYED the original: the route deleted the existing Storage object + row up front (route.ts:65-69), THEN checked magic bytes / uploaded / inserted -- so a renamed HEIC over a stored passport scan returned 'contents do not match' while the passport was already erased, and the vault card still read 'Uploaded' until reload (permanent data loss). Fix: reordered to validate -> upload the replacement to a fresh UUID path -> atomic upsertDocument on the unique (owner,kind) index -> only THEN remove the superseded object. Every failure path (bad magic bytes, failed Storage upload, failed row write) now leaves the original fully intact; new upsertDocument helper closes the delete-then-insert window per the build-order risk note. TDD red->green; gate: typecheck 0, lint 0, 2000 tests/304 files.",
       "created": "2026-07-18",
-      "entered": "2026-07-18"
+      "entered": "2026-07-18",
+      "badge": "In Review — PR #90 (9cacccf), founder-gated. Reorders the document upload to validate + store the replacement (atomic upsert on the unique (owner,kind) index) BEFORE removing the original, so a rejected or failed re-upload no longer erases a stored document (audit C-8). Guarded by tests/documents/repo.test.ts + tests/api/documents/upload.test.ts."
     }
   ]
 }
