@@ -20,7 +20,7 @@ confidence, 0 already fixed, 0 refuted.
 | 2 | F-3 | Score the English band we actually claim | **DONE** - folded into MV-129 (C-7 sibling); verified 2026-07-18 |
 | 3 | C-8 | Never destroy a document before validating its replacement | **DONE** - MV-141 |
 | 4 | C-10, C-5 | A match card's reasons must all be true | **DONE** - MV-140 |
-| 5 | C-4 Layer B | Unknown is not zero | open |
+| 5 | C-4 **Layer A** | Unknown is not zero — abstain upstream on unknown inputs (gate) | **In Review** - MV-143 |
 | 6 | F-19 | Closed application windows read as closed | **DONE** - MV-142 (Parts 2+3; Part 1 `reverifyBy` founder-gated) |
 | 7 | C-1c | The trust page describes the system we built | open - **founder-gated**, see MV-122 |
 | 8 | C-6 | Accuracy meter stops promising a ladder that doesn't exist | open - **founder-gated** |
@@ -59,3 +59,14 @@ artifact of the verification and are recorded here so they outlive MV-120's doss
 `lib/matches/compute.ts` is touched by four findings (C-3, C-4 Layer B, C-10, C-5). Their regions
 are disjoint (73-151 vs 153-182) so they can run in parallel after MV-120 lands, **but they must not
 be one PR**. C-4 Layer B collides head-on with lines 73-99 — do not bundle it with C-3.
+
+### C-4 was split A / B (read before touching it again)
+
+Slice 5 shipped as **MV-143 = Layer A only, the abstain gate** — a new pure
+`lib/matches/sufficiency.ts#hasSufficientInputs` that the three consumer sites (matches page,
+`lib/outcomes/freeze.ts`, `lib/plan/invalidate.ts`) check *before* calling the matcher, so a
+name-only profile renders the profile-incomplete prompt / a 422 instead of a zero-floored
+"Reach". **`compute.ts` and the `MatchVerdict` union are deliberately untouched.** **Layer B — a
+real `unknown` verdict band inside `compute.ts:73-99` (the region that still floors partial
+unknowns to 0 downstream) — is DEFERRED** and is the collision the sequencing note above warns
+about. Do not rebuild Layer A; do not bundle Layer B with C-3.
