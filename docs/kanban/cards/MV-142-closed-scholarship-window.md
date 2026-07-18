@@ -1,6 +1,6 @@
 # MV-142 — Closed application windows read as closed (F-19)
 
-**Priority:** P1 · **Owner:** agent · **Merge:** _founder-gated_
+**Priority:** P1 · **Owner:** agent · **Merge:** _founder-gated_ · **PR:** [#91](https://github.com/Spooderinbed/merovisa/pull/91)
 **Split from:** [MV-124](MV-124-audit-remainder-slices-2-9.md) **Slice 6** (audit F-19).
 **Build order:** `docs/audits/2026-07-10-comprehensive/VERIFIED-BUILD-ORDER.md` Slice 6.
 
