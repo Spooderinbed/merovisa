@@ -35,13 +35,14 @@
 - **MV-128** · P2 · [46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)](cards/MV-128-dossier-column-drift.md) — _Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: "This is why dossiers have no Column: field." Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said "In review" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge._
 - **MV-121** · P1 · [An all-Reach student opens an empty matches page (MV-120 fallout)](cards/MV-121-reach-group-collapsed-dead-end.md) `next up` — _undefined_
 
-## In progress (WIP 1) — 1
+## In progress (WIP 1) — 0
 
-- **MV-129** · P1 · [English editor caps PTE/TOEFL sub-scores to the IELTS scale (audit C-7)](cards/MV-129-english-editor-scale-cap.md) — _Audit C-7, confirmed uncarded 2026-07-17. The profile English editor (components/profile/editors/english-editor.tsx) + wizard english-step validate every sub-score against IELTS 0-9/0.5 regardless of test, so a PTE 79 / TOEFL 100 has no honest input, forcing mis-entry or a bounce. Fix: per-test min/max/step keyed off the selected test; store native scale and let scoring (F-3 / MV-124 slice 2) map bands. Distinct surface from slice 2 (input vs scoring)._
+_empty_
 
-## In review (WIP 3) — 1
+## In review (WIP 3) — 2
 
 - **MV-123** · P2 · [board.json duplicate card ids will corrupt the next batch flip](cards/MV-123-board-duplicate-id-collision.md) — _undefined_
+- **MV-129** · P1 · [English editor caps PTE/TOEFL sub-scores to the IELTS scale (audit C-7)](cards/MV-129-english-editor-scale-cap.md) — _Audit C-7, confirmed uncarded 2026-07-17. Built 'Scoring + input' (founder choice): the live harm was the raw PTE/TOEFL-vs-IELTS SCORING bug (profile-strength.ts over-awarded every non-IELTS taker; callouts/rules.ts never warned them) — routed both through toIeltsEquivalent. Input: the profile editor's overall already scaled per-test, so the fix hides the IELTS-only per-band sub-inputs for PTE/TOEFL (wizard english-step was already correct). Gate green: 298 files/1954 tests, typecheck clean, lint 0 errors._
 
 ## Blocked — 3
 

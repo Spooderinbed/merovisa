@@ -38,16 +38,21 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
   const [speaking, setSpeaking] = useState<string>(initial.speaking?.toString() ?? "");
   const { status, save } = useSectionSave("english");
   const overallScale = OVERALL_SCALE[test] ?? OVERALL_SCALE.ielts!;
+  // Per-band sub-scores are an IELTS-only concept (0–9 per band). PTE and TOEFL report an
+  // overall only, so the four band inputs are hidden — and never saved — for those tests.
+  const showBands = test !== "pte" && test !== "toefl";
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const patch: Record<string, unknown> = {};
     if (test) patch.test = test;
     if (overall) patch.overall = Number(overall);
-    if (listening) patch.listening = Number(listening);
-    if (reading) patch.reading = Number(reading);
-    if (writing) patch.writing = Number(writing);
-    if (speaking) patch.speaking = Number(speaking);
+    if (showBands) {
+      if (listening) patch.listening = Number(listening);
+      if (reading) patch.reading = Number(reading);
+      if (writing) patch.writing = Number(writing);
+      if (speaking) patch.speaking = Number(speaking);
+    }
     await save(patch);
   };
 
@@ -66,24 +71,26 @@ export function EnglishEditor({ initial }: { initial: EnglishInitial }) {
         <label htmlFor="ee-overall" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Overall score</label>
         <Input id="ee-overall" type="number" min={0} max={overallScale.max} step={overallScale.step} value={overall} onChange={(e) => setOverall(e.target.value)} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="ee-listening" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Listening</label>
-          <Input id="ee-listening" type="number" min={0} max={9} step={0.5} value={listening} onChange={(e) => setListening(e.target.value)} />
+      {showBands ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="ee-listening" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Listening</label>
+            <Input id="ee-listening" type="number" min={0} max={9} step={0.5} value={listening} onChange={(e) => setListening(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="ee-reading" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Reading</label>
+            <Input id="ee-reading" type="number" min={0} max={9} step={0.5} value={reading} onChange={(e) => setReading(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="ee-writing" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Writing</label>
+            <Input id="ee-writing" type="number" min={0} max={9} step={0.5} value={writing} onChange={(e) => setWriting(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="ee-speaking" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Speaking</label>
+            <Input id="ee-speaking" type="number" min={0} max={9} step={0.5} value={speaking} onChange={(e) => setSpeaking(e.target.value)} />
+          </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="ee-reading" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Reading</label>
-          <Input id="ee-reading" type="number" min={0} max={9} step={0.5} value={reading} onChange={(e) => setReading(e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="ee-writing" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Writing</label>
-          <Input id="ee-writing" type="number" min={0} max={9} step={0.5} value={writing} onChange={(e) => setWriting(e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="ee-speaking" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Speaking</label>
-          <Input id="ee-speaking" type="number" min={0} max={9} step={0.5} value={speaking} onChange={(e) => setSpeaking(e.target.value)} />
-        </div>
-      </div>
+      ) : null}
       <p className="text-small text-ink-soft">
         Have your test report? Upload it on the{" "}
         <a href="/documents" className="text-primary underline-offset-2 hover:underline">

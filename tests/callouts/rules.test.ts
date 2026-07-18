@@ -70,6 +70,43 @@ describe("evaluateWizardCallouts", () => {
   });
 });
 
+describe("ielts-low-au callout with englishTest conversion", () => {
+  // The low-English warning compares against IELTS 6.5. A PTE/TOEFL score must be
+  // converted first — a raw PTE 42 (≈ IELTS 5.5) is well below 6.5, but "42 < 6.5" is
+  // false, so before the fix a struggling PTE/TOEFL taker never saw the warning at all.
+  it("fires for a PTE 42 (IELTS 5.5), below the 6.5 floor", () => {
+    const callouts = evaluateWizardCallouts(
+      partial({ englishStatus: "taken", englishTest: "pte", englishScore: 42 }) as StudentProfile,
+      "english",
+    );
+    expect(callouts.some((c) => c.id === "ielts-low-au")).toBe(true);
+  });
+
+  it("fires for a TOEFL 46 (IELTS 5.0), below the 6.5 floor", () => {
+    const callouts = evaluateWizardCallouts(
+      partial({ englishStatus: "taken", englishTest: "toefl", englishScore: 46 }) as StudentProfile,
+      "english",
+    );
+    expect(callouts.some((c) => c.id === "ielts-low-au")).toBe(true);
+  });
+
+  it("does not fire for a PTE 65 (IELTS 7.0), above the floor", () => {
+    const callouts = evaluateWizardCallouts(
+      partial({ englishStatus: "taken", englishTest: "pte", englishScore: 65 }) as StudentProfile,
+      "english",
+    );
+    expect(callouts.some((c) => c.id === "ielts-low-au")).toBe(false);
+  });
+
+  it("still fires for a raw IELTS 6.0 (unchanged passthrough)", () => {
+    const callouts = evaluateWizardCallouts(
+      partial({ englishStatus: "taken", englishScore: 6.0 }) as StudentProfile,
+      "english",
+    );
+    expect(callouts.some((c) => c.id === "ielts-low-au")).toBe(true);
+  });
+});
+
 describe("budget-tight-au callout (AUD corridor)", () => {
   it("warns with the sourced A$ living-cost figure — never USD — when an AUD budget falls below it", () => {
     const callouts = evaluateWizardCallouts(
