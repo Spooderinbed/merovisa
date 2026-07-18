@@ -1,6 +1,12 @@
-# MV-101 — Overhaul Phase 2 / chrome + cleanup (the LAST non-mascot slice)
+# MV-127 — Overhaul Phase 2 / chrome + cleanup (the LAST non-mascot slice)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
+> **Renumbered MV-101 → MV-127 on 2026-07-17 (MV-123).** This card was filed under the
+> elevated-calm *spec's* numbering (spec MV-101 = Chrome + cleanup), which collided with
+> the 2026-07-04 card MV-101 (results competitiveness note) already holding that id. Two
+> cards under one id stranded this one in In Review for ten days after a batch flip
+> stamped its merge badge onto the other. Its branch, commits and PR still say `mv-101` / MV-101.
+
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-101-chrome-cleanup` — **stacked off #68** (`mv-100-guide-restyle`),
 which carries #62 (MV-106 type) → #63 (MV-107 motion) → #64 (MV-108 landing) →
 #65 (MV-109 auth) → #66 (MV-110 dashboard) → #67 (MV-99 profile) → #68 (MV-100 guide).

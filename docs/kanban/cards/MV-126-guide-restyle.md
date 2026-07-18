@@ -1,6 +1,13 @@
-# MV-100 — Overhaul Phase 2 / guide shell restyle (non-mascot)
+# MV-126 — Overhaul Phase 2 / guide shell restyle (non-mascot)
 
-**Column:** In review · **Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
+> **Renumbered MV-100 → MV-126 on 2026-07-17 (MV-123).** This card was filed under the
+> elevated-calm *spec's* numbering (spec MV-100 = Guide), which collided with the
+> 2026-07-04 card MV-100 (matches progressive disclosure). That collision deleted the
+> other card from the board outright during a board.json union: it stayed merged in
+> master while the board forgot it existed. Restored as [MV-100](MV-100-matches-progressive-disclosure.md).
+> This card's branch, commits and PR still say `mv-100` / MV-100.
+
+**Priority:** P2 · **Owner:** agent · **Created:** 2026-07-07
 **Branch:** `mv-100-guide-restyle` — **stacked off #67** (`mv-99-profile-restyle`),
 which carries #62 (MV-106 type) + #63 (MV-107 motion) + #64 (MV-108 landing) +
 #65 (MV-109 auth) + #66 (MV-110 dashboard) + #67 (MV-99 profile). **7-deep stack**;
