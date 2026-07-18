@@ -40,8 +40,9 @@ export default function TrustPage() {
             Your assessment inputs — grade, English score, budget, funding source, study purpose — are used to
             compute your verdict and match programs. Nothing more. Your name and email (via Google sign-in) are
             used to recognise you across visits and associate your assessment with your account. Documents you
-            upload — transcripts, bank statements, IELTS scorecards — are stored privately and used only to
-            replace declared values with verified ones in your assessment. We do not sell your data, share it
+            upload — transcripts, bank statements, IELTS scorecards — are stored privately so you can track
+            them against your application checklist. They do not change your verdict — your assessment is
+            computed only from the inputs above. We do not sell your data, share it
             with third parties, or use it for any purpose other than running your assessment and showing you
             your results.
           </p>

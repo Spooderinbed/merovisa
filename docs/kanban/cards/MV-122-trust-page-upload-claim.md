@@ -38,10 +38,27 @@ where this belongs, and it is free to fix there — it is the same paragraph as 
 
 ## Acceptance criteria
 
-- [ ] `/trust` no longer claims uploads feed the assessment (or the code makes it true).
-- [ ] The claim agrees with the accuracy-meter wording `fc380e2` already corrected — grep for other
-      copies of this claim before closing; two surfaces disagreeing is what caused this.
-- [ ] Founder has signed off on the wording.
+- [x] `/trust` no longer claims uploads feed the assessment. **Copy fix** (founder's call,
+      AskUserQuestion 2026-07-18): the §2 paragraph now reads uploads are "stored privately so you
+      can track them against your application checklist. They do not change your verdict — your
+      assessment is computed only from the inputs above."
+- [x] The claim agrees with the accuracy-meter wording `fc380e2` already corrected — swept the whole
+      repo for `replace declared values` / `verified ones in your assessment`; the only remaining
+      hits are this dossier, the guard test, and two historical audit docs. No live surface disagrees.
+- [x] Founder has signed off on the wording (approved verbatim via AskUserQuestion).
+
+## Evidence (2026-07-18)
+
+- **Root cause reconfirmed against live code:** `reScoreAssessment` is called only from
+  `app/api/assess/route.ts`, `app/api/assess/refresh/route.ts`, `app/api/profile/section/route.ts`
+  — never the upload route. Uploading a document changes no verdict, so the old §2 claim was false.
+- **Slice = copy fix** (founder chose it over "make the code true" — a reScore-on-upload feature —
+  via AskUserQuestion). One file changed: `app/(marketing)/trust/page.tsx` §2.
+- **TDD:** `tests/marketing/trust-page-claims.test.ts` (new, source-text guard mirroring
+  `copy-integrity.test.ts`) went red first — both assertions failed for the right reason (false
+  claim present, honest wording absent) — then green after the edit. It pins the honest wording so
+  the two surfaces can never drift apart again (the exact failure mode that let this survive).
+- **Gate green:** typecheck 0 · lint 0 · **1962 tests / 299 files** (was 1960/298; +2 for the guard).
 
 ## Resume notes
 
