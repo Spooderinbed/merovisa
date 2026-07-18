@@ -23,7 +23,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 describe("wizard → results seam", () => {
   it("produces a valid profile that assembles into a coherent payload", async () => {
     // `delay: null` skips user-event's per-interaction setTimeout(0) waits.
-    // With the default `delay: 0`, every one of the 15 clicks below ends by
+    // With the default `delay: 0`, every one of the 17 clicks below ends by
     // awaiting a real macrotask; under full-suite CPU contention those timer
     // callbacks fire late and the accumulated lag intermittently pushes this
     // test past the default timeout. The events still dispatch and React still
@@ -62,8 +62,13 @@ describe("wizard → results seam", () => {
     await user.click(screen.getByRole("radio", { name: /Education loan/ }));
     await user.click(next());
 
-    // Step 8 — goal (final step).
+    // Step 8 — goal.
     await user.click(screen.getByRole("radio", { name: /Permanent residency/ }));
+    await user.click(next());
+
+    // Step 9 — prior visa refusals (final step, F-1). Explicit selection required
+    // before results, so the anonymous verdict reflects any refusal up front.
+    await user.click(screen.getByRole("radio", { name: /No prior refusals/ }));
     await user.click(next());
 
     expect(onComplete).toHaveBeenCalledOnce();

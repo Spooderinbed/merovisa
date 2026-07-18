@@ -37,10 +37,11 @@ _empty_
 
 _empty_
 
-## In review (WIP 3) — 2
+## In review (WIP 3) — 3
 
 - **MV-128** · P2 · [46 dossiers store a stale Column: field the README already forbids (board state living outside board.json)](cards/MV-128-dossier-column-drift.md) — _Found while building MV-123. README anti-drift rule 1 says card state lives ONLY in board.json and spells out the consequence: "This is why dossiers have no Column: field." Reality never matched: 59 dossiers carry a **Column:** line and 49 DISAGREE with board.json, every one claiming In Review/In Progress/Backlog for work board.json records as done. MV-123 fixed 3 (the renamed MV-125/126/127); 46 remain. Why it matters: a second, stale copy of state is how an agent reaches a wrong conclusion confidently -- it nearly happened during MV-123, where both renamed dossiers said "In review" for work merged 2026-07-07 and only a git merge-base check settled it. Fix: strip the field from all 46, then add the rule to validate.mjs that fails the board if a dossier carries one (the rule is the deliverable; a cleanup without it drifts back). DELIBERATELY sequenced after PR #81: that PR carries dossiers with Column: lines, so landing the rule inside MV-123 would have booby-trapped the founder's own merge._
 - **MV-122** · P1 · [/trust claims uploads verify your assessment; they do not (C-1c)](cards/MV-122-trust-page-upload-claim.md) — _undefined_
+- **MV-139** · P1 · [Wizard asks about prior visa refusals before predicting on them (audit F-1)](cards/MV-139-wizard-prior-refusals.md) — _MV-124 Slice 9 (audit F-1), split off when the slice started. The scoring engine penalises prior visa refusals (one -15, multiple -35, a band drop) and the profile editor collects them, but the anonymous 9-step wizard never asked -> an optimistic anonymous verdict that silently dropped a band the moment a student voluntarily declared the refusal in the editor (the app punished honesty). Founder + Codex both picked the full fix over disclosure-only: added priorRefusals to ProfileSchema (closes the zod-strip risk so the answer reaches scoreVisa), a new FINAL wizard step (explicit selection required, no silent 'none', no-shame framing), and a from-assessment mapping for claim-time symmetry. TDD red->green; wizard step-count goldens updated 8->9 / 9->10 with justification. Gate: typecheck 0, lint 0, 1979 tests/302 files. Live-verified (Step 9 of 9 renders, CTA disabled->enabled on selection)._
 
 ## Blocked — 3
 

@@ -156,4 +156,23 @@ describe("ProfileSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // F-1 — prior visa refusals must survive validation, or the wizard asks and the
+  // server silently strips the answer before scoring, leaving the anonymous verdict
+  // optimistic. Values mirror StudentProfile.priorRefusals + the immigration section.
+  it("keeps a declared priorRefusals through validation (not stripped)", () => {
+    const result = ProfileSchema.safeParse({ ...validProfile, priorRefusals: "one" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.priorRefusals).toBe("one");
+  });
+
+  it("accepts a profile with priorRefusals omitted", () => {
+    const result = ProfileSchema.safeParse(validProfile);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid priorRefusals value", () => {
+    const result = ProfileSchema.safeParse({ ...validProfile, priorRefusals: "lots" });
+    expect(result.success).toBe(false);
+  });
 });

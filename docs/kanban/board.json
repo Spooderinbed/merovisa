@@ -1740,6 +1740,17 @@
       "summary": "UMBRELLA, split a scoped card off when a slice starts; do not build from this directly. Mostly the audit next-month phase. Highest ROI: F-11 (5 sourced modules render to zero surfaces, shipping paid-for value). Trust-sensitive: F-21 fabricated placeholder destination policy, F-5 undisclosed heuristic core. Journey: F-9 human fallback + /about, F-10 post-grant stages, F-13 Reach off-ramp (MV-121 deferred this), F-14 real tracker, F-12 GS/GTE workspace. Growth (needs a founder email call): F-6 email auth, F-7 deliver-a-copy + reminder, F-8 re-engagement/share, F-24 distribution + assessment_claimed event. Debt: F-18 systemic freshness, F-22 de-hardcode + CLAUDE.md fix.",
       "created": "2026-07-18",
       "entered": "2026-07-18"
+    },
+    {
+      "id": "MV-139",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-139-wizard-prior-refusals.md",
+      "title": "Wizard asks about prior visa refusals before predicting on them (audit F-1)",
+      "summary": "MV-124 Slice 9 (audit F-1), split off when the slice started. The scoring engine penalises prior visa refusals (one -15, multiple -35, a band drop) and the profile editor collects them, but the anonymous 9-step wizard never asked -> an optimistic anonymous verdict that silently dropped a band the moment a student voluntarily declared the refusal in the editor (the app punished honesty). Founder + Codex both picked the full fix over disclosure-only: added priorRefusals to ProfileSchema (closes the zod-strip risk so the answer reaches scoreVisa), a new FINAL wizard step (explicit selection required, no silent 'none', no-shame framing), and a from-assessment mapping for claim-time symmetry. TDD red->green; wizard step-count goldens updated 8->9 / 9->10 with justification. Gate: typecheck 0, lint 0, 1979 tests/302 files. Live-verified (Step 9 of 9 renders, CTA disabled->enabled on selection).",
+      "created": "2026-07-18",
+      "entered": "2026-07-18"
     }
   ]
 }

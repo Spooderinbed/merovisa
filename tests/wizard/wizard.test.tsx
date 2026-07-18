@@ -32,9 +32,10 @@ describe("Wizard", () => {
     await userEvent.click(screen.getByRole("button", { name: /Continue/ })); // -> english
 
     expect(screen.getByText(/Where are you with English\?/)).toBeInTheDocument();
-    // With gap hidden the live counter reads "Step 6 of 8" -> the eyebrow must
-    // match it, not the buried "Step 7" the static eyebrow used to show.
-    expect(screen.getByText("Step 6 of 8")).toBeInTheDocument();
+    // With gap hidden the live counter reads "Step 6 of 9" (F-1 added a final
+    // prior-refusals step) -> the eyebrow must match it, not the buried "Step 7"
+    // the static eyebrow used to show.
+    expect(screen.getByText("Step 6 of 9")).toBeInTheDocument();
     expect(screen.getByText("Step 6")).toBeInTheDocument();
   });
 

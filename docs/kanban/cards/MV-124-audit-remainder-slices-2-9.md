@@ -24,7 +24,7 @@ confidence, 0 already fixed, 0 refuted.
 | 6 | - | Closed application windows read as closed | open |
 | 7 | C-1c | The trust page describes the system we built | open - **founder-gated**, see MV-122 |
 | 8 | C-6 | Accuracy meter stops promising a ladder that doesn't exist | open - **founder-gated** |
-| 9 | F-1 | Ask about prior refusals before predicting on them | open - **founder-gated** |
+| 9 | F-1 | Ask about prior refusals before predicting on them | **DONE** - MV-139 (founder chose the full fix) |
 
 ## ⚠️ Read before building ANY slice: the audit prose is wrong in places
 
