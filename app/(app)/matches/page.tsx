@@ -6,6 +6,7 @@ import { getProfile } from "@/lib/profiles/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { listShortlistForUser } from "@/lib/matches/repo";
 import { computeMatches } from "@/lib/matches/compute";
+import { uncoveredField } from "@/lib/matches/coverage";
 import { applyPreference, signedInPreferenceAdapter } from "@/lib/matches/preference";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
@@ -19,6 +20,7 @@ import { CostEstimatePanel } from "@/components/matches/cost-estimate-panel";
 import { ScholarshipsPanel } from "@/components/matches/scholarships-panel";
 import { PreferenceNote } from "@/components/matches/preference-note";
 import { GoalTradeoffNote } from "@/components/matches/goal-tradeoff-note";
+import { FieldCoverageNotice } from "@/components/results/field-coverage-notice";
 import { goalTradeoffNote } from "@/lib/goals/conflicts";
 import { PromptCard } from "@/components/dashboard/prompt-card";
 import type { ProfileSections } from "@/lib/profiles/sections";
@@ -66,6 +68,9 @@ export default async function MatchesPage() {
         sections.career?.secondaryGoals,
       );
       const statusById = new Map<string, Status>(shortlist.map((s) => [s.programId, s.status]));
+      // Same coverage check the anonymous path runs, over the SAME injected catalogue, so
+      // both surfaces disclose an uncovered field identically (audit C-10).
+      const coverageField = uncoveredField(inputs.userField, programs);
       const strong = matches.filter((m) => m.verdict === "strong");
       const possible = matches.filter((m) => m.verdict === "possible");
       const reach = matches.filter((m) => m.verdict === "reach");
@@ -73,6 +78,7 @@ export default async function MatchesPage() {
         <div className="flex flex-col gap-6">
           <PreferenceNote note={preferenceNote} />
           <GoalTradeoffNote note={goalNote} />
+          <FieldCoverageNotice field={coverageField} />
           <VerdictGroup verdict="strong" matches={strong} statusById={statusById} />
           <VerdictGroup verdict="possible" matches={possible} statusById={statusById} />
           {/* Reach = the stretch schools; normally collapsed behind their count so the page

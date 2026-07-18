@@ -390,4 +390,60 @@ describe("/matches page", () => {
       screen.getByRole("button", { name: /Show 1 reach match/i }),
     ).toBeInTheDocument();
   });
+
+  /**
+   * MV-140 / audit C-10. A Law student's field has zero catalogue programs, but field is a
+   * soft sort (not a hard filter), so the page still surfaces off-field programs. It must
+   * say plainly we don't list Law yet, rather than presenting nursing/IT as their matches.
+   */
+  it("discloses when the student's intended field is not in the catalogue (audit C-10)", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue({
+      sections: {
+        academic: { gradePercent: 72 },
+        english: { overall: 7 },
+        finance: { total: 70000, currency: "AUD" },
+        "intended-study": { level: "masters", field: "law" }, // no Law in the catalogue below
+      },
+    });
+    listAllUniversities.mockResolvedValue([
+      {
+        id: "u1",
+        country: "AU",
+        name: "Monash",
+        city: "Melbourne",
+        rankingTier: 1,
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+      },
+    ]);
+    listAllPrograms.mockResolvedValue([
+      {
+        id: "p1",
+        universityId: "u1",
+        name: "Master of IT",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 40000,
+        tuitionMax: 40000,
+        tuitionCurrency: "AUD",
+        minGrade: 65,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+    ]);
+    listShortlistForUser.mockResolvedValue([]);
+
+    const { container } = render(await MatchesPage());
+    const text = container.textContent ?? "";
+    // The honest disclosure is on the page, naming the uncovered field.
+    expect(text).toMatch(/don.t list/i);
+    expect(text).toMatch(/Law/);
+  });
 });
