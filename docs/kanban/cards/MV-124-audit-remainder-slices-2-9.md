@@ -17,11 +17,11 @@ confidence, 0 already fixed, 0 refuted.
 | Slice | Closes | What | Status |
 |---|---|---|---|
 | 1 | C-3 | Budget means tuition **plus** living costs | **DONE** - MV-120, PR #81 |
-| 2 | C-4 | Score the English band we actually claim | open |
+| 2 | F-3 | Score the English band we actually claim | **DONE** - folded into MV-129 (C-7 sibling); verified 2026-07-18 |
 | 3 | C-8 | Never destroy a document before validating its replacement | **DONE** - MV-141 |
 | 4 | C-10, C-5 | A match card's reasons must all be true | **DONE** - MV-140 |
 | 5 | C-4 Layer B | Unknown is not zero | open |
-| 6 | - | Closed application windows read as closed | open |
+| 6 | F-19 | Closed application windows read as closed | **DONE** - MV-142 (Parts 2+3; Part 1 `reverifyBy` founder-gated) |
 | 7 | C-1c | The trust page describes the system we built | open - **founder-gated**, see MV-122 |
 | 8 | C-6 | Accuracy meter stops promising a ladder that doesn't exist | open - **founder-gated** |
 | 9 | F-1 | Ask about prior refusals before predicting on them | **DONE** - MV-139 (founder chose the full fix) |

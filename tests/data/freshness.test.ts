@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DATA_MODULES } from "@/lib/data/schema/registry";
+import { selectScholarships } from "@/lib/data/select-scholarships";
 import {
   AU_CRICOS_DIRECTORY_VERIFIED,
   AU_CRICOS_DIRECTORY_REVERIFY_BY,
@@ -124,5 +125,27 @@ describe("freshness guard (harvested DISPLAY datasets)", () => {
     for (const h of harvested) {
       expect(h.reverifyBy > h.verified).toBe(true);
     }
+  });
+});
+
+describe("freshness guard (displayed application windows)", () => {
+  // F-19: a fixed application window is a fact that expires on a known date. Unlike a
+  // `reverifyBy` (which stops the DATA, and whose next-intake value is a founder/DFAT
+  // call), this guards the DISPLAY: once the close date is behind us, the window must
+  // never render in the present tense. `today` is injected as a fixed string, so this
+  // guard is clock-independent — it cannot self-expire the way a `new Date()` inside
+  // the selector would (the exact trap that produced this finding).
+  const awardsAt = (today: string) =>
+    selectScholarships(today).find((r) => r.id === "australia-awards-nepal");
+
+  it("a held window self-heals to closed once its date has passed — no present-tense 'open'", () => {
+    const window = awardsAt("2100-01-01")?.applicationWindow;
+    expect(window).toBeDefined();
+    expect(window).not.toMatch(/applications open/i);
+    expect(window).toMatch(/closed/i);
+  });
+
+  it("the same window still reads open while it is live", () => {
+    expect(awardsAt("2026-03-01")?.applicationWindow).toMatch(/applications open/i);
   });
 });
