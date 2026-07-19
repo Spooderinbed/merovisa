@@ -21,7 +21,7 @@ import { GoalTradeoffNote } from "@/components/matches/goal-tradeoff-note";
 import { UniversityMatches } from "./university-matches";
 import { FieldCoverageNotice } from "./field-coverage-notice";
 import { GatedTeasers } from "./gated-teasers";
-import { AccuracyMeter } from "./accuracy-meter";
+import { CompletenessMeter } from "./completeness-meter";
 import { ConversionPaths } from "./conversion-paths";
 import { ConversionPrompt } from "./conversion-prompt";
 import { NextSteps } from "./next-steps";
@@ -113,7 +113,7 @@ export function Results({
           top-level: cost-to-apply is part of the core "what's next" path. */}
       <CostToApply />
       <GatedTeasers onUnlock={scrollToConversion} unlocked={owned} />
-      <AccuracyMeter accuracy={payload.accuracy} />
+      <CompletenessMeter completeness={payload.accuracy} />
       {/* Government reference, collapsed by default. Holds the corridor policy context
           plus the trust-defense triptych — every figure still gov-sourced and linked,
           nothing gated, nothing removed; just tucked behind one accessible toggle. */}

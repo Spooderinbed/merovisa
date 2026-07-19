@@ -38,7 +38,8 @@ describe("assembleAssessment", () => {
     expect(payload.matchedCount).toBe(payload.matches.length);
     expect(payload.matches.length).toBeGreaterThan(0);
     expect(payload.intake.nearest).toBeDefined();
-    expect(payload.accuracy.level).toBe("Basic");
+    // aarav omits prior visa history, so the picture is not yet full.
+    expect(payload.accuracy.level).toBe("Detailed");
   });
 
   it("stamps the config version into the persisted result payload", () => {

@@ -6,6 +6,7 @@ import { getOwnedAssessment, getRecoverableAssessment } from "@/lib/assessments/
 import { formatExpiryLabel } from "@/lib/assessments/expiry";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { assembleAssessment } from "@/lib/results/assemble";
+import { normalizeStoredProfileCompleteness } from "@/lib/results/completeness";
 import { buildIntakeTimeline } from "@/lib/timing/intake";
 import { hasLegacyMatchShape } from "@/lib/results/legacy";
 import { Results } from "@/components/results/results";
@@ -32,12 +33,22 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
 
   // result holds the full AssessmentPayload snapshot (see /api/assess).
   let payload = row.result as unknown as AssessmentPayload;
+  const snapshot = row.profile_snapshot as unknown as StudentProfile | null | undefined;
+
+  // Stored rows from the old "profile accuracy" meter keep the same payload key but
+  // carry stale Basic/Verified/Complete values. Rebuild only that legacy field from
+  // the snapshot beside it; current payloads are returned unchanged.
+  if (snapshot) {
+    payload = {
+      ...payload,
+      accuracy: normalizeStoredProfileCompleteness(payload.accuracy, snapshot),
+    };
+  }
 
   // Backcompat: assessments stored before MV-01 hold university-level matches the
   // current UI can't render. Recompute matches from the persisted profile snapshot
   // against the live catalogue, keeping the snapshot's original verdict/stamps.
   if (hasLegacyMatchShape(payload)) {
-    const snapshot = row.profile_snapshot as unknown as StudentProfile | null;
     if (snapshot) {
       const [programs, universities] = await Promise.all([
         listAllPrograms(db),

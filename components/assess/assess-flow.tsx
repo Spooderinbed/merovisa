@@ -8,6 +8,7 @@ import { WIZARD_STORAGE_KEY } from "@/components/wizard/use-wizard-state";
 import { ProfileRecap } from "./profile-recap";
 import { Results } from "@/components/results/results";
 import { formatExpiryLabel } from "@/lib/assessments/expiry";
+import { normalizeStoredProfileCompleteness } from "@/lib/results/completeness";
 import { corridorForHomeCountry } from "@/lib/theme/corridor";
 import { track } from "@/lib/analytics/events";
 
@@ -85,7 +86,10 @@ export function AssessFlow({
     const restored = readPersistedResults();
     if (!restored) return;
     setProfile(restored.profile);
-    setPayload(restored.payload);
+    setPayload({
+      ...restored.payload,
+      accuracy: normalizeStoredProfileCompleteness(restored.payload.accuracy, restored.profile),
+    });
     setAssessmentId(restored.assessmentId);
     setExpiresAt(restored.expiresAt ?? null);
     setPhase("results");

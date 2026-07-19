@@ -10,7 +10,7 @@ import { computeIntakeTiming } from "@/lib/timing/intake";
 import { competitivenessNote } from "@/lib/scoring/field-note";
 import { goalTradeoffNote } from "@/lib/goals/conflicts";
 import { computeSecondaryVerdicts } from "./secondary-verdicts";
-import { computeProfileAccuracy } from "./accuracy";
+import { computeProfileCompleteness } from "./completeness";
 import { AUSTRALIA } from "@/lib/data/destination/australia";
 import { CONFIG_RULES_VERIFIED } from "@/lib/data/scoring-config";
 import { scoringRulesStale } from "@/lib/data/scoring-freshness";
@@ -53,7 +53,11 @@ export function assembleAssessment(
     matches,
     matchedCount: matches.length,
     intake: computeIntakeTiming(scored, AUSTRALIA, now),
-    accuracy: computeProfileAccuracy(scored),
+    // Honest profile-completeness (kept on the `accuracy` payload key for stored-payload
+    // back-compat). The anonymous assemble path has no document status, so documents are
+    // not part of the bar here (they'd be unreachable dead items); a signed-in caller can
+    // pass presence flags to computeProfileCompleteness to count them.
+    accuracy: computeProfileCompleteness(scored),
     rulesVerified: CONFIG_RULES_VERIFIED,
     rulesStale: scoringRulesStale(now),
     preferenceNote,

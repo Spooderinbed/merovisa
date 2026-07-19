@@ -11,6 +11,7 @@ const {
   listAllPrograms,
   listAllUniversities,
   assembleAssessment,
+  renderResults,
 } = vi.hoisted(() => ({
   getUser: vi.fn(),
   getOwnedAssessment: vi.fn(),
@@ -21,6 +22,7 @@ const {
   listAllPrograms: vi.fn().mockResolvedValue([]),
   listAllUniversities: vi.fn().mockResolvedValue([]),
   assembleAssessment: vi.fn(),
+  renderResults: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -32,9 +34,10 @@ vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }))
 vi.mock("@/lib/results/assemble", () => ({ assembleAssessment }));
 vi.mock("next/navigation", () => ({ notFound }));
 vi.mock("@/components/results/results", () => ({
-  Results: ({ mode, assessmentId }: { mode: string; assessmentId: string | null }) => (
-    <div>results:{mode}:{assessmentId ?? "none"}</div>
-  ),
+  Results: (props: { mode: string; assessmentId: string | null; payload: unknown }) => {
+    renderResults(props);
+    return <div>results:{props.mode}:{props.assessmentId ?? "none"}</div>;
+  },
 }));
 
 import AssessmentPage from "@/app/(focused)/assessment/[id]/page";
@@ -54,6 +57,7 @@ describe("/assessment/[id]", () => {
     listAllPrograms.mockClear();
     listAllUniversities.mockClear();
     assembleAssessment.mockClear();
+    renderResults.mockClear();
   });
 
   it("renders recoverable anonymous results (with the assessment id) when signed out", async () => {
@@ -89,6 +93,88 @@ describe("/assessment/[id]", () => {
     expect(screen.getByText("results:owned:none")).toBeInTheDocument();
     // A current-shape payload renders as-is, with no legacy recompute.
     expect(assembleAssessment).not.toHaveBeenCalled();
+  });
+
+  it("recomputes a legacy accuracy meter from the stored profile snapshot", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getOwnedAssessment.mockResolvedValue({
+      id: "aid",
+      owner: "u1",
+      destination_id: "australia",
+      expires_at: "9999-12-31T00:00:00.000Z",
+      profile_snapshot: {
+        educationLevel: "bachelors",
+        grade: 72,
+        fieldOfStudy: "computer-science",
+        englishStatus: "taken",
+        englishScore: 7,
+        budget: 4_500_000,
+        priorRefusals: "none",
+      },
+      result: {
+        result: { verdict: "possible" },
+        intake: INTAKE,
+        matches: [],
+        accuracy: {
+          completeness: 28,
+          level: "Basic",
+          suggestions: [
+            { id: "transcript", label: "Upload your transcript", gain: "keep it on file" },
+          ],
+        },
+      },
+    });
+
+    const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
+    render(ui);
+
+    expect(renderResults).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          accuracy: { completeness: 100, level: "Full picture", suggestions: [] },
+        }),
+      }),
+    );
+    expect(assembleAssessment).not.toHaveBeenCalled();
+  });
+
+  it("keeps a current completeness meter instead of overwriting it from an older snapshot", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    const current = {
+      completeness: 92,
+      level: "Detailed",
+      suggestions: [
+        { id: "refusals", label: "Add your visa history", gain: "so your visa risk reflects your real record" },
+      ],
+    };
+    getOwnedAssessment.mockResolvedValue({
+      id: "aid",
+      owner: "u1",
+      destination_id: "australia",
+      expires_at: "9999-12-31T00:00:00.000Z",
+      // The primary result can be re-scored from live profile sections without updating
+      // this original snapshot, so normalisation must be legacy-only.
+      profile_snapshot: {
+        educationLevel: "bachelors",
+        grade: 72,
+        fieldOfStudy: "computer-science",
+        englishStatus: "taken",
+        englishScore: 7,
+        budget: 4_500_000,
+        priorRefusals: "none",
+      },
+      result: {
+        result: { verdict: "possible" },
+        intake: INTAKE,
+        matches: [],
+        accuracy: current,
+      },
+    });
+
+    const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
+    render(ui);
+
+    expect(renderResults.mock.calls[0]?.[0].payload.accuracy).toBe(current);
   });
 
   it("recomputes matches for a legacy payload from the stored profile snapshot", async () => {
