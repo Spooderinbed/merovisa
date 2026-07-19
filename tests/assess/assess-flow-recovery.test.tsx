@@ -19,13 +19,16 @@ vi.mock("@/components/results/results", () => ({
     assessmentId,
     mode,
     onRetrySave,
+    payload,
   }: {
     assessmentId: string | null;
     mode: string;
     onRetrySave?: () => void;
+    payload?: { accuracy?: { completeness: number; level: string } };
   }) => (
     <div>
       results:{mode}:{String(assessmentId)}
+      {payload?.accuracy ? `:meter:${payload.accuracy.level}:${payload.accuracy.completeness}` : null}
       {onRetrySave ? <button onClick={onRetrySave}>retry-save</button> : null}
     </div>
   ),
@@ -55,6 +58,40 @@ describe("AssessFlow sessionStorage recovery (MV-28 half a)", () => {
     render(<AssessFlow />);
     await waitFor(() => expect(screen.getByText(/results:anonymous:aid-7/)).toBeInTheDocument());
     expect(screen.queryByText("finish")).not.toBeInTheDocument();
+  });
+
+  it("recomputes a legacy accuracy meter when restoring anonymous results", async () => {
+    sessionStorage.setItem(
+      "myvisa.results.v1",
+      JSON.stringify({
+        profile: {
+          educationLevel: "bachelors",
+          grade: 72,
+          fieldOfStudy: "computer-science",
+          englishStatus: "taken",
+          englishScore: 7,
+          budget: 4_500_000,
+          priorRefusals: "none",
+          destination: "australia",
+        },
+        payload: {
+          accuracy: {
+            completeness: 28,
+            level: "Basic",
+            suggestions: [
+              { id: "transcript", label: "Upload your transcript", gain: "keep it on file" },
+            ],
+          },
+        },
+        assessmentId: "aid-legacy",
+      }),
+    );
+
+    render(<AssessFlow />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/meter:Full picture:100/)).toBeInTheDocument(),
+    );
   });
 
   it("clears stale saved results when started fresh (new=1) and shows the wizard", async () => {

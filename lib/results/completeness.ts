@@ -21,6 +21,20 @@ export interface ProfileCompleteness {
   suggestions: CompletenessSuggestion[];
 }
 
+const CURRENT_LEVELS = new Set<CompletenessLevel>(["Started", "Detailed", "Full picture"]);
+
+function isCurrentProfileCompleteness(value: unknown): value is ProfileCompleteness {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<ProfileCompleteness>;
+  return (
+    typeof candidate.completeness === "number" &&
+    Number.isFinite(candidate.completeness) &&
+    typeof candidate.level === "string" &&
+    CURRENT_LEVELS.has(candidate.level as CompletenessLevel) &&
+    Array.isArray(candidate.suggestions)
+  );
+}
+
 /**
  * Optional document-presence signal. The anonymous results surface has no account and
  * cannot upload, so it passes nothing — documents are then neither scored nor suggested
@@ -52,12 +66,11 @@ export interface DocumentPresence {
  * shaping fields weigh 1: field of study and target level (always answered in a real
  * wizard/editor flow, so never a suggestion) and prior visa history.
  *
- * Deliberately EXCLUDED: `dependents`. In StudentProfile, `dependents === undefined`
- * means "applying alone" — a legitimate, complete answer indistinguishable from "not yet
- * declared" — and the anonymous wizard never collects it. Counting it would either strand
- * every solo applicant below 100 (the exact unreachable-tier bug this fixes) or list an
- * "add dependents" item a solo applicant can never satisfy (a dead item). `priorRefusals`,
- * by contrast, is an explicit wizard choice (none/one/multiple) with a clean unset state.
+ * Deliberately EXCLUDED: `dependents`. The anonymous Australia flow collects family,
+ * but both an untouched control and an explicit "Just me" choice serialize as
+ * `dependents === undefined`, so there is no clean presence signal. Counting it would
+ * either strand solo applicants below 100 or list an "add dependents" item they cannot
+ * satisfy. `priorRefusals`, by contrast, has a clean unset state and explicit choices.
  */
 export function computeProfileCompleteness(
   profile: StudentProfile,
@@ -139,4 +152,17 @@ export function computeProfileCompleteness(
     completeness >= 100 ? "Full picture" : completeness >= 50 ? "Detailed" : "Started";
 
   return { completeness, level, suggestions };
+}
+
+/**
+ * Stored assessment payloads predate this meter and carry the old
+ * Basic/Verified/Complete accuracy calculation on the deliberately retained
+ * `accuracy` key. Keep current payloads byte-for-byte, but rebuild any legacy or
+ * malformed meter from the profile snapshot that was persisted beside it.
+ */
+export function normalizeStoredProfileCompleteness(
+  stored: unknown,
+  profile: StudentProfile,
+): ProfileCompleteness {
+  return isCurrentProfileCompleteness(stored) ? stored : computeProfileCompleteness(profile);
 }
