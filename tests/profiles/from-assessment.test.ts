@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
+import { sectionsToStudentProfile } from "@/lib/scoring/from-sections";
 
 describe("profileSectionsFromAssessment", () => {
   const wizardProfile = {
@@ -31,6 +32,30 @@ describe("profileSectionsFromAssessment", () => {
     expect(out.finance?.currency).toBe("NPR");
     expect(out.finance?.source).toBe("education-loan");
     expect(out.career?.goal).toBe("permanent-residency");
+  });
+
+  // A student who declares a partner/children anonymously must keep them through
+  // account bootstrap, or the signed-in re-score reads sections.family === undefined
+  // (applying alone), drops the DHA financial-capacity floor, and can falsely soften
+  // an under-funded verdict — the exact trust break the app exists to prevent.
+  it("preserves a declared partner through profile bootstrap and signed-in re-scoring", () => {
+    const partner = { partner: true, children: 0 };
+    const sections = profileSectionsFromAssessment({ ...wizardProfile, dependents: partner }, {});
+    expect(sections.family).toEqual({ situation: "spouse", children: 0 });
+    expect(sectionsToStudentProfile(sections).dependents).toEqual(partner);
+  });
+
+  it("preserves declared children through profile bootstrap and signed-in re-scoring", () => {
+    const family = { partner: true, children: 3 };
+    const sections = profileSectionsFromAssessment({ ...wizardProfile, dependents: family }, {});
+    expect(sections.family).toEqual({ situation: "spouse-and-kids", children: 3 });
+    expect(sectionsToStudentProfile(sections).dependents).toEqual(family);
+  });
+
+  it("omits the family section when applying alone (no dependents)", () => {
+    const sections = profileSectionsFromAssessment(wizardProfile, {});
+    expect(sections.family).toBeUndefined();
+    expect(sectionsToStudentProfile(sections).dependents).toBeUndefined();
   });
 
   it("normalizes a CGPA grade to a true percentage at the boundary (gradePercent invariant)", () => {

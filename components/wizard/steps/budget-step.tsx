@@ -60,8 +60,10 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Dependents raise the DHA financial-capacity floor — relevant only for the
-  // Australia gate, so the control only shows for that destination.
+  // Dependents raise the DHA financial-capacity floor. "not-sure" is resolved to
+  // Australia before scoring (lib/results/assemble.ts), so it goes through the same
+  // gate and needs the same control — otherwise a not-sure student is scored against
+  // an Australia floor that silently ignores the family they'd have declared.
   const dependents = profile.dependents;
   const children = dependents?.children ?? 0;
   const familyMode: FamilyMode =
@@ -123,7 +125,7 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
         ))}
       </div>
 
-      {profile.destination === "australia" && (
+      {(profile.destination === "australia" || profile.destination === "not-sure") && (
         <div className="flex flex-col gap-3">
           <span className="text-body text-ink-soft">
             Bringing family to Australia? <span className="text-ink-faint">(optional)</span>

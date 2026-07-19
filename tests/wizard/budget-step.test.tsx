@@ -61,6 +61,15 @@ describe("BudgetStep — dependents control (B2)", () => {
     expect(screen.queryByRole("radiogroup", { name: /Bringing family/i })).toBeNull();
   });
 
+  it("shows the family control for 'not sure', which is assessed as Australia", () => {
+    // assembleAssessment resolves destination "not-sure" -> "australia" before scoring
+    // (lib/results/assemble.ts), so the DHA financial-capacity gate that prices
+    // dependents applies. Hiding the control here would collect no family for a
+    // verdict that assumes Australia — an under-counted floor the student never sees.
+    renderStep({ ...auProfile, destination: "not-sure" });
+    expect(screen.getByRole("radiogroup", { name: /Bringing family/i })).toBeInTheDocument();
+  });
+
   it("sets a partner (no children) when 'Partner' is chosen", async () => {
     const { setField } = renderStep(auProfile);
     const group = screen.getByRole("radiogroup", { name: /Bringing family/i });

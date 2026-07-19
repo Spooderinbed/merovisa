@@ -8,6 +8,7 @@ import type {
   FundingSource,
   Goal,
   GradeSystem,
+  StudentProfile,
 } from "@/lib/scoring/types";
 import { normalizeGradeToPercentage } from "@/lib/scoring/grade-normalize";
 
@@ -103,6 +104,18 @@ export function profileSectionsFromAssessment(
   // than showing "none" and surprising them with a band drop on their next edit.
   const priorRefusals = get<"none" | "one" | "multiple">("priorRefusals");
   if (priorRefusals) out.immigration = { refusals: priorRefusals };
+
+  // family — preserve a declared partner/children through account bootstrap so the
+  // next signed-in re-score keeps the same DHA financial-capacity floor the wizard
+  // already scored (lib/scoring/from-sections.ts reads it back via dependentsFromFamily).
+  // Applying alone (undefined) omits the section, which maps back to no dependents.
+  const dependents = get<StudentProfile["dependents"]>("dependents");
+  if (dependents && (dependents.partner || dependents.children > 0)) {
+    out.family =
+      dependents.children > 0
+        ? { situation: "spouse-and-kids", children: dependents.children }
+        : { situation: "spouse", children: 0 };
+  }
 
   return out;
 }
