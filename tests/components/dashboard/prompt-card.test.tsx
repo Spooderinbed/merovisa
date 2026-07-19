@@ -28,6 +28,22 @@ describe("PromptCard", () => {
     expect(screen.getByRole("link", { name: /Add details/i })).toHaveAttribute("href", "/profile");
   });
 
+  it("matches-need-inputs: names grade, English and budget and states no verdict is invented (C-4)", () => {
+    // The /matches abstain gate must not reuse the vague dashboard copy ("Add details",
+    // "sharpens the verdict"): it has to say WHICH inputs unlock matches and promise we
+    // don't fabricate a verdict from what the student never entered (audit C-4 honest copy).
+    render(<PromptCard prompt={{ kind: "matches-need-inputs" }} />);
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/grade/i);
+    expect(text).toMatch(/English/i);
+    expect(text).toMatch(/budget/i);
+    expect(text).toMatch(/won.t invent/i);
+    expect(screen.getByRole("link", { name: /Add your details/i })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
+  });
+
   it("renders the plan's top item with a CTA to its completing surface (verified kind)", () => {
     render(<PromptCard prompt={next()} />);
     expect(screen.getByText("Upload your IELTS report")).toBeInTheDocument();

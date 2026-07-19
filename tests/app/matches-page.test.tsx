@@ -18,8 +18,9 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
-// Mirror the dashboard-page test: surface the shared empty-profile gate's `kind`
-// so we can assert /matches reuses the SAME PromptCard("profile-incomplete") gate.
+// Surface the gate PromptCard's `kind` so we can assert /matches renders the
+// matches-specific "matches-need-inputs" abstain gate (audit C-4), not the vague
+// dashboard "profile-incomplete" copy.
 vi.mock("@/components/dashboard/prompt-card", () => ({
   PromptCard: ({ prompt }: { prompt: { kind: string } }) => (
     <div data-testid="prompt">{prompt.kind}</div>
@@ -46,7 +47,7 @@ describe("/matches page", () => {
     );
   });
 
-  it("gates an empty profile with the dashboard's profile-incomplete gate, never fabricated verdicts", async () => {
+  it("gates an empty profile with the matches-need-inputs abstain gate, never fabricated verdicts", async () => {
     // A signed-in user who never filled their profile must NOT see verdicts
     // computed off fields they never entered (audit fix #3 — /matches empty-profile gate).
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
@@ -87,13 +88,117 @@ describe("/matches page", () => {
     listShortlistForUser.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
-    // Same gate the dashboard renders.
-    expect(screen.getByTestId("prompt")).toHaveTextContent("profile-incomplete");
+    // The matches-specific abstain gate — names the missing inputs, never a verdict.
+    expect(screen.getByTestId("prompt")).toHaveTextContent("matches-need-inputs");
     // No fabricated verdict groups or short-by reasons off never-entered fields.
     expect(screen.queryByText(/Strong matches/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Reach matches/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/short by/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Master of IT")).not.toBeInTheDocument();
+  });
+
+  it("gates a name-only profile (non-empty sections, no verdict inputs) with the matches-need-inputs gate (C-4)", async () => {
+    // Audit C-4 "Unknown is not zero": a signed-in student who typed only their name
+    // has a NON-empty profile, so the old `Object.keys(sections).length === 0` gate let
+    // them fall through to the matcher, which floors every unknown to 0 and fabricated
+    // "Reach · Grade short by 65%" cards. hasSufficientInputs closes that hole.
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue({
+      sections: {
+        personal: { name: "Asha" },
+        "intended-study": { field: "computer-science", level: "masters" },
+      },
+    });
+    listAllPrograms.mockResolvedValue([
+      {
+        id: "p1",
+        universityId: "u1",
+        name: "Master of IT",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 40000,
+        tuitionMax: 40000,
+        tuitionCurrency: "AUD",
+        minGrade: 65,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+    ]);
+    listAllUniversities.mockResolvedValue([
+      {
+        id: "u1",
+        country: "AU",
+        name: "Monash",
+        city: "Melbourne",
+        rankingTier: 1,
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+      },
+    ]);
+    listShortlistForUser.mockResolvedValue([]);
+    const ui = await MatchesPage();
+    render(ui);
+    // Same matches-need-inputs gate the empty profile renders — never fabricated bands.
+    expect(screen.getByTestId("prompt")).toHaveTextContent("matches-need-inputs");
+    expect(screen.queryByText(/short by/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Master of IT")).not.toBeInTheDocument();
+  });
+
+  it("still renders match cards for a partial profile with one verdict input present (no over-gating)", async () => {
+    // The over-gating guard: a grade-only profile (English + budget still absent) is
+    // sufficient — it produced partial verdicts before and must keep doing so. Gating
+    // it would wall a student who gave us something to score, which is its own bounce.
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue({
+      sections: {
+        academic: { gradePercent: 72 },
+        "intended-study": { field: "computer-science", level: "masters" },
+      },
+    });
+    listAllUniversities.mockResolvedValue([
+      {
+        id: "u1",
+        country: "AU",
+        name: "Monash",
+        city: "Melbourne",
+        rankingTier: 1,
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+      },
+    ]);
+    listAllPrograms.mockResolvedValue([
+      {
+        id: "p1",
+        universityId: "u1",
+        name: "Master of IT",
+        level: "masters",
+        field: "computer-science",
+        tuitionMin: 40000,
+        tuitionMax: 40000,
+        tuitionCurrency: "AUD",
+        minGrade: 65,
+        minEnglish: 6.5,
+        minEnglishBand: 6,
+        intakes: ["feb"],
+        source: "https://x",
+        lastVerified: "2026-01-01",
+        dataQuality: "primary",
+        notes: null,
+      },
+    ]);
+    listShortlistForUser.mockResolvedValue([]);
+    const ui = await MatchesPage();
+    render(ui);
+    // Not gated: the match card is on the page.
+    expect(screen.queryByTestId("prompt")).not.toBeInTheDocument();
+    expect(screen.getByText("Master of IT")).toBeInTheDocument();
   });
 
   it("renders headline + policy banner + empty-state when no programs", async () => {
