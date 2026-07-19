@@ -1798,7 +1798,7 @@
     },
     {
       "id": "MV-143",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-143-unknown-is-not-zero.md",
@@ -1806,7 +1806,20 @@
       "summary": "MV-124 Slice 5 (audit C-4, LAYER A only — the abstain gate), split off when the slice started. compute.ts floors every unknown verdict input to 0 (userGradePercent ?? 0, userEnglishOverall ?? 0, userBudgetAud ?? 0), so a signed-in student who typed only their name got fabricated \"Reach · Grade short by 65%\" cards, a frozen MV-08 prediction off those zeros, and a plan seeded off the same invented reach. Fix: new pure lib/matches/sufficiency.ts#hasSufficientInputs (false ONLY when grade + English + budget are all absent; any one present ⇒ still render cards, never over-gate), checked upstream at the matches page (a matches-need-inputs prompt naming the missing inputs), lib/outcomes/freeze.ts (new 422 not-enough-data variant, no zeroed prediction persisted) and lib/plan/invalidate.ts (skip match-driven items). compute.ts + the MatchVerdict union are UNTOUCHED — a real `unknown` verdict band is deferred Layer B. Codex (GPT-5) adversarial review returned fix-then-ship; 4 findings all remediated TDD (auto-close falsely completing add-safer-options on abstain, vague gate copy, a bands-only over-gate premise, overstated comments) — its band-as-presence prescription was correctly rejected (it would reintroduce the fabrication). Gate: typecheck 0, lint 0, full suite green.",
       "created": "2026-07-19",
       "entered": "2026-07-19",
-      "badge": "In Review — PR #92 (876cf39), founder-gated. Abstains on an all-absent profile (grade/English/budget) instead of fabricating a \"Reach\" verdict off zero-floored inputs (audit C-4 Layer A): a new hasSufficientInputs gate covers the matches page (matches-need-inputs prompt), freeze (422, no persisted zero prediction) and plan invalidation. compute.ts / MatchVerdict untouched (Layer B deferred). Includes a Codex-review second pass (false plan-completion + honest gate copy). Gate green."
+      "badge": "DONE — merged to master 2026-07-19 (PR #92, merge fedc577). Abstain gate (audit C-4 Layer A): hasSufficientInputs stops a fabricated \"Reach\" verdict off zero-floored unknowns; covers the matches page (profile-incomplete prompt), freeze (422, no persisted zero prediction) and plan invalidation. compute.ts / MatchVerdict untouched (Layer B deferred). Codex-review second pass (false plan-completion on abstain + honest gate copy) folded. Gate green.",
+      "done": "2026-07-19"
+    },
+    {
+      "id": "MV-144",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-144-honest-completeness-meter.md",
+      "title": "Honest profile-completeness meter, not a fake accuracy score (audit C-6)",
+      "summary": "MV-124 Slice 8 (audit C-6). The old \"profile accuracy\" meter (lib/results/accuracy.ts) was dishonest three ways: completeness started at 25 and added only +3 for English taken (max 28) while the tiers required Verified>=40 / Complete>=75, so EVERY user was stranded at \"Basic\" (top tiers mathematically unreachable); the two document suggestions added zero points (dead items that never moved the bar); and it named a tier \"Verified\" + promised \"band-level verification\" though the app verifies nothing (nobody reads the uploaded PDF; the engine scores the typed numbers) — a false trust claim, the exact dishonesty the app exists to replace. Founder chose Option A: rebuild as an honest PROFILE COMPLETENESS meter (how much of the picture you've given us, never whether we checked it). New lib/results/completeness.ts#computeProfileCompleteness(profile, docs?): neutral reachable tiers Started(<50)/Detailed(50-99)/Full picture(=100); real weights — grade/English/budget x3 (the verdict-driving inputs the engine otherwise floors/assumes), field of study/target level/prior visa history x1 (denominator 12 on the anon surface, reaches exactly 100 when full); every suggestion raises the bar (no dead items); documents (transcript/financials x1) count ONLY when a docs presence signal is passed (signed-in vault), so they are never dead items on the anon results surface; dependents excluded (undefined = solo, no clean presence signal). New components/results/completeness-meter.tsx replaces accuracy-meter.tsx. The persisted payload key `accuracy` is deliberately kept (now typed ProfileCompleteness) so old stored rows don't crash. Second commit (Codex-reviewed): stale stored payloads — /assessment/[id] and the anon sessionStorage restore replay the stored payload, so pre-fix assessments still rendered the old \"Verified\" dishonesty; new normalizeStoredProfileCompleteness recomputes legacy/malformed meters from the persisted profile snapshot on read at BOTH sites, current payloads untouched (active users already refreshed by reScoreAssessment). Two separate dependents/financial-capacity bugs Codex surfaced are de-scoped to a follow-up chip. Gate green: typecheck 0, lint 0, goldens byte-identical, 2031 tests / 305 files. Commits 82ebda8 + 0b4a6a2. Dossier: cards/MV-144-honest-completeness-meter.md.",
+      "created": "2026-07-19",
+      "entered": "2026-07-19",
+      "badge": "In Review — branch mv-144-honest-completeness-meter (82ebda8 meter rebuild + 0b4a6a2 stale-row normalizer), founder-gated PR. Replaces the dishonest \"profile accuracy\" meter (unreachable Verified/Complete tiers, dead document suggestions, a false \"band-level verification\" promise) with an honest completeness meter: reachable Started/Detailed/Full picture tiers, real weights, documents counted only where they can be added, no verification language. Codex second pass fixed stale stored payloads still showing the old meter on read. Gate green (2031 tests)."
     }
   ]
 }

@@ -93,7 +93,6 @@ function clientMain() {
   var ready = B.cards.filter(function (c) { return c.col === "ready"; }).length;
   var prog = B.cards.filter(function (c) { return c.col === "inprogress"; }).length;
   var review = B.cards.filter(function (c) { return c.col === "inreview"; }).length;
-  var done = B.cards.filter(function (c) { return c.col === "done"; }).length;
   var stale = B.cards.filter(function (c) { return c.stale; }).length;
   document.getElementById("metrics").innerHTML =
     metric(ready, "Ready to start") + metric(prog, "In progress") +
