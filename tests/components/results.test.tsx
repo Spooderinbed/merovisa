@@ -31,7 +31,7 @@ const aarav: StudentProfile = {
 };
 
 describe("Results", () => {
-  it("renders the core path (verdict, factor bars, intake, matches, cost, accuracy, conversion) top-level", () => {
+  it("renders the core path (verdict, factor bars, intake, matches, cost, completeness, conversion) top-level", () => {
     const payload = assemble(aarav, new Date("2026-06-03"));
     // A persisted anonymous assessment has an id — the success path that shows the
     // keep-it / 3-day-expiry conversion copy. (The id:null persist-miss path is
@@ -41,7 +41,7 @@ describe("Results", () => {
     expect(screen.getByText(/Intake timing/i)).toBeInTheDocument();
     expect(screen.getByText(/matched your profile/)).toBeInTheDocument();
     expect(screen.getByText(/What it costs to apply/i)).toBeInTheDocument();
-    expect(screen.getByText(/Profile accuracy/i)).toBeInTheDocument();
+    expect(screen.getByText(/Profile completeness/i)).toBeInTheDocument();
     expect(screen.getByText(/expires in 3 days/i)).toBeInTheDocument();
   });
 

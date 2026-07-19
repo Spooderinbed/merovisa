@@ -4,14 +4,20 @@ import type { IntakeTiming } from "@/lib/timing/intake";
 import type { FieldCompetitivenessNote } from "@/lib/scoring/field-note";
 import type { GoalTradeoffNote } from "@/lib/goals/conflicts";
 import type { SecondaryVerdicts } from "./secondary-verdicts";
-import type { ProfileAccuracy } from "./accuracy";
+import type { ProfileCompleteness } from "./completeness";
 
 export interface AssessmentPayload {
   result: AssessmentResult;
   matches: MatchResult[];
   matchedCount: number;
   intake: IntakeTiming;
-  accuracy: ProfileAccuracy;
+  /**
+   * Honest weighted profile-COMPLETENESS (how much of the picture the student gave us),
+   * NOT a confidence/accuracy score — see lib/results/completeness.ts. The field key is
+   * kept as `accuracy` because the whole payload is persisted into assessments.result;
+   * renaming the stored key would break the meter for every already-saved assessment.
+   */
+  accuracy: ProfileCompleteness;
   /** Oldest verification date across the scoring config's sourced inputs (F16). Absent on legacy stored payloads. */
   rulesVerified?: string;
   /** A scoring-critical input is past its reverifyBy as of scoring time — the verdict card degrades (MV-04). Absent on legacy stored payloads. */
