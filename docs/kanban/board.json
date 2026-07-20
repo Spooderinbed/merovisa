@@ -1833,6 +1833,17 @@
       "created": "2026-07-20",
       "entered": "2026-07-20",
       "badge": "In Review — branch mv-145-dependents-financial-capacity (9d4aed7), founder-gated PR. Fixes two dependents/financial-capacity trust bugs de-scoped from MV-144: (1) the wizard family control is now shown for \"not sure\" (assessed as Australia), not only \"australia\", so the DHA floor isn't scored against an assumed-empty family; (2) declared dependents now survive account bootstrap (from-assessment.ts maps them onto the family section) instead of being dropped and silently lowering the floor on the signed-in re-score. TDD red->green (+4 tests), no scorer path touched (goldens byte-identical), gate green (2035 tests). Codex adversarial pass: CLEAN on both questions. No other surface gates dependents on destination (both match adapters price dependents ungated, profile family-editing/summaries are destination-independent, the proof-of-funds plan step is unconditional, and the signed-in re-score also resolves not-sure->AU); and the from-assessment guard round-trips every wizard-reachable state through dependentsFromFamily byte-for-byte. No fix required."
+    },
+    {
+      "id": "MV-147",
+      "col": "backlog",
+      "pri": "P0",
+      "owner": "agent",
+      "file": "cards/MV-147-google-only-auth-gap.md",
+      "title": "Non-Google sign-in: email auth so students without a Google account can save/recover (audit F-6)",
+      "summary": "Audit F-6 (P0), flagged in the report as \"Not on the board.\" Sign-in is Google-only (components/auth/auth-card.tsx:38-63 renders \"Email sign-in isn't ready yet\"); saving, converting, every (app) route, and the ONLY anonymous-recovery path all hard-require a Google account. A student without Google hits a wall at the exact conversion moment — a straight bounce for a consultancy-replacement product. Fix: add a non-Google email path via Supabase Auth (magic link / OTP recommended — password-free), wired into the SAME /auth/callback claim/bootstrap flow Google uses so save/convert/recover behave identically (do not fork the claim path). Supabase Auth sends its own OTP emails, so this does not hard-depend on the app-level transactional email infra F-7 flags absent — only production deliverability does. Founder nod on auth method; coordinate with the F-2 consent/age gate (MV-05). Distinct from F-7 (transactional email) and F-2/MV-05 (privacy/consent).",
+      "created": "2026-07-20",
+      "entered": "2026-07-20"
     }
   ]
 }
