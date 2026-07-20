@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-19",
+  "updated": "2026-07-20",
   "staleDays": 7,
   "columns": [
     {
@@ -1811,7 +1811,7 @@
     },
     {
       "id": "MV-144",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-144-honest-completeness-meter.md",
@@ -1819,7 +1819,20 @@
       "summary": "MV-124 Slice 8 (audit C-6). The old \"profile accuracy\" meter (lib/results/accuracy.ts) was dishonest three ways: completeness started at 25 and added only +3 for English taken (max 28) while the tiers required Verified>=40 / Complete>=75, so EVERY user was stranded at \"Basic\" (top tiers mathematically unreachable); the two document suggestions added zero points (dead items that never moved the bar); and it named a tier \"Verified\" + promised \"band-level verification\" though the app verifies nothing (nobody reads the uploaded PDF; the engine scores the typed numbers) — a false trust claim, the exact dishonesty the app exists to replace. Founder chose Option A: rebuild as an honest PROFILE COMPLETENESS meter (how much of the picture you've given us, never whether we checked it). New lib/results/completeness.ts#computeProfileCompleteness(profile, docs?): neutral reachable tiers Started(<50)/Detailed(50-99)/Full picture(=100); real weights — grade/English/budget x3 (the verdict-driving inputs the engine otherwise floors/assumes), field of study/target level/prior visa history x1 (denominator 12 on the anon surface, reaches exactly 100 when full); every suggestion raises the bar (no dead items); documents (transcript/financials x1) count ONLY when a docs presence signal is passed (signed-in vault), so they are never dead items on the anon results surface; dependents excluded (undefined = solo, no clean presence signal). New components/results/completeness-meter.tsx replaces accuracy-meter.tsx. The persisted payload key `accuracy` is deliberately kept (now typed ProfileCompleteness) so old stored rows don't crash. Second commit (Codex-reviewed): stale stored payloads — /assessment/[id] and the anon sessionStorage restore replay the stored payload, so pre-fix assessments still rendered the old \"Verified\" dishonesty; new normalizeStoredProfileCompleteness recomputes legacy/malformed meters from the persisted profile snapshot on read at BOTH sites, current payloads untouched (active users already refreshed by reScoreAssessment). Two separate dependents/financial-capacity bugs Codex surfaced are de-scoped to a follow-up chip. Gate green: typecheck 0, lint 0, goldens byte-identical, 2031 tests / 305 files. Commits 82ebda8 + 0b4a6a2. Dossier: cards/MV-144-honest-completeness-meter.md.",
       "created": "2026-07-19",
       "entered": "2026-07-19",
-      "badge": "In Review — branch mv-144-honest-completeness-meter (82ebda8 meter rebuild + 0b4a6a2 stale-row normalizer), founder-gated PR. Replaces the dishonest \"profile accuracy\" meter (unreachable Verified/Complete tiers, dead document suggestions, a false \"band-level verification\" promise) with an honest completeness meter: reachable Started/Detailed/Full picture tiers, real weights, documents counted only where they can be added, no verification language. Codex second pass fixed stale stored payloads still showing the old meter on read. Gate green (2031 tests)."
+      "badge": "DONE — merged to master 2026-07-19 (PR #93, merge 2fc17ce). Honest profile-completeness meter (audit C-6): replaced the dishonest \"profile accuracy\" meter (mathematically unreachable Verified/Complete tiers, dead document suggestions, a false \"band-level verification\" promise) with reachable Started/Detailed/Full picture tiers, real weights, documents counted only where they can be added, and no verification language. Codex second pass folded: stale stored payloads recompute honestly on read at both the owned DB page and the anon restore. Gate green (2031 tests).",
+      "done": "2026-07-19"
+    },
+    {
+      "id": "MV-145",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-145-dependents-financial-capacity.md",
+      "title": "Dependents survive \"not sure\" and account bootstrap (financial-capacity honesty)",
+      "summary": "The two dependents/financial-capacity bugs Codex surfaced while reviewing MV-144 (chip task_9db5afb3), de-scoped from it to keep that slice the meter only. Both corrupt the DHA financial-capacity floor (lib/scoring/financial.ts prices declared dependents via auDependentsCapacityAud), so the verdict is wrong on money. Bug 1: lib/results/assemble.ts resolves destination \"not-sure\" -> \"australia\" BEFORE scoring (so the Australia DHA gate applies), but components/wizard/steps/budget-step.tsx gated the family/dependents control on destination === \"australia\" only — a not-sure student is scored against an Australia floor that silently assumes no dependents. Bug 2: lib/profiles/from-assessment.ts mapped every wizard answer EXCEPT dependents, so on claim / first signed-in assess a declared partner/children was dropped; the signed-in re-score reads dependents back from sections.family via lib/scoring/from-sections.ts#dependentsFromFamily, so the floor silently fell and an under-funded verdict could falsely soften. Fix: show the control for \"australia\" OR \"not-sure\"; map wizard dependents -> family section (spouse / spouse-and-kids), guarded so applying-alone omits the section (round-trips through dependentsFromFamily byte-for-byte, no dead alone write). Verified end-to-end: financial.ts genuinely reads dependents; ProfileSchema keeps dependents so profile_snapshot carries it; the mapping is the exact inverse of dependentsFromFamily. No scorer path touched (goldens byte-identical). Gate green: typecheck 0, lint 0, 2035 tests / 305 files (+4). Code commit 9d4aed7. Dossier: cards/MV-145-dependents-financial-capacity.md.",
+      "created": "2026-07-20",
+      "entered": "2026-07-20",
+      "badge": "In Review — branch mv-145-dependents-financial-capacity (9d4aed7), founder-gated PR. Fixes two dependents/financial-capacity trust bugs de-scoped from MV-144: (1) the wizard family control is now shown for \"not sure\" (assessed as Australia), not only \"australia\", so the DHA floor isn't scored against an assumed-empty family; (2) declared dependents now survive account bootstrap (from-assessment.ts maps them onto the family section) instead of being dropped and silently lowering the floor on the signed-in re-score. TDD red->green (+4 tests), no scorer path touched (goldens byte-identical), gate green (2035 tests). Codex adversarial pass: CLEAN on both questions. No other surface gates dependents on destination (both match adapters price dependents ungated, profile family-editing/summaries are destination-independent, the proof-of-funds plan step is unconditional, and the signed-in re-score also resolves not-sure->AU); and the from-assessment guard round-trips every wizard-reachable state through dependentsFromFamily byte-for-byte. No fix required."
     }
   ]
 }
