@@ -72,11 +72,12 @@ export default function TrustPage() {
             When we delete your data
           </h2>
           <p className="mt-3 text-lead text-ink-soft">
-            You can delete your account at any time from the settings page. Account deletion is real deletion —
-            your profile, assessment, and documents are removed. We retain assessment records for 12 months
-            after deletion for legal-compliance reasons, then purge them. There is no soft-delete or
-            indefinite &ldquo;deactivation&rdquo; state. If you want confirmation that your data has been deleted, email
-            us at{" "}
+            You can delete your account at any time from your profile page. Account deletion is real deletion —
+            your profile, your assessments, and your uploaded documents are removed straight away. There is no
+            soft-delete or indefinite &ldquo;deactivation&rdquo; state, and we do not hold anything back afterwards.
+            If you never create an account, your assessment expires three days after you take it and is deleted
+            within a day of expiring, along with any email address attached to it. If you want confirmation that
+            your data has been deleted, email us at{" "}
             <a
               href="mailto:support@merovisa.app"
               className="text-primary underline underline-offset-2 hover:text-primary-ink"
