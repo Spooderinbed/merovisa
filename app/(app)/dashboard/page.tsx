@@ -90,14 +90,24 @@ export default async function DashboardPage() {
   // resolve program names only then so the common (no-attempt) path stays cheap.
   let outcomeRows: OutcomeFunnelRow[] = [];
   if (outcomes.attempts.length > 0) {
-    const [programs, universities] = await Promise.all([
-      listAllPrograms(supabase),
-      listAllUniversities(supabase),
-    ]);
-    const uniById = new Map(universities.map((u) => [u.id, u.name]));
-    const programLookup = new Map(
-      programs.map((p) => [p.id, { programName: p.name, universityName: uniById.get(p.universityId) ?? null }]),
-    );
+    // The audited exception to MV-133: this catalogue read only puts program NAMES on
+    // rows the student's own attempts already prove exist. Nothing here is rendered as
+    // "we found nothing for you", so an outage degrades the labels instead of taking the
+    // whole hub — plan, snapshot, readiness — down with it. Every other catalogue read on
+    // a signed-in surface propagates to the (app) error boundary rather than lying.
+    let programLookup = new Map<string, { programName: string; universityName: string | null }>();
+    try {
+      const [programs, universities] = await Promise.all([
+        listAllPrograms(supabase),
+        listAllUniversities(supabase),
+      ]);
+      const uniById = new Map(universities.map((u) => [u.id, u.name]));
+      programLookup = new Map(
+        programs.map((p) => [p.id, { programName: p.name, universityName: uniById.get(p.universityId) ?? null }]),
+      );
+    } catch (err) {
+      console.error("[dashboard] outcome funnel catalogue lookup failed", { userId: user.id, err });
+    }
     outcomeRows = buildOutcomeFunnel({ ...outcomes, programLookup });
   }
 

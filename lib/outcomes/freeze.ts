@@ -5,6 +5,8 @@ import type { ProfileSections } from "@/lib/profiles/sections";
 import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
 import { getProfile } from "@/lib/profiles/repo";
 import { getProgram, listAllUniversities } from "@/lib/programs/repo";
+import { isCatalogReadError } from "@/lib/programs/errors";
+import type { Program, University } from "@/lib/programs/types";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
 import { hasSufficientInputs } from "@/lib/matches/sufficiency";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
@@ -17,7 +19,25 @@ export type FreezeResult =
   | { ok: true; prediction: PredictionRow; created: boolean }
   // 422: the profile carries no verdict-driving input (grade/English/budget all
   // absent), so there is nothing to freeze but a fabricated zero-floored verdict.
-  | { ok: false; status: 404 | 409 | 422; error: string };
+  // 503: the catalogue could not be read at all — distinct from the 404/409 below,
+  // which are answers about a catalogue that DID respond (MV-133).
+  | { ok: false; status: 404 | 409 | 422 | 503; error: string };
+
+/**
+ * A catalogue outage is not a verdict about the program. Without this, a failed read
+ * surfaces as "unknown program" (404) or "program is missing its university" (409) —
+ * both of which tell the student their shortlisted program is broken or gone. Anything
+ * that is not a catalogue read error is a real bug and keeps propagating.
+ */
+function catalogueOutage(err: unknown, context: Record<string, unknown>): FreezeResult {
+  if (!isCatalogReadError(err)) throw err;
+  console.error("[outcomes/freeze] catalogue read failed", { ...context, err });
+  return {
+    ok: false,
+    status: 503,
+    error: "the program catalogue is unavailable right now — try again in a moment",
+  };
+}
 
 /**
  * Freeze the per-program prediction for a signed-in user (MV-08, F16).
@@ -42,12 +62,22 @@ export async function freezePredictionForProgram(
     return { ok: false, status: 409, error: "no primary assessment to anchor the prediction" };
   }
 
-  const program = await getProgram(db, programId);
+  let program: Program | null;
+  try {
+    program = await getProgram(db, programId);
+  } catch (err) {
+    return catalogueOutage(err, { owner, programId });
+  }
   if (!program) {
     return { ok: false, status: 404, error: "unknown program" };
   }
 
-  const universities = await listAllUniversities(db);
+  let universities: University[];
+  try {
+    universities = await listAllUniversities(db);
+  } catch (err) {
+    return catalogueOutage(err, { owner, programId });
+  }
   const university = universities.find((u) => u.id === program.universityId);
   if (!university) {
     return { ok: false, status: 409, error: "program is missing its university" };

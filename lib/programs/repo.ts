@@ -2,31 +2,37 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type { Program, University } from "./types";
+import { CatalogReadError } from "./errors";
 
 type DB = SupabaseClient<Database>;
 
+// PostgREST reports a failed read as an `{ error }` value, not a throw. Returning [] on
+// that error made an outage indistinguishable from an empty catalogue, and the surfaces
+// render the empty one as "no programs found" (MV-133). Every read below throws on a real
+// error and reserves [] / null for the query that answered with nothing.
+
 export async function listAllPrograms(db: DB): Promise<Program[]> {
   const { data, error } = await db.from("programs").select("*").order("name");
-  if (error || !data) return [];
-  return data.map(mapProgram);
+  if (error) throw new CatalogReadError("programs", error);
+  return (data ?? []).map(mapProgram);
 }
 
 export async function listProgramsForField(db: DB, field: string): Promise<Program[]> {
   const { data, error } = await db.from("programs").select("*").eq("field", field).order("name");
-  if (error || !data) return [];
-  return data.map(mapProgram);
+  if (error) throw new CatalogReadError("programs", error);
+  return (data ?? []).map(mapProgram);
 }
 
 export async function listProgramsForUniversity(db: DB, universityId: string): Promise<Program[]> {
   const { data, error } = await db.from("programs").select("*").eq("university_id", universityId).order("name");
-  if (error || !data) return [];
-  return data.map(mapProgram);
+  if (error) throw new CatalogReadError("programs", error);
+  return (data ?? []).map(mapProgram);
 }
 
 export async function getProgram(db: DB, id: string): Promise<Program | null> {
   const { data, error } = await db.from("programs").select("*").eq("id", id).maybeSingle();
-  if (error || !data) return null;
-  return mapProgram(data);
+  if (error) throw new CatalogReadError("programs", error);
+  return data ? mapProgram(data) : null;
 }
 
 export async function listAllUniversities(db: DB): Promise<University[]> {
@@ -35,8 +41,8 @@ export async function listAllUniversities(db: DB): Promise<University[]> {
     .select("*")
     .order("ranking_tier")
     .order("name");
-  if (error || !data) return [];
-  return data.map(mapUniversity);
+  if (error) throw new CatalogReadError("universities", error);
+  return (data ?? []).map(mapUniversity);
 }
 
 function mapProgram(r: Database["public"]["Tables"]["programs"]["Row"]): Program {
