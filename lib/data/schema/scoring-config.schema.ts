@@ -10,7 +10,18 @@ import { FindingId, IsoDate, Volatility, missingReverifyBy } from "./common";
  * explicitly tagged `source: "internal-heuristic"` — so an unsourced value can
  * never silently masquerade as sourced, yet honest heuristics aren't forced to
  * invent finding refs.
+ *
+ * The third class (MV-132) is a value read from a named authority that the
+ * findings ledger cannot hold: a market rate is dynamic, so it gets rejected as a
+ * finding (see D.003/D.004, `rejected:dynamic-data`) yet is still externally
+ * sourced, not a heuristic. Such a value may cite its authority URL *only* if it
+ * also carries both `lastVerified` and `reverifyBy` — citing an authority means
+ * committing to re-read it, and that commitment is what stops a dated citation
+ * from quietly ageing into a false one.
  */
+const authorityUrl = (source: string | undefined): boolean =>
+  source !== undefined && /^https?:\/\//.test(source);
+
 export const ConfigProvenanceSchema = z
   .object({
     findingRefs: z.array(FindingId),
@@ -21,9 +32,16 @@ export const ConfigProvenanceSchema = z
     volatility: Volatility.optional(),
     reverifyBy: IsoDate.optional(),
   })
-  .refine((p) => p.findingRefs.length >= 1 || p.source === "internal-heuristic", {
-    message: "a config value needs ≥1 findingRef or source:'internal-heuristic'",
-  })
+  .refine(
+    (p) =>
+      p.findingRefs.length >= 1 ||
+      p.source === "internal-heuristic" ||
+      (authorityUrl(p.source) && p.lastVerified !== undefined && p.reverifyBy !== undefined),
+    {
+      message:
+        "a config value needs ≥1 findingRef, source:'internal-heuristic', or an authority URL carrying both lastVerified and reverifyBy",
+    },
+  )
   .refine((p) => !missingReverifyBy(p), {
     message: "non-stable volatility requires a reverifyBy date",
   });

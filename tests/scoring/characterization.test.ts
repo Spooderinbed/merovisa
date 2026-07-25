@@ -48,6 +48,16 @@ import type { AssessmentResult, Currency, StudentProfile } from "@/lib/scoring/t
  * to v0.5.0. The CGPA conversion is covered by tests/scoring/grade-normalize.test.ts
  * and the grade-system cases in tests/scoring/academic.test.ts.
  *
+ * config-v4 (RULE_VERSION unchanged) corrected the FX table (MV-132 / audit F-20):
+ * the rates are now read from their publishing authorities (NRB for the Nepal
+ * corridor, U.S. Treasury elsewhere) instead of undated approximations that had
+ * drifted ~20% — NPR 90 per A$1 where NRB published ~108. This is a DATA correction,
+ * not a rule change, but it moves every non-USD budget, so it is an intended golden
+ * change: each NPR fixture's budget was restated to preserve the USD intent its own
+ * comment documents (e.g. possible-boundary-low is still exactly 20,000 USD, so it
+ * still lands on the weighted-50 boundary it exists to pin), and the AU capacity
+ * floor's USD expression moved from ≈49.5k to ≈51.9k with the corrected AUD leg.
+ *
  * Determinism: the only time-dependent input is the graduation gap
  * (`computeGapYears` reads `new Date()`). Each profile's `graduationYear` is
  * expressed relative to the current year, so the *gap* — and therefore the whole
@@ -156,7 +166,7 @@ const CASES: Case[] = [
       englishStatus: "taken",
       englishScore: 6.5,
       destination: "australia",
-      budget: 7000000, // NPR ≈ 51.9k USD — clears the AU DHA capacity floor (≈49.5k USD)
+      budget: 8100000, // NPR ≈ 52.4k USD — clears the AU DHA capacity floor (≈51.9k USD)
       budgetCurrency: "NPR",
       fundingSource: "education-loan",
       goal: "fastest-admission",
@@ -175,7 +185,7 @@ const CASES: Case[] = [
       gapReasons: ["preparing"],
       englishStatus: "not-taken",
       destination: "canada",
-      budget: 2700000, // NPR = 20,000 USD; sibling of reach-weighted-boundary (grade −1)
+      budget: 3090400, // NPR = 20,000 USD; sibling of reach-weighted-boundary (grade −1)
       budgetCurrency: "NPR",
       fundingSource: "scholarship-dependent",
       goal: "lowest-cost",
@@ -194,7 +204,7 @@ const CASES: Case[] = [
       gapReasons: ["preparing"],
       englishStatus: "not-taken",
       destination: "canada",
-      budget: 2700000, // NPR = 20,000 USD; same budget as possible-boundary-low, 1 grade lower
+      budget: 3090400, // NPR = 20,000 USD; same budget as possible-boundary-low, 1 grade lower
       budgetCurrency: "NPR",
       fundingSource: "scholarship-dependent",
       goal: "lowest-cost",

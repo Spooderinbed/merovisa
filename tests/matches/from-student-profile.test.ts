@@ -55,7 +55,8 @@ describe("profileToMatchInputs", () => {
 
   it("converts the budget to AUD and stamps the Nepal policy level", () => {
     const inputs = profileToMatchInputs(base);
-    expect(inputs.userBudgetAud).toBe(50_000); // 4,500,000 NPR ÷ 90 (canonical FX_RATES: NPR 135/USD, AUD 1.5/USD)
+    // 4,500,000 NPR ÷ 108.14 (canonical FX_RATES: NPR 154.52/USD, AUD 1.4289/USD — NRB)
+    expect(inputs.userBudgetAud).toBeCloseTo(41_613, 0);
     expect(inputs.policy.nepalAssessmentLevel).toBe(NEPAL_ASSESSMENT_LEVEL);
   });
 });
