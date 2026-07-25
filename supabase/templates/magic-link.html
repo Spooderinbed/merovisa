@@ -1,0 +1,38 @@
+<!--
+  Sign-in email for an account that already exists (GoTrue "Magic Link" template).
+
+  Two ways in, because inboxes are read on whatever device is nearest:
+    - the 6-digit code, typed back into the tab that asked for it;
+    - the link, which carries a token_hash to /auth/callback for server-side
+      verification (no PKCE verifier to lose, so it survives mail apps that open
+      links in their own in-app browser).
+
+  {{ .RedirectTo }} is the emailRedirectTo built by /api/auth/email/start; it always
+  carries at least ?next=, so appending &token_hash= is safe. `type=magiclink` must
+  match the token GoTrue issued for this template — see confirm-signup.html for the
+  new-account variant, which issues a `signup` token instead.
+
+  Styles are inline: email clients strip <style> blocks.
+-->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background-color: #f4f1ea; color: #211d21; padding: 32px 16px;">
+  <div style="max-width: 460px; margin: 0 auto; background-color: #fffdf8; border: 1px solid #e4ded2; border-radius: 16px; padding: 32px;">
+    <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 600; color: #211d21;">Your sign-in code</h1>
+    <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.55; color: #5b555b;">
+      Enter this code on the sign-in screen you already have open.
+    </p>
+
+    <p style="margin: 0 0 8px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 30px; letter-spacing: 8px; font-weight: 600; color: #6a2b57;">
+      {{ .Token }}
+    </p>
+    <p style="margin: 0 0 28px; font-size: 13px; color: #857f85;">This code expires in one hour.</p>
+
+    <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.55; color: #5b555b;">
+      Or sign in straight from this email:
+      <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=magiclink" style="color: #6a2b57;">Sign in to MeroVisa</a>
+    </p>
+
+    <p style="margin: 0; padding-top: 20px; border-top: 1px solid #e4ded2; font-size: 13px; line-height: 1.55; color: #857f85;">
+      Didn't ask for this? You can ignore this email — nobody can sign in without the code above.
+    </p>
+  </div>
+</div>

@@ -164,7 +164,13 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# The /auth/callback entries are the landing pad for Google OAuth and for emailed
+# sign-in links (MV-147); without them the local stack refuses the redirect.
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://127.0.0.1:3000/auth/callback",
+  "http://localhost:3000/auth/callback",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -227,7 +233,11 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# MV-147: must stay true. With auto-confirm on, GoTrue can settle a first-time
+# email signup without ever mailing anything — the student would sit on the code
+# screen waiting for a code that was never sent. Google sign-in is unaffected
+# (Google hands us an already-verified address).
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -246,6 +256,21 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# MV-147 — email sign-in. The stock templates send only a link to GoTrue's own
+# /verify endpoint, which hands the session back in a URL fragment our server-side
+# callback cannot read: a dead end. These templates carry the 6-digit code AND a
+# link addressed to /auth/callback with a token_hash we can verify. Both are
+# required because signInWithOtp uses `confirmation` for an address it has never
+# seen and `magic_link` for one it has. The same two must be pasted into the hosted
+# dashboard for production — see docs/email-auth-setup.md.
+[auth.email.template.magic_link]
+subject = "Your MeroVisa sign-in code"
+content_path = "./supabase/templates/magic-link.html"
+
+[auth.email.template.confirmation]
+subject = "Your MeroVisa sign-in code"
+content_path = "./supabase/templates/confirm-signup.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

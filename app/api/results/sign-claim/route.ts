@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { signClaim } from "@/lib/auth/hmac-claim";
-
-const CLAIM_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+import { CLAIM_TTL_MS, signClaim } from "@/lib/auth/hmac-claim";
 
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;

@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmailSignIn } from "@/components/auth/email-sign-in";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface AuthCardProps {
   nextPath?: string;
+  /** Signed claim token when the visitor arrived from an anonymous assessment. */
+  claimToken?: string | null;
 }
 
-export function AuthCard({ nextPath }: AuthCardProps) {
-  const [open, setOpen] = useState(false);
-
+export function AuthCard({ nextPath, claimToken }: AuthCardProps) {
   const continueWithGoogle = async () => {
     const supabase = createSupabaseBrowserClient();
     const destination = nextPath ?? "/dashboard";
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+    const params = new URLSearchParams({ next: destination });
+    if (claimToken) params.set("claim", claimToken);
+    const redirectTo = `${window.location.origin}/auth/callback?${params.toString()}`;
     await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
   };
 
@@ -48,19 +50,16 @@ export function AuthCard({ nextPath }: AuthCardProps) {
           Your profile is private. We never sell your data.
         </p>
 
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="mt-2 text-center font-mono text-small uppercase tracking-wide text-ink-faint hover:text-ink"
-        >
-          {open ? "Hide other options" : "Other ways to sign in →"}
-        </button>
+        {/* No Google account, or no wish to hand Google your study plans? The email
+            path is on the same screen rather than behind a disclosure — for anyone
+            who can't use the primary button, a hidden alternative is still a wall. */}
+        <div className="mt-2 flex items-center gap-3" aria-hidden>
+          <span className="h-px flex-1 bg-line" />
+          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">or</span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
 
-        {open ? (
-          <p role="status" className="mt-2 border-t border-line pt-4 text-meta text-ink-soft">
-            Email sign-in isn&apos;t ready yet — Google is the only way to sign in for now.
-          </p>
-        ) : null}
+        <EmailSignIn claimToken={claimToken} nextPath={nextPath} />
       </Card>
     </div>
   );

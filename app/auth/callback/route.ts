@@ -1,66 +1,52 @@
 import { NextResponse } from "next/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
-import { safeNext } from "@/lib/auth/safe-next";
-import { verifyClaim } from "@/lib/auth/hmac-claim";
+import { resolveSignInDestination } from "@/lib/auth/finish-sign-in";
+import { resolveSiteOrigin } from "@/lib/auth/site-origin";
 
 /**
- * Resolve the public site origin for post-auth redirects.
- *
- * Behind Vercel's load balancer, `new URL(request.url).origin` is the function's INTERNAL
- * host (localhost), so trusting it bounces production sign-ins to localhost. Precedence:
- *   1. NEXT_PUBLIC_SITE_URL — explicit, deterministic (set this in Vercel → can't be wrong)
- *   2. x-forwarded-host / host header — the proxy's public host
- *   3. url.origin — local dev (NODE_ENV=development) or no proxy headers
+ * Email links arrive as a `token_hash` plus a type. Only these are ours to verify —
+ * an unrecognised `?type=` is refused rather than forwarded to Supabase. `invite`
+ * is here so a future invitation link lands on this same claim/bootstrap path.
  */
-function resolveSiteOrigin(request: Request, url: URL): string {
-  if (process.env.NODE_ENV === "development") return url.origin;
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
-  if (configured) return configured;
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  if (host) {
-    const proto = request.headers.get("x-forwarded-proto") ?? "https";
-    return `${proto}://${host}`;
-  }
-  return url.origin;
+const EMAIL_OTP_TYPES = ["email", "magiclink", "signup", "recovery", "invite", "email_change"] as const;
+
+function emailOtpType(raw: string | null): EmailOtpType | null {
+  if (!raw) return "email";
+  return (EMAIL_OTP_TYPES as readonly string[]).includes(raw) ? (raw as EmailOtpType) : null;
 }
 
+/**
+ * The one landing pad for every sign-in method.
+ *
+ * Google OAuth returns a `code` to exchange; the emailed sign-in link returns a
+ * `token_hash` to verify. Both then hand off to `resolveSignInDestination`, so
+ * claiming, profile bootstrap, and the final landing page are identical whichever
+ * way the student signed in.
+ */
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const claimToken = url.searchParams.get("claim");
+  const tokenHash = url.searchParams.get("token_hash");
+  const claim = url.searchParams.get("claim");
   const next = url.searchParams.get("next");
   const origin = resolveSiteOrigin(request, url);
 
-  if (!code) return NextResponse.redirect(`${origin}/assess`);
+  if (!code && !tokenHash) return NextResponse.redirect(`${origin}/assess`);
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return NextResponse.redirect(`${origin}/assess?error=auth`);
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) return NextResponse.redirect(`${origin}/assess?error=auth`);
+  } else {
+    const type = emailOtpType(url.searchParams.get("type"));
+    if (!type) return NextResponse.redirect(`${origin}/assess?error=auth`);
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash!, type });
+    if (error) return NextResponse.redirect(`${origin}/assess?error=auth`);
+  }
 
   const { data } = await supabase.auth.getUser();
-  const userId = data.user?.id;
-  const googleName = data.user?.user_metadata?.full_name as string | undefined;
-  const email = data.user?.email ?? undefined;
-
-  let claimedAssessmentId: string | null = null;
-  if (claimToken) {
-    const verified = verifyClaim(claimToken);
-    if (!verified) {
-      return NextResponse.redirect(`${origin}/assess?error=invalid-claim`);
-    }
-    claimedAssessmentId = verified.assessmentId;
-  }
-
-  if (claimedAssessmentId && userId) {
-    const { claimed } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
-      assessmentId: claimedAssessmentId, userId, googleName, email,
-    });
-    if (!claimed) return NextResponse.redirect(`${origin}/assess?error=expired`);
-    return NextResponse.redirect(`${origin}/assessment/${claimedAssessmentId}`);
-  }
-
-  const fallback = safeNext(next) ?? "/dashboard";
-  return NextResponse.redirect(`${origin}${fallback}`);
+  const destination = await resolveSignInDestination(data.user, { claim, next });
+  return NextResponse.redirect(`${origin}${destination}`);
 }

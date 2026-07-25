@@ -9,14 +9,15 @@ import { signClaim } from "@/lib/auth/hmac-claim";
 
 const ASSESSMENT_UUID = "11815637-f603-4821-8dd0-d9e52560c4f6";
 
-const { exchangeCodeForSession, getUser, claimAndBootstrapProfile } = vi.hoisted(() => ({
+const { exchangeCodeForSession, verifyOtp, getUser, claimAndBootstrapProfile } = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
+  verifyOtp: vi.fn(),
   getUser: vi.fn(),
   claimAndBootstrapProfile: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: async () => ({ auth: { exchangeCodeForSession, getUser } }),
+  createSupabaseServerClient: async () => ({ auth: { exchangeCodeForSession, verifyOtp, getUser } }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/assessments/claim", () => ({ claimAndBootstrapProfile }));
@@ -28,6 +29,7 @@ const url = (qs: string) => new Request(`http://localhost/auth/callback?${qs}`);
 describe("GET /auth/callback", () => {
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
+    verifyOtp.mockReset();
     getUser.mockReset();
     claimAndBootstrapProfile.mockReset();
   });
@@ -62,11 +64,54 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toContain("error=auth");
   });
 
-  it("redirects home when there is no code", async () => {
+  it("redirects home when there is neither a code nor an emailed token", async () => {
     const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
     const res = await GET(url(`claim=${encodeURIComponent(claimToken)}`));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/assess");
+  });
+
+  // MV-147 — the emailed sign-in link. Supabase's email templates hand us a
+  // `token_hash`, not an OAuth `code`, and verifying it server-side means the
+  // link works even when the mail app opens it in a different browser (no PKCE
+  // verifier to lose). It must land exactly where the Google code path lands.
+  it("verifies an emailed token_hash and claims + lands identically to the Google path", async () => {
+    verifyOtp.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", email: "aarav@example.com" } } });
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: true });
+
+    const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
+    const res = await GET(url(`token_hash=abc123&type=email&claim=${encodeURIComponent(claimToken)}`));
+
+    expect(verifyOtp).toHaveBeenCalledWith({ token_hash: "abc123", type: "email" });
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ assessmentId: ASSESSMENT_UUID, userId: "user-1" }),
+    );
+    expect(res.headers.get("location")).toContain(`/assessment/${ASSESSMENT_UUID}`);
+  });
+
+  it("redirects to /assess?error=auth when the emailed token is expired or already used", async () => {
+    verifyOtp.mockResolvedValue({ error: { message: "Token has expired" } });
+    const res = await GET(url("token_hash=stale&type=email"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("error=auth");
+    expect(claimAndBootstrapProfile).not.toHaveBeenCalled();
+  });
+
+  it("defaults an emailed token with no type to the email OTP type", async () => {
+    verifyOtp.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    await GET(url("token_hash=abc123"));
+    expect(verifyOtp).toHaveBeenCalledWith({ token_hash: "abc123", type: "email" });
+  });
+
+  it("refuses an unrecognised ?type= rather than passing it through to Supabase", async () => {
+    const res = await GET(url("token_hash=abc123&type=phone_change"));
+    expect(verifyOtp).not.toHaveBeenCalled();
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("error=auth");
   });
 
   it("redirects to /dashboard when there is no claim", async () => {

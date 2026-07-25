@@ -25,11 +25,21 @@ describe("ConversionPrompt", () => {
     expect(startClaimOAuth).toHaveBeenCalledWith(ASSESSMENT_UUID);
   });
 
+  it("offers an email route for students with no Google account (MV-147)", () => {
+    render(<ConversionPrompt assessmentId={ASSESSMENT_UUID} />);
+    expect(screen.getByRole("link", { name: /email/i })).toHaveAttribute(
+      "href",
+      `/auth?assessment=${ASSESSMENT_UUID}`,
+    );
+  });
+
   describe("when the assessment failed to persist (id:null)", () => {
     it("shows an honest could-not-save message instead of a dead Continue button", () => {
       render(<ConversionPrompt assessmentId={null} onRetrySave={() => {}} />);
       expect(screen.getByText(/couldn.t save/i)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Continue with Google/i })).not.toBeInTheDocument();
+      // Nothing to claim, so the email route must not appear either.
+      expect(screen.queryByRole("link", { name: /email/i })).not.toBeInTheDocument();
     });
 
     it("retries the save in place via a button — not a link that wipes the wizard and results", async () => {

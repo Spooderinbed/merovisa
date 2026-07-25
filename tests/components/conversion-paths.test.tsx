@@ -85,6 +85,18 @@ describe("ConversionPaths", () => {
     expect(screen.queryByText(/come back later/i)).not.toBeInTheDocument();
   });
 
+  // MV-147: email sign-in exists now, so the card must not promise that Google is
+  // the only way to keep an assessment — that copy would send a student without a
+  // Google account straight to a consultancy.
+  it("offers an email route and no longer frames Google as the only way to keep it", () => {
+    render(<ConversionPaths assessmentId={ASSESSMENT_UUID} />);
+    expect(screen.getByRole("link", { name: /email/i })).toHaveAttribute(
+      "href",
+      `/auth?assessment=${ASSESSMENT_UUID}`,
+    );
+    expect(screen.queryByText(/account with Google to keep it/i)).not.toBeInTheDocument();
+  });
+
   describe("when the assessment failed to persist (id:null)", () => {
     it("shows an honest could-not-save message instead of a dead Continue button", () => {
       render(<ConversionPaths assessmentId={null} onRetrySave={() => {}} />);
