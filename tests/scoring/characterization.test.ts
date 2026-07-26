@@ -352,7 +352,7 @@ const CASES: Case[] = [
   },
   {
     name: "booked-english-aud",
-    note: "englishStatus 'booked' (neither taken nor not-taken → no visa english adjustment) + AUD currency (FX /1.5) + gap 2 retook-exams (reason not work/venture → risk factor) + mixed; AUD 60k ≈ 40k USD sits in the AU gate's block-strong band → financial capped at 49",
+    note: "englishStatus 'booked' (neither taken nor not-taken → no visa english adjustment) + AUD currency (FX /1.4289) + gap 2 retook-exams (reason not work/venture → risk factor) + mixed; AUD 60k ≈ 42k USD sits in the AU gate's block-strong band → financial capped at 49",
     profile: {
       homeCountry: "Nepal",
       educationLevel: "bachelors",

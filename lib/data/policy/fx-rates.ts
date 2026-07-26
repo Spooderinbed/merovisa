@@ -42,13 +42,20 @@ const REVERIFY_BY = "2026-10-25";
 /**
  * How long an FX snapshot may stand before it must be re-read.
  *
- * Not a TTL dressed up as a deadline: it is the window in which observed NPR/AUD
- * drift stays small enough that it cannot move a *banded* verdict on its own. NRB
- * published ~109.5 NPR/AUD on 2026-06-05 (the repo's own D.003/D.004) and ~108.1
- * on 2026-07-24 — ~1.3% over seven weeks. A quarter therefore keeps expected drift
- * well inside the ~5% that could shift a budget across the DHA capacity cliff,
- * while the guard forces a fresh read before it compounds into the ~20% error this
- * card fixed.
+ * A cadence, not an expiry: an FX rate has no date on which it "changes", so the
+ * deadline is a periodic re-read (the doctrine the harvested DHA datasets use).
+ * A quarter is calibrated against observed drift — NRB published ~109.5 NPR/AUD on
+ * 2026-06-05 (the repo's own D.003/D.004) and ~108.1 on 2026-07-24, ~1.3% over
+ * seven weeks — so it forces a fresh read long before drift can compound into the
+ * ~20% error this card fixed.
+ *
+ * What it does NOT do, deliberately stated so nobody reads more safety into it than
+ * exists: the DHA capacity gate is a hard cliff, not a tolerance band, so a student
+ * sitting within ~1% of the floor can be moved across it by drift far smaller than a
+ * quarter's worth — and `rulesStale` stays false until the deadline arrives. This
+ * cadence bounds how *wrong* the rate can get, not how *close to the cliff* a
+ * particular budget sits. Narrowing that exposure needs a margin-aware treatment of
+ * the gate itself (e.g. a "too close to call" band), which is a separate slice.
  */
 export const FX_REVERIFY_CADENCE_DAYS = 92;
 

@@ -131,19 +131,24 @@ describe("FX staleness reaches the verdict surface (MV-04 degrade seam)", () => 
     expect(fxDeadline()).toBe(earliest);
   });
 
-  it("once the FX cadence elapses, the verdict degrades — on FX alone", () => {
+  it("once the FX cadence elapses, the verdict degrades", () => {
     const after = dayAfter(fxDeadline());
-    const stale = staleScoringFacts(after).map((f) => f.name);
-    expect(stale).toContain("FX_RATES");
-    // FX is the *only* thing stale at that moment (every other input's deadline
-    // is further out), so this proves FX by itself trips the runtime degrade
-    // rather than riding along with some other fact.
-    expect(stale).toEqual(["FX_RATES"]);
+    expect(staleScoringFacts(after).map((f) => f.name)).toContain("FX_RATES");
     expect(scoringRulesStale(after)).toBe(true);
   });
 
   it("and it does not degrade before the deadline arrives", () => {
     const before = new Date(Date.parse(fxDeadline()) - MS_PER_DAY);
     expect(staleScoringFacts(before).map((f) => f.name)).not.toContain("FX_RATES");
+  });
+
+  it("FX is what trips it — the transition happens on the FX deadline, not another fact's", () => {
+    // Asserted as a transition rather than `toEqual(["FX_RATES"])`: that exact-array
+    // form would go red if any unrelated input were later given an earlier deadline,
+    // a false failure during routine provenance maintenance. Crossing FX's own
+    // deadline flipping the whole degrade from off to on is the property that matters.
+    const before = new Date(Date.parse(fxDeadline()) - MS_PER_DAY);
+    expect(scoringRulesStale(before)).toBe(false);
+    expect(scoringRulesStale(dayAfter(fxDeadline()))).toBe(true);
   });
 });

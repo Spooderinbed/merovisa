@@ -124,6 +124,23 @@ describe("scoreFinancial — DHA capacity gate (Australia)", () => {
     expect(npr.value).toBe(49);
   });
 
+  it("MV-132: the same nominal NPR budget that used to clear the reach cliff no longer does", () => {
+    // The correction's actual effect on a student, pinned deliberately.
+    //
+    // The fixtures elsewhere were restated to preserve their documented USD intent,
+    // so the characterization golden shows no verdict change — which is correct, but
+    // it means nothing else records that an UNCHANGED nominal budget now scores
+    // differently. NPR 5,400,000 was the Aarav persona's budget: ≈40,000 USD at the
+    // old (wrong) 135, comfortably above the reach cliff; ≈34,947 USD at NRB's 154.52,
+    // below it. Same rupees, worse honest answer — the visa officer was always going
+    // to apply the real rate.
+    const npr = (amount: number) => scoreFinancial({ ...au, budget: amount, budgetCurrency: "NPR" });
+    expect(npr(5_400_000).value).toBe(29); // forced reach: below the reach cliff
+    expect(reachCliffUsd()).toBeGreaterThan(5_400_000 / FX_RATES.NPR!);
+    // And the restated figure the persona now uses does clear it, as its comment claims.
+    expect(npr(6_200_000).value).toBe(49);
+  });
+
   it("pins the capacity cliff: just-under caps to 49, just-over is uncapped", () => {
     expect(scoreFinancial({ ...au, budget: floorUsd() - 100 }).value).toBe(49);
     expect(scoreFinancial({ ...au, budget: floorUsd() + 100 }).value).toBeGreaterThan(49);

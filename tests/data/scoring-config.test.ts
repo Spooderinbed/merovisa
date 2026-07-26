@@ -182,6 +182,26 @@ describe("scoring config — provenance discipline", () => {
     expect(FxRateSchema.safeParse(citedNoDeadline).success).toBe(false);
   });
 
+  it("rejects the ways an unsourced value could dress itself as authority-cited", () => {
+    // Each of these once satisfied the authority branch. A scoring constant must not
+    // be able to buy provenance with a string that can never be opened and checked,
+    // or with a deadline that can never arrive.
+    const cited = (provenance: Record<string, unknown>) => ({ value: 1, provenance });
+    const NRB = "https://www.nrb.org.np/forex/";
+    const cases: Array<[string, Record<string, unknown>]> = [
+      ["no host at all", { findingRefs: [], source: "https://", lastVerified: "2026-07-25", reverifyBy: "2026-10-25" }],
+      ["hostname without a dot", { findingRefs: [], source: "https://localhost", lastVerified: "2026-07-25", reverifyBy: "2026-10-25" }],
+      // ISO-SHAPED but not a real date: it sorts as indefinitely-future in the
+      // lexicographic staleness comparison, parking the deadline out of reach.
+      ["impossible calendar date", { findingRefs: [], source: NRB, lastVerified: "2026-07-25", reverifyBy: "9999-99-99" }],
+      ["deadline before its own verification", { findingRefs: [], source: NRB, lastVerified: "2026-07-25", reverifyBy: "2026-07-24" }],
+      ["deadline equal to its own verification", { findingRefs: [], source: NRB, lastVerified: "2026-07-25", reverifyBy: "2026-07-25" }],
+    ];
+    for (const [why, provenance] of cases) {
+      expect(FxRateSchema.safeParse(cited(provenance)).success, why).toBe(false);
+    }
+  });
+
   it("the FX table is authority-sourced, not heuristic, and carries a live deadline", () => {
     const p = Config.CONFIG_PROVENANCE.FX_RATES!;
     expect(p.source).toMatch(/^https:\/\//);
