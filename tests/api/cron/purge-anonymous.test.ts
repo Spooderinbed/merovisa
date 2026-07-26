@@ -48,6 +48,17 @@ describe("GET /api/cron/purge-anonymous — the gate fails closed", () => {
     expect(purgeUnclaimedAnonymousAssessments).not.toHaveBeenCalled();
   });
 
+  // Without this the byte comparison is never exercised on a rejection: every other
+  // negative differs in LENGTH, so the cheap length check short-circuits and
+  // crypto.timingSafeEqual could be deleted outright with the suite still green.
+  it("404s a wrong secret of exactly the right length", async () => {
+    const sameLengthWrong = "X".repeat(SECRET.length);
+    expect(sameLengthWrong).toHaveLength(SECRET.length);
+    const res = await GET(req(`Bearer ${sameLengthWrong}`));
+    expect(res.status).toBe(404);
+    expect(purgeUnclaimedAnonymousAssessments).not.toHaveBeenCalled();
+  });
+
   it("404s a bare token that is not a Bearer header", async () => {
     const res = await GET(req(SECRET));
     expect(res.status).toBe(404);
@@ -55,13 +66,51 @@ describe("GET /api/cron/purge-anonymous — the gate fails closed", () => {
   });
 
   // A rate limiter no-ops open when unconfigured; a delete trigger must not.
-  it("refuses to run at all when CRON_SECRET is unset, and logs the misconfiguration", async () => {
+  it("refuses to run at all when CRON_SECRET is unset", async () => {
     delete process.env.CRON_SECRET;
-    const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await GET(req("Bearer "));
     expect(res.status).toBe(404);
     expect(purgeUnclaimedAnonymousAssessments).not.toHaveBeenCalled();
+  });
+});
+
+// The failure mode of a fail-closed gate is retention silently stopping while /trust keeps
+// promising students deletion — so a rejected SCHEDULED run has to be loud.
+describe("GET /api/cron/purge-anonymous — a wedged gate raises the alarm", () => {
+  const cronReq = (auth?: string) =>
+    new Request("http://localhost/api/cron/purge-anonymous", {
+      headers: { "x-vercel-cron": "1", ...(auth ? { authorization: auth } : {}) },
+    });
+
+  beforeEach(() => {
+    purgeUnclaimedAnonymousAssessments.mockReset().mockResolvedValue(cleanReport);
+  });
+  afterEach(() => {
+    delete process.env.CRON_SECRET;
+    vi.restoreAllMocks();
+  });
+
+  it("logs when the scheduler is rejected because the secret is unset", async () => {
+    delete process.env.CRON_SECRET;
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await GET(cronReq("Bearer anything"))).status).toBe(404);
     expect(err).toHaveBeenCalled();
+  });
+
+  // Rotating CRON_SECRET in Vercel without redeploying wedges the gate exactly this way.
+  it("logs when the scheduler is rejected because the secret no longer matches", async () => {
+    process.env.CRON_SECRET = SECRET;
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await GET(cronReq("Bearer stale-rotated-secret"))).status).toBe(404);
+    expect(err).toHaveBeenCalled();
+  });
+
+  // …but a scanner on the same URL must not be able to drown that daily signal.
+  it("stays silent for unauthenticated traffic that is not the scheduler", async () => {
+    delete process.env.CRON_SECRET;
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await GET(req())).status).toBe(404);
+    expect(err).not.toHaveBeenCalled();
   });
 });
 
@@ -82,6 +131,21 @@ describe("GET /api/cron/purge-anonymous — reporting", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({ dryRun: true, purged: 0 });
     expect(purgeUnclaimedAnonymousAssessments).toHaveBeenCalledWith({ tag: "admin" }, { dryRun: true });
+  });
+
+  // The rehearsal switch is typed by hand, once, against production. A near-miss spelling
+  // must NOT silently arm the irreversible branch.
+  it.each(["?dryRun", "?dryrun=1", "?dryRun=true", "?dryRun=0"])(
+    "treats %s as a dry run rather than falling through to a real delete",
+    async (query) => {
+      await GET(req(`Bearer ${SECRET}`, query));
+      expect(purgeUnclaimedAnonymousAssessments).toHaveBeenCalledWith({ tag: "admin" }, { dryRun: true });
+    },
+  );
+
+  it("only arms the real delete when the parameter is absent entirely", async () => {
+    await GET(req(`Bearer ${SECRET}`));
+    expect(purgeUnclaimedAnonymousAssessments).toHaveBeenCalledWith({ tag: "admin" }, { dryRun: false });
   });
 
   it("logs the counts, which are the only record that outlives the deleted rows", async () => {

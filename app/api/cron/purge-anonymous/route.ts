@@ -14,21 +14,18 @@ import { purgeUnclaimedAnonymousAssessments } from "@/lib/assessments/purge";
  * The gate FAILS CLOSED, deliberately unlike `lib/rate-limit/upstash.ts` — a rate
  * limiter that no-ops when unconfigured is merely permissive, but a delete trigger that
  * no-ops when unconfigured is an internet-reachable "destroy rows" button. An absent or
- * wrong secret returns a bare 404, so the route is indistinguishable from one that does
- * not exist (the `/api/dev/sign-in` precedent). A missing secret is also logged, because
- * the failure mode of a fail-closed gate is a purge that silently stops running.
+ * wrong secret returns 404 rather than 401, so the route does not advertise itself as a
+ * gated endpoint worth attacking (the `/api/dev/sign-in` precedent).
  *
- * `?dryRun=1` reports what WOULD be deleted and deletes nothing — the first production
- * run should use it, be read once, and only then be armed.
+ * `?dryRun` reports what WOULD be deleted and deletes nothing. PRESENCE alone is enough —
+ * any value, either casing — because this is a switch a human types by hand, once, against
+ * production, and a safety control must never degrade to the irreversible mode on a typo.
  */
 export const dynamic = "force-dynamic";
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    console.error("[cron/purge-anonymous] CRON_SECRET is not set — the purge cannot run");
-    return false;
-  }
+  if (!secret) return false;
   const presented = request.headers.get("authorization") ?? "";
   const expected = `Bearer ${secret}`;
   const a = Buffer.from(presented);
@@ -39,10 +36,23 @@ function isAuthorized(request: Request): boolean {
 
 export async function GET(request: Request): Promise<Response> {
   if (!isAuthorized(request)) {
+    // Only a request presenting itself as the platform scheduler earns a log line. That is
+    // the alarm for a wedged gate — a secret left unset, or rotated without a redeploy,
+    // stops retention silently while /trust keeps promising students deletion. Scanners hit
+    // this same URL, so an unconditional log would bury the one daily signal in noise. The
+    // header is a log-throttling hint only and is never part of the gate.
+    if (request.headers.get("x-vercel-cron")) {
+      console.error(
+        "[cron/purge-anonymous] scheduled run REJECTED — CRON_SECRET is unset, or does not match what Vercel signs with. The purge is NOT running.",
+      );
+    }
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const dryRun = new URL(request.url).searchParams.get("dryRun") === "1";
+  // `has`, not `=== "1"`: ?dryRun, ?dryrun=1 and ?dryRun=true must all be safe. Only the
+  // absence of the parameter arms the irreversible branch.
+  const params = new URL(request.url).searchParams;
+  const dryRun = params.has("dryRun") || params.has("dryrun");
 
   let report;
   try {

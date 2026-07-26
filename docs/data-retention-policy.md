@@ -86,14 +86,23 @@ function or trigger.
 - `vercel.json` schedules a daily GET of `/api/cron/purge-anonymous` at 21:15 UTC
   (03:00 Nepal time — the corridor audience's quietest hour).
 - The route authorises a `CRON_SECRET` bearer token with a timing-safe compare and
-  **fails closed**: an absent or wrong secret returns a bare 404 and deletes nothing.
+  **fails closed**: an absent or wrong secret returns 404 and deletes nothing.
   Deliberately unlike `lib/rate-limit/upstash.ts`, whose fail-open shape is right for a
-  limiter and catastrophic for a delete trigger. A missing secret is logged, because the
-  failure mode of a fail-closed gate is a purge that silently stops running.
-- `?dryRun=1` reports what would be deleted and deletes nothing. **Use it for the first
+  limiter and catastrophic for a delete trigger.
+- A **rejected scheduled run is logged** — the alarm for the failure mode of a fail-closed
+  gate, which is retention silently stopping while `/trust` still promises deletion. A
+  secret rotated in Vercel without a redeploy wedges the gate exactly this way. The log
+  fires only for requests carrying the platform's cron header, so internet scanners on the
+  same URL cannot bury the daily signal.
+- **`?dryRun` reports what would be deleted and deletes nothing.** Presence alone is
+  enough — any value, either casing — because a switch a human types by hand against
+  production must not degrade to the irreversible mode on a typo. **Use it for the first
   production run**, read the counts once, then arm the schedule.
-- Each run is bounded (500 rows) and reports `truncated` when it fills the batch, so a
-  backlog is never capped silently.
+- Each run is bounded (100 rows) and reports `truncated` when it fills the batch, so a
+  backlog is never capped silently. The bound is small on purpose: PostgREST puts the
+  delete's id list in the query string, and a few hundred ids exceeds the gateway's
+  header-buffer limit — which would strand the purge in exactly the backlog case the
+  bound exists for. A backlog drains over consecutive days instead.
 - The run logs `{ scanned, purged, skipped, truncated }`. Those counts are the only record
   that outlives the rows — the funnel denominator must come from them and from PostHog,
   never from retained personal data.

@@ -44,6 +44,33 @@ const serviceKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * HARD localhost guard — not a comment, a gate.
+ *
+ * The sibling claim-path smoke only ever writes rows it created and removes them by id, so
+ * pointed at the wrong project it would litter. This file is categorically more dangerous:
+ * `purgeUnclaimedAnonymousAssessments` takes no id filter, so it deletes EVERY overdue
+ * unclaimed row in whatever database it is handed, cascading each row's captured email away
+ * with it. A stale SUPABASE_TEST_URL in a shell — copied from Vercel, or left over from a
+ * data check — would destroy real student data. Refuse to run anywhere but a local stack.
+ */
+const isLocalStack = (u: string | undefined): boolean => {
+  if (!u) return false;
+  try {
+    const { hostname } = new URL(u);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
+  } catch {
+    return false;
+  }
+};
+
+if (url && !isLocalStack(url)) {
+  throw new Error(
+    `anon-purge.itest.ts refuses to run against a non-local database (SUPABASE_TEST_URL=${url}). ` +
+      "This suite issues an unscoped DELETE. Point it at a local `npx supabase start` stack, or unset the variable.",
+  );
+}
+
 describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postgres", () => {
   let admin: SupabaseClient<Database>;
   let userId: string;
@@ -109,7 +136,8 @@ describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postg
     const report = await purgeUnclaimedAnonymousAssessments(admin);
 
     expect(report.failedSteps).toEqual([]);
-    expect(report.purged).toBeGreaterThanOrEqual(1);
+    // Assert on THIS row, not on the run's total: the purge is global, so any other
+    // seeded data in the same local database moves the count around.
     expect(await exists(doomed)).toBe(false);
     // The DELETE went to `assessments` only — this asserts the FK cascade, not the app.
     expect(await leadCount(doomed)).toBe(0);

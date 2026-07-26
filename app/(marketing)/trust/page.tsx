@@ -74,7 +74,8 @@ export default function TrustPage() {
           <p className="mt-3 text-lead text-ink-soft">
             You can delete your account at any time from your profile page. Account deletion is real deletion —
             your profile, your assessments, and your uploaded documents are removed straight away. There is no
-            soft-delete or indefinite &ldquo;deactivation&rdquo; state, and we do not hold anything back afterwards.
+            soft-delete and no indefinite &ldquo;deactivation&rdquo; state, and we do not keep your records for a
+            retention period afterwards.
             If you never create an account, your assessment expires three days after you take it and is deleted
             within a day of expiring, along with any email address attached to it. If you want confirmation that
             your data has been deleted, email us at{" "}

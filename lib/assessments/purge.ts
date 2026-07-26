@@ -42,10 +42,16 @@ export interface PurgeReport {
 }
 
 /**
- * One run is bounded so a backlog can never turn into an unbounded delete; the
- * remainder is picked up by the next run and reported as `truncated`.
+ * One run is bounded so a backlog can never turn into an unbounded delete; the remainder
+ * is picked up by the next run and reported as `truncated`.
+ *
+ * Kept small on purpose. PostgREST carries filters in the query string, so the delete's
+ * `id=in.(...)` list is ~37 bytes per row in the request line; a few hundred ids crosses
+ * the gateway's header-buffer limit and comes back 414 without ever reaching Postgres.
+ * That would strand the purge in exactly the backlog case this bound exists for, so the
+ * batch stays far under it and a backlog drains over consecutive days instead.
  */
-const DEFAULT_BATCH_SIZE = 500;
+const DEFAULT_BATCH_SIZE = 100;
 
 /**
  * Delete unclaimed anonymous assessments that are past both their access expiry and
