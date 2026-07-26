@@ -106,6 +106,37 @@ schedule, and the repo's own ledger (D.003/D.004 recorded NRB at ~109.5 NPR/AUD 
   moves them instead of turning four tests red with hand-recomputed numbers.
 - **Gate:** `tsc --noEmit` clean · `eslint` clean · **2048/2048 tests** (306 files).
 
+## Adversarial review pass (Codex `xhigh`, 2026-07-25) — 6 findings, all fixed in `a24ff84`
+
+**A real blocker, on the surface that matters most.** `rulesStale` is stored in the
+payload and replayed verbatim on read, so a verdict scored before a `reverifyBy` and
+reopened after showed the calm "rules verified …" line instead of the degrade — on
+`/assessment/<id>`, the primary stored-assessment page. The dashboard already
+recomputed live and documents the contract in its own comment; this page never did.
+**FX is what made it reachable**: every other input's deadline is in 2027, FX's is
+2026-10-25. Shipping the sourcing without this would have been a guard that looks
+right and does nothing. Fixed at the replay site (MV-144's normalize-on-read idiom),
+**OR'd not overwritten** so an already-stale verdict is never un-flagged. Red-first.
+
+Also fixed: the authority-URL class accepted `https://` and `9999-99-99` (an
+ISO-shaped non-date that sorts indefinitely-future, parking a deadline out of reach)
+→ now needs a real dotted host, real calendar dates, `reverifyBy > lastVerified`, with
+five bypasses pinned; the cadence comment **overclaimed** (quarterly drift does NOT
+protect a student ~1% from the cliff — the gate is a hard cliff, not a band) → stated
+plainly, margin-aware gating noted as a separate slice; **the missing regression** —
+nothing recorded the correction's effect on an *unchanged* budget, so NPR 5,400,000
+(clears the reach cliff at the old rate, doesn't at the real one) is now pinned; the
+wiring test's brittle `toEqual(["FX_RATES"])` → asserts the transition across FX's own
+deadline; one fixture note still quoting `/1.5`.
+
+Gate after fixes: typecheck clean · lint clean · **2054/2054**.
+
+**Codex could not independently verify the cited figures** (no network in its sandbox).
+It confirmed the corridor arithmetic is coherent and both datasets are real official
+sources, but the four Treasury rows and the NRB mid-rates rest on this session's
+reading of the live APIs. Worth a founder spot-check — a wrong rate here is the whole
+point of the card.
+
 ## Follow-ups (not in scope here)
 
 - **Unmapped-currency passthrough is still dishonest**: `toAud(1000, "EUR")` returns 1000,
@@ -114,6 +145,14 @@ schedule, and the repo's own ledger (D.003/D.004 recorded NRB at ~109.5 NPR/AUD 
   `hasSufficientInputs`, is probably the honest answer).
 - The public freshness table (`lib/marketing/freshness-rows.ts`) has no FX row, and its
   hand-written `nextCheck: "Jul 2026"` stamps are themselves past due.
+- **Margin-aware capacity gate.** The DHA gate is a hard cliff, so a budget within ~1%
+  of the floor flips on drift far smaller than a quarter — while `rulesStale` stays
+  false. A "too close to call" band would make that honest; the freshness cadence
+  cannot.
+- **Staleness by supersession.** Recomputing `rulesStale` answers "are the rules
+  current?", not "was this stored verdict computed from the rules that are current?".
+  Comparing the stored `configVersion` to the live one would catch a verdict scored on
+  rates that have since been re-verified and replaced.
 - No live browser pass: the only UI change is copy inside an existing caption span, and
   this session's preview harness is pinned to a different worktree. The caption is now
   ~57 chars, so it may wrap to two lines at mobile width — worth an eyeball.
