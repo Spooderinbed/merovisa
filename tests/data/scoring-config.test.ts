@@ -62,9 +62,12 @@ describe("scoring config — literal pins", () => {
   it("financial tables", () => {
     expect(Config.FUNDING_RELIABILITY["self-funded"]).toBe(0.95);
     expect(Config.FUNDING_RELIABILITY["scholarship-dependent"]).toBe(0.55);
+    // FX per USD, read from the publishing authorities (MV-132). Changing either
+    // corridor leg moves every Nepali verdict → regenerate the characterization
+    // golden + bump CONFIG_VERSION, exactly like a DHA figure.
     expect(Config.FX_RATES.USD).toBe(1);
-    expect(Config.FX_RATES.NPR).toBe(135);
-    expect(Config.FX_RATES.AUD).toBe(1.5);
+    expect(Config.FX_RATES.NPR).toBe(154.52);
+    expect(Config.FX_RATES.AUD).toBe(1.4289);
     expect(Config.TYPICAL_YEARLY_USD.australia).toEqual({ min: 30000, max: 55000 });
     expect(Config.TYPICAL_YEARLY_USD.germany).toEqual({ min: 12000, max: 22000 });
     expect(Config.AU_DHA_LIVING_CAPACITY_AUD).toBe(29_710);
@@ -158,11 +161,55 @@ describe("scoring config — schema validity", () => {
 });
 
 describe("scoring config — provenance discipline", () => {
-  it("every config value cites ≥1 finding or is tagged internal-heuristic", () => {
+  it("every config value cites a finding, an authority it re-verifies, or is tagged internal-heuristic", () => {
+    // Three honest classes, and nothing else (lib/data/schema/scoring-config.schema.ts):
+    // finding-traced, an authority URL that commits to a re-verification date
+    // (MV-132 — a market rate can't be a ledger finding), or a declared heuristic.
     for (const [name, p] of Object.entries(Config.CONFIG_PROVENANCE)) {
-      const ok = p.findingRefs.length >= 1 || p.source === "internal-heuristic";
+      const authorityWithDeadline =
+        /^https?:\/\//.test(p.source ?? "") && Boolean(p.lastVerified) && Boolean(p.reverifyBy);
+      const ok = p.findingRefs.length >= 1 || p.source === "internal-heuristic" || authorityWithDeadline;
       expect(ok, `${name} provenance`).toBe(true);
     }
+  });
+
+  it("an authority-cited config value may not skip its re-verification deadline", () => {
+    // The loophole the third class could have opened: cite a URL, never re-read it.
+    const citedNoDeadline = {
+      value: 1,
+      provenance: { findingRefs: [], source: "https://www.nrb.org.np/forex/", lastVerified: "2026-07-25" },
+    };
+    expect(FxRateSchema.safeParse(citedNoDeadline).success).toBe(false);
+  });
+
+  it("rejects the ways an unsourced value could dress itself as authority-cited", () => {
+    // Each of these once satisfied the authority branch. A scoring constant must not
+    // be able to buy provenance with a string that can never be opened and checked,
+    // or with a deadline that can never arrive.
+    const cited = (provenance: Record<string, unknown>) => ({ value: 1, provenance });
+    const NRB = "https://www.nrb.org.np/forex/";
+    const cases: Array<[string, Record<string, unknown>]> = [
+      ["no host at all", { findingRefs: [], source: "https://", lastVerified: "2026-07-25", reverifyBy: "2026-10-25" }],
+      ["hostname without a dot", { findingRefs: [], source: "https://localhost", lastVerified: "2026-07-25", reverifyBy: "2026-10-25" }],
+      // ISO-SHAPED but not a real date: it sorts as indefinitely-future in the
+      // lexicographic staleness comparison, parking the deadline out of reach.
+      ["impossible calendar date", { findingRefs: [], source: NRB, lastVerified: "2026-07-25", reverifyBy: "9999-99-99" }],
+      ["deadline before its own verification", { findingRefs: [], source: NRB, lastVerified: "2026-07-25", reverifyBy: "2026-07-24" }],
+      ["deadline equal to its own verification", { findingRefs: [], source: NRB, lastVerified: "2026-07-25", reverifyBy: "2026-07-25" }],
+    ];
+    for (const [why, provenance] of cases) {
+      expect(FxRateSchema.safeParse(cited(provenance)).success, why).toBe(false);
+    }
+  });
+
+  it("the FX table is authority-sourced, not heuristic, and carries a live deadline", () => {
+    const p = Config.CONFIG_PROVENANCE.FX_RATES!;
+    expect(p.source).toMatch(/^https:\/\//);
+    expect(p.source).not.toBe("internal-heuristic");
+    expect(p.lastVerified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // The deadline must be present, or FX staleness is invisible to the runtime
+    // degrade — the exact hole MV-132 closed (see tests/data/fx-freshness.test.ts).
+    expect(p.reverifyBy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("the DHA living figure is genuinely sourced to A.015 with its effective date", () => {

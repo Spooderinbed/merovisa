@@ -7,6 +7,7 @@ import { formatExpiryLabel } from "@/lib/assessments/expiry";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { assembleAssessment } from "@/lib/results/assemble";
 import { normalizeStoredProfileCompleteness } from "@/lib/results/completeness";
+import { scoringRulesStale } from "@/lib/data/scoring-freshness";
 import { buildIntakeTimeline } from "@/lib/timing/intake";
 import { hasLegacyMatchShape } from "@/lib/results/legacy";
 import { Results } from "@/components/results/results";
@@ -44,6 +45,15 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
       accuracy: normalizeStoredProfileCompleteness(payload.accuracy, snapshot),
     };
   }
+
+  // `rulesStale` is a fact about NOW, not about the stored assessment: a verdict
+  // scored while every rule was current can age past a reverifyBy between visits.
+  // Stored payloads replay verbatim, so trusting the captured flag would show the
+  // calm "rules verified …" line over a verdict whose inputs are overdue — the
+  // failure MV-132's FX deadline makes reachable, and the behaviour the dashboard
+  // already implements (components/dashboard/snapshot-card.tsx). OR, not overwrite:
+  // a verdict flagged stale when it was scored must never be un-flagged on re-read.
+  payload = { ...payload, rulesStale: Boolean(payload.rulesStale) || scoringRulesStale() };
 
   // Backcompat: assessments stored before MV-01 hold university-level matches the
   // current UI can't render. Recompute matches from the persisted profile snapshot

@@ -28,13 +28,17 @@ describe("BudgetStep — AUD corridor currency (MV-97)", () => {
 
   it("converts an NPR budget to its AUD equivalent from the single FX source", () => {
     renderStep(auProfile);
-    // 4,500,000 NPR at NPR 90 ≈ A$1 (FX_RATES: 135 NPR/USD ÷ 1.5 AUD/USD) → A$50k.
-    expect(screen.getByText(/≈ A\$50k/)).toBeInTheDocument();
+    // 4,500,000 NPR at NPR 108.14 ≈ A$1 (FX_RATES: 154.52 NPR/USD ÷ 1.4289 AUD/USD,
+    // both NRB-published) → A$42k. The old undated table said A$50k (MV-132).
+    expect(screen.getByText(/≈ A\$42k/)).toBeInTheDocument();
   });
 
-  it("shows the honest indicative rate caption", () => {
+  it("shows the honest indicative rate caption, naming the source and its as-of date", () => {
     renderStep(auProfile);
-    expect(screen.getByText(/NPR 90 ≈ A\$1/)).toBeInTheDocument();
+    // A student checking this against their bank needs to know whose rate it is and
+    // from when — this conversion feeds the financial-capacity check (MV-132).
+    expect(screen.getByText(/NPR 108 ≈ A\$1/)).toBeInTheDocument();
+    expect(screen.getByText(/Nepal Rastra Bank, 2026-07-24/)).toBeInTheDocument();
   });
 
   it("switches to the AUD scale with its own default when AUD is chosen", async () => {

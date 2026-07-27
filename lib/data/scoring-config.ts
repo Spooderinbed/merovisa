@@ -96,6 +96,26 @@ const profileStrength = checked(ProfileStrengthPointsSchema, PROFILE_STRENGTH_PO
 const fxEntries = Object.entries(FX_RATES_SRC) as Array<[Currency, { value: number; provenance: Provenance }]>;
 for (const [cur, s] of fxEntries) checked(FxRateSchema, s, `FX_RATES.${cur}`);
 
+/**
+ * FX is a *table* of independently-sourced rates, but CONFIG_PROVENANCE holds one
+ * provenance per config key — so FX has to be represented by its most urgent rate.
+ *
+ * It used to be represented by whichever rate came first (`fxEntries[0]`), which is
+ * the USD identity — and that entry carries no `reverifyBy`, because there is
+ * nothing external to verify about USD per USD. The effect (MV-132 / audit F-20)
+ * was that no real rate's deadline was visible to `staleScoringFacts`, so a
+ * months-old NPR rate could gate the DHA financial-capacity verdict without ever
+ * tripping the runtime degrade. Earliest `reverifyBy` wins; a rate without one
+ * sorts last, so the identity can never mask a dated rate again.
+ */
+const FAR_FUTURE = "9999-12-31";
+const mostUrgentFxProvenance: Provenance = [...fxEntries]
+  .sort(
+    ([, a], [, b]) =>
+      (a.provenance.reverifyBy ?? FAR_FUTURE).localeCompare(b.provenance.reverifyBy ?? FAR_FUTURE) ||
+      (a.provenance.lastVerified ?? FAR_FUTURE).localeCompare(b.provenance.lastVerified ?? FAR_FUTURE),
+  )[0]![1].provenance;
+
 export const FIELD_COMPETITIVENESS: Readonly<Record<FieldOfStudy, number>> = Object.freeze(fieldComp.value);
 export const LEVEL_BONUS: Readonly<Record<EducationLevel, number>> = Object.freeze(levelBonus.value);
 export const FUNDING_RELIABILITY: Readonly<Record<FundingSource, number>> = Object.freeze(fundingRel.value);
@@ -128,15 +148,20 @@ export const PROFILE_STRENGTH_POINTS = Object.freeze(profileStrength.value);
  * competent-English floor), distinct from the course-admission threshold; the
  * financial dimension now consumes AU_DHA_PARTNER_CAPACITY_AUD +
  * AU_DHA_CHILD_CAPACITY_AUD — declared dependents raise the DHA capacity floor.
+ * config-v4: FX_RATES are now read from their publishing authorities (NRB for the
+ * Nepal corridor, U.S. Treasury elsewhere) instead of undated approximations. The
+ * corrected rates change every budget→USD/AUD conversion, so every verdict that
+ * turns on a non-USD budget is affected — an intended correction, not a drift
+ * (MV-132: the old table converted Nepali budgets ~20% high).
  */
-export const CONFIG_VERSION = "config-v3";
+export const CONFIG_VERSION = "config-v4";
 
 /** name → provenance, for explainability ("what backs this number?"). */
 export const CONFIG_PROVENANCE: Readonly<Record<string, Provenance>> = Object.freeze({
   FIELD_COMPETITIVENESS: fieldComp.provenance,
   LEVEL_BONUS: levelBonus.provenance,
   FUNDING_RELIABILITY: fundingRel.provenance,
-  FX_RATES: fxEntries[0]![1].provenance,
+  FX_RATES: mostUrgentFxProvenance,
   ENGLISH_THRESHOLD_BY_DEST: englishThreshold.provenance,
   ENGLISH_VISA_FLOOR_BY_DEST: englishVisaFloor.provenance,
   GAP_REASON_WEIGHT: gapReasonWeight.provenance,

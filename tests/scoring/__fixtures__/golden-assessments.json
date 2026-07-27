@@ -74,7 +74,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "strong-boundary": {
     "verdict": "strong",
@@ -121,7 +121,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "possible-boundary-high": {
     "verdict": "possible",
@@ -168,7 +168,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "possible-mid": {
     "verdict": "possible",
@@ -235,7 +235,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "possible-boundary-low": {
     "verdict": "possible",
@@ -287,7 +287,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "reach-weighted-boundary": {
     "verdict": "reach",
@@ -339,7 +339,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "reach-min-dimension": {
     "verdict": "reach",
@@ -391,7 +391,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "possible-min-dimension": {
     "verdict": "possible",
@@ -443,7 +443,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "germany-threshold": {
     "verdict": "possible",
@@ -496,7 +496,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "not-sure-destination": {
     "verdict": "strong",
@@ -564,7 +564,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "higher-secondary-no-english": {
     "verdict": "reach",
@@ -626,7 +626,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "unknown-currency-passthrough": {
     "verdict": "strong",
@@ -689,7 +689,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "long-gap-below-english": {
     "verdict": "reach",
@@ -749,7 +749,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "booked-english-aud": {
     "verdict": "possible",
@@ -800,7 +800,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "dependents-alone-clears": {
     "verdict": "strong",
@@ -877,7 +877,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "dependents-partner-capped": {
     "verdict": "possible",
@@ -954,7 +954,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "refusal-one-penalised": {
     "verdict": "strong",
@@ -1036,7 +1036,7 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   },
   "refusal-multiple-penalised": {
     "verdict": "strong",
@@ -1118,6 +1118,6 @@
       }
     },
     "ruleVersion": "v0.5.0",
-    "configVersion": "config-v3"
+    "configVersion": "config-v4"
   }
 }
