@@ -17,6 +17,7 @@ vi.mock("@/lib/programs/repo", () => ({ getProgram, listAllUniversities }));
 vi.mock("@/lib/outcomes/repo", () => ({ insertPrediction }));
 
 import { freezePredictionForProgram } from "@/lib/outcomes/freeze";
+import { CatalogReadError } from "@/lib/programs/errors";
 import type { Program, University } from "@/lib/programs/types";
 
 const db = {} as never;
@@ -93,6 +94,24 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
     getProgram.mockResolvedValue(null);
     const r = await freezePredictionForProgram(db, "owner1", "ghost");
     expect(r).toEqual({ ok: false, status: 404, error: expect.any(String) });
+  });
+
+  // MV-133: "this program does not exist" and "we couldn't read the catalogue" are
+  // different answers. The 404 above is honest only when the query answered.
+  it("503s (not 404 'unknown program') when the program read fails", async () => {
+    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getProgram.mockRejectedValue(new CatalogReadError("programs"));
+    const r = await freezePredictionForProgram(db, "owner1", "p1");
+    expect(r).toEqual({ ok: false, status: 503, error: expect.any(String) });
+    expect(insertPrediction).not.toHaveBeenCalled();
+  });
+
+  it("503s (not 409 'missing its university') when the university read fails", async () => {
+    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    listAllUniversities.mockRejectedValue(new CatalogReadError("universities"));
+    const r = await freezePredictionForProgram(db, "owner1", "p1");
+    expect(r).toEqual({ ok: false, status: 503, error: expect.any(String) });
+    expect(insertPrediction).not.toHaveBeenCalled();
   });
 
   it("freezes the recomputed verdict against the primary assessment (F16, server-side)", async () => {

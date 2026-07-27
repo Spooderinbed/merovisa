@@ -42,6 +42,7 @@ vi.mock("@/lib/programs/repo", async () => {
 });
 
 import { POST } from "@/app/api/assess/route";
+import { CatalogReadError } from "@/lib/programs/errors";
 
 const validProfile = {
   homeCountry: "Nepal",
@@ -139,6 +140,23 @@ describe("POST /api/assess", () => {
       expect(json.id).toBe("as-2");
       expect(upsertProfile).not.toHaveBeenCalled();
       expect(invalidatePlan).toHaveBeenCalled();
+    });
+
+    // MV-133: the plan rebuild is a derived side-effect, and now that catalogue reads
+    // throw it can fail on its own. The assessment WAS saved — reporting "failed to save"
+    // would be the same class of lie in reverse (mirrors the caught-and-logged treatment
+    // invalidatePlan already gets at every other call site).
+    it("still reports the saved assessment when the derived plan rebuild fails", async () => {
+      getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
+      getPrimaryAssessmentForUser.mockResolvedValue({ id: "old", owner: "u1" });
+      getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 0 });
+      adminInsertSingle.mockResolvedValue({ data: { id: "as-3" }, error: null });
+      invalidatePlan.mockRejectedValue(new CatalogReadError("programs"));
+
+      const res = await POST(req(validProfile));
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.id).toBe("as-3");
     });
 
     it("returns 500 (not 200) when persistence throws for an authenticated user", async () => {

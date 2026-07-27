@@ -50,10 +50,13 @@ export async function POST(request: Request): Promise<Response> {
 
   // The match set reads the live program/university catalogue — the same source the
   // signed-in matches page uses — so an anonymous student sees the same matches they
-  // will after signing in. Resilient: listAll* return [] on error, so a catalogue
-  // hiccup degrades to an empty match list rather than failing the assessment.
-  let programs: Program[] = [];
-  let universities: University[] = [];
+  // will after signing in. A read that FAILS is not an empty catalogue (MV-133): scoring
+  // against [] hands a student who just finished the nine-step wizard a verdict with zero
+  // matches — "nothing fits you" — and for a signed-in user persists that fabrication as
+  // their assessment of record. Fail honestly instead; the wizard keeps their answers in
+  // memory, so retrying costs them nothing.
+  let programs: Program[];
+  let universities: University[];
   try {
     const catalogDb = createSupabaseAdminClient();
     [programs, universities] = await Promise.all([
@@ -62,6 +65,10 @@ export async function POST(request: Request): Promise<Response> {
     ]);
   } catch (err) {
     console.error("[/api/assess] catalog fetch failed", err);
+    return NextResponse.json(
+      { error: "We couldn't load the program catalogue just now. Please try again." },
+      { status: 503 },
+    );
   }
 
   const payload = assembleAssessment(parsed.data, programs, universities);
@@ -110,7 +117,15 @@ export async function POST(request: Request): Promise<Response> {
           }
         }
 
-        await invalidatePlan(adminDb, user.id);
+        // Derived side-effects: the assessment is already saved, so a failure here must
+        // not be reported as a failed save. Both can now throw on their own (their own
+        // catalogue reads surface errors since MV-133) — caught and logged, as they are
+        // at every other call site.
+        try {
+          await invalidatePlan(adminDb, user.id);
+        } catch (err) {
+          console.error("[/api/assess] invalidatePlan failed", err);
+        }
         try {
           await reScoreAssessment(adminDb, user.id);
         } catch (err) {
