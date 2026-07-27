@@ -1,16 +1,13 @@
 <!--
   Sign-in email for an account that already exists (GoTrue "Magic Link" template).
 
-  Two ways in, because inboxes are read on whatever device is nearest:
-    - the 6-digit code, typed back into the tab that asked for it;
-    - the link, which carries a token_hash to /auth/callback for server-side
-      verification (no PKCE verifier to lose, so it survives mail apps that open
-      links in their own in-app browser).
-
-  {{ .RedirectTo }} is the emailRedirectTo built by /api/auth/email/start; it always
-  carries at least ?next=, so appending &token_hash= is safe. `type=magiclink` must
-  match the token GoTrue issued for this template — see confirm-signup.html for the
-  new-account variant, which issues a `signup` token instead.
+  Code only, no sign-in link, on purpose. GoTrue derives a magic link's token_hash
+  as an unsalted sha224(email + otp) (crypto.GenerateTokenHash), so for a known
+  address it has the same 1,000,000 preimages as the 6-digit code — but a link is
+  redeemed by an unauthenticated GET that carries no address, leaving nothing to
+  count guesses against. That made it an unmetered way around the per-address cap
+  in lib/auth/otp-attempts. Typing the code is the only email path, and it is
+  counted. Do not add a link back without a guess counter that covers it.
 
   Styles are inline: email clients strip <style> blocks.
 -->
@@ -25,11 +22,6 @@
       {{ .Token }}
     </p>
     <p style="margin: 0 0 28px; font-size: 13px; color: #857f85;">This code expires in one hour.</p>
-
-    <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.55; color: #5b555b;">
-      Or sign in straight from this email:
-      <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=magiclink" style="color: #6a2b57;">Sign in to MeroVisa</a>
-    </p>
 
     <p style="margin: 0; padding-top: 20px; border-top: 1px solid #e4ded2; font-size: 13px; line-height: 1.55; color: #857f85;">
       Didn't ask for this? You can ignore this email — nobody can sign in without the code above.

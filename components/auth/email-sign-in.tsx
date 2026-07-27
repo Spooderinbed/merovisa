@@ -31,7 +31,8 @@ async function postJson(path: string, body: Record<string, unknown>) {
  * The code is typed here rather than followed from a link on purpose. Mail apps
  * open links in their own in-app browser, which loses the PKCE verifier and dead-
  * ends the sign-in; a typed code lets the student read it on a phone and finish
- * on a laptop. The emailed link still works — /auth/callback verifies it too.
+ * on a laptop. The email carries no link at all — see supabase/templates/ for why
+ * a magic link turned out to be no stronger than the code, and unmeterable.
  */
 export function EmailSignIn({ claimToken, nextPath }: EmailSignInProps) {
   const router = useRouter();

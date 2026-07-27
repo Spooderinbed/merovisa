@@ -4,12 +4,7 @@ vi.mock("server-only", () => ({}));
 const { getRedis } = vi.hoisted(() => ({ getRedis: vi.fn() }));
 vi.mock("@/lib/rate-limit/upstash", () => ({ getRedis }));
 
-import {
-  MAX_OTP_ATTEMPTS,
-  failedOtpAttempts,
-  recordFailedOtpAttempt,
-  clearOtpAttempts,
-} from "@/lib/auth/otp-attempts";
+import { MAX_OTP_ATTEMPTS, recordOtpAttempt, clearOtpAttempts } from "@/lib/auth/otp-attempts";
 
 function fakeRedis() {
   const store = new Map<string, number>();
@@ -37,16 +32,26 @@ function fakeRedis() {
 describe("otp attempt counter", () => {
   beforeEach(() => getRedis.mockReset());
 
-  it("counts failures per address, independently", async () => {
+  it("counts attempts per address, independently", async () => {
     const redis = fakeRedis();
     getRedis.mockReturnValue(redis);
 
-    await recordFailedOtpAttempt("victim@example.com");
-    await recordFailedOtpAttempt("victim@example.com");
-    await recordFailedOtpAttempt("someone-else@example.com");
+    expect(await recordOtpAttempt("victim@example.com")).toBe(1);
+    expect(await recordOtpAttempt("victim@example.com")).toBe(2);
+    expect(await recordOtpAttempt("someone-else@example.com")).toBe(1);
+  });
 
-    expect(await failedOtpAttempts("victim@example.com")).toBe(2);
-    expect(await failedOtpAttempts("someone-else@example.com")).toBe(1);
+  // The whole point of reserving with INCR rather than reading first: a burst of
+  // concurrent guesses must consume distinct numbers, or they all pass one stale
+  // read and the cap means nothing against the very attacker it targets.
+  it("hands every concurrent attempt a distinct number", async () => {
+    const redis = fakeRedis();
+    getRedis.mockReturnValue(redis);
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => recordOtpAttempt("victim@example.com")),
+    );
+    expect(new Set(results).size).toBe(20);
+    expect(Math.max(...results)).toBe(20);
   });
 
   // The counter must die with the code it guards, so a stale count from an hour
@@ -54,16 +59,16 @@ describe("otp attempt counter", () => {
   it("expires the counter alongside the code it guards", async () => {
     const redis = fakeRedis();
     getRedis.mockReturnValue(redis);
-    await recordFailedOtpAttempt("a@b.com");
+    await recordOtpAttempt("a@b.com");
     expect([...redis.ttls.values()][0]).toBe(3600);
   });
 
   it("sets the expiry once, not on every failure", async () => {
     const redis = fakeRedis();
     getRedis.mockReturnValue(redis);
-    await recordFailedOtpAttempt("a@b.com");
-    await recordFailedOtpAttempt("a@b.com");
-    await recordFailedOtpAttempt("a@b.com");
+    await recordOtpAttempt("a@b.com");
+    await recordOtpAttempt("a@b.com");
+    await recordOtpAttempt("a@b.com");
     expect(redis.expire).toHaveBeenCalledTimes(1);
   });
 
@@ -72,10 +77,10 @@ describe("otp attempt counter", () => {
   it("clears the count so a fresh code starts clean", async () => {
     const redis = fakeRedis();
     getRedis.mockReturnValue(redis);
-    await recordFailedOtpAttempt("a@b.com");
-    await recordFailedOtpAttempt("a@b.com");
+    await recordOtpAttempt("a@b.com");
+    await recordOtpAttempt("a@b.com");
     await clearOtpAttempts("a@b.com");
-    expect(await failedOtpAttempts("a@b.com")).toBe(0);
+    expect(await recordOtpAttempt("a@b.com")).toBe(1);
   });
 
   // Email OTP is the only credential these accounts have. If Redis is missing or
@@ -83,20 +88,17 @@ describe("otp attempt counter", () => {
   // risk, so this fails open — matching checkRateLimit's posture.
   it("fails open when Upstash is not configured", async () => {
     getRedis.mockReturnValue(null);
-    expect(await failedOtpAttempts("a@b.com")).toBe(0);
-    expect(await recordFailedOtpAttempt("a@b.com")).toBe(0);
+    expect(await recordOtpAttempt("a@b.com")).toBe(0);
     await expect(clearOtpAttempts("a@b.com")).resolves.toBeUndefined();
   });
 
   it("fails open when Redis throws", async () => {
     getRedis.mockReturnValue({
-      get: vi.fn().mockRejectedValue(new Error("down")),
       incr: vi.fn().mockRejectedValue(new Error("down")),
       expire: vi.fn(),
       del: vi.fn().mockRejectedValue(new Error("down")),
     });
-    expect(await failedOtpAttempts("a@b.com")).toBe(0);
-    expect(await recordFailedOtpAttempt("a@b.com")).toBe(0);
+    expect(await recordOtpAttempt("a@b.com")).toBe(0);
     await expect(clearOtpAttempts("a@b.com")).resolves.toBeUndefined();
   });
 

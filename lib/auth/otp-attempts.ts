@@ -2,7 +2,7 @@ import "server-only";
 import { getRedis } from "@/lib/rate-limit/upstash";
 
 /**
- * Wrong guesses a single emailed code survives before it is retired.
+ * Guesses a single emailed code survives before it is retired.
  *
  * Both the app's verify limit and GoTrue's own are per-IP, so a rotating IP pool
  * could otherwise spend the code's whole one-hour life guessing — roughly 500k
@@ -13,8 +13,12 @@ import { getRedis } from "@/lib/rate-limit/upstash";
  *
  * Deliberately NOT an address lockout. The count is scoped to one code and wiped
  * whenever a new one is sent, so burning a code can never park a student outside
- * their own account — "send a new code" is always open to them. The emailed link
- * is unaffected either way: its token hash is far too large to guess.
+ * their own account — "send a new code" stays open.
+ *
+ * This only binds guesses that arrive through /api/auth/email/verify. GoTrue's
+ * own /auth/v1/verify is reachable directly with the public anon key and is
+ * bounded only by its per-IP limit, so this is a meaningful control, not a
+ * complete one — see docs/email-auth-setup.md.
  */
 export const MAX_OTP_ATTEMPTS = 5;
 
@@ -24,29 +28,23 @@ const TTL_SECONDS = 60 * 60;
 const keyFor = (email: string) => `mv:otp-attempts:${email}`;
 
 /**
- * Every function here fails OPEN. Email OTP is the sole credential for these
- * accounts, so refusing all sign-ins while Redis is unreachable would be a worse
- * outage than the brute-force exposure it guards. Same posture as checkRateLimit.
+ * Claims one attempt against the current code and returns its number.
+ *
+ * Callers must reserve BEFORE verifying, never read-then-write afterwards: INCR
+ * is atomic, but a separate read leaves a check-then-act window in which a burst
+ * of concurrent guesses all observe the same stale count and all get through —
+ * exactly what the rotating-IP attacker this guards against is doing.
+ *
+ * Fails OPEN (returns 0). Email OTP is the sole credential for these accounts, so
+ * refusing every sign-in while Redis is unreachable would be a worse outage than
+ * the exposure it guards. Same posture as checkRateLimit.
  */
-export async function failedOtpAttempts(email: string): Promise<number> {
-  const redis = getRedis();
-  if (!redis) return 0;
-  try {
-    const value = await redis.get<number | string>(keyFor(email));
-    return Number(value ?? 0) || 0;
-  } catch (e) {
-    console.error("[otp-attempts] read failed, allowing attempt:", e);
-    return 0;
-  }
-}
-
-/** Records one wrong guess. Returns the running count for this code. */
-export async function recordFailedOtpAttempt(email: string): Promise<number> {
+export async function recordOtpAttempt(email: string): Promise<number> {
   const redis = getRedis();
   if (!redis) return 0;
   try {
     const count = await redis.incr(keyFor(email));
-    // Only the first failure needs the TTL; re-setting it on every miss would let
+    // Only the first attempt needs the TTL; re-setting it on every guess would let
     // an attacker keep the counter alive indefinitely by guessing slowly.
     if (count === 1) await redis.expire(keyFor(email), TTL_SECONDS);
     return count;

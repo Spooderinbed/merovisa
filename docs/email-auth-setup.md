@@ -36,11 +36,16 @@ Both are needed: Supabase uses **Confirm signup** for an address it has never se
 and **Magic Link** for one it already knows — the same moment from the student's
 side, two templates on Supabase's.
 
-The stock templates send only a link to GoTrue's own `/verify` endpoint, which hands
-the session back in a URL fragment that a server-side callback cannot read. Ours
-carry the 6-digit code plus a link addressed to `/auth/callback` with a `token_hash`
-the callback verifies. The typed code works either way; **the link only works with
-these templates in place.**
+**Both templates are code-only, with no sign-in link, deliberately.** GoTrue derives
+a magic link's `token_hash` as an unsalted `sha224(email + otp)`
+([`crypto.GenerateTokenHash`](https://github.com/supabase/auth/blob/master/internal/crypto/crypto.go)),
+so for a known address it has exactly the same 1,000,000 preimages as the 6-digit
+code — a link is not the high-entropy credential it looks like. Worse, a link is
+redeemed by an unauthenticated `GET` carrying no address, so there is nothing to
+count guesses against, making it an unmetered way around the per-address cap below.
+The typed code is the only email path, and every guess at it is counted. **Do not
+paste a `{{ .ConfirmationURL }}` or `token_hash` link back into these templates
+without a guess counter that covers it.**
 
 ## 3. Allow the callback URL
 
@@ -82,14 +87,36 @@ hour total.
 
 Retiring a code is **not** an account lockout: the count is scoped to one code and
 wiped whenever a new one is sent, so an attacker burning codes can never park a
-student outside their own account — "send a new code" stays open. The emailed link is
-unaffected; its token hash is far too large to guess.
+student outside their own account — "send a new code" stays open. The trade-off it
+does introduce is nuisance, not lockout: someone who knows an address can burn each
+code as it is issued, forcing repeated resends. That needs a sustained, targeted
+attack, and the student always has a route back in.
 
 **These limits require Upstash.** `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`
 must be set in Vercel or every one of them silently no-ops — they fail open by design,
 because refusing all sign-ins while Redis is unreachable would be a worse outage than
 the exposure. Without Upstash, only Supabase's per-IP caps remain, and the
 rotating-IP attack above is live. Treat Upstash as required for production email auth.
+
+### The app cannot close this alone — two settings worth changing
+
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` ships in the browser bundle, as it must, and GoTrue's
+own `POST /auth/v1/verify` accepts it. An attacker can therefore skip this app
+entirely and guess codes straight at Supabase, where the per-address counter above
+does not exist and only the per-IP `token_verifications` limit applies — the very
+limit a rotating IP pool defeats. **The app-layer cap raises the cost of the easy
+attack; it cannot bound the direct one.** Two `supabase/config.toml` settings (and
+their dashboard equivalents) are what actually shrink that exposure, and both are
+founder calls because they change the sign-in experience:
+
+| Setting | Now | Effect of changing it |
+| --- | --- | --- |
+| `otp_length` | 6 | 8 digits multiplies the keyspace by 100 — a longer code to type |
+| `otp_expiry` | 3600 | 600s cuts the guessing window 6× — more "code expired, send another" |
+
+Enabling `[auth.captcha]` (hCaptcha/Turnstile) is the third lever, and the only one
+that also protects GoTrue's endpoints directly, at the cost of a challenge in the
+sign-in flow.
 
 ## Checking it end to end
 

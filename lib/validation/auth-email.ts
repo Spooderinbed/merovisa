@@ -5,7 +5,9 @@ import { z } from "zod";
  * must reach Supabase as the same address, or the code is sent to one identity
  * and verified against another.
  */
-const NormalizedEmail = z.string().trim().toLowerCase().pipe(z.email());
+// The 254 cap is the RFC 5321 maximum, and it also keeps an attacker-chosen
+// address from becoming an arbitrarily large Redis key in the OTP attempt counter.
+const NormalizedEmail = z.string().trim().toLowerCase().pipe(z.email().max(254));
 
 /** Matches `otp_length = 6` in supabase/config.toml. */
 const OtpCode = z.string().trim().regex(/^\d{6}$/);

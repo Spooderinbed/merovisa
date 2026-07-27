@@ -71,47 +71,22 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toContain("/assess");
   });
 
-  // MV-147 — the emailed sign-in link. Supabase's email templates hand us a
-  // `token_hash`, not an OAuth `code`, and verifying it server-side means the
-  // link works even when the mail app opens it in a different browser (no PKCE
-  // verifier to lose). It must land exactly where the Google code path lands.
-  it("verifies an emailed token_hash and claims + lands identically to the Google path", async () => {
-    verifyOtp.mockResolvedValue({ error: null });
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", email: "aarav@example.com" } } });
-    claimAndBootstrapProfile.mockResolvedValue({ claimed: true });
-
+  // MV-147 security regression guard. This route briefly accepted an emailed
+  // `token_hash` so the link in the sign-in email would work. That made it an
+  // unmetered verification oracle: GoTrue derives the hash as an unsalted
+  // sha224(email + otp), so for a known address it has the same 1,000,000
+  // preimages as the 6-digit code — but an unauthenticated GET carries no address,
+  // so the per-address cap in lib/auth/otp-attempts could not count guesses here.
+  // Anyone re-adding a token_hash branch must bring a guess counter with it.
+  it("refuses to verify an emailed token_hash — the counted code path is the only email route", async () => {
     const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
     const res = await GET(url(`token_hash=abc123&type=email&claim=${encodeURIComponent(claimToken)}`));
 
-    expect(verifyOtp).toHaveBeenCalledWith({ token_hash: "abc123", type: "email" });
-    expect(exchangeCodeForSession).not.toHaveBeenCalled();
-    expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ assessmentId: ASSESSMENT_UUID, userId: "user-1" }),
-    );
-    expect(res.headers.get("location")).toContain(`/assessment/${ASSESSMENT_UUID}`);
-  });
-
-  it("redirects to /assess?error=auth when the emailed token is expired or already used", async () => {
-    verifyOtp.mockResolvedValue({ error: { message: "Token has expired" } });
-    const res = await GET(url("token_hash=stale&type=email"));
-    expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("error=auth");
-    expect(claimAndBootstrapProfile).not.toHaveBeenCalled();
-  });
-
-  it("defaults an emailed token with no type to the email OTP type", async () => {
-    verifyOtp.mockResolvedValue({ error: null });
-    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    await GET(url("token_hash=abc123"));
-    expect(verifyOtp).toHaveBeenCalledWith({ token_hash: "abc123", type: "email" });
-  });
-
-  it("refuses an unrecognised ?type= rather than passing it through to Supabase", async () => {
-    const res = await GET(url("token_hash=abc123&type=phone_change"));
     expect(verifyOtp).not.toHaveBeenCalled();
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(claimAndBootstrapProfile).not.toHaveBeenCalled();
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toContain("error=auth");
+    expect(res.headers.get("location")).toContain("/assess");
   });
 
   it("redirects to /dashboard when there is no claim", async () => {

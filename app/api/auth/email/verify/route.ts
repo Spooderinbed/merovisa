@@ -3,12 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkRateLimit, ipFromRequest } from "@/lib/rate-limit/upstash";
 import { EmailVerifySchema } from "@/lib/validation/auth-email";
 import { resolveSignInDestination } from "@/lib/auth/finish-sign-in";
-import {
-  MAX_OTP_ATTEMPTS,
-  failedOtpAttempts,
-  recordFailedOtpAttempt,
-  clearOtpAttempts,
-} from "@/lib/auth/otp-attempts";
+import { MAX_OTP_ATTEMPTS, recordOtpAttempt, clearOtpAttempts } from "@/lib/auth/otp-attempts";
 
 const BURNED = "Too many wrong tries. Send yourself a new code.";
 
@@ -42,18 +37,20 @@ export async function POST(request: Request): Promise<Response> {
 
   // Per-address guard. The IP limit above and GoTrue's own are both per-IP, which
   // a rotating pool defeats; this is what actually bounds guesses at a code.
-  if ((await failedOtpAttempts(email)) >= MAX_OTP_ATTEMPTS) {
+  // Reserved before the guess is spent, not counted after: an atomic INCR is the
+  // only thing that stops a concurrent burst from all passing one stale read.
+  const attempt = await recordOtpAttempt(email);
+  if (attempt > MAX_OTP_ATTEMPTS) {
     return NextResponse.json({ error: BURNED }, { status: 401 });
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
   if (error) {
-    const attempts = await recordFailedOtpAttempt(email);
     return NextResponse.json(
       {
         error:
-          attempts >= MAX_OTP_ATTEMPTS
+          attempt >= MAX_OTP_ATTEMPTS
             ? BURNED
             : "That code didn't work. Check it, or send a new one.",
       },

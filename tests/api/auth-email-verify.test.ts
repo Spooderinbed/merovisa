@@ -10,23 +10,20 @@ const {
   getUser,
   claimAndBootstrapProfile,
   checkRateLimit,
-  failedOtpAttempts,
-  recordFailedOtpAttempt,
+  recordOtpAttempt,
   clearOtpAttempts,
 } = vi.hoisted(() => ({
   verifyOtp: vi.fn(),
   getUser: vi.fn(),
   claimAndBootstrapProfile: vi.fn(),
   checkRateLimit: vi.fn(),
-  failedOtpAttempts: vi.fn(),
-  recordFailedOtpAttempt: vi.fn(),
+  recordOtpAttempt: vi.fn(),
   clearOtpAttempts: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/otp-attempts", () => ({
   MAX_OTP_ATTEMPTS: 5,
-  failedOtpAttempts,
-  recordFailedOtpAttempt,
+  recordOtpAttempt,
   clearOtpAttempts,
 }));
 
@@ -56,10 +53,8 @@ describe("POST /api/auth/email/verify", () => {
     claimAndBootstrapProfile.mockReset();
     checkRateLimit.mockReset();
     checkRateLimit.mockResolvedValue(true);
-    failedOtpAttempts.mockReset();
-    failedOtpAttempts.mockResolvedValue(0);
-    recordFailedOtpAttempt.mockReset();
-    recordFailedOtpAttempt.mockResolvedValue(1);
+    recordOtpAttempt.mockReset();
+    recordOtpAttempt.mockResolvedValue(1);
     clearOtpAttempts.mockReset();
   });
 
@@ -124,14 +119,30 @@ describe("POST /api/auth/email/verify", () => {
   // Burning the code after a few misses caps it at MAX_OTP_ATTEMPTS per code, and
   // codes are already capped at 5/hour per address by the send endpoint.
   describe("brute-force defence (per address, not per IP)", () => {
-    it("counts a wrong code against the address, not just the IP", async () => {
+    it("counts the guess against the address, not just the IP", async () => {
       verifyOtp.mockResolvedValue({ error: { message: "invalid" } });
       await POST(post({ email: "a@b.com", code: "000000" }));
-      expect(recordFailedOtpAttempt).toHaveBeenCalledWith("a@b.com");
+      expect(recordOtpAttempt).toHaveBeenCalledWith("a@b.com");
+    });
+
+    // Reserve-then-verify, not verify-then-count: the attempt must be claimed
+    // before the guess is spent, or concurrent guesses all pass one stale read.
+    it("claims the attempt before forwarding the guess to Supabase", async () => {
+      const order: string[] = [];
+      recordOtpAttempt.mockImplementation(async () => {
+        order.push("count");
+        return 1;
+      });
+      verifyOtp.mockImplementation(async () => {
+        order.push("verify");
+        return { error: { message: "invalid" } };
+      });
+      await POST(post({ email: "a@b.com", code: "000000" }));
+      expect(order).toEqual(["count", "verify"]);
     });
 
     it("stops forwarding guesses to Supabase once the code is burned", async () => {
-      failedOtpAttempts.mockResolvedValue(5);
+      recordOtpAttempt.mockResolvedValue(6);
       const res = await POST(post({ email: "a@b.com", code: "000000" }));
       expect(verifyOtp).not.toHaveBeenCalled();
       expect(res.status).toBe(401);
@@ -140,10 +151,20 @@ describe("POST /api/auth/email/verify", () => {
 
     it("tells the student to request a new code on the miss that burns it", async () => {
       verifyOtp.mockResolvedValue({ error: { message: "invalid" } });
-      recordFailedOtpAttempt.mockResolvedValue(5);
+      recordOtpAttempt.mockResolvedValue(5);
       const res = await POST(post({ email: "a@b.com", code: "000000" }));
       expect(res.status).toBe(401);
       expect((await res.json()).error).toMatch(/new code/i);
+    });
+
+    // The reserved attempt must not lock out the guess that is actually correct.
+    it("still accepts the correct code on the last allowed attempt", async () => {
+      recordOtpAttempt.mockResolvedValue(5);
+      verifyOtp.mockResolvedValue({ error: null });
+      getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+      const res = await POST(post({ email: "a@b.com", code: "123456" }));
+      expect(res.status).toBe(200);
+      expect(clearOtpAttempts).toHaveBeenCalledWith("a@b.com");
     });
 
     // Not an address lockout: burning is per-code and a resend clears it, so an
@@ -155,10 +176,10 @@ describe("POST /api/auth/email/verify", () => {
       expect(clearOtpAttempts).toHaveBeenCalledWith("a@b.com");
     });
 
-    it("checks the burn count against the normalized address", async () => {
-      failedOtpAttempts.mockResolvedValue(5);
+    it("counts against the normalized address, so casing can't split the counter", async () => {
+      verifyOtp.mockResolvedValue({ error: { message: "invalid" } });
       await POST(post({ email: " A@B.com ", code: "000000" }));
-      expect(failedOtpAttempts).toHaveBeenCalledWith("a@b.com");
+      expect(recordOtpAttempt).toHaveBeenCalledWith("a@b.com");
     });
   });
 });
