@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmailInsteadLink } from "@/components/auth/email-instead-link";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
 export function ConversionPaths({
@@ -47,20 +48,22 @@ export function ConversionPaths({
     );
   }
 
-  // Creating a Google account is the only way to keep an anonymous assessment —
-  // there is no email-delivery or anonymous-retrieval path, so we don't imply one.
+  // An account is the only way to keep an anonymous assessment — there is still no
+  // email-delivery or anonymous-retrieval path, so we don't imply one. Google is the
+  // one-tap route; email (MV-147) is the route for everyone who can't take it.
   return (
     <section className="flex flex-col gap-4">
       <Card padding="lg">
         <h3 className="text-headline">Keep your assessment</h3>
         <p className="mt-2 text-body text-ink-soft">
           Your assessment expires in 3 days{expiryLabel ? ` (by ${expiryLabel})` : ""}. Create a free
-          account with Google to keep it and get updates as visa rules change.
+          account to keep it and get updates as visa rules change.
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col items-start gap-3">
           <Button size="lg" onClick={() => void startClaimOAuth(assessmentId)}>
             Continue with Google
           </Button>
+          <EmailInsteadLink assessmentId={assessmentId} />
         </div>
       </Card>
     </section>

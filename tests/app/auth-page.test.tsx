@@ -1,5 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+vi.mock("server-only", () => ({}));
+
+beforeAll(() => {
+  process.env.CLAIM_HMAC_SECRET = "test-secret-must-be-32-chars-long-abc";
+});
 
 const { getUser, redirect } = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -13,10 +18,15 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("@/components/auth/auth-card", () => ({
-  AuthCard: () => <div>auth-card</div>,
+  AuthCard: ({ claimToken }: { claimToken?: string | null }) => (
+    <div>auth-card{claimToken ? `:${claimToken}` : ""}</div>
+  ),
 }));
 
+import { verifyClaim } from "@/lib/auth/hmac-claim";
 import AuthPage from "@/app/(marketing)/auth/page";
+
+const ASSESSMENT_UUID = "11815637-f603-4821-8dd0-d9e52560c4f6";
 
 describe("/auth page", () => {
   beforeEach(() => {
@@ -47,5 +57,25 @@ describe("/auth page", () => {
     getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
     await expect(AuthPage({ searchParams: Promise.resolve({ next: "//attacker.com" }) })).rejects.toThrow("REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  // MV-147 — an anonymous visitor who picks email over Google arrives here by link,
+  // so the page (not a browser fetch) signs the claim their assessment needs. Without
+  // it, choosing email would quietly cost them the assessment Google would have kept.
+  it("signs a claim token for the assessment the visitor arrived with", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const ui = await AuthPage({ searchParams: Promise.resolve({ assessment: ASSESSMENT_UUID }) });
+    render(ui);
+
+    const rendered = screen.getByText(/^auth-card:/).textContent!;
+    const token = rendered.replace("auth-card:", "");
+    expect(verifyClaim(token)).toEqual({ assessmentId: ASSESSMENT_UUID });
+  });
+
+  it("ignores an ?assessment= that isn't an assessment id", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const ui = await AuthPage({ searchParams: Promise.resolve({ assessment: "../../etc/passwd" }) });
+    render(ui);
+    expect(screen.getByText("auth-card")).toBeInTheDocument();
   });
 });

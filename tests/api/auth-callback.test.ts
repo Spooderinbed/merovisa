@@ -9,14 +9,15 @@ import { signClaim } from "@/lib/auth/hmac-claim";
 
 const ASSESSMENT_UUID = "11815637-f603-4821-8dd0-d9e52560c4f6";
 
-const { exchangeCodeForSession, getUser, claimAndBootstrapProfile } = vi.hoisted(() => ({
+const { exchangeCodeForSession, verifyOtp, getUser, claimAndBootstrapProfile } = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
+  verifyOtp: vi.fn(),
   getUser: vi.fn(),
   claimAndBootstrapProfile: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: async () => ({ auth: { exchangeCodeForSession, getUser } }),
+  createSupabaseServerClient: async () => ({ auth: { exchangeCodeForSession, verifyOtp, getUser } }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/assessments/claim", () => ({ claimAndBootstrapProfile }));
@@ -28,6 +29,7 @@ const url = (qs: string) => new Request(`http://localhost/auth/callback?${qs}`);
 describe("GET /auth/callback", () => {
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
+    verifyOtp.mockReset();
     getUser.mockReset();
     claimAndBootstrapProfile.mockReset();
   });
@@ -62,9 +64,27 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toContain("error=auth");
   });
 
-  it("redirects home when there is no code", async () => {
+  it("redirects home when there is neither a code nor an emailed token", async () => {
     const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
     const res = await GET(url(`claim=${encodeURIComponent(claimToken)}`));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/assess");
+  });
+
+  // MV-147 security regression guard. This route briefly accepted an emailed
+  // `token_hash` so the link in the sign-in email would work. That made it an
+  // unmetered verification oracle: GoTrue derives the hash as an unsalted
+  // sha224(email + otp), so for a known address it has the same 1,000,000
+  // preimages as the 6-digit code — but an unauthenticated GET carries no address,
+  // so the per-address cap in lib/auth/otp-attempts could not count guesses here.
+  // Anyone re-adding a token_hash branch must bring a guess counter with it.
+  it("refuses to verify an emailed token_hash — the counted code path is the only email route", async () => {
+    const claimToken = signClaim(ASSESSMENT_UUID, Date.now() + 60_000);
+    const res = await GET(url(`token_hash=abc123&type=email&claim=${encodeURIComponent(claimToken)}`));
+
+    expect(verifyOtp).not.toHaveBeenCalled();
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(claimAndBootstrapProfile).not.toHaveBeenCalled();
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/assess");
   });

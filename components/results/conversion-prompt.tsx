@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmailInsteadLink } from "@/components/auth/email-instead-link";
 import { track } from "@/lib/analytics/events";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
@@ -47,15 +48,17 @@ export function ConversionPrompt({
       <p className="text-body text-ink-soft">
         Keep this assessment and get updates as visa rules change.
       </p>
-      <Button
-        onClick={() => {
-          track("gate_cta_clicked");
-          void startClaimOAuth(assessmentId);
-        }}
-        className="shrink-0"
-      >
-        Continue with Google
-      </Button>
+      <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+        <Button
+          onClick={() => {
+            track("gate_cta_clicked");
+            void startClaimOAuth(assessmentId);
+          }}
+        >
+          Continue with Google
+        </Button>
+        <EmailInsteadLink assessmentId={assessmentId} />
+      </div>
     </Card>
   );
 }

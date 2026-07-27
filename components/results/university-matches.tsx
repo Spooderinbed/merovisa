@@ -8,6 +8,7 @@ import { SourceLine } from "@/components/results/source-line";
 import { SourceAnchor } from "@/components/analytics/source-anchor";
 import { VERDICT_LABELS } from "@/lib/scoring/verdict-labels";
 import { track } from "@/lib/analytics/events";
+import { EmailInsteadLink } from "@/components/auth/email-instead-link";
 import { startClaimOAuth } from "@/lib/auth/start-claim-oauth";
 
 function tuition(p: MatchResult["program"]): string | null {
@@ -116,17 +117,21 @@ export function UniversityMatches({
                 ))}
               </div>
               <div className="absolute inset-0 grid place-items-center bg-surface/60">
-                <Button onClick={unlock} disabled={!assessmentId}>
-                  Unlock all {total} matches →
-                </Button>
+                <div className="flex flex-col items-center gap-2">
+                  <Button onClick={unlock} disabled={!assessmentId}>
+                    Unlock all {total} matches →
+                  </Button>
+                  <EmailInsteadLink assessmentId={assessmentId} />
+                </div>
               </div>
             </Card>
           ) : (
             // ≤3 matches: nothing to blur, but anonymous users still need a way in.
-            <Card radius="card" padding="sm" className="text-center">
+            <Card radius="card" padding="sm" className="flex flex-col items-center gap-2 text-center">
               <Button onClick={unlock} disabled={!assessmentId}>
                 Sign in to save your matches →
               </Button>
+              <EmailInsteadLink assessmentId={assessmentId} />
             </Card>
           )}
         </>

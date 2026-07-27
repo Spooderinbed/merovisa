@@ -46,6 +46,14 @@ describe("UniversityMatches", () => {
     expect(startClaimOAuth).toHaveBeenCalledWith(ASSESSMENT_UUID);
   });
 
+  it("offers an email route beside the unlock gate (MV-147)", () => {
+    render(<UniversityMatches matches={matches} total={12} assessmentId={ASSESSMENT_UUID} />);
+    expect(screen.getByRole("link", { name: /No Google account/i })).toHaveAttribute(
+      "href",
+      `/auth?assessment=${ASSESSMENT_UUID}`,
+    );
+  });
+
   it("cites each surfaced match's source with a verified date", () => {
     render(<UniversityMatches matches={matches} total={12} assessmentId={ASSESSMENT_UUID} />);
     // The three free cards each carry a host link + verified date; the blurred locked rows don't.

@@ -6,17 +6,25 @@ const { signInWithOAuth } = vi.hoisted(() => ({ signInWithOAuth: vi.fn() }));
 vi.mock("@/lib/supabase/client", () => ({
   createSupabaseBrowserClient: () => ({ auth: { signInWithOAuth } }),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 
 import { AuthCard } from "@/components/auth/auth-card";
 
-describe("AuthCard", () => {
-  beforeEach(() => signInWithOAuth.mockReset());
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
 
-  it("starts collapsed and renders the Google CTA + privacy line", () => {
+describe("AuthCard", () => {
+  beforeEach(() => {
+    signInWithOAuth.mockReset();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+  });
+
+  it("offers both sign-in methods on one screen: Google and email", () => {
     render(<AuthCard />);
     expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     expect(screen.getByText(/Your profile is private/i)).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: /email/i })).toBeNull();
   });
 
   it("starts Google OAuth pointing at /auth/callback (no claim id on the standalone /auth)", async () => {
@@ -34,13 +42,28 @@ describe("AuthCard", () => {
     expect(arg.options.redirectTo).not.toMatch(/claim=/);
   });
 
-  it("discloses honestly that email sign-in isn't ready — no fake submit masquerading as login", async () => {
+  // MV-147 — the dead affordance is gone. This used to read "Email sign-in isn't
+  // ready yet", which was honest but was still a wall for anyone without Google.
+  it("no longer tells the student that email sign-in is unavailable", () => {
     render(<AuthCard />);
-    await userEvent.click(screen.getByRole("button", { name: /Other ways to sign in/i }));
-    expect(await screen.findByText(/Email sign-in isn't ready yet/i)).toBeInTheDocument();
-    // no email input and no submit button pretending to create an account
-    expect(screen.queryByRole("textbox", { name: /email/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Create account/i })).toBeNull();
+    expect(screen.queryByText(/isn't ready yet/i)).toBeNull();
+    expect(screen.getByRole("button", { name: /send.*code/i })).toBeInTheDocument();
+  });
+
+  // The anonymous-recovery contract: whichever method the student picks, the same
+  // signed claim token has to travel with it, or email sign-in silently loses the
+  // assessment that Google sign-in would have kept.
+  it("carries the claim token into both the Google redirect and the email request", async () => {
+    render(<AuthCard claimToken="tok.123.sig" />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Continue with Google/i }));
+    expect(signInWithOAuth.mock.calls[0]![0].options.redirectTo).toContain("claim=tok.123.sig");
+
+    await userEvent.type(screen.getByLabelText(/email address/i), "aarav@example.com");
+    await userEvent.click(screen.getByRole("button", { name: /send.*code/i }));
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body as string)).toMatchObject({
+      claim: "tok.123.sig",
+    });
   });
 
   // Wave A / A4 (MV-109) — two-beat entrance, reduced-motion-safe. Both `rise`

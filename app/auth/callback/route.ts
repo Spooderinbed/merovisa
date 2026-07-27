@@ -1,35 +1,27 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
-import { safeNext } from "@/lib/auth/safe-next";
-import { verifyClaim } from "@/lib/auth/hmac-claim";
+import { resolveSignInDestination } from "@/lib/auth/finish-sign-in";
+import { resolveSiteOrigin } from "@/lib/auth/site-origin";
 
 /**
- * Resolve the public site origin for post-auth redirects.
+ * The one landing pad for every sign-in method.
  *
- * Behind Vercel's load balancer, `new URL(request.url).origin` is the function's INTERNAL
- * host (localhost), so trusting it bounces production sign-ins to localhost. Precedence:
- *   1. NEXT_PUBLIC_SITE_URL — explicit, deterministic (set this in Vercel → can't be wrong)
- *   2. x-forwarded-host / host header — the proxy's public host
- *   3. url.origin — local dev (NODE_ENV=development) or no proxy headers
+ * Google OAuth returns a `code` to exchange; email sign-in verifies its 6-digit
+ * code at /api/auth/email/verify. Both hand off to `resolveSignInDestination`, so
+ * claiming, profile bootstrap, and the final landing page are identical whichever
+ * way the student signed in.
+ *
+ * This route deliberately does NOT accept an emailed `token_hash`. GoTrue derives
+ * it as an unsalted sha224(email + otp) (crypto.GenerateTokenHash), so for a known
+ * address it has exactly as many preimages as the 6-digit code — 1,000,000 — while
+ * an unauthenticated GET here carries no address to count guesses against. That
+ * made it an unmetered verification oracle that sidestepped the per-address cap in
+ * lib/auth/otp-attempts. Typing the code is the only email path, and it is counted.
  */
-function resolveSiteOrigin(request: Request, url: URL): string {
-  if (process.env.NODE_ENV === "development") return url.origin;
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
-  if (configured) return configured;
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  if (host) {
-    const proto = request.headers.get("x-forwarded-proto") ?? "https";
-    return `${proto}://${host}`;
-  }
-  return url.origin;
-}
-
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const claimToken = url.searchParams.get("claim");
+  const claim = url.searchParams.get("claim");
   const next = url.searchParams.get("next");
   const origin = resolveSiteOrigin(request, url);
 
@@ -40,27 +32,6 @@ export async function GET(request: Request): Promise<Response> {
   if (error) return NextResponse.redirect(`${origin}/assess?error=auth`);
 
   const { data } = await supabase.auth.getUser();
-  const userId = data.user?.id;
-  const googleName = data.user?.user_metadata?.full_name as string | undefined;
-  const email = data.user?.email ?? undefined;
-
-  let claimedAssessmentId: string | null = null;
-  if (claimToken) {
-    const verified = verifyClaim(claimToken);
-    if (!verified) {
-      return NextResponse.redirect(`${origin}/assess?error=invalid-claim`);
-    }
-    claimedAssessmentId = verified.assessmentId;
-  }
-
-  if (claimedAssessmentId && userId) {
-    const { claimed } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
-      assessmentId: claimedAssessmentId, userId, googleName, email,
-    });
-    if (!claimed) return NextResponse.redirect(`${origin}/assess?error=expired`);
-    return NextResponse.redirect(`${origin}/assessment/${claimedAssessmentId}`);
-  }
-
-  const fallback = safeNext(next) ?? "/dashboard";
-  return NextResponse.redirect(`${origin}${fallback}`);
+  const destination = await resolveSignInDestination(data.user, { claim, next });
+  return NextResponse.redirect(`${origin}${destination}`);
 }

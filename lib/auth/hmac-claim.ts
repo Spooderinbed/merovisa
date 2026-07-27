@@ -9,6 +9,9 @@ function getSecret(): string {
   return s;
 }
 
+/** How long a freshly signed claim token stays usable. */
+export const CLAIM_TTL_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Produce a signed claim token: `<assessmentId>.<expiresAt>.<sig>`
  * Signature is HMAC-SHA256 over `<assessmentId>.<expiresAt>`.
