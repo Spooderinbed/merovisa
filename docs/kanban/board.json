@@ -1844,6 +1844,17 @@
       "summary": "Audit F-6 (P0), flagged in the report as \"Not on the board.\" Sign-in is Google-only (components/auth/auth-card.tsx:38-63 renders \"Email sign-in isn't ready yet\"); saving, converting, every (app) route, and the ONLY anonymous-recovery path all hard-require a Google account. A student without Google hits a wall at the exact conversion moment — a straight bounce for a consultancy-replacement product. Fix: add a non-Google email path via Supabase Auth (magic link / OTP recommended — password-free), wired into the SAME /auth/callback claim/bootstrap flow Google uses so save/convert/recover behave identically (do not fork the claim path). Supabase Auth sends its own OTP emails, so this does not hard-depend on the app-level transactional email infra F-7 flags absent — only production deliverability does. Founder nod on auth method; coordinate with the F-2 consent/age gate (MV-05). Distinct from F-7 (transactional email) and F-2/MV-05 (privacy/consent).",
       "created": "2026-07-20",
       "entered": "2026-07-27"
+    },
+    {
+      "id": "MV-148",
+      "col": "ready",
+      "pri": "P2",
+      "owner": "agent",
+      "file": "cards/MV-148-board-pr-enrichment.md",
+      "title": "Board PR enrichment: live PR/CI/review state per card, zero drift",
+      "summary": "Multiple parallel Claude sessions each own one card/branch/PR; the board must show PR ownership, CI rollup, review decision, and files-touched per card at a glance. Derived at build time in build.mjs from one gh pr list call, joined by MV-ID in branch/PR names — never written into board.json (anti-drift rule 1). Fail-soft when gh is unavailable; warn-only reconciliation for inreview-without-PR and merged-without-done. Scoped after evaluating and declining mission-control (2026-07-27).",
+      "created": "2026-07-27",
+      "entered": "2026-07-27"
     }
   ]
 }

@@ -26,9 +26,9 @@
 - **MV-137** · P1 · [Umbrella: security + reliability hardening (audit F-15/F-16/O-3/O-4/O-5/O-6)](cards/MV-137-security-reliability-umbrella.md) — _UMBRELLA, split a scoped card off when a slice starts; do not build from this directly. Tracks the audit before-launch engineering risks so they stop living only in the report: F-15 no prod monitoring (Sentry unwired; MV-62 = in-app boundaries only), F-16 security cluster (no CSP, fail-OPEN rate limit, sign-claim HMAC oracle, over-broad selects; split further), O-3 non-transactional claim/bootstrap/lead/apply flows, O-4 profile-JSON lost updates, O-5 CI is advisory + no E2E gate, O-6 static-bailout catch + Google-Fonts build dep. Sequence after the student-facing gaps + P0s._
 - **MV-138** · P2 · [Umbrella: journey depth, growth loops, orphaned data (audit F-5/F-7-F-14/F-18/F-21/F-22/F-24)](cards/MV-138-journey-growth-umbrella.md) — _UMBRELLA, split a scoped card off when a slice starts; do not build from this directly. Mostly the audit next-month phase. Highest ROI: F-11 (5 sourced modules render to zero surfaces, shipping paid-for value). Trust-sensitive: F-21 fabricated placeholder destination policy, F-5 undisclosed heuristic core. Journey: F-9 human fallback + /about, F-10 post-grant stages, F-13 Reach off-ramp (MV-121 deferred this), F-14 real tracker, F-12 GS/GTE workspace. Growth (needs a founder email call): F-6 email auth, F-7 deliver-a-copy + reminder, F-8 re-engagement/share, F-24 distribution + assessment_claimed event. Debt: F-18 systemic freshness, F-22 de-hardcode + CLAUDE.md fix._
 
-## Ready (WIP 5) — 0
+## Ready (WIP 5) — 1
 
-_empty_
+- **MV-148** · P2 · [Board PR enrichment: live PR/CI/review state per card, zero drift](cards/MV-148-board-pr-enrichment.md) — _Multiple parallel Claude sessions each own one card/branch/PR; the board must show PR ownership, CI rollup, review decision, and files-touched per card at a glance. Derived at build time in build.mjs from one gh pr list call, joined by MV-ID in branch/PR names — never written into board.json (anti-drift rule 1). Fail-soft when gh is unavailable; warn-only reconciliation for inreview-without-PR and merged-without-done. Scoped after evaluating and declining mission-control (2026-07-27)._
 
 ## In progress (WIP 1) — 0
 
