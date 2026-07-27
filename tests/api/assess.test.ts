@@ -27,6 +27,8 @@ vi.mock("@/lib/programs/repo", async () => {
 });
 
 import { POST } from "@/app/api/assess/route";
+import { listAllPrograms } from "@/lib/programs/repo";
+import { CatalogReadError } from "@/lib/programs/errors";
 
 const validProfile = {
   homeCountry: "Nepal",
@@ -65,6 +67,19 @@ describe("POST /api/assess", () => {
   it("returns 422 for an invalid profile", async () => {
     const res = await POST(req({ ...validProfile, grade: 999 }));
     expect(res.status).toBe(422);
+  });
+
+  // MV-133: the catalogue read used to degrade to [] on failure, so a student who had just
+  // finished the 9-step wizard got a verdict with zero matches — "nothing fits you" — and
+  // for a signed-in user that fabricated zero-match payload was persisted. Fail honestly
+  // instead: the client shows its retry state and the wizard answers stay in memory.
+  it("returns 503 rather than an assessment scored against an unreadable catalogue", async () => {
+    vi.mocked(listAllPrograms).mockRejectedValueOnce(new CatalogReadError("programs"));
+    const res = await POST(req(validProfile));
+    expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json.error).toEqual(expect.any(String));
+    expect(json.payload).toBeUndefined();
   });
 
   it("returns 400 for malformed JSON", async () => {
