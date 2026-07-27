@@ -16,9 +16,12 @@ describe("Aarav persona", () => {
     englishScore: 7.0,
     destination: "australia",
     // ≈40k USD — close to, but short of, the AU DHA financial-capacity floor
-    // (≈49.5k USD). The gate caps financial at 49, which keeps a realistic CS
+    // (≈51.9k USD). The gate caps financial at 49, which keeps a realistic CS
     // applicant out of 'strong' but firmly in 'possible': viable, needs more funds.
-    budget: 5400000,
+    // MV-132 raised this from 5.4M NPR to hold that ≈40k USD intent — the corrected
+    // NRB rate (154.52, was 135) made 5.4M only ≈35k USD, under the reach cliff,
+    // which flipped the persona to 'reach'.
+    budget: 6200000,
     budgetCurrency: "NPR",
     fundingSource: "education-loan",
     goal: "permanent-residency",

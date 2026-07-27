@@ -61,9 +61,12 @@ describe("runAssessment", () => {
       ...baseProfile,
       grade: 85,
       englishScore: 7.5,
-      // ≈51.9k USD — clears the AU DHA capacity floor (≈49.5k USD); a genuinely
+      // ≈55k USD — clears the AU DHA capacity floor (≈51.9k USD); a genuinely
       // strong Australia profile must be able to show the visa's financial capacity.
-      budget: 7000000,
+      // MV-132 raised this from 7M NPR: at the corrected NRB rate 7M is only ≈45k
+      // USD, under the floor, so the gate capped financial and this stopped being
+      // 'strong' — the fixture is about the strong band, not about FX.
+      budget: 8500000,
       fundingSource: "self-funded",
       educationLevel: "masters",
       graduationYear: new Date().getFullYear(),

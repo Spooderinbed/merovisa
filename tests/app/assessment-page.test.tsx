@@ -12,6 +12,7 @@ const {
   listAllUniversities,
   assembleAssessment,
   renderResults,
+  scoringRulesStale,
 } = vi.hoisted(() => ({
   getUser: vi.fn(),
   getOwnedAssessment: vi.fn(),
@@ -23,6 +24,7 @@ const {
   listAllUniversities: vi.fn().mockResolvedValue([]),
   assembleAssessment: vi.fn(),
   renderResults: vi.fn(),
+  scoringRulesStale: vi.fn(() => false),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -32,6 +34,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({}) }
 vi.mock("@/lib/assessments/repo", () => ({ getOwnedAssessment, getRecoverableAssessment }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/lib/results/assemble", () => ({ assembleAssessment }));
+vi.mock("@/lib/data/scoring-freshness", () => ({ scoringRulesStale }));
 vi.mock("next/navigation", () => ({ notFound }));
 vi.mock("@/components/results/results", () => ({
   Results: (props: { mode: string; assessmentId: string | null; payload: unknown }) => {
@@ -58,6 +61,51 @@ describe("/assessment/[id]", () => {
     listAllUniversities.mockClear();
     assembleAssessment.mockClear();
     renderResults.mockClear();
+    scoringRulesStale.mockReset();
+    scoringRulesStale.mockReturnValue(false);
+  });
+
+  // MV-132. A stored payload replays verbatim, so the `rulesStale` flag captured when
+  // the assessment was scored would keep saying "all rules current" long after a
+  // reverifyBy passed — showing the calm "rules verified …" line over a verdict whose
+  // inputs are overdue. FX made this reachable: it is the first scoring input with a
+  // near-term deadline. The dashboard already recomputed; this page did not.
+  describe("stale-rule degrade on a stored assessment", () => {
+    const storedWith = (rulesStale: boolean) => ({
+      id: "aid",
+      owner: "u1",
+      result: { result: { verdict: "possible" }, intake: INTAKE, rulesStale },
+    });
+    const renderedPayload = () =>
+      (renderResults.mock.calls[0]![0] as { payload: { rulesStale?: boolean } }).payload;
+
+    it("degrades a verdict stored as current once a rule has since aged out", async () => {
+      getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+      getOwnedAssessment.mockResolvedValue(storedWith(false));
+      scoringRulesStale.mockReturnValue(true); // the clock has crossed a reverifyBy
+
+      render(await AssessmentPage({ params: Promise.resolve({ id: "aid" }) }));
+      expect(renderedPayload().rulesStale).toBe(true);
+    });
+
+    it("leaves a verdict alone while every rule is still current", async () => {
+      getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+      getOwnedAssessment.mockResolvedValue(storedWith(false));
+
+      render(await AssessmentPage({ params: Promise.resolve({ id: "aid" }) }));
+      expect(renderedPayload().rulesStale).toBe(false);
+    });
+
+    it("never un-flags a verdict that was already stale when it was scored", async () => {
+      // OR, not overwrite: the stored verdict really was computed off overdue inputs,
+      // and a later re-verification of the config does not retroactively fix it.
+      getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+      getOwnedAssessment.mockResolvedValue(storedWith(true));
+      scoringRulesStale.mockReturnValue(false);
+
+      render(await AssessmentPage({ params: Promise.resolve({ id: "aid" }) }));
+      expect(renderedPayload().rulesStale).toBe(true);
+    });
   });
 
   it("renders recoverable anonymous results (with the assessment id) when signed out", async () => {

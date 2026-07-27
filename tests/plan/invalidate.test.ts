@@ -27,6 +27,7 @@ const from = vi.fn(() => ({ select, insert, update }));
 const fakeAdmin = { from } as never;
 
 import { invalidatePlan } from "@/lib/plan/invalidate";
+import { CatalogReadError } from "@/lib/programs/errors";
 
 // Kinds the generator emits for a completely empty profile (L3 policy).
 const EMPTY_PROFILE_KINDS = [
@@ -64,6 +65,21 @@ describe("invalidatePlan", () => {
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockResolvedValue([]);
     listDocumentsForUser.mockReset().mockResolvedValue([]);
+  });
+
+  // MV-133: the plan is regenerated FROM the catalogue. Reading it as empty on failure
+  // silently rewrote the student's plan without its match-driven items — a degraded plan
+  // persisted as if it were the truth. The read now throws before any write happens, and
+  // callers (every route that triggers a rebuild) catch and log, leaving the prior plan.
+  it("writes nothing when the catalogue read fails", async () => {
+    getProfile.mockResolvedValue({ sections: { academic: { gradePercent: 75 } } });
+    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    listAllPrograms.mockRejectedValue(new CatalogReadError("programs"));
+
+    await expect(invalidatePlan(fakeAdmin, "u1")).rejects.toThrow(CatalogReadError);
+    expect(insert).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
   });
 
   it("inserts items generated for an empty profile (all expected high-impact prompts)", async () => {
