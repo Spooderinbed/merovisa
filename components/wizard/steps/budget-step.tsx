@@ -8,7 +8,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { StepShell } from "@/components/wizard/step-shell";
 import { formatAud, formatNpr } from "@/lib/utils";
-import { FX_RATES, toAud } from "@/lib/data/policy/fx-rates";
+import { FX_RATES, FX_NRB_AS_OF, toAud } from "@/lib/data/policy/fx-rates";
 import type { StepProps } from "./types";
 
 type WizardCurrency = "NPR" | "AUD";
@@ -110,8 +110,11 @@ export function BudgetStep({ profile, setField, callouts, eyebrow }: StepProps) 
           value={budget}
           onChange={(v) => setField({ budget: v })}
         />
+        {/* Name the rate's source and as-of date: the conversion above feeds the
+            financial-capacity check, and a student comparing it to today's bank
+            rate deserves to know which day's rate this is (MV-132). */}
         <span className="text-small text-ink-faint">
-          Indicative rate: NPR {Math.round(nprPerAud)} ≈ A$1
+          Indicative rate: NPR {Math.round(nprPerAud)} ≈ A$1 — Nepal Rastra Bank, {FX_NRB_AS_OF}
         </span>
       </Card>
       <div role="radiogroup" aria-label="Funding source" className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -28,6 +28,7 @@ vi.mock("@/components/dashboard/prompt-card", () => ({
 }));
 
 import MatchesPage from "@/app/(app)/matches/page";
+import { CatalogReadError } from "@/lib/programs/errors";
 
 // A minimally-filled profile so the matches path runs (the empty/never-filled
 // profile is gated; see the dedicated gate test below).
@@ -215,6 +216,20 @@ describe("/matches page", () => {
     expect(screen.getByText(/No programs found yet/i)).toBeInTheDocument();
     // MV-05: the not-immigration-advice boundary rides above the matches.
     expect(screen.getByText(/not immigration advice/i)).toBeInTheDocument();
+  });
+
+  // MV-133: the empty state above is the truth only when the catalogue answered. A failed
+  // read must reach the (app) error boundary's "we couldn't load this page — try again",
+  // never tell a student with a filled profile that nothing matched them.
+  it("propagates a catalogue read failure instead of rendering the no-programs empty state", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getProfile.mockResolvedValue(FILLED_PROFILE);
+    listAllPrograms.mockRejectedValue(new CatalogReadError("programs"));
+    listAllUniversities.mockResolvedValue([]);
+    listShortlistForUser.mockResolvedValue([]);
+
+    await expect(MatchesPage()).rejects.toThrow(CatalogReadError);
+    expect(screen.queryByText(/No programs found yet/i)).not.toBeInTheDocument();
   });
 
   it("scholarships tab shows real sourced scholarships; cost tab shows the sourced first-year estimate", async () => {

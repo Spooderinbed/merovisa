@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getPrimaryAssessmentForUser, getProfile, listDocumentsForUser, listAllPlanForUser, getOutcomesForUser, listShortlistForUser } = vi.hoisted(() => ({
+const { getUser, getPrimaryAssessmentForUser, getProfile, listDocumentsForUser, listAllPlanForUser, getOutcomesForUser, listShortlistForUser, listAllPrograms, listAllUniversities } = vi.hoisted(() => ({
   getUser: vi.fn(),
   getPrimaryAssessmentForUser: vi.fn(),
   getProfile: vi.fn(),
@@ -11,6 +11,8 @@ const { getUser, getPrimaryAssessmentForUser, getProfile, listDocumentsForUser, 
   listAllPlanForUser: vi.fn(),
   getOutcomesForUser: vi.fn(),
   listShortlistForUser: vi.fn(),
+  listAllPrograms: vi.fn(),
+  listAllUniversities: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -22,6 +24,7 @@ vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
 vi.mock("@/lib/plan/repo", () => ({ listAllPlanForUser }));
 vi.mock("@/lib/outcomes/repo", () => ({ getOutcomesForUser }));
 vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
+vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/components/dashboard/snapshot-card", () => ({
   SnapshotCard: ({ primary }: { primary: unknown }) => <div data-testid="snap">{primary ? "has-snap" : "empty-snap"}</div>,
 }));
@@ -42,6 +45,7 @@ vi.mock("@/components/dashboard/journey-rail", () => ({
 }));
 
 import DashboardPage from "@/app/(app)/dashboard/page";
+import { CatalogReadError } from "@/lib/programs/errors";
 
 describe("/dashboard page", () => {
   beforeEach(() => {
@@ -55,6 +59,10 @@ describe("/dashboard page", () => {
     getOutcomesForUser.mockResolvedValue({ predictions: [], attempts: [], events: [] });
     listShortlistForUser.mockReset();
     listShortlistForUser.mockResolvedValue([]);
+    listAllPrograms.mockReset();
+    listAllPrograms.mockResolvedValue([]);
+    listAllUniversities.mockReset();
+    listAllUniversities.mockResolvedValue([]);
   });
 
   const openItem = {
@@ -172,5 +180,27 @@ describe("/dashboard page", () => {
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("prompt")).toHaveTextContent("waiting");
+  });
+
+  // MV-133, the audited exception: the dashboard reads the catalogue only to put program
+  // NAMES on outcome-funnel rows. Unlike /matches, nothing here is presented as "we found
+  // nothing for you", so a failed lookup must not take the whole hub down with it — the
+  // student keeps their plan, snapshot and readiness. Every other read path propagates.
+  it("still renders when the catalogue name-lookup for the outcome funnel fails", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
+    getPrimaryAssessmentForUser.mockResolvedValue(null);
+    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listDocumentsForUser.mockResolvedValue([]);
+    getOutcomesForUser.mockResolvedValue({
+      predictions: [],
+      attempts: [{ id: "at1", owner: "u1", predictionId: "pr1", programId: "p1" }],
+      events: [],
+    });
+    listAllPrograms.mockRejectedValue(new CatalogReadError("programs"));
+    listAllUniversities.mockRejectedValue(new CatalogReadError("universities"));
+
+    const ui = await DashboardPage();
+    render(ui);
+    expect(screen.getByTestId("greet")).toHaveTextContent("Aarav");
   });
 });

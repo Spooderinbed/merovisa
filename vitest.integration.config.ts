@@ -10,6 +10,12 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.itest.ts"],
+    // Agent worktrees under .claude/ are full repo copies — never collect their tests,
+    // matching vitest.config.ts. Without this, N worktrees means N copies of the same
+    // itest running in parallel forks against ONE local database; for the anon-purge
+    // smoke, whose purge is global and takes no id filter, the copies delete each
+    // other's fixtures and fail intermittently.
+    exclude: ["**/node_modules/**", "**/.claude/**"],
     globals: true,
     // Real network round-trips to Postgres are slower than unit assertions.
     testTimeout: 30_000,

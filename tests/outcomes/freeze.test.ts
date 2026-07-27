@@ -17,6 +17,7 @@ vi.mock("@/lib/programs/repo", () => ({ getProgram, listAllUniversities }));
 vi.mock("@/lib/outcomes/repo", () => ({ insertPrediction }));
 
 import { freezePredictionForProgram } from "@/lib/outcomes/freeze";
+import { CatalogReadError } from "@/lib/programs/errors";
 import type { Program, University } from "@/lib/programs/types";
 
 const db = {} as never;
@@ -55,14 +56,18 @@ const program: Program = {
 //
 // MV-120: the budget was 4.5M NPR (~50k AUD) back when a budget was judged against
 // tuition alone. Under the real AU capacity model this student needs tuition (40k) +
-// living (29,710) = 69,710 AUD, so ~50k is a reach and "strong-fit" was false. Raised to
-// 6.5M NPR (~72,222 AUD) so the fixture means what its name says, rather than opting out
-// of the capacity model to keep the old number green.
+// living (29,710) = 69,710 AUD, so ~50k is a reach and "strong-fit" was false. Raised
+// so the fixture means what its name says, rather than opting out of the capacity
+// model to keep the old number green.
+//
+// MV-132: raised again, 6.5M → 7.8M NPR, for the same reason. The ~72k AUD intent was
+// computed at the old NPR 90 ≈ A$1; at the corrected NRB rate (108.14) 6.5M NPR is only
+// ~60k AUD, back under the floor.
 const strongSections = {
   academic: { degree: "bachelors", gradeSystem: "percentage-nepal", gradePercent: 72 },
   english: { test: "ielts", overall: 7, listening: 7, reading: 7, writing: 7, speaking: 7 },
   "intended-study": { field: "computer-science", level: "masters" },
-  finance: { total: 6_500_000, currency: "NPR" },
+  finance: { total: 7_800_000, currency: "NPR" },
 };
 
 describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-derived assessment)", () => {
@@ -89,6 +94,24 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
     getProgram.mockResolvedValue(null);
     const r = await freezePredictionForProgram(db, "owner1", "ghost");
     expect(r).toEqual({ ok: false, status: 404, error: expect.any(String) });
+  });
+
+  // MV-133: "this program does not exist" and "we couldn't read the catalogue" are
+  // different answers. The 404 above is honest only when the query answered.
+  it("503s (not 404 'unknown program') when the program read fails", async () => {
+    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getProgram.mockRejectedValue(new CatalogReadError("programs"));
+    const r = await freezePredictionForProgram(db, "owner1", "p1");
+    expect(r).toEqual({ ok: false, status: 503, error: expect.any(String) });
+    expect(insertPrediction).not.toHaveBeenCalled();
+  });
+
+  it("503s (not 409 'missing its university') when the university read fails", async () => {
+    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    listAllUniversities.mockRejectedValue(new CatalogReadError("universities"));
+    const r = await freezePredictionForProgram(db, "owner1", "p1");
+    expect(r).toEqual({ ok: false, status: 503, error: expect.any(String) });
+    expect(insertPrediction).not.toHaveBeenCalled();
   });
 
   it("freezes the recomputed verdict against the primary assessment (F16, server-side)", async () => {

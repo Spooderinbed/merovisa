@@ -34,6 +34,8 @@ vi.mock("@/components/checklist/checklist-view", () => ({
 }));
 
 import ProgramChecklistPage from "@/app/(app)/checklist/[programId]/page";
+import { notFound } from "next/navigation";
+import { CatalogReadError } from "@/lib/programs/errors";
 
 const program = {
   id: "p1", universityId: "u1", name: "Master of IT", level: "masters",
@@ -93,5 +95,16 @@ describe("/checklist/[programId] page", () => {
     const ui = await ProgramChecklistPage({ params: Promise.resolve({ programId: "p1" }) });
     render(ui);
     expect(screen.getByTestId("view")).toHaveTextContent("{}");
+  });
+
+  // MV-133: getProgram used to return null on a read error too, so an outage was served
+  // as notFound() — "this program doesn't exist" — for a program the student shortlisted
+  // minutes ago. A failed read must reach the (app) retry boundary instead.
+  it("does not 404 when the program read fails — it surfaces the error", async () => {
+    getProgram.mockRejectedValue(new CatalogReadError("programs"));
+    await expect(
+      ProgramChecklistPage({ params: Promise.resolve({ programId: "p1" }) }),
+    ).rejects.toThrow(CatalogReadError);
+    expect(vi.mocked(notFound)).not.toHaveBeenCalled();
   });
 });

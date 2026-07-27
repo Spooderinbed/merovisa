@@ -10,7 +10,47 @@ import { FindingId, IsoDate, Volatility, missingReverifyBy } from "./common";
  * explicitly tagged `source: "internal-heuristic"` — so an unsourced value can
  * never silently masquerade as sourced, yet honest heuristics aren't forced to
  * invent finding refs.
+ *
+ * The third class (MV-132) is a value read from a named authority that the
+ * findings ledger cannot hold: a market rate is dynamic, so it gets rejected as a
+ * finding (see D.003/D.004, `rejected:dynamic-data`) yet is still externally
+ * sourced, not a heuristic. Such a value may cite its authority URL *only* if it
+ * also carries both `lastVerified` and `reverifyBy` — citing an authority means
+ * committing to re-read it, and that commitment is what stops a dated citation
+ * from quietly ageing into a false one.
  */
+/**
+ * A citable authority URL: scheme + a real dotted host, so a bare `"https://"` (or
+ * `"https://localhost"`) cannot pass itself off as a source. This cannot tell a
+ * legitimate authority from an arbitrary domain — that stays a human review
+ * judgement — but it does refuse a string that could never be opened and checked.
+ */
+const authorityUrl = (source: string | undefined): boolean =>
+  source !== undefined && /^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i.test(source);
+
+/**
+ * A real calendar date, not merely an ISO-shaped string. `IsoDate` checks shape
+ * only, so "9999-99-99" satisfies it and then sorts as indefinitely-future in the
+ * lexicographic staleness comparisons — which would park a deadline permanently out
+ * of reach. Checked here (rather than by tightening the shared `IsoDate`, which is
+ * used repo-wide) because this is the branch where a date is the whole guarantee.
+ */
+const realDate = (iso: string | undefined): boolean =>
+  iso !== undefined && !Number.isNaN(Date.parse(iso)) && iso === new Date(iso).toISOString().slice(0, 10);
+
+/** An authority citation is only as good as its re-verification commitment. */
+const authorityCited = (p: {
+  source?: string;
+  lastVerified?: string;
+  reverifyBy?: string;
+}): boolean =>
+  authorityUrl(p.source) &&
+  realDate(p.lastVerified) &&
+  realDate(p.reverifyBy) &&
+  // A deadline on or before its own verification date would already be due, i.e. a
+  // citation that never commits to anything.
+  p.reverifyBy! > p.lastVerified!;
+
 export const ConfigProvenanceSchema = z
   .object({
     findingRefs: z.array(FindingId),
@@ -21,9 +61,13 @@ export const ConfigProvenanceSchema = z
     volatility: Volatility.optional(),
     reverifyBy: IsoDate.optional(),
   })
-  .refine((p) => p.findingRefs.length >= 1 || p.source === "internal-heuristic", {
-    message: "a config value needs ≥1 findingRef or source:'internal-heuristic'",
-  })
+  .refine(
+    (p) => p.findingRefs.length >= 1 || p.source === "internal-heuristic" || authorityCited(p),
+    {
+      message:
+        "a config value needs ≥1 findingRef, source:'internal-heuristic', or an authority URL (real host) carrying real lastVerified + reverifyBy dates, with reverifyBy after lastVerified",
+    },
+  )
   .refine((p) => !missingReverifyBy(p), {
     message: "non-stable volatility requires a reverifyBy date",
   });
