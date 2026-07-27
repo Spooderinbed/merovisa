@@ -5,11 +5,29 @@ beforeAll(() => {
   process.env.CLAIM_HMAC_SECRET = "test-secret-must-be-32-chars-long-abc";
 });
 
-const { verifyOtp, getUser, claimAndBootstrapProfile, checkRateLimit } = vi.hoisted(() => ({
+const {
+  verifyOtp,
+  getUser,
+  claimAndBootstrapProfile,
+  checkRateLimit,
+  failedOtpAttempts,
+  recordFailedOtpAttempt,
+  clearOtpAttempts,
+} = vi.hoisted(() => ({
   verifyOtp: vi.fn(),
   getUser: vi.fn(),
   claimAndBootstrapProfile: vi.fn(),
   checkRateLimit: vi.fn(),
+  failedOtpAttempts: vi.fn(),
+  recordFailedOtpAttempt: vi.fn(),
+  clearOtpAttempts: vi.fn(),
+}));
+
+vi.mock("@/lib/auth/otp-attempts", () => ({
+  MAX_OTP_ATTEMPTS: 5,
+  failedOtpAttempts,
+  recordFailedOtpAttempt,
+  clearOtpAttempts,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -38,6 +56,11 @@ describe("POST /api/auth/email/verify", () => {
     claimAndBootstrapProfile.mockReset();
     checkRateLimit.mockReset();
     checkRateLimit.mockResolvedValue(true);
+    failedOtpAttempts.mockReset();
+    failedOtpAttempts.mockResolvedValue(0);
+    recordFailedOtpAttempt.mockReset();
+    recordFailedOtpAttempt.mockResolvedValue(1);
+    clearOtpAttempts.mockReset();
   });
 
   it("verifies the emailed code and signs the student in", async () => {
@@ -93,5 +116,49 @@ describe("POST /api/auth/email/verify", () => {
     const res = await POST(post({ email: "a@b.com", code: "123456" }));
     expect(res.status).toBe(429);
     expect(verifyOtp).not.toHaveBeenCalled();
+  });
+
+  // The IP limits above (ours and GoTrue's) are both per-IP, so a rotating pool of
+  // ~1,400 IPs could otherwise land ~500k guesses inside the code's one-hour life —
+  // against a 1,000,000 keyspace, on the only credential these accounts have.
+  // Burning the code after a few misses caps it at MAX_OTP_ATTEMPTS per code, and
+  // codes are already capped at 5/hour per address by the send endpoint.
+  describe("brute-force defence (per address, not per IP)", () => {
+    it("counts a wrong code against the address, not just the IP", async () => {
+      verifyOtp.mockResolvedValue({ error: { message: "invalid" } });
+      await POST(post({ email: "a@b.com", code: "000000" }));
+      expect(recordFailedOtpAttempt).toHaveBeenCalledWith("a@b.com");
+    });
+
+    it("stops forwarding guesses to Supabase once the code is burned", async () => {
+      failedOtpAttempts.mockResolvedValue(5);
+      const res = await POST(post({ email: "a@b.com", code: "000000" }));
+      expect(verifyOtp).not.toHaveBeenCalled();
+      expect(res.status).toBe(401);
+      expect((await res.json()).error).toMatch(/new code/i);
+    });
+
+    it("tells the student to request a new code on the miss that burns it", async () => {
+      verifyOtp.mockResolvedValue({ error: { message: "invalid" } });
+      recordFailedOtpAttempt.mockResolvedValue(5);
+      const res = await POST(post({ email: "a@b.com", code: "000000" }));
+      expect(res.status).toBe(401);
+      expect((await res.json()).error).toMatch(/new code/i);
+    });
+
+    // Not an address lockout: burning is per-code and a resend clears it, so an
+    // attacker can never park a victim outside their own account.
+    it("clears the count on a successful sign-in", async () => {
+      verifyOtp.mockResolvedValue({ error: null });
+      getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+      await POST(post({ email: "a@b.com", code: "123456" }));
+      expect(clearOtpAttempts).toHaveBeenCalledWith("a@b.com");
+    });
+
+    it("checks the burn count against the normalized address", async () => {
+      failedOtpAttempts.mockResolvedValue(5);
+      await POST(post({ email: " A@B.com ", code: "000000" }));
+      expect(failedOtpAttempts).toHaveBeenCalledWith("a@b.com");
+    });
   });
 });

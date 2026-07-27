@@ -8,6 +8,15 @@ const redis = url && token ? new Redis({ url, token }) : null;
 
 const cache = new Map<string, Ratelimit>();
 
+/**
+ * The shared Redis connection, or null when Upstash is not configured.
+ * Exposed for counters that need reset semantics a sliding window can't express
+ * (see lib/auth/otp-attempts) — everything else should use checkRateLimit.
+ */
+export function getRedis(): Redis | null {
+  return redis;
+}
+
 function getLimiter(
   name: string,
   limit: number,

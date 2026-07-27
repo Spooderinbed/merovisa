@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
-const { signInWithOtp, checkRateLimit } = vi.hoisted(() => ({
+const { signInWithOtp, checkRateLimit, clearOtpAttempts } = vi.hoisted(() => ({
   signInWithOtp: vi.fn(),
   checkRateLimit: vi.fn(),
+  clearOtpAttempts: vi.fn(),
 }));
+
+vi.mock("@/lib/auth/otp-attempts", () => ({ clearOtpAttempts }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { signInWithOtp } }),
@@ -99,5 +102,21 @@ describe("POST /api/auth/email/start", () => {
     const res = await POST(post({ email: "a@b.com" }));
     expect(res.status).toBe(502);
     expect((await res.json()).error).toMatch(/couldn't send/i);
+  });
+
+  // A new code must start with a clean slate, otherwise wrong guesses against the
+  // previous code would burn this one on arrival — turning a brute-force defence
+  // into a way to keep a student permanently locked out.
+  it("clears the burnt-attempt count when a fresh code goes out", async () => {
+    clearOtpAttempts.mockReset();
+    await POST(post({ email: "a@b.com" }));
+    expect(clearOtpAttempts).toHaveBeenCalledWith("a@b.com");
+  });
+
+  it("does not clear the count when sending failed", async () => {
+    clearOtpAttempts.mockReset();
+    signInWithOtp.mockResolvedValue({ error: { message: "smtp down" } });
+    await POST(post({ email: "a@b.com" }));
+    expect(clearOtpAttempts).not.toHaveBeenCalled();
   });
 });

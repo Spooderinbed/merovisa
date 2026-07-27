@@ -4,6 +4,7 @@ import { checkRateLimit, ipFromRequest } from "@/lib/rate-limit/upstash";
 import { EmailStartSchema } from "@/lib/validation/auth-email";
 import { resolveSiteOrigin } from "@/lib/auth/site-origin";
 import { safeNext } from "@/lib/auth/safe-next";
+import { clearOtpAttempts } from "@/lib/auth/otp-attempts";
 
 /**
  * Step 1 of email sign-in: ask Supabase Auth to email a 6-digit code (and a
@@ -56,6 +57,10 @@ export async function POST(request: Request): Promise<Response> {
       { status: 502 },
     );
   }
+
+  // A new code starts clean. Without this, guesses against the previous code would
+  // burn this one on arrival and the brute-force guard would become a lockout.
+  await clearOtpAttempts(email);
 
   return NextResponse.json({ ok: true });
 }

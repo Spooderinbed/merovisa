@@ -64,10 +64,32 @@ testing; it is the same dependency the 2026-07-10 audit tracks as **F-7**.
 
 ## What the app already limits
 
-The app rate-limits ahead of Supabase, so a misconfigured or absent Upstash does not
-open the door: 5 send requests per IP per minute and 5 per address per hour
-(`/api/auth/email/start`), and 10 verification attempts per IP per minute
-(`/api/auth/email/verify`). Supabase's own per-address frequency cap sits behind that.
+Ahead of Supabase, the app applies:
+
+| Surface | Limit |
+| --- | --- |
+| `/api/auth/email/start` | 5 sends per IP per minute · 5 per address per hour |
+| `/api/auth/email/verify` | 10 attempts per IP per minute |
+| A single emailed code | **5 wrong guesses, then the code is retired** |
+
+That last one is the load-bearing defence, and it is per **address**. Every other
+limit here — including Supabase's own `token_verifications` (30 per 5 minutes) — is
+per **IP**, which a rotating IP pool defeats: ~1,400 addresses would otherwise buy
+roughly 500,000 guesses inside a code's one-hour life, against a 1,000,000 keyspace,
+on the only credential an email-auth account has. Capping guesses per code brings
+that to 5 per code and, since codes are capped at 5 per address per hour, 25 per
+hour total.
+
+Retiring a code is **not** an account lockout: the count is scoped to one code and
+wiped whenever a new one is sent, so an attacker burning codes can never park a
+student outside their own account — "send a new code" stays open. The emailed link is
+unaffected; its token hash is far too large to guess.
+
+**These limits require Upstash.** `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`
+must be set in Vercel or every one of them silently no-ops — they fail open by design,
+because refusing all sign-ins while Redis is unreachable would be a worse outage than
+the exposure. Without Upstash, only Supabase's per-IP caps remain, and the
+rotating-IP attack above is live. Treat Upstash as required for production email auth.
 
 ## Checking it end to end
 

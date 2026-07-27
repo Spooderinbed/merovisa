@@ -3,6 +3,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkRateLimit, ipFromRequest } from "@/lib/rate-limit/upstash";
 import { EmailVerifySchema } from "@/lib/validation/auth-email";
 import { resolveSignInDestination } from "@/lib/auth/finish-sign-in";
+import {
+  MAX_OTP_ATTEMPTS,
+  failedOtpAttempts,
+  recordFailedOtpAttempt,
+  clearOtpAttempts,
+} from "@/lib/auth/otp-attempts";
+
+const BURNED = "Too many wrong tries. Send yourself a new code.";
 
 /**
  * Step 2 of email sign-in: exchange the emailed code for a session.
@@ -32,14 +40,27 @@ export async function POST(request: Request): Promise<Response> {
   }
   const { email, code, claim, next } = parsed.data;
 
+  // Per-address guard. The IP limit above and GoTrue's own are both per-IP, which
+  // a rotating pool defeats; this is what actually bounds guesses at a code.
+  if ((await failedOtpAttempts(email)) >= MAX_OTP_ATTEMPTS) {
+    return NextResponse.json({ error: BURNED }, { status: 401 });
+  }
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
   if (error) {
+    const attempts = await recordFailedOtpAttempt(email);
     return NextResponse.json(
-      { error: "That code didn't work. Check it, or send a new one." },
+      {
+        error:
+          attempts >= MAX_OTP_ATTEMPTS
+            ? BURNED
+            : "That code didn't work. Check it, or send a new one.",
+      },
       { status: 401 },
     );
   }
+  await clearOtpAttempts(email);
 
   const { data } = await supabase.auth.getUser();
   const redirectTo = await resolveSignInDestination(data.user, { claim, next });
