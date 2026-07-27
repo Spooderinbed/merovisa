@@ -245,7 +245,12 @@ max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# MV-147: 10 minutes, not the 1-hour default. GoTrue's /auth/v1/verify is reachable
+# directly with the public anon key, where the app's per-address guess cap does not
+# apply and only a per-IP limit a rotating pool defeats remains. Shortening the code's
+# life is one of the few levers that shrinks that window — 6x fewer guesses per code.
+# Keep TTL_SECONDS in lib/auth/otp-attempts.ts equal to this.
+otp_expiry = 600
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]

@@ -98,25 +98,30 @@ because refusing all sign-ins while Redis is unreachable would be a worse outage
 the exposure. Without Upstash, only Supabase's per-IP caps remain, and the
 rotating-IP attack above is live. Treat Upstash as required for production email auth.
 
-### The app cannot close this alone — two settings worth changing
+### The app cannot close this alone
 
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` ships in the browser bundle, as it must, and GoTrue's
 own `POST /auth/v1/verify` accepts it. An attacker can therefore skip this app
 entirely and guess codes straight at Supabase, where the per-address counter above
 does not exist and only the per-IP `token_verifications` limit applies — the very
 limit a rotating IP pool defeats. **The app-layer cap raises the cost of the easy
-attack; it cannot bound the direct one.** Two `supabase/config.toml` settings (and
-their dashboard equivalents) are what actually shrink that exposure, and both are
-founder calls because they change the sign-in experience:
+attack; it cannot bound the direct one.** Supabase-side settings are what actually
+shrink that exposure:
 
-| Setting | Now | Effect of changing it |
+| Setting | Value | Status |
 | --- | --- | --- |
-| `otp_length` | 6 | 8 digits multiplies the keyspace by 100 — a longer code to type |
-| `otp_expiry` | 3600 | 600s cuts the guessing window 6× — more "code expired, send another" |
+| `otp_expiry` | **600** (was 3600) | **Applied** — 6× smaller guessing window per code |
+| `otp_length` | 6 | Open — 8 digits multiplies the keyspace by 100, at two more digits to type |
+| `[auth.captcha]` | off | Open — the only lever that also protects GoTrue's endpoints directly |
 
-Enabling `[auth.captcha]` (hCaptcha/Turnstile) is the third lever, and the only one
-that also protects GoTrue's endpoints directly, at the cost of a challenge in the
-sign-in flow.
+**`otp_expiry` must be set in the dashboard too**, or production keeps the 1-hour
+default while local dev uses 10 minutes: **Authentication → Providers → Email → Email
+OTP Expiration → `600`**. `supabase/config.toml` governs only `supabase start`.
+
+Three things are pinned to that 600: the two email templates ("expires in 10
+minutes"), the code-entry screen in `components/auth/email-sign-in.tsx`, and
+`TTL_SECONDS` in `lib/auth/otp-attempts.ts` — the attempt counter must not outlive
+the code it guards. Change one, change all four.
 
 ## Checking it end to end
 

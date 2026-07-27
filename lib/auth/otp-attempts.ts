@@ -5,11 +5,11 @@ import { getRedis } from "@/lib/rate-limit/upstash";
  * Guesses a single emailed code survives before it is retired.
  *
  * Both the app's verify limit and GoTrue's own are per-IP, so a rotating IP pool
- * could otherwise spend the code's whole one-hour life guessing — roughly 500k
- * attempts against a 1,000,000 keyspace, on the only credential an email-auth
- * account has. Counting per address instead caps a code at MAX_OTP_ATTEMPTS
- * guesses, and the send endpoint already caps codes at 5 per address per hour:
- * 25 guesses an hour, which is nowhere near six digits.
+ * could otherwise spend the code's whole life guessing — against a 1,000,000
+ * keyspace, on the only credential an email-auth account has. Counting per address
+ * instead caps a code at MAX_OTP_ATTEMPTS guesses, and the send endpoint already
+ * caps codes at 5 per address per hour: 25 guesses an hour, which is nowhere near
+ * six digits.
  *
  * Deliberately NOT an address lockout. The count is scoped to one code and wiped
  * whenever a new one is sent, so burning a code can never park a student outside
@@ -23,7 +23,7 @@ import { getRedis } from "@/lib/rate-limit/upstash";
 export const MAX_OTP_ATTEMPTS = 5;
 
 /** Matches `otp_expiry` in supabase/config.toml — the counter dies with its code. */
-const TTL_SECONDS = 60 * 60;
+const TTL_SECONDS = 600;
 
 const keyFor = (email: string) => `mv:otp-attempts:${email}`;
 

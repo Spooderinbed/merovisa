@@ -54,13 +54,14 @@ describe("otp attempt counter", () => {
     expect(Math.max(...results)).toBe(20);
   });
 
-  // The counter must die with the code it guards, so a stale count from an hour
-  // ago can't burn a freshly issued one.
+  // The counter must die with the code it guards, so a stale count can't burn a
+  // freshly issued one. This number tracks `otp_expiry` in supabase/config.toml —
+  // if that changes and this doesn't, the counter outlives its code.
   it("expires the counter alongside the code it guards", async () => {
     const redis = fakeRedis();
     getRedis.mockReturnValue(redis);
     await recordOtpAttempt("a@b.com");
-    expect([...redis.ttls.values()][0]).toBe(3600);
+    expect([...redis.ttls.values()][0]).toBe(600);
   });
 
   it("sets the expiry once, not on every failure", async () => {

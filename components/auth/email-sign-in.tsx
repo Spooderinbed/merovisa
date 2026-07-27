@@ -118,7 +118,7 @@ export function EmailSignIn({ claimToken, nextPath }: EmailSignInProps) {
       ) : (
         <form onSubmit={submitCode} className="flex flex-col gap-2">
           <p role="status" className="text-meta text-ink-soft">
-            We sent a 6-digit code to {email}. It expires in an hour.
+            We sent a 6-digit code to {email}. It expires in 10 minutes.
           </p>
           <label htmlFor="auth-code" className="text-meta text-ink-soft">
             6-digit code
