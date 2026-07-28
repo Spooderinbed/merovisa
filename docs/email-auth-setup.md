@@ -93,6 +93,8 @@ code as it is issued, forcing repeated resends. That needs a sustained, targeted
 attack, and the student always has a route back in.
 
 **These limits require Upstash.** `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`
+(or the `KV_REST_API_URL` / `KV_REST_API_TOKEN` pair the Vercel Marketplace's Upstash
+integration injects — the client accepts either naming)
 must be set in Vercel or every one of them silently no-ops — they fail open by design,
 because refusing all sign-ins while Redis is unreachable would be a worse outage than
 the exposure. Without Upstash, only Supabase's per-IP caps remain, and the
