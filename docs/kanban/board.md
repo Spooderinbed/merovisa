@@ -9,11 +9,11 @@
 
 ### In flight — 1 open PR
 
-> Read from `gh` at 2026-07-28 13:37 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-07-28 13:42 UTC. **Not board state** — never written to board.json.
 
 | Card | PR | | CI | Review | Touches |
 |---|---|---|---|---|---|
-| **MV-148** | [#101](https://github.com/Spooderinbed/merovisa/pull/101) | open | pending 2/4 | — | docs · tests |
+| **MV-148** | [#101](https://github.com/Spooderinbed/merovisa/pull/101) | open | passing 4/4 | — | docs · tests |
 
 
 ## Backlog — 14
@@ -35,7 +35,7 @@
 
 ## Ready (WIP 5) — 1
 
-- **MV-148** · P2 · [Board PR enrichment: live PR/CI/review state per card, zero drift](cards/MV-148-board-pr-enrichment.md) — _Multiple parallel Claude sessions each own one card/branch/PR; the board must show PR ownership, CI rollup, review decision, and files-touched per card at a glance. Derived at build time in build.mjs from one gh pr list call, joined by MV-ID in branch/PR names — never written into board.json (anti-drift rule 1). Fail-soft when gh is unavailable; warn-only reconciliation for inreview-without-PR and merged-without-done. Scoped after evaluating and declining mission-control (2026-07-27)._ · [#101](https://github.com/Spooderinbed/merovisa/pull/101) open, ci pending
+- **MV-148** · P2 · [Board PR enrichment: live PR/CI/review state per card, zero drift](cards/MV-148-board-pr-enrichment.md) — _Multiple parallel Claude sessions each own one card/branch/PR; the board must show PR ownership, CI rollup, review decision, and files-touched per card at a glance. Derived at build time in build.mjs from one gh pr list call, joined by MV-ID in branch/PR names — never written into board.json (anti-drift rule 1). Fail-soft when gh is unavailable; warn-only reconciliation for inreview-without-PR and merged-without-done. Scoped after evaluating and declining mission-control (2026-07-27)._ · [#101](https://github.com/Spooderinbed/merovisa/pull/101) open, ci passing
 
 ## In progress (WIP 1) — 1
 
