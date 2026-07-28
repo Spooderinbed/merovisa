@@ -1,7 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { claimAssessment, createLead } from "./repo";
+import { claimAssessment, createLead, getAssessmentClaimState } from "./repo";
+import { isAssessmentClaimError } from "./errors";
 import { getProfile, upsertProfile } from "@/lib/profiles/repo";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
@@ -15,20 +16,41 @@ export interface ClaimAndBootstrapInput {
   email?: string;
 }
 
+/**
+ * Why a claim did not succeed, so the sign-in seam can route each to an honest,
+ * distinct recovery instead of one catch-all "expired" (MV-130 / audit C-9):
+ * - `already-mine`: the row is already owned by THIS user — a re-claim, so it is a
+ *   success at the seam (land them on it), not a failure.
+ * - `claimed`: bound to ANOTHER account — recover by signing into that account.
+ * - `expired`: purged, deleted, or past its 3-day life — nothing left to recover.
+ * - `error`: a transient write failure — the assessment is still there; retry.
+ */
+export type ClaimFailureReason = "already-mine" | "claimed" | "expired" | "error";
+
 export interface ClaimAndBootstrapResult {
   claimed: boolean;
+  reason?: ClaimFailureReason;
 }
 
 export async function claimAndBootstrapProfile(
   adminDb: DB,
   input: ClaimAndBootstrapInput,
 ): Promise<ClaimAndBootstrapResult> {
-  const ok = await claimAssessment(adminDb, {
-    id: input.assessmentId,
-    userId: input.userId,
-    nowIso: new Date().toISOString(),
-  });
-  if (!ok) return { claimed: false };
+  const nowIso = new Date().toISOString();
+  let ok: boolean;
+  try {
+    ok = await claimAssessment(adminDb, {
+      id: input.assessmentId,
+      userId: input.userId,
+      nowIso,
+    });
+  } catch (err) {
+    // A transient write failure, NOT "no row matched": the assessment is still
+    // recoverable, so tell the seam this is retryable rather than gone.
+    if (isAssessmentClaimError(err)) return { claimed: false, reason: "error" };
+    throw err;
+  }
+  if (!ok) return { claimed: false, reason: await classifyMiss(adminDb, input, nowIso) };
 
   // Read the just-claimed row's snapshot
   const { data } = await adminDb
@@ -82,4 +104,23 @@ export async function claimAndBootstrapProfile(
   }
 
   return { claimed: true };
+}
+
+/**
+ * Read the row back to explain why a conditional claim matched nothing, so each
+ * cause reaches its own honest recovery state (MV-130). Ordered most- to
+ * least-specific; a row that is unclaimed AND unexpired here means the update lost
+ * a race (or a filter regressed), which is retryable, so it falls through to `error`.
+ */
+async function classifyMiss(
+  adminDb: DB,
+  input: ClaimAndBootstrapInput,
+  nowIso: string,
+): Promise<ClaimFailureReason> {
+  const state = await getAssessmentClaimState(adminDb, input.assessmentId, nowIso);
+  if (!state) return "expired"; // purged (MV-135) / deleted / never persisted
+  if (state.owner === input.userId) return "already-mine";
+  if (state.owner !== null) return "claimed"; // bound to another account
+  if (state.expired) return "expired";
+  return "error"; // unclaimed & unexpired but the write missed — retryable
 }

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
-const { claimAssessment, createLead, upsertProfile, getProfile, from, update, updateCalls, updateResults } = vi.hoisted(() => {
+const { claimAssessment, createLead, getAssessmentClaimState, upsertProfile, getProfile, from, update, updateCalls, updateResults } = vi.hoisted(() => {
   const claimAssessment = vi.fn();
   const createLead = vi.fn();
+  const getAssessmentClaimState = vi.fn();
   const upsertProfile = vi.fn();
   const getProfile = vi.fn();
 
@@ -31,19 +32,23 @@ const { claimAssessment, createLead, upsertProfile, getProfile, from, update, up
 
   const select = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: { profile_snapshot: { destination: "australia" } }, error: null }) }) });
   const from = vi.fn(() => ({ update, select }));
-  return { claimAssessment, createLead, upsertProfile, getProfile, from, update, updateCalls, updateResults };
+  return { claimAssessment, createLead, getAssessmentClaimState, upsertProfile, getProfile, from, update, updateCalls, updateResults };
 });
 const fakeAdmin = { from } as never;
 
-vi.mock("@/lib/assessments/repo", () => ({ claimAssessment, createLead }));
+vi.mock("@/lib/assessments/repo", () => ({ claimAssessment, createLead, getAssessmentClaimState }));
 vi.mock("@/lib/profiles/repo", () => ({ upsertProfile, getProfile }));
 
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
+import { AssessmentClaimError } from "@/lib/assessments/errors";
 
 describe("claimAndBootstrapProfile", () => {
   beforeEach(() => {
     claimAssessment.mockReset();
     createLead.mockReset();
+    getAssessmentClaimState.mockReset();
+    // Default: the row is gone (purged/deleted) unless a test says otherwise.
+    getAssessmentClaimState.mockResolvedValue(null);
     upsertProfile.mockReset();
     getProfile.mockReset();
     from.mockClear();
@@ -58,8 +63,64 @@ describe("claimAndBootstrapProfile", () => {
     const out = await claimAndBootstrapProfile(fakeAdmin, {
       assessmentId: "a1", userId: "u1", googleName: "Aarav Sharma",
     });
-    expect(out).toEqual({ claimed: false });
+    expect(out.claimed).toBe(false);
     expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  // MV-130: a failed claim is not one dead end — each cause is read back and reported
+  // as a distinct, honest reason so the /assess seam can recover the student correctly.
+  describe("classifies why a claim missed (MV-130 / audit C-9)", () => {
+    it("reports 'expired' when the row is gone (purged/deleted/never persisted)", async () => {
+      claimAssessment.mockResolvedValue(false);
+      getAssessmentClaimState.mockResolvedValue(null);
+      const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
+      expect(out).toEqual({ claimed: false, reason: "expired" });
+    });
+
+    it("reports 'already-mine' when the row is already owned by this user (a re-claim)", async () => {
+      claimAssessment.mockResolvedValue(false);
+      getAssessmentClaimState.mockResolvedValue({ owner: "u1", expired: false });
+      const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
+      expect(out).toEqual({ claimed: false, reason: "already-mine" });
+      // A re-claim must never re-bootstrap or re-record a lead.
+      expect(upsertProfile).not.toHaveBeenCalled();
+      expect(createLead).not.toHaveBeenCalled();
+    });
+
+    it("reports 'claimed' when the row is bound to another account", async () => {
+      claimAssessment.mockResolvedValue(false);
+      getAssessmentClaimState.mockResolvedValue({ owner: "someone-else", expired: false });
+      const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
+      expect(out).toEqual({ claimed: false, reason: "claimed" });
+    });
+
+    it("reports 'expired' when the row is unclaimed but past its life", async () => {
+      claimAssessment.mockResolvedValue(false);
+      getAssessmentClaimState.mockResolvedValue({ owner: null, expired: true });
+      const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
+      expect(out).toEqual({ claimed: false, reason: "expired" });
+    });
+
+    it("reports the retryable 'error' when the row is still claimable but the write missed", async () => {
+      claimAssessment.mockResolvedValue(false);
+      getAssessmentClaimState.mockResolvedValue({ owner: null, expired: false });
+      const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
+      expect(out).toEqual({ claimed: false, reason: "error" });
+    });
+
+    it("reports the retryable 'error' on a transient claim WRITE failure, without reading state", async () => {
+      claimAssessment.mockRejectedValue(new AssessmentClaimError(new Error("ETIMEDOUT")));
+      const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
+      expect(out).toEqual({ claimed: false, reason: "error" });
+      expect(getAssessmentClaimState).not.toHaveBeenCalled();
+    });
+
+    it("does not swallow a non-claim error thrown by the write", async () => {
+      claimAssessment.mockRejectedValue(new Error("unexpected"));
+      await expect(
+        claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" }),
+      ).rejects.toThrow("unexpected");
+    });
   });
 
   it("bootstraps profile when claim succeeds and user has no profile", async () => {

@@ -22,6 +22,13 @@ vi.mock("@/components/assess/assess-flow", () => ({
 vi.mock("@/components/assess/assess-interstitial", () => ({
   AssessInterstitial: () => <div data-testid="interstitial">interstitial</div>,
 }));
+vi.mock("@/components/assess/claim-failure", () => ({
+  ClaimFailure: ({ reason, signedIn }: { reason: string; signedIn: boolean }) => (
+    <div data-testid="claim-failure" data-reason={reason} data-signed-in={String(signedIn)}>
+      claim failure
+    </div>
+  ),
+}));
 
 import AssessPage from "@/app/(focused)/assess/page";
 
@@ -63,5 +70,34 @@ describe("/assess server-side fork", () => {
     render(ui);
     expect(screen.getByTestId("flow")).toBeInTheDocument();
     expect(screen.getByTestId("flow")).toHaveAttribute("data-signed-in", "true");
+  });
+
+  // MV-130 / audit C-9: a claim/OAuth failure returns here with ?error= and must render
+  // an honest recovery state instead of the silent ?new-only wizard.
+  it.each(["auth", "invalid-claim", "expired", "claimed", "claim-failed"])(
+    "renders the claim-failure recovery for ?error=%s",
+    async (code) => {
+      getUser.mockResolvedValue({ data: { user: null } });
+      const ui = await AssessPage({ searchParams: Promise.resolve({ error: code }) });
+      render(ui);
+      const el = screen.getByTestId("claim-failure");
+      expect(el).toBeInTheDocument();
+      expect(el).toHaveAttribute("data-reason", code);
+    },
+  );
+
+  it("passes signedIn=true to the recovery state when the failed claim left a session", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    const ui = await AssessPage({ searchParams: Promise.resolve({ error: "claim-failed" }) });
+    render(ui);
+    expect(screen.getByTestId("claim-failure")).toHaveAttribute("data-signed-in", "true");
+  });
+
+  it("ignores an unrecognised ?error= and renders the normal flow", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    const ui = await AssessPage({ searchParams: Promise.resolve({ error: "bogus" }) });
+    render(ui);
+    expect(screen.getByTestId("flow")).toBeInTheDocument();
+    expect(screen.queryByTestId("claim-failure")).not.toBeInTheDocument();
   });
 });
