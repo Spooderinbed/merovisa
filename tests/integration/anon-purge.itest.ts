@@ -185,7 +185,9 @@ describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postg
         googleName: "Ghost Claimant",
         email,
       });
-      expect(result).toEqual({ claimed: false });
+      // MV-130 enriched the miss with a classification; a purged row must read
+      // as expired — the honest "deleted, not recoverable" signal, never a retry.
+      expect(result).toEqual({ claimed: false, reason: "expired" });
       // A failed claim must not leave a half-bootstrapped account behind.
       expect(await getProfile(admin, freshUserId)).toBeNull();
       expect(await exists(doomed)).toBe(false);
