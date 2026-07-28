@@ -1647,14 +1647,14 @@
     },
     {
       "id": "MV-130",
-      "col": "backlog",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-130-assess-claim-failure-recovery.md",
       "title": "OAuth claim failure has no recovery on /assess (audit C-9)",
       "summary": "Audit C-9, uncarded. app/(focused)/assess/page.tsx reads only ?new and has no ?error handling, so a failed claim/OAuth silently drops the highest-intent user at the conversion moment. Fix: surface the failure honestly plus a retry path (reuse the MV-28 / MV-65 recover-in-place pattern). Distinct from MV-28 (anon results recovery).",
       "created": "2026-07-18",
-      "entered": "2026-07-18"
+      "entered": "2026-07-28"
     },
     {
       "id": "MV-131",
