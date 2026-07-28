@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
+import { AssessmentClaimError } from "./errors";
 
 type DB = SupabaseClient<Database>;
 export type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"];
@@ -53,8 +54,46 @@ export async function claimAssessment(
     .is("owner", null)
     .gt("expires_at", input.nowIso)
     .select("id");
-  if (error || !data) return false;
+  // A DB/network error is NOT "no row matched" — surface it as a distinct, retryable
+  // failure so the sign-in seam never tells a student their still-recoverable
+  // assessment is gone. `!data` with no error means the conditional update matched
+  // nothing (already claimed, expired, or purged): report that as a plain false.
+  if (error) throw new AssessmentClaimError(error);
+  if (!data) return false;
   return (data as unknown[]).length > 0;
+}
+
+/**
+ * Why a conditional `claimAssessment` matched no row, read back for an HONEST
+ * recovery message (MV-130). The bare boolean can't tell a student whose
+ * assessment was purged ("expired and deleted") from one already bound to another
+ * account ("sign in with that account") from a transient miss they should retry.
+ *
+ * Call with the SERVICE-ROLE admin client: it must see rows owned by ANOTHER user
+ * to detect the "claimed elsewhere" case, which RLS would hide. Returns null when
+ * the row no longer exists (purged by the MV-135 daily job, or never persisted).
+ */
+export interface AssessmentClaimState {
+  owner: string | null;
+  expired: boolean;
+}
+
+export async function getAssessmentClaimState(
+  db: DB,
+  id: string,
+  nowIso: string,
+): Promise<AssessmentClaimState | null> {
+  const { data, error } = await db
+    .from("assessments")
+    .select("owner, expires_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as { owner: string | null; expires_at: string };
+  return {
+    owner: row.owner,
+    expired: new Date(row.expires_at).getTime() <= new Date(nowIso).getTime(),
+  };
 }
 
 export async function getOwnedAssessment(db: DB, id: string): Promise<AssessmentRow | null> {

@@ -40,12 +40,27 @@ export async function resolveSignInDestination(
   if (!verified) return "/assess?error=invalid-claim";
   if (!user?.id) return fallback;
 
-  const { claimed } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
+  const { claimed, reason } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
     assessmentId: verified.assessmentId,
     userId: user.id,
     googleName: user.user_metadata?.full_name ?? undefined,
     email: user.email ?? undefined,
   });
-  if (!claimed) return "/assess?error=expired";
-  return `/assessment/${verified.assessmentId}`;
+  if (claimed) return `/assessment/${verified.assessmentId}`;
+
+  // A failed claim is not one dead end — route each cause to its own honest
+  // recovery on /assess (MV-130 / audit C-9). `already-mine` is a re-claim, so it
+  // is a success: land the student on the assessment they already own instead of a
+  // false "expired". A bare `{ claimed: false }` (no reason) stays `expired`.
+  switch (reason) {
+    case "already-mine":
+      return `/assessment/${verified.assessmentId}`;
+    case "claimed":
+      return "/assess?error=claimed";
+    case "error":
+      return "/assess?error=claim-failed";
+    case "expired":
+    default:
+      return "/assess?error=expired";
+  }
 }
