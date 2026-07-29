@@ -1,6 +1,6 @@
 # Stage 0 — Founder decision record
 
-**Date:** 2026-07-25 · **Status:** Decisions taken by founder · **Records:** the three questions the [Stage 0 decision pack](2026-07-25-stage0-controller-model-options.md) put forward
+**Decisions taken:** 2026-07-29 · **Pack drafted:** 2026-07-25 · **Records:** the three questions the [Stage 0 decision pack](2026-07-25-stage0-controller-model-options.md) put forward
 
 **Pack:** [controller-model options memo](2026-07-25-stage0-controller-model-options.md) · [consultancy agreement skeleton](2026-07-25-stage0-consultancy-agreement-skeleton.md) · [product-name decision brief](2026-07-25-stage0-product-name-decision-brief.md) · this record
 
@@ -12,7 +12,7 @@ being brought into line.
 
 ## D-A · Controller model = **Option B (layered)** ✅ DECIDED
 
-**Plan decision #1. Founder agreed with the memo's recommendation, 2026-07-25.**
+**Plan decision #1. Founder agreed with the memo's recommendation, 2026-07-29.**
 
 Each party is responsible for the layer it actually determines:
 
@@ -50,7 +50,7 @@ recommendation was accepted, so they are commitments):
 
 ## D-B · Consultancy agreement — **counsel engaged when the product is ready** ✅ DECIDED
 
-**Founder, 2026-07-25:** the agreement will be drafted and executed when the product is ready,
+**Founder, 2026-07-29:** the agreement will be drafted and executed when the product is ready,
 not now. The [skeleton](2026-07-25-stage0-consultancy-agreement-skeleton.md) stands as the brief
 for that engagement; §4 and §6 can now be filled in from D-A above.
 
@@ -73,7 +73,7 @@ agreement waits.
 
 ## D-C · Product name = **MeroVisa** ✅ DECIDED
 
-**MV-136 / audit F-4. Founder, 2026-07-25:** "LandingPad needs to go — it's either MeroVisa or
+**MV-136 / audit F-4. Founder, 2026-07-29:** "LandingPad needs to go — it's either MeroVisa or
 MyVisa," then chose **MeroVisa**.
 
 **LandingPad is eliminated.** It should not reappear in briefs or docs.
