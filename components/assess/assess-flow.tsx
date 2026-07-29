@@ -9,6 +9,7 @@ import { ProfileRecap } from "./profile-recap";
 import { Results } from "@/components/results/results";
 import { formatExpiryLabel } from "@/lib/assessments/expiry";
 import { normalizeStoredProfileCompleteness } from "@/lib/results/completeness";
+import { RESULTS_STORAGE_KEY } from "@/lib/results/persisted-results";
 import { corridorForHomeCountry } from "@/lib/theme/corridor";
 import { track } from "@/lib/analytics/events";
 
@@ -16,8 +17,8 @@ type Phase = "wizard" | "recap" | "results";
 
 // Computed results payload (+ profile + id) so a refresh / tab-restore on the
 // results screen rehydrates the results view instead of dropping to the wizard
-// (MV-28 a). Anonymous-only — signed-in users already persist server-side.
-const RESULTS_STORAGE_KEY = "myvisa.results.v1";
+// (MV-28 a). Anonymous-only — signed-in users already persist server-side. The
+// storage key is shared so the /assess claim-failure recovery reads the same slot.
 
 interface PersistedResults {
   profile: StudentProfile;

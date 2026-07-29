@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { claimAssessment, getOwnedAssessment } from "@/lib/assessments/repo";
+import { claimAssessment, getOwnedAssessment, getAssessmentClaimState } from "@/lib/assessments/repo";
+import { AssessmentClaimError } from "@/lib/assessments/errors";
 import { fakeSupabase } from "../helpers/fake-supabase";
 
 describe("claimAssessment", () => {
@@ -20,6 +21,39 @@ describe("claimAssessment", () => {
     const { client } = fakeSupabase({ data: [], error: null });
     const claimed = await claimAssessment(client, { id: "aid", userId: "u", nowIso: "2026-06-03T00:00:00.000Z" });
     expect(claimed).toBe(false);
+  });
+
+  // MV-130: a DB/network error is NOT "no row matched". Collapsing it to `false` is
+  // what let the sign-in seam tell a student their still-recoverable assessment was gone.
+  it("throws a typed claim error on a DB failure, so callers can offer a retry", async () => {
+    const { client } = fakeSupabase({ data: null, error: { message: "connection reset" } });
+    await expect(
+      claimAssessment(client, { id: "aid", userId: "u", nowIso: "2026-06-03T00:00:00.000Z" }),
+    ).rejects.toBeInstanceOf(AssessmentClaimError);
+  });
+});
+
+describe("getAssessmentClaimState", () => {
+  const NOW = "2026-06-03T00:00:00.000Z";
+
+  it("returns null when the row no longer exists (purged/deleted)", async () => {
+    const { client } = fakeSupabase({ data: null, error: null });
+    expect(await getAssessmentClaimState(client, "aid", NOW)).toBeNull();
+  });
+
+  it("reports the owner and that the row is still live", async () => {
+    const { client } = fakeSupabase({ data: { owner: "u1", expires_at: "2026-06-05T00:00:00.000Z" }, error: null });
+    expect(await getAssessmentClaimState(client, "aid", NOW)).toEqual({ owner: "u1", expired: false });
+  });
+
+  it("marks an unclaimed row past its expiry as expired", async () => {
+    const { client } = fakeSupabase({ data: { owner: null, expires_at: "2026-06-01T00:00:00.000Z" }, error: null });
+    expect(await getAssessmentClaimState(client, "aid", NOW)).toEqual({ owner: null, expired: true });
+  });
+
+  it("returns null on a read error rather than guessing", async () => {
+    const { client } = fakeSupabase({ data: null, error: { message: "boom" } });
+    expect(await getAssessmentClaimState(client, "aid", NOW)).toBeNull();
   });
 });
 

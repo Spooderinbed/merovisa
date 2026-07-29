@@ -46,7 +46,11 @@ const cards = board.cards.map((c) => {
   return { ...c, ageDays, inColDays, cycleDays, stale };
 });
 
-const priLabel = { P1: "P1", P2: "P2", P3: "P3" };
+// Priorities are whatever board.json says they are. There was once a { P1, P2, P3 }
+// lookup here, which mapped each label to itself and returned undefined for anything
+// else — so five P0 cards and one P4 rendered as "· undefined ·". Never re-enumerate
+// priorities; read the card's own value.
+const priorities = [...new Set(board.cards.map((c) => c.pri).filter(Boolean))].sort();
 
 // ---------- live PR enrichment (MV-148) ----------
 // One `gh` call per generation, joined onto cards by the MV-id in the branch/title.
@@ -152,7 +156,7 @@ for (const col of board.columns) {
     continue;
   }
   for (const c of list) {
-    const pri = c.pri ? `${priLabel[c.pri]} · ` : "";
+    const pri = c.pri ? `${c.pri} · ` : "";
     const title = c.file ? `[${c.title}](${c.file})` : c.title;
     const stale = c.stale ? ` · ⏳ ${c.inColDays}d in column` : "";
     md += `- **${c.id}** · ${pri}${title}${badgeMd(c)}${stale} — _${c.summary}_${prMd(c)}\n`;
@@ -165,7 +169,11 @@ writeFileSync(join(here, "board.md"), md);
 // via .toString() into the HTML, so backticks would break the wrapper string).
 function clientMain() {
   var B = window.__BOARD__;
-  var pri = { P1: "var(--danger)", P2: "var(--warn)", P3: "var(--muted)" };
+  // Same lesson as board.md: an unlisted priority used to yield "background:undefined",
+  // an invisible dot. P0 shares P1's red (both are drop-everything) and the exact
+  // label rides on the dot's tooltip, so the colour collision loses nothing.
+  var pri = { P0: "var(--danger)", P1: "var(--danger)", P2: "var(--warn)", P3: "var(--muted)", P4: "var(--muted)" };
+  function priColor(p) { return pri[p] || "var(--muted)"; }
 
   function metric(v, l) {
     return '<div class="m"><div class="mv">' + v + '</div><div class="ml">' + l + "</div></div>";
@@ -300,7 +308,7 @@ function clientMain() {
       var h = '<div class="col"><div class="ch"><span>' + col.name + "</span>" + wip + "</div>";
       if (!list.length) h += '<div class="empty">— none</div>';
       list.forEach(function (c) {
-        var dot = c.pri ? '<span class="dot" style="background:' + pri[c.pri] + '"></span>' : "";
+        var dot = c.pri ? '<span class="dot" title="' + c.pri + '" style="background:' + priColor(c.pri) + '"></span>' : "";
         var b = badge(c) + prChips(c);
         h += '<div class="card' + (c.badge === "next" ? " next" : "") + '" data-id="' + c.id + '">' +
           '<div class="t"><span class="cid">' + c.id + "</span>" + dot + "</div>" +
@@ -421,9 +429,7 @@ a.b{text-decoration:none}a.pr{font-weight:600}
   <div id="prstrip"></div>
   <div class="bar">
     <button class="pill on" data-f="all">All</button>
-    <button class="pill" data-f="P1">P1</button>
-    <button class="pill" data-f="P2">P2</button>
-    <button class="pill" data-f="P3">P3</button>
+    ${priorities.map((p) => `<button class="pill" data-f="${p}">${p}</button>`).join("\n    ")}
     <input id="q" placeholder="search cards…" />
     <label class="chk"><input type="checkbox" id="stale" /> stale only</label>
   </div>

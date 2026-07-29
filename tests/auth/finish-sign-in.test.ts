@@ -68,6 +68,32 @@ describe("resolveSignInDestination", () => {
     expect(dest).toBe("/assess?error=expired");
   });
 
+  // MV-130 / audit C-9: a failed claim is not one dead end. Each distinct cause routes
+  // to its own honest recovery on /assess so the student is never silently dropped.
+  it("treats a re-claim of the user's own assessment as success (lands on the assessment)", async () => {
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: false, reason: "already-mine" });
+    const dest = await resolveSignInDestination({ id: "user-1" }, { claim: validClaim() });
+    expect(dest).toBe(`/assessment/${ASSESSMENT_UUID}`);
+  });
+
+  it("routes a purged/expired assessment to /assess?error=expired", async () => {
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: false, reason: "expired" });
+    const dest = await resolveSignInDestination({ id: "user-1" }, { claim: validClaim() });
+    expect(dest).toBe("/assess?error=expired");
+  });
+
+  it("routes an assessment already bound to another account to /assess?error=claimed", async () => {
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: false, reason: "claimed" });
+    const dest = await resolveSignInDestination({ id: "user-1" }, { claim: validClaim() });
+    expect(dest).toBe("/assess?error=claimed");
+  });
+
+  it("routes a transient claim write failure to the retryable /assess?error=claim-failed", async () => {
+    claimAndBootstrapProfile.mockResolvedValue({ claimed: false, reason: "error" });
+    const dest = await resolveSignInDestination({ id: "user-1" }, { claim: validClaim() });
+    expect(dest).toBe("/assess?error=claim-failed");
+  });
+
   it("rejects an unsigned (raw) claim without touching the claim path", async () => {
     const dest = await resolveSignInDestination({ id: "user-1" }, { claim: ASSESSMENT_UUID });
     expect(dest).toBe("/assess?error=invalid-claim");
