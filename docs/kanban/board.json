@@ -1847,14 +1847,14 @@
     },
     {
       "id": "MV-148",
-      "col": "ready",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "file": "cards/MV-148-board-pr-enrichment.md",
       "title": "Board PR enrichment: live PR/CI/review state per card, zero drift",
       "summary": "Multiple parallel Claude sessions each own one card/branch/PR; the board must show PR ownership, CI rollup, review decision, and files-touched per card at a glance. Derived at build time in build.mjs from one gh pr list call, joined by MV-ID in branch/PR names — never written into board.json (anti-drift rule 1). Fail-soft when gh is unavailable; warn-only reconciliation for inreview-without-PR and merged-without-done. Scoped after evaluating and declining mission-control (2026-07-27).",
       "created": "2026-07-27",
-      "entered": "2026-07-27"
+      "entered": "2026-07-29"
     }
   ]
 }
