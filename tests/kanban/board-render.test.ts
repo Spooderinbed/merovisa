@@ -21,7 +21,11 @@ const md = readFileSync(join(KANBAN, "board.md"), "utf8");
 
 /** Card id → everything the row renders after "- **MV-NN** · ". */
 const renderedRows = new Map<string, string>();
-for (const line of md.split("\n")) {
+// Split on /\r?\n/, not "\n": the repo has no .gitattributes, so board.md checks out CRLF
+// wherever core.autocrlf is on. A bare "\n" split leaves a trailing \r that the row regex
+// below cannot match (`.` never matches \r, and there is no `m` flag for `$`), so every row
+// silently fails to parse — which quietly voids the two assertions that follow.
+for (const line of md.split(/\r?\n/)) {
   const m = line.match(/^- \*\*(MV-[A-Za-z0-9]+)\*\* · (.*)$/);
   if (m) renderedRows.set(m[1]!, m[2]!);
 }
