@@ -1858,47 +1858,47 @@
     },
     {
       "id": "MV-149",
-      "col": "backlog",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "founder",
       "file": "cards/MV-149-stage1-umbrella.md",
       "title": "Umbrella: Stage 1 tenancy foundation (MV-150 schema · MV-151 server boundary · MV-152 RLS · MV-153 negative-test gate)",
       "summary": "READY (tracking) — umbrella for Stage 1 of the revised consultancy plan (tenancy foundation): organizations/memberships/cases/assignments/invitations/audit_events, the server-only case-permission boundary, case-aware RLS, and the real-Supabase cross-tenant test harness. Carries four slices — MV-150 (additive schema + deny-all RLS), MV-151 (getCaseContext/requireCasePermission + service-role exception list), MV-152 (SECURITY DEFINER RLS policies), MV-153 (negative catalogue + positive matrix harness) — in the DAG 150→{151,152}→153. Stage exit gate is MV-153: the authorization matrix passes positive AND negative real-DB tests under npm run test:integration; a green unit/lint run is NOT sufficient evidence. Not blocked by the Stage 0 legal gate (D-B): Stage 1 runs entirely on seed data, no real student data. Carries two still-open founder decisions as design inputs (deciding nothing): fate of an unclaimed case, and the bounded case-creation→student-notice window.",
       "created": "2026-07-30",
-      "entered": "2026-07-30"
+      "entered": "2026-08-01"
     },
     {
       "id": "MV-150",
-      "col": "ready",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-150-tenancy-core-schema.md",
       "title": "Stage 1 tenancy core schema: six additive tables, deny-all RLS, regenerated types",
       "summary": "Ships one additive migration creating the six Stage-1 tenancy tables (organizations, organization_memberships, cases, case_assignments, invitations, audit_events) per the plan's \"New core tables\", with the revision's invitation shape (unique token_hash, hash-only, nullable accepted_at/revoked_at/expires_at feeding the downstream single-acceptance CAS) and append-only audit (role-independent immutability trigger + SECURITY DEFINER writer choke point, bare-uuid tombstone columns). All six tables get enable+force RLS, explicit named deny-all policies, and revoke-all-from-client grants — real case-aware policies and grant review are MV-152's. Every FK and every column the Stage-1 RLS helpers will read is indexed (advisor-clean); text+check enums per house convention; lib/supabase/types.ts regenerated. Strictly additive: touches no existing table — the owner NOT NULL relaxation, program_predictions immutability-trigger backfill, predictions→attempts→outcomes composite-FK rebuild, document header/versions replacement, and storage.objects policy retirement from \"Known schema obstacles\" are all explicit Stage-2 non-goals.",
       "created": "2026-07-30",
-      "entered": "2026-07-30"
+      "entered": "2026-08-01"
     },
     {
       "id": "MV-151",
-      "col": "backlog",
+      "col": "ready",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-151-case-permission-boundary.md",
       "title": "Case-permission server boundary (getCaseContext / requireCasePermission) + service-role exception list",
       "summary": "Builds the server-only case-permission layer for the consultancy workspace: getCaseContext(actorUserId, caseId), requireCasePermission(actorUserId, caseId, permission), and the role→permission matrix (owner/admin = whole org, counsellor = assigned-only, student = linked-case-only, inactive membership = nothing, role read from the DB never from JWT/metadata). Establishes the enforcement-boundary doctrine — the authenticated client + RLS is the load-bearing tenant boundary and this layer is defense-in-depth — plus a machine-enforced service-role exception list (a registered allowlist + lint/test guard) so no new case-touching path can reach createSupabaseAdminClient unregistered. Unit + behavioral tests against a mocked client only; real-DB positive/negative proof is MV-153's exit gate. Depends on MV-150; consumed by MV-152 and MV-153.",
       "created": "2026-07-30",
-      "entered": "2026-07-30"
+      "entered": "2026-08-01"
     },
     {
       "id": "MV-152",
-      "col": "backlog",
+      "col": "ready",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-152-case-aware-rls-policies.md",
       "title": "Case-aware RLS policies — replace deny-all with role-aware tenant isolation",
       "summary": "Replaces MV-150's deny-all default policies with real case-aware RLS on all six tenancy tables (organizations, organization_memberships, cases, case_assignments, invitations, audit_events), routing every membership/assignment/case lookup through `private` SECURITY DEFINER STABLE helpers with pinned `search_path = ''` so policies stay non-recursive and plan on MV-150's indexes. Covers org owner/admin full-org access, counsellor assigned-only, student linked-case-only, and inactive-membership = no access; every UPDATE carries USING + WITH CHECK, grants are authenticated-only (anon gets nothing), and audit_events keeps its append-only shape. This is the load-bearing tenant-isolation layer per the plan's enforcement boundary — tested as the authenticated user, never service-role — with an EXPLAIN check proving index usage and once-per-statement helper evaluation, and a clean security+performance advisor pass. P1, agent-owned; blocked by MV-150, coordinates with MV-151's role matrix, consumed by MV-153's exit-gate harness.",
       "created": "2026-07-30",
-      "entered": "2026-07-30"
+      "entered": "2026-08-01"
     },
     {
       "id": "MV-153",
