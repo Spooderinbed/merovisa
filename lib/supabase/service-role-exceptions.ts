@@ -94,16 +94,16 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Account linking (plan line 342). Claims an anonymous assessment into a freshly created account and bootstraps the profile. The row has no owner until this runs, so an authenticated client under RLS could not see the row it is about to claim.",
     requiredCaseCheck:
-      "None today — pre-tenancy, no case exists. Once cases are claimable this path must verify the claim token binds this Auth user to this case before writing.",
+      "Verifies an HMAC claim token — verifyClaim(params.claim), finish-sign-in.ts:39 — before reaching for service-role. Once cases are claimable this path must additionally bind case → Auth user.",
     auditEvent: null,
   },
   {
     path: "app/api/assess/claim/route.ts",
     status: "sanctioned",
     justification:
-      "Account linking (plan line 342), the API-route twin of finish-sign-in.ts: binds an ownerless anonymous assessment to the signed-in user via an HMAC claim token.",
+      "Account linking (plan line 342): binds an ownerless anonymous assessment, named by a caller-supplied id, to the signed-in caller. Unlike finish-sign-in.ts this route verifies NO claim token.",
     requiredCaseCheck:
-      "Verifies the HMAC claim token before writing. Once cases are claimable the same path must additionally bind case → Auth user.",
+      "Authenticates via supabase.auth.getUser(); the only authorization is the conditional-update predicate inside claimAssessment (binds an UNCLAIMED, UNEXPIRED row only). That predicate is therefore load-bearing and must not be relaxed — a caller-supplied id alone decides which row is targeted.",
     auditEvent: null,
   },
   {

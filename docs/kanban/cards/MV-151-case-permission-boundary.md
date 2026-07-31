@@ -81,5 +81,41 @@
 - 2026-07-30 — **"Every server path calls the boundary" ships as a binding convention + Stage 3 review-gate checklist, not a runtime assertion**, because Stage 1 ships no case-touching Server Components / Route Handlers / Server Actions yet — there is nothing to assert against at runtime until Stage 3 (integrator session).
 - 2026-07-30 — **Service-role fence is enforced by a lint rule + an importer-enumeration test, mirroring the board's `validate.mjs` "guard refuses" ethos** — a documented list alone is a convention a future PR forgets; a machine check is what actually holds the line (integrator session).
 
+- 2026-07-31 — **The fence is a dedicated rule (`merovisa/service-role-exception-list`), NOT a second `no-restricted-imports` block.** ESLint flat config *replaces* a rule's options rather than merging them, so a second `no-restricted-imports` entry would have silently disabled the Motion v2 ADR fence for every file it matched. A test now asserts that fence still resolves to `framer-motion` (build session).
+- 2026-07-31 — **The lint allow-list is extracted from `service-role-exceptions.ts` at config load, not restated in the config**, so there is one list a reviewer must trust. Extraction throws if it yields zero paths — an empty allow-list would silently unfence every call site. Exemption is by exact path comparison inside the rule, never a glob: real route paths contain `[id]` and `(focused)`, which minimatch would read as a character class and an extglob group.
+- 2026-07-31 — **`db` is a trailing optional parameter, not a leading one.** The plan names `getCaseContext(actorUserId, caseId)` / `requireCasePermission(actorUserId, caseId, permission)`; the repo's repo-layer idiom injects the client first. Keeping the plan's argument order and defaulting `db` to `createSupabaseServerClient()` satisfies both, and makes the safe client the zero-effort path — a caller cannot hand it the admin client by accident, only on purpose (build session).
+- 2026-07-31 — **Tests use a new table-keyed fake (`tests/helpers/fake-case-db.ts`), not the shared positional `fake-supabase.ts`.** The shared fake serves rows from one positional queue, which would have made `getCaseContext`'s internal query order load-bearing on every assertion. Fixture rows are typed against the generated `Database` types so a later column rename breaks these tests instead of silently matching nothing (build session).
+- 2026-07-31 — **Scope fence held on the fence itself:** the review's "resolve one hop of re-exports" suggestion was declined. Once the rule covers every first-party root, a relay module is flagged *at the relay*, which is the root of the chain; hop-resolution would add complexity for no additional coverage.
+
 ## Done evidence
-- (pending)
+
+**Branch** `mv-151-case-permission-boundary` off `origin/master` @ `78414d0`.
+
+**Gate (all green, run in the worktree):**
+- `npm run typecheck` — clean.
+- `npm run lint` — clean, with the new fence live repo-wide.
+- `npm test` — **322 files / 2405 tests passed**, of which **175 are new** (`tests/cases/permissions.test.ts` 103, `tests/cases/context.test.ts` 26, `tests/cases/require-permission.test.ts` 17, `tests/supabase/service-role-exceptions.test.ts` 29).
+- `npm run test:integration` — **deliberately not run**, per this card's Integration gate. No `*.itest.ts` added; the real-DB proof is MV-153's.
+
+**Delivered**
+- `lib/cases/permissions.ts` — the pure 13×4 grid, `deriveAccessScope`, `decideCasePermission`, and the enums mirrored from the merged migration (`ACTIVE_MEMBERSHIP_STATUS` is the single spelling of "active"). No I/O.
+- `lib/cases/context.ts` — `getCaseContext(actorUserId, caseId, db?)`, authenticated client only.
+- `lib/cases/require-permission.ts` — `requireCasePermission` (throws `CaseAuthorizationError`) + `checkCasePermission` (non-throwing).
+- `lib/cases/README.md` — the enforcement-boundary doctrine + the Stage 3 review-gate checklist.
+- `lib/supabase/service-role-exceptions.ts` — 16 entries + the plan's 4 sanctioned categories.
+- `eslint.config.mjs` — `merovisa/service-role-exception-list`.
+
+**Guard proven, not assumed.** Verified by reproducing the attacks rather than trusting the tests:
+- *Mutation check* (card test plan): deleting both inactive-membership guards from `deriveAccessScope` fails **7** tests; restoring returns to green.
+- *Fence fires*: an unregistered module using an aliased import + a re-export produced 2 ESLint errors. 11 evasion shapes are pinned through the real ESLint API (`lintText` against the repo's own config), plus a working-tree drift sweep and an assertion that the rule's effective allow-list **is** the registry.
+- *Laundering closed*: a relay at `components/__probe__/relay.ts` re-exporting the admin client, imported from `app/`, was caught at the relay by ESLint **and** failed the drift sweep. Probes deleted; tree clean.
+
+**Adversarial review before PR.** 88-agent workflow, six lenses (fail-open · fence evasion · schema agreement with MV-150/MV-152 · test vacuity · card compliance · registry accuracy), each finding refuted by three independent verifiers. **27 raw findings → 24 refuted → 3 confirmed, all 3 fixed before the PR opened:**
+1. **(high, 3/3)** The fence covered only `lib/**` + `app/**`, so a one-line re-export relay in `components/`, `scripts/`, or the repo root laundered the admin client past *both* layers — the exact re-export evasion the card says must not survive. Fixed: rule now `**/*.{ts,tsx,js,mjs,cjs}` with `tests/**` exempt; `SCANNED_ROOTS` widened to match; a regression test pins relays in four locations.
+2. **(high, 3/3)** The same defect, found independently by a second lens.
+3. **(high, 3/3)** **The registry was lying about a call site.** The `app/api/assess/claim/route.ts` entry claimed "verifies the HMAC claim token before writing" — that route performs *no* token verification; its only authorization is the unclaimed-and-unexpired predicate inside `claimAssessment`. `lib/auth/finish-sign-in.ts` is the path that calls `verifyClaim`. Both entries corrected against the source. This is exactly the failure mode a registry exists to prevent — an unreviewed path laundered as reviewed.
+
+**Deferred / flagged, not silently dropped**
+- **Student "permitted fields only"** (`case.update`): this layer authorizes the *claim*, not the *field set*. Recorded as a named gap in `lib/cases/README.md` with a checklist item — a Stage 3 mutation accepting an arbitrary student patch is a defect even though the cell allows.
+- **MV-152 must match this model.** `lib/cases/README.md` carries the grid in reviewable form; every enum value and column name was verified against the merged migration, and none was guessed.
+- No audit event is emitted anywhere: MV-150 shipped `private.write_audit_event` with EXECUTE revoked, so no path can emit one until MV-152's grant review. A test asserts every Stage-1 registry entry has `auditEvent: null` rather than claiming an emission the database cannot honour.

@@ -26,7 +26,13 @@ import {
 
 const REPO_ROOT = process.cwd();
 const RULE = "merovisa/service-role-exception-list";
-const SCANNED_ROOTS = ["lib", "app"];
+/**
+ * The whole first-party tree, matching the ESLint rule's scope. Scanning only
+ * `lib` and `app` would let a one-line re-export relay in `components/` or
+ * `scripts/` launder the admin client past both fence layers.
+ */
+const SCANNED_ROOTS = ["lib", "app", "components", "scripts", "docs"];
+const SKIP_DIRS = new Set(["node_modules", ".next", ".git", ".claude"]);
 
 let eslint: ESLint;
 
@@ -84,6 +90,23 @@ describe("A — the ESLint rule fires on every evasion shape", () => {
     }
   });
 
+  test("a re-export relay outside lib/ and app/ is flagged at the relay", { timeout: 60_000 }, async () => {
+    // The laundering attack: park `export { createSupabaseAdminClient } from
+    // "@/lib/supabase/admin"` in components/ or scripts/, then import THAT from a
+    // route. The importer's specifier is not an admin-module specifier, so the
+    // only place this can be caught is the relay itself — which means the fence
+    // has to cover every first-party root, not just the two the layer lives in.
+    const relay = `export { createSupabaseAdminClient } from "@/lib/supabase/admin";\n`;
+    for (const relayPath of [
+      "components/cases/__fence_fixture__.ts",
+      "scripts/__fence_fixture__.mjs",
+      "docs/__fence_fixture__.js",
+      "__fence_fixture__.ts",
+    ]) {
+      expect(await fenceErrorsFor(relay, relayPath), relayPath).toBeGreaterThan(0);
+    }
+  });
+
   test("the authenticated client is never fenced — it is the encouraged path", { timeout: 60_000 }, async () => {
     const source = `import { createSupabaseServerClient } from "@/lib/supabase/server";\nexport const a = createSupabaseServerClient;\n`;
     expect(await fenceErrorsFor(source, UNREGISTERED)).toBe(0);
@@ -102,11 +125,11 @@ describe("B — the registry agrees with the working tree", () => {
   /** Every .ts/.tsx file under the scanned roots. */
   function collectSourceFiles(dir: string, found: string[] = []): string[] {
     for (const entry of readdirSync(dir)) {
-      if (entry === "node_modules" || entry === ".next") continue;
+      if (SKIP_DIRS.has(entry)) continue;
       const absolute = path.join(dir, entry);
       if (statSync(absolute).isDirectory()) {
         collectSourceFiles(absolute, found);
-      } else if (/\.tsx?$/.test(entry)) {
+      } else if (/\.(?:tsx?|m?js|cjs)$/.test(entry)) {
         found.push(absolute);
       }
     }
@@ -174,7 +197,15 @@ describe("B — the registry agrees with the working tree", () => {
 
 describe("C — the effective lint config IS the registry", () => {
   test("the rule is switched on for lib and app", { timeout: 60_000 }, async () => {
-    for (const probe of ["lib/cases/permissions.ts", "app/api/leads/route.ts"]) {
+    // components/ and scripts/ are included deliberately: scoping the fence to
+    // lib/ + app/ alone let a one-line re-export relay outside those two roots
+    // launder the admin client past both layers.
+    for (const probe of [
+      "lib/cases/permissions.ts",
+      "app/api/leads/route.ts",
+      "components/chrome/site-header.tsx",
+      "scripts/contrast-check.mjs",
+    ]) {
       const config = await eslint.calculateConfigForFile(path.join(REPO_ROOT, probe));
       const entry = config.rules?.[RULE];
       expect(entry, `${RULE} should be configured for ${probe}`).toBeDefined();

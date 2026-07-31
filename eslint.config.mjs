@@ -156,8 +156,17 @@ const eslintConfig = defineConfig([
   // options rather than merging them, so a second `no-restricted-imports` block
   // would silently disable the Motion v2 ADR fence above for every file it
   // matched. Two concerns, two rules, no interference.
+  //
+  // Scoped to the whole first-party tree, not just `lib/` and `app/`: a one-line
+  // re-export relay parked in `components/` or `scripts/` would otherwise launder
+  // the admin client past both this rule and the drift sweep, because the route
+  // importing the relay sees a specifier that is not an admin-module specifier.
+  // Widening costs nothing — the allow-list is matched by exact path — and it
+  // closes the hole at its root: the relay itself is now the flagged module.
+  // `tests/**` is exempt: a test may legitimately import the client it is testing.
   {
-    files: ["lib/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx,js,mjs,cjs}"],
+    ignores: ["tests/**"],
     plugins: {
       merovisa: { rules: { "service-role-exception-list": serviceRoleExceptionListRule } },
     },
