@@ -155,6 +155,49 @@ mechanism is the trigger above. The grant list is unchanged, and the itest still
 and a personal case has no organization. Same shape as the personal-case DELETE gap already recorded,
 lands with the same Stage-2 personal-case path. Not a regression — MV-150 shipped that surface closed.
 
+**Deviation recorded (permissive direction, deliberate).** The checklist authorises exactly one
+invitations change for divergence 3 — INSERT. This ships SELECT and UPDATE for the assigned
+counsellor too, moving the case-scoped branch from `can_manage_case` to `can_staff_case`. Reason:
+INSERT alone is a broken cell, not a narrow one. PostgREST's `return=representation` needs the row
+to pass the SELECT policy, so `.insert().select()` fails outright; and an invite you can mint but
+cannot list or revoke is not a duty anyone can discharge. The widening is strictly case-scoped —
+team invites carry `case_id null` and stay invisible to counsellors, and the counsellor already has
+full access to the case in question. Flagged for the integrator rather than assumed.
+
+### Follow-up round — adversarial review of the amendment (same PR)
+
+A 64-agent red-team was run against the amended diff, with every finding put through three
+independent refutation attempts. Three survived and are fixed here; the rest are reported to the
+integrator rather than actioned, because they are pre-existing or out of MV-152's scope.
+
+- **A second un-minted-owner path, same class as divergence 5.** Closing `role='owner'` on INSERT is
+  only half a door. `revoked_at` is the sole column in the invitations UPDATE grant and that surface
+  is **bidirectional** — setting it back to null resurrects the invitation. An owner mints and
+  revokes an owner invitation; any admin un-revokes it. `invitations_update_staff` now carries the
+  same carve-out, so an admin may SEE an owner invitation and may not ALTER it — exactly how
+  `organization_memberships` already treats owner rows.
+- **Two performance regressions I introduced, both measured.** Gating the org branch on
+  `case_id is null` stopped student invitations ever matching the cheap InitPlan disjunct, so every
+  one fell through to a per-row `can_staff_case`: org-wide invitation listing went **1.0 ms → 141.9 ms**
+  (3,000 student + 3,000 team invites). Collapsing `case_assignments` SELECT to the bare helper left
+  a counsellor's own-assignments query with nothing to short-circuit on: **0.97 ms → 6.31 ms** (100 of
+  5,000 rows). Both restored with disjuncts that are strict *subsets* of the helper — the org branch
+  is sound on its own terms and the assignment branch (`actor_assigned_case_ids()`) is
+  revocation-gated — so no safety is traded for speed. An EXPLAIN assertion now guards both shapes.
+- **A comment of mine that was factually wrong.** I claimed the `SECURITY INVOKER` trigger function
+  needs `EXECUTE` from the updating client. It does not: PostgreSQL checks EXECUTE on a trigger
+  function once, at `CREATE TRIGGER` time, against the trigger's creator — never at fire time.
+  Verified by revoking it and confirming the guard still raises. The grant is removed; a security
+  boundary resting on a false premise is worse than no comment.
+- **The BYPASSRLS exemption was asserted only as catalog metadata.** Deleting the early-return from
+  the guard left the entire suite green while breaking Stage-2 claim and Stage-5 acceptance in
+  production. Replaced with a behavioural test that writes both guarded columns as `service_role`.
+- **Two omissions recorded rather than left implicit**, both raised by the review: `operational_status`
+  is frozen on a personal case for the same structural reason `archived_at` is (no org ⇒ no staff),
+  and `organization_memberships` keeps the one status-ungated `user_id = auth.uid()` disjunct that
+  the amendment deleted from `case_assignments`. The second is a knowing partial implementation of
+  the matrix's structural rule 1 and the migration now argues for it explicitly.
+
 **Mutation-tested, not merely green.** The four security fixes were reverted directly on the live
 local database (policy `ALTER`s + `DROP TRIGGER`) and the suite re-run: **12 tests failed, each one the
 test written for the reverted cell**, and every other test stayed green. A passing suite here proves
@@ -200,7 +243,7 @@ read proving the rows exist, and usually with the actor who legitimately does se
 - `npm run typecheck` — clean.
 - `npm run lint` — clean, 0 errors 0 warnings.
 - `npm test` — **318 files / 2230 tests passed**.
-- `npm run test:integration` — **4 files / 95 tests passed**, including `tests/integration/case-rls.itest.ts` (63 tests, evaluated as the **authenticated** user throughout; the service-role client is used only to seed fixtures, to read back rows for assertions, and to prove that a denied read was denied rather than empty).
+- `npm run test:integration` — **4 files / 99 tests passed**, including `tests/integration/case-rls.itest.ts` (67 tests, evaluated as the **authenticated** user throughout; the service-role client is used only to seed fixtures, to read back rows for assertions, and to prove that a denied read was denied rather than empty).
 
 **The four named proofs, all passing in `case-rls.itest.ts`:**
 

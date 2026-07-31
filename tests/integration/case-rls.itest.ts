@@ -910,6 +910,30 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       expect(undo).toBeNull();
     });
 
+    it("still lets service_role write both guarded columns — Stage 2 and Stage 5 depend on it", async () => {
+      // The BEHAVIOURAL half of the exemption. Asserting `rolbypassrls` from the catalog proves
+      // the roles are configured; it does not prove the guard consults it. Delete the
+      // early-return from private.enforce_case_write_surface() and every catalog assertion below
+      // still passes — but Stage 2's anonymous-claim path and Stage 5's invitation acceptance,
+      // which run as service_role and must set operational_status, would break in production
+      // with a green suite. This is the test that fails instead.
+      const { error: status } = await admin
+        .from("cases")
+        .update({ operational_status: "waiting_on_student" })
+        .eq("id", caseA2);
+      expect(status, `service_role must keep the operational_status write: ${status?.message}`).toBeNull();
+      expect(await caseField(caseA2, "operational_status")).toBe("waiting_on_student");
+
+      const { error: archive } = await admin
+        .from("cases")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", caseA2);
+      expect(archive, `service_role must keep the archived_at write: ${archive?.message}`).toBeNull();
+      expect(await caseField(caseA2, "archived_at")).not.toBeNull();
+
+      await admin.from("cases").update({ archived_at: null, operational_status: "new" }).eq("id", caseA2);
+    });
+
     it("still exempts the roles that bypass RLS — the guard is its column half, no wider", () => {
       // Stage 2's anonymous-claim path and Stage 5's invitation acceptance run as service_role
       // and must be able to set operational_status. The trigger reads the CALLER's rolbypassrls,
@@ -1126,6 +1150,53 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .insert(invitationFixture("ownerbyowner", { organization_id: orgA, role: "owner" }) as any);
       expect(byOwner, `an owner must still be able to invite an owner: ${byOwner?.message}`).toBeNull();
+    });
+
+    it("refuses an admin the UN-revocation of an owner invitation", async () => {
+      // The INSERT carve-out is only half a door. `revoked_at` is the one column in the grant
+      // and it is BIDIRECTIONAL — setting it back to null resurrects the invitation. Without
+      // the same carve-out on UPDATE, an admin who may not MINT an owner invitation just
+      // un-revokes one an owner already revoked, and arrives at the same place one verb along.
+      const { data: minted } = await ownerA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("ownerrevoke", { organization_id: orgA, role: "owner" }) as any)
+        .select("id")
+        .single();
+      const ownerInviteId = minted!.id;
+      const revokedAt = async (id: string) =>
+        (await admin.from("invitations").select("revoked_at").eq("id", id).single()).data!.revoked_at;
+
+      const { error: revoked } = await ownerA.client
+        .from("invitations")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", ownerInviteId);
+      expect(revoked).toBeNull();
+
+      // Silent USING miss, so the row is the assertion — and the owner's successful
+      // un-revocation below is what proves the write path works rather than being inert.
+      const { error: byAdmin } = await adminA.client
+        .from("invitations")
+        .update({ revoked_at: null })
+        .eq("id", ownerInviteId);
+      expect(byAdmin).toBeNull();
+      expect(await revokedAt(ownerInviteId), "an admin must not resurrect an owner invitation").not.toBeNull();
+
+      const { error: byOwner } = await ownerA.client
+        .from("invitations")
+        .update({ revoked_at: null })
+        .eq("id", ownerInviteId);
+      expect(byOwner).toBeNull();
+      expect(await revokedAt(ownerInviteId), "an owner may still un-revoke their own").toBeNull();
+
+      // The admin keeps the verb on every non-owner invitation — a role carve-out, not a lost
+      // capability.
+      const { error: nonOwner } = await adminA.client
+        .from("invitations")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", teamInvitationId);
+      expect(nonOwner).toBeNull();
+      expect(await revokedAt(teamInvitationId)).not.toBeNull();
     });
 
     it("refuses a student invitation stamped with another tenant's organization_id", async () => {
@@ -1378,6 +1449,47 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       // Three InitPlans = each helper ran ONCE for the whole statement. Without them the
       // definer helpers are called per row — the auth_rls_initplan finding at tenancy scale.
       expect(plan.match(/InitPlan \d/g)?.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it("keeps a cheap InitPlan disjunct in front of the per-row helper on the child tables", () => {
+      // Both of these regressed during the matrix-alignment amendment and were caught only by
+      // measuring. A per-row `can_staff_case` with nothing to short-circuit on took the
+      // org-wide invitation list from 1.0 ms to 141.9 ms (3,000 student + 3,000 team invites)
+      // and a counsellor's own-assignments list from 0.97 ms to 6.31 ms (100 of 5,000 rows).
+      // The security predicate is unchanged either way — the InitPlan disjuncts are strict
+      // SUBSETS of the helper — so nothing here trades safety for speed. Asserted structurally
+      // from the plan rather than on a timing threshold, which would be flaky.
+      const plans = execFileSync(
+        "docker",
+        ["exec", "-i", dbContainer, "psql", "-U", "postgres", "-d", "postgres", "-tAX", "-v", "ON_ERROR_STOP=1", "-f", "-"],
+        {
+          encoding: "utf8",
+          input: `
+            begin;
+            insert into public.invitations (organization_id, case_id, email, role, token_hash, expires_at)
+              select '${orgA}'::uuid, c.id, 'p@x.test', 'student', 'mv152-plan-s-${stamp}-'||c.id, now() + interval '1 day'
+              from public.cases c where c.organization_id = '${orgA}'::uuid;
+            insert into public.invitations (organization_id, email, role, token_hash, expires_at)
+              select '${orgA}'::uuid, 'p@x.test', 'counsellor', 'mv152-plan-t-${stamp}-'||g, now() + interval '1 day'
+              from generate_series(1, 500) g;
+            analyze public.invitations;
+            set local request.jwt.claims = '{"sub":"${adminA.id}","role":"authenticated"}';
+            set local role authenticated;
+            explain (analyze) select id from public.invitations;
+            reset role;
+            set local request.jwt.claims = '{"sub":"${counsellorA.id}","role":"authenticated"}';
+            set local role authenticated;
+            explain (analyze) select case_id from public.case_assignments where user_id = '${counsellorA.id}';
+            rollback;
+          `,
+        },
+      );
+
+      // The org-admin disjunct must be reachable WITHOUT first proving `case_id is null`, or no
+      // student invitation can ever short-circuit on it.
+      expect(plans).toMatch(/organization_id = ANY \(\(InitPlan \d\)\.col1\)\)? OR/);
+      // And the assignment predicate must lead with its InitPlan, not with the helper.
+      expect(plans).toMatch(/case_id = ANY \(\(InitPlan \d\)\.col1\)\)? OR/);
     });
   });
 });

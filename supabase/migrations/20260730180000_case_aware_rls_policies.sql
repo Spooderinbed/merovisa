@@ -525,17 +525,25 @@ create trigger cases_write_surface_guard
 --   * `user_id = (select auth.uid())` was ungated on membership status. It was there for the
 --     index, and it meant a REVOKED counsellor kept reading their own assignment rows — the
 --     roster of which of the org's cases they had worked — forever. "Inactive membership
---     grants nothing" has to mean nothing (matrix, structural rule 1). can_staff_case reaches
---     the same rows through actor-side membership checks that all filter `status = 'active'`;
---     real queries here are case- or user-scoped and hit an index on the column, not on this
---     predicate.
+--     grants nothing" has to mean nothing (matrix, structural rule 1).
 --   * `can_access_case` carries the student disjunct, so a linked student could read the
 --     assignment roster of their own case. Who staffs a case is consultancy-internal operating
 --     data — the plan's "cannot see consultancy-only notes, audit data" — and the student link
 --     must not confer org-scoped rights (matrix, divergence 6).
+--
+-- `actor_assigned_case_ids()` is kept in front of the helper, but as the REVOCATION-GATED
+-- replacement for the disjunct that was removed, not a re-introduction of it: it is an
+-- uncorrelated InitPlan evaluated once per statement, it filters `status = 'active'` on the
+-- membership join, and its result is a strict subset of `can_staff_case`, so it can add no
+-- right the second disjunct does not already grant. It exists because dropping it made a
+-- counsellor's "my assignments" query pay a per-row helper call with nothing cheap to
+-- short-circuit on — measured 0.97 ms -> 6.31 ms at 100 assigned rows in a 5,000-row table.
 create policy case_assignments_select_accessor on public.case_assignments
   for select to authenticated
-  using (private.can_staff_case(case_id));
+  using (
+    case_id = any ((select private.actor_assigned_case_ids())::uuid[])
+    or private.can_staff_case(case_id)
+  );
 
 -- Two conditions, two different jobs: can_manage_case says the ACTOR may hand out work on
 -- this case; is_case_org_member says the ASSIGNEE is inside the same tenant. Without the
@@ -579,11 +587,19 @@ create policy case_assignments_delete_admin on public.case_assignments
 -- or the case matches no row at all, so there is nothing to read it from. Revoking column
 -- SELECT on token_hash was considered and rejected — it would make `select *` fail for every
 -- client while protecting only a non-reversible hash from the very person who minted it.
+-- On the read/revoke verbs the org branch is left UNGATED on `case_id` deliberately, and it is
+-- a performance decision with a measurement behind it. Gating it (`case_id is null and …`)
+-- stops a student invitation ever matching the cheap InitPlan disjunct, so every such row falls
+-- through to a per-row `can_staff_case`: on 3,000 student + 3,000 team invitations in one org,
+-- listing them went 1.0 ms -> 141.9 ms. Ungated, the org admin short-circuits on the InitPlan
+-- and the helper is only reached for the rows they do not already own. Soundness does not
+-- depend on the gate: "an admin of the organization named on this row may see it" is true on
+-- its own terms, and the INSERT tie below is what makes `organization_id` trustworthy.
 create policy invitations_select_staff on public.invitations
   for select to authenticated
   using (
-    (case_id is null and organization_id = any ((select private.actor_admin_org_ids())::uuid[]))
-    or (case_id is not null and private.can_staff_case(case_id))
+    organization_id = any ((select private.actor_admin_org_ids())::uuid[])
+    or (case_id is not null and role = 'student' and private.can_staff_case(case_id))
   );
 
 create policy invitations_insert_staff on public.invitations
@@ -616,18 +632,29 @@ create policy invitations_insert_staff on public.invitations
 -- service-role compare-and-swap (Stage 5) — a client that could write accepted_at could
 -- accept an invitation it merely knows the id of. No DELETE policy either: revocation is the
 -- audited path, and a deleted invitation is a deleted record of who was invited.
--- The predicate is the SELECT predicate: whoever may see an invitation may revoke it. Neither
--- `role` nor `organization_id` is in the column grant, so the INSERT-time constraints above
--- cannot be walked around by minting a legal invitation and then editing it.
+--
+-- CARRIES THE OWNER CARVE-OUT TOO, and this is not symmetry for its own sake. The only column
+-- in the grant is `revoked_at`, and that surface is BIDIRECTIONAL: setting it back to null
+-- un-revokes. Without the carve-out here, the INSERT-side rule "an admin may not mint
+-- role='owner'" is walkable by editing an existing legal row instead of minting one — an owner
+-- mints an owner invitation and revokes it, and any admin resurrects it. Same door, different
+-- key, one verb along. So an admin may SEE an owner invitation (it is their org's roster) and
+-- may not ALTER it, exactly as organization_memberships already treats owner rows.
 create policy invitations_update_staff on public.invitations
   for update to authenticated
   using (
-    (case_id is null and organization_id = any ((select private.actor_admin_org_ids())::uuid[]))
-    or (case_id is not null and private.can_staff_case(case_id))
+    (
+      organization_id = any ((select private.actor_admin_org_ids())::uuid[])
+      and (role <> 'owner' or organization_id = any ((select private.actor_owner_org_ids())::uuid[]))
+    )
+    or (case_id is not null and role = 'student' and private.can_staff_case(case_id))
   )
   with check (
-    (case_id is null and organization_id = any ((select private.actor_admin_org_ids())::uuid[]))
-    or (case_id is not null and private.can_staff_case(case_id))
+    (
+      organization_id = any ((select private.actor_admin_org_ids())::uuid[])
+      and (role <> 'owner' or organization_id = any ((select private.actor_owner_org_ids())::uuid[]))
+    )
+    or (case_id is not null and role = 'student' and private.can_staff_case(case_id))
   );
 
 -- =====================================================================
@@ -711,11 +738,14 @@ grant execute on function private.actor_admin_org_ids()              to authenti
 grant execute on function private.actor_owner_org_ids()              to authenticated;
 grant execute on function private.actor_assigned_case_ids()          to authenticated;
 
--- The trigger guard is SECURITY INVOKER, so it runs with the updating client's privileges and
--- needs EXECUTE. Granting it opens nothing: a function returning `trigger` cannot be called
--- directly ("trigger functions can only be called as triggers"), and `private` is not a
--- PostgREST-exposed schema in any case.
-grant execute on function private.enforce_case_write_surface()       to authenticated;
+-- private.enforce_case_write_surface() gets NO grant, and the omission is checked, not assumed.
+-- The intuition that a SECURITY INVOKER trigger function needs EXECUTE from the updating client
+-- is wrong: PostgreSQL checks EXECUTE on a trigger function once, at CREATE TRIGGER time,
+-- against the trigger's creator — never at fire time against the DML actor. Verified by
+-- revoking it and confirming the guard still raises for a student and still passes a permitted
+-- profile edit. The `revoke all … from public` above therefore stands alone, which is the
+-- correct end state: section 9 calls this list a security boundary, and a grant nobody needs
+-- has no place in it.
 
 -- private.write_audit_event keeps MV-150's grants unchanged: the review's conclusion is that
 -- NO client role gets EXECUTE. Audit rows are written by server paths running as service_role
@@ -733,11 +763,30 @@ grant execute on function private.enforce_case_write_surface()       to authenti
 --     name of the consultancy handling their case. Real journey gap, opened deliberately:
 --     closing it needs a case->org read grant that widens the tenancy surface, which belongs
 --     with the Stage-5 student portal.
---   * archiving a PERSONAL case — section 5a makes archived_at owner/admin-only, and a personal
---     case (organization_id null) has no organization and therefore no owner or admin. So
---     nobody can archive one from a client. That is the same shape as the personal-case DELETE
---     gap above and lands with the same Stage-2 personal-case path; it is a gap in a surface
---     MV-150 shipped closed, never a regression.
+--   * archiving a PERSONAL case, and moving one along `operational_status` — section 5a makes
+--     archived_at owner/admin-only and operational_status staff-only, and a personal case
+--     (organization_id null) has no organization, therefore no owner, no admin and no staff:
+--     `is_org_admin(null)` is false and can_staff_case's membership join matches nothing. So
+--     BOTH columns are unwritable from a client on a personal case, including by the linked
+--     student who is the only actor who can see the row at all. Same shape as the personal-case
+--     DELETE gap above, lands with the same Stage-2 personal-case path, and it is a gap in a
+--     surface MV-150 shipped closed — never a regression.
+--   * `organizations.status = 'suspended'` — no predicate or helper in this file reads it, so
+--     suspending a tenant does not currently withdraw anything. MV-150 shipped the column;
+--     wiring it is a decision about what suspension MEANS (read-only? frozen? invisible?) that
+--     the plan does not make, and the canonical access matrix does not cover. Named here so it
+--     reads as an open question rather than an oversight; flagged to MV-153.
+--   * an INACTIVE member still reading their own `organization_memberships` row. That policy's
+--     `user_id = (select auth.uid())` disjunct is the one place a revoked membership still
+--     yields a row, and keeping it is a KNOWING partial implementation of "inactive membership
+--     grants nothing" — the byte-identical disjunct was deleted from `case_assignments` above
+--     for violating that very rule. The distinction: the assignment roster is the organization's
+--     record of its own operations, while the membership row is a record ABOUT the actor, held
+--     as a data subject rather than as staff — the same footing on which the dual-role rule
+--     preserves a person's rights over their own student case. It discloses only what they
+--     already know (which org revoked them, from which role), it is read-only to them (every
+--     membership write verb goes through actor_admin_org_ids, which is empty for them), and the
+--     audit trail needs it to survive. Recorded here rather than left silently inconsistent.
 --   * finer per-field splitting on `cases` beyond section 5a's three tiers — the document
 --     request/review model and the internal-note visibility classification (plan §"Document
 --     request and review model") are Stage 5, on tables that do not exist yet.
