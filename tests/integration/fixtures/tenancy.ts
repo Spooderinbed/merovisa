@@ -157,8 +157,6 @@ export interface TenancyFixture {
   caseOrg: Record<CaseKey, string | null>;
   invitations: { teamA: string; teamB: string; studentB: string };
   auditEvents: { orgA: string; orgB: string };
-  /** Sign a brand-new actor in mid-suite (the revocation and forgery tests need one). */
-  mintActor: (label: string, options?: MintOptions) => Promise<Actor>;
   teardown: () => Promise<void>;
 }
 
@@ -405,28 +403,20 @@ export async function seedTenancyFixture(args: {
     return row.id;
   };
 
-  // audit_events is append-only with no client INSERT grant; MV-150's controlled writer is the
-  // only door, so the fixture uses it rather than reaching around the choke point.
+  // audit_events carries no client INSERT grant — MV-150's `private.write_audit_event` is the
+  // controlled write path — but that writer deliberately lives in the unexposed `private`
+  // schema, so supabase-js cannot reach it as an RPC. The fixture therefore seeds through the
+  // service role's BYPASSRLS insert, which the append-only trigger permits (it raises on
+  // UPDATE and DELETE, not INSERT). These rows exist only to give the cross-tenant read
+  // denials something real to deny.
   const writeAudit = async (action: string, organizationId: string): Promise<string> => {
-    const { data, error } = await admin.rpc("write_audit_event" as never, {
-      p_action: action,
-      p_organization_id: organizationId,
-    } as never);
-    if (error || typeof data !== "string") {
-      // The helper lives in the unexposed `private` schema by design (it must not be an RPC),
-      // so the RPC route is expected to fail — fall back to a direct service-role insert,
-      // which BYPASSRLS permits and the append-only trigger allows on INSERT.
-      const inserted = await admin
-        .from("audit_events")
-        .insert({ action, organization_id: organizationId })
-        .select("id")
-        .single();
-      if (inserted.error || !inserted.data) {
-        throw new Error(`failed to seed audit event: ${inserted.error?.message}`);
-      }
-      return inserted.data.id;
-    }
-    return data;
+    const { data, error } = await admin
+      .from("audit_events")
+      .insert({ action, organization_id: organizationId })
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(`failed to seed audit event: ${error?.message}`);
+    return data.id;
   };
   const auditEvents = {
     orgA: await writeAudit("case.created", orgA),
@@ -459,10 +449,6 @@ export async function seedTenancyFixture(args: {
       studentB: invitationIdFor("student-b"),
     },
     auditEvents,
-    mintActor: async (label, options) => {
-      const actor = await mintNamed(label, options);
-      return actor;
-    },
     teardown,
   };
 }
