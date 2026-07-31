@@ -1880,36 +1880,36 @@
     },
     {
       "id": "MV-151",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-151-case-permission-boundary.md",
       "title": "Case-permission server boundary (getCaseContext / requireCasePermission) + service-role exception list",
       "summary": "Builds the server-only case-permission layer for the consultancy workspace: getCaseContext(actorUserId, caseId), requireCasePermission(actorUserId, caseId, permission), and the role→permission matrix (owner/admin = whole org, counsellor = assigned-only, student = linked-case-only, inactive membership = nothing, role read from the DB never from JWT/metadata). Establishes the enforcement-boundary doctrine — the authenticated client + RLS is the load-bearing tenant boundary and this layer is defense-in-depth — plus a machine-enforced service-role exception list (a registered allowlist + lint/test guard) so no new case-touching path can reach createSupabaseAdminClient unregistered. Unit + behavioral tests against a mocked client only; real-DB positive/negative proof is MV-153's exit gate. Depends on MV-150; consumed by MV-152 and MV-153.",
       "created": "2026-07-30",
-      "entered": "2026-08-02"
+      "entered": "2026-08-03"
     },
     {
       "id": "MV-152",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-152-case-aware-rls-policies.md",
       "title": "Case-aware RLS policies — replace deny-all with role-aware tenant isolation",
       "summary": "Replaces MV-150's deny-all default policies with real case-aware RLS on all six tenancy tables (organizations, organization_memberships, cases, case_assignments, invitations, audit_events), routing every membership/assignment/case lookup through `private` SECURITY DEFINER STABLE helpers with pinned `search_path = ''` so policies stay non-recursive and plan on MV-150's indexes. Covers org owner/admin full-org access, counsellor assigned-only, student linked-case-only, and inactive-membership = no access; every UPDATE carries USING + WITH CHECK, grants are authenticated-only (anon gets nothing), and audit_events keeps its append-only shape. This is the load-bearing tenant-isolation layer per the plan's enforcement boundary — tested as the authenticated user, never service-role — with an EXPLAIN check proving index usage and once-per-statement helper evaluation, and a clean security+performance advisor pass. P1, agent-owned; blocked by MV-150, coordinates with MV-151's role matrix, consumed by MV-153's exit-gate harness.",
       "created": "2026-07-30",
-      "entered": "2026-08-02"
+      "entered": "2026-08-03"
     },
     {
       "id": "MV-153",
-      "col": "backlog",
+      "col": "ready",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-153-cross-tenant-negative-tests.md",
       "title": "Cross-tenant negative-test harness + positive authorization matrix (Stage 1 exit gate)",
       "summary": "The Stage 1 exit gate: a real-Supabase integration harness that proves the tenancy authorization matrix both DENIES and GRANTS. Extends the *.itest.ts pattern + localhost hard-guard from tests/integration/anon-purge.itest.ts, but adds the capability the two existing itests lack — per-role AUTHENTICATED clients (anon key + user JWT), because RLS only proves anything when queries run as the actual user; the service-role admin bypasses RLS and is used only for seeding/teardown and for exercising MV-151's service-role exception wrappers. A two-org fixture factory mints 2 orgs x users in every role (owner/admin/counsellor/student) x cases + assignments + student links. Implements the Stage-1 slice of the plan's negative catalogue (cross-org list/read/change/delete deny across all six tenant tables; unassigned-counsellor deny; student cross-case deny; revoked-member immediate loss; role forgery from user/app-metadata rejected; service-role path rejects unauthorized case ids) AND the positive matrix in the same run (an all-deny bug passes every negative test while breaking the product). Wires the CI integration job to export the new anon key and keeps the 0-skipped/>0-passed guard so the suite can never green having tested nothing. Depends on MV-150+151+152. Stage 1 cannot exit until this suite is green as a gating check.",
       "created": "2026-07-30",
-      "entered": "2026-07-30"
+      "entered": "2026-08-03"
     }
   ]
 }
