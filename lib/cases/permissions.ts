@@ -70,6 +70,44 @@ export const CASE_PERMISSIONS = [
 export type CasePermission = (typeof CASE_PERMISSIONS)[number];
 
 /**
+ * The 13 claims partition into two questions, and each is asked through its own
+ * entry point.
+ *
+ * ORG-SCOPED claims are questions about an ORGANIZATION. "May this actor create
+ * a case?" has no case id to hand — and `requireCasePermission` denies with
+ * "unknown-case" when no row matches, so routing these through it would have
+ * shipped five claims no caller could ever check. They go through
+ * `requireOrgPermission(actorUserId, organizationId, permission)`.
+ *
+ * CASE-SCOPED claims are questions about one case and go through
+ * `requireCasePermission(actorUserId, caseId, permission)`.
+ *
+ * The split is by TYPE at both entry points and re-checked at runtime in
+ * `decideOrgPermission`, so a cast cannot borrow an org membership to answer a
+ * question about a single case.
+ */
+export const ORG_SCOPED_PERMISSIONS = [
+  "case.list",
+  "case.create",
+  "org.audit.read",
+  "org.manage",
+  "org.settings",
+] as const satisfies readonly CasePermission[];
+export type OrgScopedPermission = (typeof ORG_SCOPED_PERMISSIONS)[number];
+
+export const CASE_SCOPED_PERMISSIONS = [
+  "case.read",
+  "case.update",
+  "case.assign",
+  "case.invite_student",
+  "case.export",
+  "case.archive",
+  "case.delete",
+  "case.notes.internal",
+] as const satisfies readonly CasePermission[];
+export type CaseScopedPermission = (typeof CASE_SCOPED_PERMISSIONS)[number];
+
+/**
  * What relationship a role needs to *this* case for a claim to hold.
  *
  * - `all-org`  every case in the actor's organization (and, for the `org.*`
@@ -86,10 +124,10 @@ export type PermissionScope = (typeof PERMISSION_SCOPES)[number];
  * and no wildcard, so a claim added to `CASE_PERMISSIONS` without a decision for
  * each role fails to compile rather than silently inheriting an allow.
  *
- * The `org.*` claims are organization-level rather than case-level; they are
- * resolved through the same entry point because the case names the organization
- * whose settings/team/audit trail is in question. A personal case (no
- * `organization_id`) therefore satisfies no `all-org` claim at all.
+ * The rows in `ORG_SCOPED_PERMISSIONS` are read by `decideOrgPermission` against
+ * an organization; the rest by `decideCasePermission` against one case. Same
+ * grid, two questions — which is why the table stays whole rather than being
+ * split in half and drifting.
  */
 export const CASE_PERMISSION_MATRIX: Record<CaseRole, Record<CasePermission, PermissionScope>> = {
   owner: {
@@ -174,7 +212,6 @@ export type CaseDenyReason =
   | "membership-inactive"
   | "role-not-permitted"
   | "not-assigned"
-  | "not-linked-student"
   | "scope-mismatch"
   | "lookup-failed";
 
@@ -183,18 +220,48 @@ export type CaseDenyReason =
  * field is resolved from a database row by `getCaseContext`; none of it may
  * originate in a JWT claim, `app_metadata`, `user_metadata`, a header, or a
  * caller argument (plan line 101).
+ *
+ * `membershipRole` and `isLinkedStudent` are SEPARATE facts on purpose. A single
+ * `role` field forced a choice between them, and the choice it made — membership
+ * first, student only as a fallback — is precisely the masking defect the
+ * canonical matrix names (spec §"The dual-role rule"). Student-ness is not a
+ * membership role; it is a link on one case, and the two are additive.
  */
 export interface CaseAccessFacts {
   /** False for a personal case — `cases.organization_id is null`. */
   isOrgCase: boolean;
-  /** From `organization_memberships.role`, or `student` via `cases.student_user_id`. */
-  role: CaseRole | null;
+  /**
+   * `organization_memberships.role` VERBATIM, or null when the actor has no
+   * membership row in this case's organization. Never `student`: the
+   * check constraint excludes it (migration line 60), and a row carrying it
+   * anyway is schema drift that grants nothing.
+   */
+  membershipRole: CaseRole | null;
   /** From `organization_memberships.status`; null when the actor has no membership row. */
   membershipStatus: MembershipStatus | null;
   /** A `case_assignments` row exists for (this case, this actor). */
   isAssignedToCase: boolean;
   /** `cases.student_user_id` equals the actor. */
   isLinkedStudent: boolean;
+}
+
+/**
+ * What the actor is to an ORGANIZATION, independent of any case. Resolved by
+ * `getOrgContext` from a single `organization_memberships` row.
+ */
+export interface OrgAccessFacts {
+  membershipRole: CaseRole | null;
+  membershipStatus: MembershipStatus | null;
+}
+
+/**
+ * One relationship the actor genuinely holds on one case, and how far it reaches.
+ * An actor may hold two at once — staff of the organization AND the case's linked
+ * student — which is the whole point of modelling grants as a list.
+ */
+export interface CaseGrant {
+  role: CaseRole;
+  scope: Exclude<PermissionScope, "deny">;
 }
 
 export type CasePermissionDecision =
@@ -226,87 +293,179 @@ function deny(reason: CaseDenyReason, requiredScope: PermissionScope | null = nu
 }
 
 /**
- * The single scope an actor is GRANTED on one case, independent of any claim —
- * the broadest relationship the database supports for them here. Pure.
+ * Does this membership row still confer ORG standing? The one place the org gate
+ * conditions live, so `decideOrgPermission`, `deriveCaseGrants` and
+ * `getOrgContext` cannot drift apart on what "inactive membership", "unknown
+ * role", or "not a member" mean.
  *
- * This is the one place the gate conditions live, so `decideCasePermission` and
- * `getCaseContext` cannot drift apart on what "inactive membership" or "unknown
- * role" mean.
+ * Inactive membership = nothing (plan lines 352, 355), and that is total for
+ * ORGANIZATION rights: any status that is not the active spelling denies, which
+ * also covers a value a later migration adds.
+ */
+export function deriveOrgStanding(facts: OrgAccessFacts): {
+  isActiveMember: boolean;
+  reason: CaseDenyReason | null;
+} {
+  const { membershipRole, membershipStatus } = facts;
+  if (membershipRole === null) return { isActiveMember: false, reason: "no-relationship" };
+  // A role string the migration does not define grants nothing, however it got
+  // here — this is what stops a widened DB enum from quietly inheriting access.
+  // `student` lands here too: it is not a membership role (migration line 60).
+  if (!isCaseRole(membershipRole) || !isMembershipRole(membershipRole)) {
+    return { isActiveMember: false, reason: "unknown-role" };
+  }
+  if (membershipStatus !== ACTIVE_MEMBERSHIP_STATUS) {
+    return { isActiveMember: false, reason: "membership-inactive" };
+  }
+  return { isActiveMember: true, reason: null };
+}
+
+/**
+ * Every relationship the actor genuinely holds on one case. Pure.
+ *
+ * THE DUAL-ROLE RULE (canonical access matrix, §"The dual-role rule"):
+ *
+ * > Membership (while `status = 'active'`) grants org-scoped rights. The student
+ * > link grants student-scoped rights on that one case. The two are additive, and
+ * > an `inactive` membership contributes nothing — but revoking a membership
+ * > never removes a person's rights over their own student case.
+ *
+ * So the two halves are computed independently and neither can veto the other. A
+ * fired counsellor loses the organization; they do not lose the case they are the
+ * student of, because they hold those rights as a data subject, not as staff.
+ * Equally, an unrecognised membership role costs the actor their staff grant and
+ * nothing else — the student link is read from `cases.student_user_id`, and
+ * handing the actual linked student their own case is not an escalation.
+ *
+ * `reason` is populated only when the result is EMPTY, and explains the most
+ * specific thing that went wrong; a non-empty grant list carries no reason.
+ */
+export function deriveCaseGrants(facts: CaseAccessFacts): {
+  grants: readonly CaseGrant[];
+  reason: CaseDenyReason | null;
+} {
+  const grants: CaseGrant[] = [];
+  let reason: CaseDenyReason | null = null;
+
+  // --- The staff half: what the organization membership confers. ---
+  if (facts.membershipRole !== null) {
+    const standing = deriveOrgStanding(facts);
+    if (!standing.isActiveMember) {
+      reason = standing.reason;
+    } else if (facts.membershipRole === "counsellor") {
+      // A counsellor reaches only the cases assigned to them.
+      if (facts.isAssignedToCase) grants.push({ role: "counsellor", scope: "assigned" });
+      else reason = "not-assigned";
+    } else if (facts.membershipRole === "owner" || facts.membershipRole === "admin") {
+      // A personal case belongs to no organization, so nothing is org-wide on it.
+      if (facts.isOrgCase) grants.push({ role: facts.membershipRole, scope: "all-org" });
+      else reason = "scope-mismatch";
+    }
+  }
+
+  // --- The student half: what the case linkage confers, on this case alone. ---
+  // Deliberately not an `else`. This is the additive rule; making it conditional
+  // on the staff half is the masking defect.
+  if (facts.isLinkedStudent) grants.push({ role: "student", scope: "linked" });
+
+  if (grants.length > 0) return { grants, reason: null };
+  return { grants, reason: reason ?? "no-relationship" };
+}
+
+/** All-org reaches furthest, then assigned, then the actor's own single case. */
+const SCOPE_BREADTH: Record<Exclude<PermissionScope, "deny">, number> = {
+  "all-org": 3,
+  assigned: 2,
+  linked: 1,
+};
+
+/**
+ * The single broadest scope an actor holds on one case, independent of any claim.
+ * A summary of `deriveCaseGrants` for callers that need one value — chiefly
+ * `CaseContext.accessScope` / `hasAccess`. Authorization decisions use the grants
+ * themselves; a dual-role actor's broadest scope does not imply every claim that
+ * scope could satisfy.
  */
 export function deriveAccessScope(facts: CaseAccessFacts): {
   scope: PermissionScope;
   reason: CaseDenyReason | null;
+  grants: readonly CaseGrant[];
 } {
-  const { role, membershipStatus, isOrgCase, isAssignedToCase, isLinkedStudent } = facts;
-
-  // No relationship to the case at all.
-  if (role === null) return { scope: "deny", reason: "no-relationship" };
-
-  // A role string the migration does not define grants nothing, however it got
-  // here — this is what stops a widened DB enum from quietly inheriting access.
-  if (!isCaseRole(role)) return { scope: "deny", reason: "unknown-role" };
-
-  // Inactive membership = nothing (plan lines 352, 355). Total, and checked
-  // before any scope is granted so no role/claim combination can route around it:
-  //   * any non-null status that is not the active spelling denies, which also
-  //     covers a status value a later migration adds;
-  //   * staff must hold exactly the active status — a missing membership row
-  //     means the actor is not staff of this case's organization.
-  if (membershipStatus !== null && membershipStatus !== ACTIVE_MEMBERSHIP_STATUS) {
-    return { scope: "deny", reason: "membership-inactive" };
-  }
-  if (isMembershipRole(role) && membershipStatus !== ACTIVE_MEMBERSHIP_STATUS) {
-    return { scope: "deny", reason: "membership-inactive" };
-  }
-
-  switch (role) {
-    case "owner":
-    case "admin":
-      // A personal case belongs to no organization, so nothing is org-wide on it.
-      if (!isOrgCase) return { scope: "deny", reason: "scope-mismatch" };
-      return { scope: "all-org", reason: null };
-    case "counsellor":
-      if (!isAssignedToCase) return { scope: "deny", reason: "not-assigned" };
-      return { scope: "assigned", reason: null };
-    case "student":
-      if (!isLinkedStudent) return { scope: "deny", reason: "not-linked-student" };
-      return { scope: "linked", reason: null };
-    default: {
-      // Exhaustiveness: a role added to CASE_ROLES without a branch here fails to
-      // compile, and fails closed at runtime if it ever ships.
-      const unreachable: never = role;
-      void unreachable;
-      return { scope: "deny", reason: "unknown-role" };
-    }
-  }
+  const { grants, reason } = deriveCaseGrants(facts);
+  if (grants.length === 0) return { scope: "deny", reason: reason ?? "no-relationship", grants };
+  const broadest = grants.reduce((widest, grant) =>
+    SCOPE_BREADTH[grant.scope] > SCOPE_BREADTH[widest.scope] ? grant : widest,
+  );
+  return { scope: broadest.scope, reason: null, grants };
 }
 
 /**
- * Decide one claim against one set of DB-sourced facts. Pure and synchronous.
+ * Decide one case-level claim against one set of DB-sourced facts. Pure and
+ * synchronous.
  *
- * Two independent conditions must both hold for an allow: the actor must be
- * GRANTED a scope on this case (`deriveAccessScope`), and the grid cell for
- * (role, claim) must REQUIRE exactly that scope. Anything else — an absent grid
- * cell, a `deny` cell, a granted deny, or a required/granted mismatch — returns a
- * deny with a reason. There is no `default: allow` and no truthy fall-through.
+ * An allow requires a grant the actor genuinely holds whose scope is EXACTLY what
+ * the grid cell for (that grant's role, this claim) requires. Each grant is tried
+ * on its own — a dual-role actor is allowed if either half suffices, and neither
+ * half lends the other its scope. Anything else — no grants at all, an absent
+ * grid cell, a `deny` cell, or a required/granted mismatch — returns a deny with
+ * a reason. There is no `default: allow` and no truthy fall-through.
  */
 export function decideCasePermission(
   permission: CasePermission,
   facts: CaseAccessFacts,
 ): CasePermissionDecision {
-  const granted = deriveAccessScope(facts);
-  if (granted.scope === "deny") {
-    return deny(granted.reason ?? "scope-mismatch");
+  const { grants, reason } = deriveCaseGrants(facts);
+  if (grants.length === 0) return deny(reason ?? "no-relationship");
+
+  let sawUnknownPermission = false;
+  let mismatchedScope: PermissionScope | null = null;
+
+  for (const grant of grants) {
+    const requiredScope = scopeForRolePermission(grant.role, permission);
+    // A claim this module does not know is never allowed for anyone.
+    if (requiredScope === undefined) {
+      sawUnknownPermission = true;
+      continue;
+    }
+    // The grid's "—": this role never holds this claim.
+    if (requiredScope === "deny") continue;
+    if (requiredScope === grant.scope) return { allowed: true, requiredScope, reason: null };
+    // A required scope this grant does not carry (e.g. a future edit handing a
+    // counsellor an `all-org` claim) denies rather than widening.
+    mismatchedScope = requiredScope;
   }
 
-  // `role` is non-null and recognised here, or deriveAccessScope would have denied.
-  const requiredScope = scopeForRolePermission(facts.role as CaseRole, permission);
+  if (sawUnknownPermission) return deny("unknown-permission");
+  if (mismatchedScope !== null) return deny("scope-mismatch", mismatchedScope);
+  return deny("role-not-permitted", "deny");
+}
+
+/**
+ * Decide one ORGANIZATION-level claim. Pure and synchronous.
+ *
+ * The scope on an allow is load-bearing and is NOT a formality: `case.list` for a
+ * counsellor allows with scope `assigned`, which means "may list, filtered to
+ * their own `case_assignments`" — never "may see every case in the organization".
+ * A caller that ignores the returned scope has not finished authorizing.
+ *
+ * The student role is absent by construction: a student holds no membership row,
+ * so they reach no org-scoped claim at all.
+ */
+export function decideOrgPermission(
+  permission: OrgScopedPermission,
+  facts: OrgAccessFacts,
+): CasePermissionDecision {
+  // Runtime half of the entry-point split: a case-scoped claim cast into this
+  // function is refused rather than answered from an org membership.
+  if (!(ORG_SCOPED_PERMISSIONS as readonly string[]).includes(permission)) {
+    return deny("unknown-permission");
+  }
+
+  const standing = deriveOrgStanding(facts);
+  if (!standing.isActiveMember) return deny(standing.reason ?? "no-relationship");
+
+  const requiredScope = scopeForRolePermission(facts.membershipRole as CaseRole, permission);
   if (requiredScope === undefined) return deny("unknown-permission");
   if (requiredScope === "deny") return deny("role-not-permitted", "deny");
-
-  // A required scope the actor was not granted (e.g. a future edit handing a
-  // counsellor an `all-org` claim) denies rather than widening.
-  if (requiredScope !== granted.scope) return deny("scope-mismatch", requiredScope);
-
   return { allowed: true, requiredScope, reason: null };
 }

@@ -5,6 +5,7 @@ import {
   type CaseDenyReason,
   type CasePermission,
   type CasePermissionDecision,
+  type CaseScopedPermission,
 } from "./permissions";
 
 /**
@@ -19,19 +20,42 @@ import {
  * There is no `role` parameter, by design — a caller cannot assert who it is
  * (plan line 101). The only inputs are two identifiers, a claim, and optionally
  * the request-scoped authenticated client.
+ *
+ * It takes CASE-scoped claims only. The five organization-level claims
+ * (`case.list`, `case.create`, `org.audit.read`, `org.manage`, `org.settings`)
+ * have no case id to be asked about — "may this actor create a case?" cannot be
+ * answered by a function that denies with "unknown-case" — and go through
+ * `requireOrgPermission` in ./require-org-permission.ts instead.
  */
 
 /**
- * Thrown on every denial. Carries the decision detail as typed fields for server
- * logs and for MV-153's assertions; the `message` deliberately contains no actor
- * or case identifier so a caller that bubbles it cannot leak one to a client
- * (CLAUDE.md §Architecture Rules).
+ * The base every denial from this layer shares, so a route can map both entry
+ * points to one 403 with a single `instanceof`. Carries the decision detail as
+ * typed fields for server logs and for MV-153's assertions; the `message`
+ * deliberately contains no actor, case, or organization identifier so a caller
+ * that bubbles it cannot leak one to a client (CLAUDE.md §Architecture Rules).
  */
-export class CaseAuthorizationError extends Error {
+export class AuthorizationError extends Error {
   readonly permission: CasePermission;
-  readonly caseId: string;
   readonly actorUserId: string;
   readonly reason: CaseDenyReason;
+
+  constructor(name: string, message: string, args: {
+    permission: CasePermission;
+    actorUserId: string;
+    reason: CaseDenyReason;
+  }) {
+    super(message);
+    this.name = name;
+    this.permission = args.permission;
+    this.actorUserId = args.actorUserId;
+    this.reason = args.reason;
+  }
+}
+
+/** Thrown by `requireCasePermission` on every denial. */
+export class CaseAuthorizationError extends AuthorizationError {
+  readonly caseId: string;
 
   constructor(args: {
     permission: CasePermission;
@@ -39,12 +63,12 @@ export class CaseAuthorizationError extends Error {
     actorUserId: string;
     reason: CaseDenyReason;
   }) {
-    super(`Case authorization denied for ${args.permission} (${args.reason})`);
-    this.name = "CaseAuthorizationError";
-    this.permission = args.permission;
+    super(
+      "CaseAuthorizationError",
+      `Case authorization denied for ${args.permission} (${args.reason})`,
+      args,
+    );
     this.caseId = args.caseId;
-    this.actorUserId = args.actorUserId;
-    this.reason = args.reason;
   }
 }
 
@@ -57,7 +81,7 @@ export class CaseAuthorizationError extends Error {
 export async function checkCasePermission(
   actorUserId: string,
   caseId: string,
-  permission: CasePermission,
+  permission: CaseScopedPermission,
   db?: CaseAuthorizationClient,
 ): Promise<{ decision: CasePermissionDecision; context: CaseContext }> {
   const context = await getCaseContext(actorUserId, caseId, db);
@@ -79,7 +103,7 @@ export async function checkCasePermission(
 export async function requireCasePermission(
   actorUserId: string,
   caseId: string,
-  permission: CasePermission,
+  permission: CaseScopedPermission,
   db?: CaseAuthorizationClient,
 ): Promise<CaseContext> {
   const { decision, context } = await checkCasePermission(actorUserId, caseId, permission, db);

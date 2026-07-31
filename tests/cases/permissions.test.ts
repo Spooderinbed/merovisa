@@ -8,6 +8,8 @@ import {
   CASE_ROLES,
   MEMBERSHIP_ROLES,
   decideCasePermission,
+  deriveAccessScope,
+  deriveCaseGrants,
   scopeForRolePermission,
   type CaseAccessFacts,
   type CasePermission,
@@ -45,7 +47,7 @@ const COLUMN_ROLES: CaseRole[] = ["owner", "admin", "counsellor", "student"];
 function staffFacts(role: "owner" | "admin" | "counsellor", overrides: Partial<CaseAccessFacts> = {}): CaseAccessFacts {
   return {
     isOrgCase: true,
-    role,
+    membershipRole: role,
     membershipStatus: "active",
     isAssignedToCase: false,
     isLinkedStudent: false,
@@ -53,11 +55,16 @@ function staffFacts(role: "owner" | "admin" | "counsellor", overrides: Partial<C
   };
 }
 
-/** Facts for the student whose Auth user is linked to the case. */
+/**
+ * Facts for the student whose Auth user is linked to the case. There is no
+ * `membershipRole: "student"` — student-ness IS the link, and a membership row
+ * is what the actor is to the ORGANIZATION. Keeping the two in separate fields
+ * is what makes the dual-role rule expressible at all.
+ */
 function studentFacts(overrides: Partial<CaseAccessFacts> = {}): CaseAccessFacts {
   return {
     isOrgCase: true,
-    role: "student",
+    membershipRole: null,
     membershipStatus: null,
     isAssignedToCase: false,
     isLinkedStudent: true,
@@ -163,12 +170,15 @@ describe("student — only the case linked to their Auth user", () => {
     expect(decideCasePermission("case.update", studentFacts()).allowed).toBe(true);
   });
 
-  test("a student who is not the linked student is denied their own claims", () => {
+  test("an actor who is not the linked student holds no student claims", () => {
+    // With `membershipRole` and `isLinkedStudent` as separate facts, "a student
+    // who is not linked" is not a representable state — the link IS the role.
+    // Losing the link means holding no relationship to the case at all.
     const facts = studentFacts({ isLinkedStudent: false });
     for (const permission of ["case.read", "case.update"] as const) {
       const decision = decideCasePermission(permission, facts);
       expect(decision.allowed).toBe(false);
-      expect(decision.reason).toBe("not-linked-student");
+      expect(decision.reason).toBe("no-relationship");
     }
   });
 
@@ -214,24 +224,10 @@ describe("inactive membership = nothing (the guard whose removal must fail a tes
     });
   }
 
-  test("a revoked staff member who is also the linked student still gets nothing", () => {
-    // Deliberately fail-closed: 'inactive membership = nothing' outranks student
-    // linkage, so revocation is total and needs no per-claim reasoning.
-    const decision = decideCasePermission("case.read", {
-      isOrgCase: true,
-      role: "counsellor",
-      membershipStatus: "inactive",
-      isAssignedToCase: true,
-      isLinkedStudent: true,
-    });
-    expect(decision.allowed).toBe(false);
-    expect(decision.reason).toBe("membership-inactive");
-  });
-
   test("a membership status the migration does not define denies everything", () => {
     const decision = decideCasePermission("case.read", {
       isOrgCase: true,
-      role: "owner",
+      membershipRole: "owner",
       membershipStatus: "suspended" as CaseAccessFacts["membershipStatus"],
       isAssignedToCase: true,
       isLinkedStudent: false,
@@ -245,19 +241,132 @@ describe("inactive membership = nothing (the guard whose removal must fail a tes
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toBe("membership-inactive");
   });
+});
 
-  test("a student arriving with an inactive membership is denied", () => {
-    const decision = decideCasePermission("case.read", studentFacts({ membershipStatus: "inactive" }));
-    expect(decision.allowed).toBe(false);
-    expect(decision.reason).toBe("membership-inactive");
+// ---------------------------------------------------------------------------
+// The dual-role rule, from docs/superpowers/specs/2026-08-02-stage1-canonical-
+// access-matrix.md §"The dual-role rule":
+//
+//   "Membership (while status = 'active') grants org-scoped rights. The student
+//    link grants student-scoped rights on that one case. The two are additive,
+//    and an `inactive` membership contributes nothing — but revoking a
+//    membership never removes a person's rights over their own student case."
+//
+// The defect this replaces: the membership role MASKED the student link, so a
+// revoked counsellor who was also the linked student lost their own case.
+// ---------------------------------------------------------------------------
+describe("the dual-role rule — membership and the student link are additive", () => {
+  function bothFacts(overrides: Partial<CaseAccessFacts> = {}): CaseAccessFacts {
+    return {
+      isOrgCase: true,
+      membershipRole: "counsellor",
+      membershipStatus: "active",
+      isAssignedToCase: true,
+      isLinkedStudent: true,
+      ...overrides,
+    };
+  }
+
+  test("an assigned counsellor who is also the linked student holds BOTH grants", () => {
+    const facts = bothFacts();
+    expect(deriveCaseGrants(facts).grants).toEqual([
+      { role: "counsellor", scope: "assigned" },
+      { role: "student", scope: "linked" },
+    ]);
+    // Staff-only claim: allowed through the counsellor grant.
+    expect(decideCasePermission("case.notes.internal", facts).allowed).toBe(true);
+    // Shared claim: allowed either way.
+    expect(decideCasePermission("case.read", facts).allowed).toBe(true);
+  });
+
+  test("an INACTIVE membership contributes nothing, but never removes the student's own rights", () => {
+    // The canonical case. A fired counsellor loses the org; they do not lose
+    // their own case — they hold those rights as a data subject, not as staff.
+    const revoked = bothFacts({ membershipStatus: "inactive" });
+    expect(deriveCaseGrants(revoked).grants).toEqual([{ role: "student", scope: "linked" }]);
+    expect(decideCasePermission("case.read", revoked).allowed).toBe(true);
+    expect(decideCasePermission("case.update", revoked).allowed).toBe(true);
+    // But nothing the membership used to carry survives.
+    for (const permission of ["case.notes.internal", "case.export", "case.assign"] as const) {
+      const decision = decideCasePermission(permission, revoked);
+      expect(decision.allowed).toBe(false);
+      expect(decision.reason).toBe("role-not-permitted");
+    }
+  });
+
+  test("a revoked member who is NOT the linked student still gets nothing at all", () => {
+    const revoked = bothFacts({ membershipStatus: "inactive", isLinkedStudent: false });
+    expect(deriveCaseGrants(revoked).grants).toEqual([]);
+    for (const [permission] of CARD_GRID) {
+      const decision = decideCasePermission(permission, revoked);
+      expect(decision.allowed).toBe(false);
+      expect(decision.reason).toBe("membership-inactive");
+    }
+  });
+
+  test("an unassigned counsellor who is the linked student is a student here, not staff", () => {
+    const facts = bothFacts({ isAssignedToCase: false });
+    expect(deriveCaseGrants(facts).grants).toEqual([{ role: "student", scope: "linked" }]);
+    expect(decideCasePermission("case.read", facts).allowed).toBe(true);
+    expect(decideCasePermission("case.notes.internal", facts).allowed).toBe(false);
+  });
+
+  test("an active owner who is also the linked student keeps every org right", () => {
+    const facts = bothFacts({ membershipRole: "owner", isAssignedToCase: false });
+    expect(deriveCaseGrants(facts).grants).toEqual([
+      { role: "owner", scope: "all-org" },
+      { role: "student", scope: "linked" },
+    ]);
+    expect(decideCasePermission("case.export", facts).allowed).toBe(true);
+    expect(decideCasePermission("case.notes.internal", facts).allowed).toBe(true);
+  });
+
+  test("the student grant is the LINK, never the membership — staff get nothing student-shaped", () => {
+    // An active counsellor assigned to a case they are not the student of gets
+    // only the counsellor grant. The linked cell can never be reached by staff.
+    const staff = bothFacts({ isLinkedStudent: false });
+    expect(deriveCaseGrants(staff).grants).toEqual([{ role: "counsellor", scope: "assigned" }]);
+  });
+
+  test("a membership role the migration does not define cannot poison the student grant", () => {
+    // A widened enum contributes no staff grant, but the student link is read
+    // from cases.student_user_id independently — granting the actual student
+    // their own case is not an escalation.
+    const facts = bothFacts({ membershipRole: "auditor" as CaseRole });
+    expect(deriveCaseGrants(facts).grants).toEqual([{ role: "student", scope: "linked" }]);
+    expect(decideCasePermission("case.read", facts).allowed).toBe(true);
+    expect(decideCasePermission("case.notes.internal", facts).allowed).toBe(false);
+  });
+
+  test("a 'student' membership row is schema drift and grants no org rights", () => {
+    // organization_memberships.role excludes 'student' by check constraint
+    // (migration line 60). A row claiming it must not become a staff grant.
+    const facts = bothFacts({ membershipRole: "student", isLinkedStudent: false });
+    expect(deriveCaseGrants(facts)).toEqual({ grants: [], reason: "unknown-role" });
+  });
+
+  test("accessScope reports the BROADEST grant, and hasAccess follows it", () => {
+    expect(deriveAccessScope(bothFacts({ membershipRole: "owner" })).scope).toBe("all-org");
+    expect(deriveAccessScope(bothFacts()).scope).toBe("assigned");
+    expect(deriveAccessScope(bothFacts({ membershipStatus: "inactive" })).scope).toBe("linked");
+    expect(deriveAccessScope(bothFacts({ membershipStatus: "inactive", isLinkedStudent: false })).scope).toBe(
+      "deny",
+    );
   });
 });
+
+/** The facts that make exactly one role's grant reachable — no dual-role mixing. */
+function factsForRole(role: CaseRole): CaseAccessFacts {
+  return role === "student"
+    ? studentFacts()
+    : staffFacts(role, { isAssignedToCase: true, isLinkedStudent: false });
+}
 
 describe("fail-closed by construction", () => {
   test("no relationship to the case at all → deny", () => {
     const decision = decideCasePermission("case.read", {
       isOrgCase: true,
-      role: null,
+      membershipRole: null,
       membershipStatus: null,
       isAssignedToCase: false,
       isLinkedStudent: false,
@@ -266,14 +375,14 @@ describe("fail-closed by construction", () => {
     expect(decision.reason).toBe("no-relationship");
   });
 
-  test("an unrecognised role denies every claim", () => {
+  test("an unrecognised membership role denies every claim", () => {
     for (const [permission] of CARD_GRID) {
       const decision = decideCasePermission(permission, {
         isOrgCase: true,
-        role: "superuser" as CaseRole,
+        membershipRole: "superuser" as CaseRole,
         membershipStatus: "active",
         isAssignedToCase: true,
-        isLinkedStudent: true,
+        isLinkedStudent: false,
       });
       expect(decision.allowed).toBe(false);
       expect(decision.reason).toBe("unknown-role");
@@ -282,14 +391,7 @@ describe("fail-closed by construction", () => {
 
   test("an unrecognised permission denies for every role", () => {
     for (const role of CASE_ROLES) {
-      const facts: CaseAccessFacts = {
-        isOrgCase: true,
-        role,
-        membershipStatus: role === "student" ? null : "active",
-        isAssignedToCase: true,
-        isLinkedStudent: true,
-      };
-      const decision = decideCasePermission("case.take_over" as CasePermission, facts);
+      const decision = decideCasePermission("case.take_over" as CasePermission, factsForRole(role));
       expect(decision.allowed).toBe(false);
       expect(decision.reason).toBe("unknown-permission");
     }
@@ -298,14 +400,7 @@ describe("fail-closed by construction", () => {
   test("every allow carries the grid cell that produced it, and every deny carries a reason", () => {
     for (const [permission] of CARD_GRID) {
       for (const role of CASE_ROLES) {
-        const facts: CaseAccessFacts = {
-          isOrgCase: true,
-          role,
-          membershipStatus: role === "student" ? null : "active",
-          isAssignedToCase: true,
-          isLinkedStudent: true,
-        };
-        const decision = decideCasePermission(permission, facts);
+        const decision = decideCasePermission(permission, factsForRole(role));
         if (decision.allowed) {
           // A truthy allow is only ever returned with a matched, non-deny grid cell.
           expect(decision.requiredScope).toBe(scopeForRolePermission(role, permission));

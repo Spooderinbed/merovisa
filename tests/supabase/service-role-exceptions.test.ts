@@ -70,6 +70,41 @@ describe("A — the ESLint rule fires on every evasion shape", () => {
       "an extensioned specifier",
       `import { createSupabaseAdminClient } from "@/lib/supabase/admin.ts";\nexport const a = createSupabaseAdminClient;\n`,
     ],
+    // ---- The two shapes that used to walk straight through both layers. ----
+    // Neither is adversarial evasion; both are what an author reaches for when
+    // they do not know lib/supabase/admin.ts exists.
+    [
+      "an inline client built from the service-role key, importing no admin module",
+      `import { createClient } from "@supabase/supabase-js";\nexport const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);\n`,
+    ],
+    [
+      "a bracket-indexed read of the key",
+      `export const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];\n`,
+    ],
+    [
+      "a backtick-indexed read of the key",
+      "export const key = process.env[`SUPABASE_SERVICE_ROLE_KEY`];\n",
+    ],
+    [
+      "a destructured read of the key",
+      `const { SUPABASE_SERVICE_ROLE_KEY } = process.env;\nexport const key = SUPABASE_SERVICE_ROLE_KEY;\n`,
+    ],
+    [
+      "the key passed by name to a helper",
+      `declare function readEnv(name: string): string;\nexport const key = readEnv("SUPABASE_SERVICE_ROLE_KEY");\n`,
+    ],
+    [
+      "a template-literal dynamic import",
+      "export async function a() { return import(`@/lib/supabase/admin`); }\n",
+    ],
+    [
+      "a template-literal require",
+      "const m = require(`@/lib/supabase/admin`);\nexport const a = m;\n",
+    ],
+    [
+      "a template-literal specifier with an interpolated tail",
+      "export async function a() { return import(`@/lib/supabase/admin${\"\"}`); }\n",
+    ],
   ];
 
   for (const [name, source, filePath] of EVASIONS) {
@@ -107,6 +142,20 @@ describe("A — the ESLint rule fires on every evasion shape", () => {
     }
   });
 
+  test("the registered factory may still read the key it exists to wrap", { timeout: 60_000 }, async () => {
+    // lib/supabase/admin.ts is the one module whose whole job is to turn the key
+    // into a client. Fencing it would be circular — the rule fences its callers.
+    const source = `export const key = process.env.SUPABASE_SERVICE_ROLE_KEY;\n`;
+    expect(await fenceErrorsFor(source, "lib/supabase/admin.ts")).toBe(0);
+  });
+
+  test("a similarly-named test-only key is not swept up", { timeout: 60_000 }, async () => {
+    // tests/integration/*.itest.ts read SUPABASE_TEST_SERVICE_ROLE_KEY. Matching
+    // the key name exactly rather than by substring keeps the fence precise.
+    const source = `export const key = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;\n`;
+    expect(await fenceErrorsFor(source, UNREGISTERED)).toBe(0);
+  });
+
   test("the authenticated client is never fenced — it is the encouraged path", { timeout: 60_000 }, async () => {
     const source = `import { createSupabaseServerClient } from "@/lib/supabase/server";\nexport const a = createSupabaseServerClient;\n`;
     expect(await fenceErrorsFor(source, UNREGISTERED)).toBe(0);
@@ -121,44 +170,108 @@ describe("A — the ESLint rule fires on every evasion shape", () => {
   });
 });
 
-describe("B — the registry agrees with the working tree", () => {
-  /** Every .ts/.tsx file under the scanned roots. */
-  function collectSourceFiles(dir: string, found: string[] = []): string[] {
-    for (const entry of readdirSync(dir)) {
-      if (SKIP_DIRS.has(entry)) continue;
-      const absolute = path.join(dir, entry);
-      if (statSync(absolute).isDirectory()) {
-        collectSourceFiles(absolute, found);
-      } else if (/\.(?:tsx?|m?js|cjs)$/.test(entry)) {
-        found.push(absolute);
-      }
+/** Every .ts/.tsx file under the scanned roots. */
+function collectSourceFiles(dir: string, found: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    if (SKIP_DIRS.has(entry)) continue;
+    const absolute = path.join(dir, entry);
+    if (statSync(absolute).isDirectory()) {
+      collectSourceFiles(absolute, found);
+    } else if (/\.(?:tsx?|m?js|cjs)$/.test(entry)) {
+      found.push(absolute);
     }
-    return found;
   }
+  return found;
+}
 
-  /**
-   * Does this source REFERENCE the admin module (as opposed to merely mentioning
-   * the identifier in prose)? Matching module specifiers rather than the bare
-   * name keeps doc comments that name `createSupabaseAdminClient` — like the one
-   * in lib/cases/context.ts explaining why it must never be used — out of the
-   * results, while still catching every aliasing and re-export shape.
-   */
-  function referencesAdminModule(source: string): boolean {
-    const specifiers = [
-      ...source.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)["']([^"']+)["']/g),
-    ].map((match) => match[1] ?? "");
-    return specifiers.some((specifier) => {
-      const withoutExtension = specifier.replace(/\.(?:ts|tsx|js|mjs|cjs)$/, "");
-      if (/(?:^|\/)supabase\/admin$/.test(withoutExtension)) return true;
-      return withoutExtension.startsWith(".") && /(?:^|\/)admin$/.test(withoutExtension);
-    });
-  }
+/**
+ * Comments out. Every detector below runs on code only, so a doc comment that
+ * *names* the admin client or the key — like the ones in `lib/cases/context.ts`
+ * and this very file explaining why they must not be used — is not a finding.
+ * Whole-line `//` and `*` continuations plus block comments; a trailing comment
+ * on a code line survives, which errs toward a false positive, not a miss.
+ * Split on /\r?\n/ — a CRLF checkout otherwise makes every line-filter vacuous.
+ */
+function stripComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*(?:\/\/|\*)/.test(line))
+    .join("\n");
+}
 
+/**
+ * Does this source REFERENCE the admin module? Matching module specifiers rather
+ * than the bare identifier keeps prose out of the results while still catching
+ * every aliasing and re-export shape. Backticks are in the quote class because a
+ * template-literal specifier — `import(\`@/lib/supabase/admin\`)` — is a module
+ * reference like any other, and requiring `["']` let it through.
+ */
+function referencesAdminModule(code: string): boolean {
+  const specifiers = [
+    ...code.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)["'`]([^"'`]+)["'`]/g),
+  ].map((match) => match[1] ?? "");
+  return specifiers.some((specifier) => {
+    const withoutExtension = specifier.replace(/\.(?:ts|tsx|js|mjs|cjs)$/, "");
+    if (/(?:^|\/)supabase\/admin$/.test(withoutExtension)) return true;
+    return withoutExtension.startsWith(".") && /(?:^|\/)admin$/.test(withoutExtension);
+  });
+}
+
+/**
+ * Does this source read the service-role key itself? This is the half the
+ * specifier match cannot see: an inline
+ * `createClient(url, process.env.<the key>)` holds an RLS-bypassing client while
+ * importing no admin module at all. The key name is matched EXACTLY, so the
+ * integration suite's `SUPABASE_TEST_SERVICE_ROLE_KEY` is not swept up.
+ */
+function readsServiceRoleKey(code: string): boolean {
+  return /\bSUPABASE_SERVICE_ROLE_KEY\b/.test(code);
+}
+
+/** The drift sweep's question: does this module hold an RLS-bypassing client? */
+export function reachesForServiceRole(source: string): boolean {
+  const code = stripComments(source);
+  return referencesAdminModule(code) || readsServiceRoleKey(code);
+}
+
+describe("B — the registry agrees with the working tree", () => {
   const reachingFiles: string[] = SCANNED_ROOTS.flatMap((root) =>
     collectSourceFiles(path.join(REPO_ROOT, root))
-      .filter((absolute) => referencesAdminModule(readFileSync(absolute, "utf8")))
+      .filter((absolute) => reachesForServiceRole(readFileSync(absolute, "utf8")))
       .map((absolute) => path.relative(REPO_ROOT, absolute).split(path.sep).join("/")),
   );
+
+  describe("the sweep detects the key, not merely the import", () => {
+    const CAUGHT: Array<[string, string]> = [
+      ["an inline service-role client", `const db = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY);`],
+      ["a bracket-indexed key read", `const k = process.env["SUPABASE_SERVICE_ROLE_KEY"];`],
+      ["a destructured key read", `const { SUPABASE_SERVICE_ROLE_KEY } = process.env;`],
+      ["a template-literal dynamic import", "await import(`@/lib/supabase/admin`);"],
+      ["a template-literal require", "require(`./admin`);"],
+      ["a plain import", `import { createSupabaseAdminClient } from "@/lib/supabase/admin";`],
+    ];
+    for (const [name, source] of CAUGHT) {
+      test(`${name} is a finding`, () => {
+        expect(reachesForServiceRole(source)).toBe(true);
+      });
+    }
+
+    const IGNORED: Array<[string, string]> = [
+      ["a line comment naming the key", `// never read SUPABASE_SERVICE_ROLE_KEY here`],
+      [
+        "a doc comment naming the admin module",
+        `/**\n * Never import "@/lib/supabase/admin" from this layer.\n */\nexport const a = 1;`,
+      ],
+      ["the test-only key", `const k = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;`],
+      ["the authenticated client", `import { createSupabaseServerClient } from "@/lib/supabase/server";`],
+    ];
+    for (const [name, source] of IGNORED) {
+      test(`${name} is not a finding`, () => {
+        expect(reachesForServiceRole(source)).toBe(false);
+      });
+    }
+  });
 
   test("the sweep found the call sites at all — a silent zero would pass vacuously", () => {
     expect(reachingFiles.length).toBeGreaterThan(5);
@@ -190,7 +303,7 @@ describe("B — the registry agrees with the working tree", () => {
     const caseLayer = collectSourceFiles(path.join(REPO_ROOT, "lib", "cases"));
     expect(caseLayer.length).toBeGreaterThan(0);
     for (const absolute of caseLayer) {
-      expect(referencesAdminModule(readFileSync(absolute, "utf8")), absolute).toBe(false);
+      expect(reachesForServiceRole(readFileSync(absolute, "utf8")), absolute).toBe(false);
     }
   });
 });
@@ -221,11 +334,77 @@ describe("C — the effective lint config IS the registry", () => {
     expect(entry?.[1]?.allow).toEqual([...SERVICE_ROLE_EXCEPTION_PATHS]);
   });
 
+  test("both fence layers are looking for the key the factory actually reads", () => {
+    // The ESLint rule extracts the name from lib/supabase/admin.ts; the sweep
+    // above hardcodes it. Renaming the env var without updating both would leave
+    // one layer watching for a string that no longer exists — a fence that has
+    // quietly stopped fencing. This is the assertion that fails first.
+    const factory = readFileSync(path.join(REPO_ROOT, "lib/supabase/admin.ts"), "utf8");
+    const named = factory.match(/process\.env\.([A-Z0-9_]*SERVICE_ROLE_KEY)\b/)?.[1];
+    expect(named, "lib/supabase/admin.ts no longer reads a *SERVICE_ROLE_KEY env var").toBeDefined();
+    expect(reachesForServiceRole(`const k = process.env.${named};`)).toBe(true);
+  });
+
   test("the Motion v2 ADR fence still applies — the new rule did not clobber it", { timeout: 60_000 }, async () => {
     // Flat config REPLACES rule options rather than merging them; a second
     // `no-restricted-imports` block would have silently killed this.
     const config = await eslint.calculateConfigForFile(path.join(REPO_ROOT, "lib/cases/permissions.ts"));
     expect(JSON.stringify(config.rules?.["no-restricted-imports"])).toContain("framer-motion");
+  });
+});
+
+describe("D — the registry's prose is checked against the source it describes", () => {
+  /**
+   * A registry is only worth having if a reviewer can trust its prose without
+   * re-reading every file. The pre-review draft of this registry claimed the
+   * claim route verified an HMAC token (it does not) and that the dev sign-in
+   * route was gated on a dev secret and a local-looking URL (neither is true).
+   * Both were caught by reading the source. These tests are that read, automated
+   * for the one entry whose gates are security-load-bearing.
+   */
+  const entryFor = (file: string) => {
+    const entry = SERVICE_ROLE_EXCEPTIONS.find((candidate) => candidate.path === file);
+    expect(entry, `${file} should be registered`).toBeDefined();
+    return `${entry!.justification} ${entry!.requiredCaseCheck}`;
+  };
+
+  const DEV_SIGN_IN = "app/api/dev/sign-in/route.ts";
+  const devSignInSource = readFileSync(path.join(REPO_ROOT, DEV_SIGN_IN), "utf8");
+
+  test("the dev sign-in route's real gates are NODE_ENV and ENABLE_DEV_SIGNIN", () => {
+    expect(devSignInSource).toContain("NODE_ENV");
+    expect(devSignInSource).toContain("ENABLE_DEV_SIGNIN");
+    const prose = entryFor(DEV_SIGN_IN);
+    expect(prose, "the entry must name both real gates").toContain("NODE_ENV");
+    expect(prose).toContain("ENABLE_DEV_SIGNIN");
+  });
+
+  test("the entry says outright that there is no dev secret, because there is not", () => {
+    // The pre-review prose read "its dev secret matches". The route reads no
+    // secret at all — its only env inputs are the two gates plus DEV_USER_EMAIL.
+    // If one is ever added, this fails and the prose gets to be true again.
+    expect(/secret/i.test(devSignInSource), "route now checks a secret — update the entry").toBe(false);
+    expect(entryFor(DEV_SIGN_IN)).toMatch(/no dev secret/i);
+  });
+
+  test("the entry records that the URL check is not a gate while the route still ships it", () => {
+    // ensureDevAllowed's second alternative is /\.supabase\.co/, which matches
+    // EVERY hosted project including production. Describing that as "the URL must
+    // look local" reads as a third gate; it is not one. If the route is ever
+    // tightened, this fails in the other direction and the caveat comes out.
+    const permitsAnyHostedProject = /supabase\\?\.co/.test(devSignInSource);
+    expect(permitsAnyHostedProject, "route no longer permits any *.supabase.co host").toBe(true);
+    expect(entryFor(DEV_SIGN_IN), "the entry must not present the URL check as a gate").toContain(
+      "supabase.co",
+    );
+  });
+
+  test("the claim route's entry still says it verifies no token", () => {
+    // The other lying entry the pre-PR review caught. lib/auth/finish-sign-in.ts
+    // is the path that calls verifyClaim; the claim route does not.
+    const claimRoute = readFileSync(path.join(REPO_ROOT, "app/api/assess/claim/route.ts"), "utf8");
+    expect(/verifyClaim/.test(claimRoute), "claim route now verifies a token — update the entry").toBe(false);
+    expect(readFileSync(path.join(REPO_ROOT, "lib/auth/finish-sign-in.ts"), "utf8")).toContain("verifyClaim");
   });
 });
 

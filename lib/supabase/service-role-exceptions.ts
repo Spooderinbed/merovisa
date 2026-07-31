@@ -13,13 +13,21 @@
  * must not add service-role paths outside that list" (plan lines 340-344).
  *
  * THIS LIST IS MACHINE-ENFORCED, not a convention. `eslint.config.mjs` defines
- * `merovisa/service-role-exception-list`, which errors on any module under
- * `lib/` or `app/` that imports, re-exports, requires, or dynamically imports
- * `lib/supabase/admin` while absent from `SERVICE_ROLE_EXCEPTION_PATHS` below.
- * `tests/supabase/service-role-exceptions.test.ts` independently sweeps the
- * working tree for drift and proves the rule survives aliasing and re-export.
- * Adding a call site means adding an entry here — in the same commit, in front of
- * a reviewer.
+ * `merovisa/service-role-exception-list`, which errors on any first-party module
+ * absent from `SERVICE_ROLE_EXCEPTION_PATHS` below that either
+ *
+ *   (a) imports, re-exports, requires, or dynamically imports `lib/supabase/admin`
+ *       — including through a template-literal specifier; or
+ *   (b) names the SUPABASE_SERVICE_ROLE_KEY env var at all.
+ *
+ * (b) is the load-bearing half. Fencing only the import path fenced the HELPER,
+ * not the capability: an inline
+ * `createClient(url, process.env.<the service-role key>)` holds exactly the same
+ * RLS-bypassing client while importing nothing this list has ever heard of — and
+ * that is precisely what an author who does not know this helper exists reaches
+ * for. `tests/supabase/service-role-exceptions.test.ts` independently sweeps the
+ * working tree for both shapes. Adding a call site means adding an entry here —
+ * in the same commit, in front of a reviewer.
  *
  * READ `lib/cases/README.md` before adding one. The correct default for anything
  * touching case-scoped data is the AUTHENTICATED client plus
@@ -127,8 +135,9 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     path: "app/api/dev/sign-in/route.ts",
     status: "sanctioned",
     justification:
-      "Development-only sign-in harness that mints a user and seeds fixtures. Functionally dead outside development: the route 404s unless NODE_ENV is not production, its dev secret matches, and the Supabase URL looks local.",
-    requiredCaseCheck: "n/a — must never be reachable in production; the route's own three gates are the guard.",
+      "Development-only sign-in harness that mints an Auth user with admin.createUser and seeds fixtures. TWO gates, both in ensureDevAllowed (route.ts:133): NODE_ENV must not be 'production', and ENABLE_DEV_SIGNIN must equal the string '1'. There is no dev secret and no caller-supplied credential of any kind — the opt-in env var IS the whole authorization.",
+    requiredCaseCheck:
+      "n/a — no case data. NOT a third gate: ensureDevAllowed also tests NEXT_PUBLIC_SUPABASE_URL, but its second alternative matches any *.supabase.co host, which is EVERY hosted project including production. Treat that check as decorative; only NODE_ENV and ENABLE_DEV_SIGNIN keep this route dead, so ENABLE_DEV_SIGNIN must never be set in a deployed environment.",
     auditEvent: null,
   },
   {

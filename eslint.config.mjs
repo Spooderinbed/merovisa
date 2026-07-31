@@ -34,6 +34,30 @@ const serviceRoleExceptionPaths = (() => {
 })();
 
 /**
+ * The env var that IS the RLS bypass, READ OUT OF the factory that wraps it
+ * rather than restated here — the same "one list a reviewer must trust" reasoning
+ * as the allow-list above, and it means this config never contains the literal
+ * the rule fences (a rule that flagged its own definition would be unshippable).
+ * Rename the var in `lib/supabase/admin.ts` and the fence follows; remove it and
+ * config load throws, failing lint loudly instead of fencing nothing.
+ *
+ * Matched exactly downstream, so the integration suite's differently-prefixed
+ * test key is not swept up with it.
+ */
+const serviceRoleKeyEnv = (() => {
+  const factory = "lib/supabase/admin.ts";
+  const source = readFileSync(path.join(repoRoot, factory), "utf8");
+  const match = source.match(/process\.env\.([A-Z0-9_]*SERVICE_ROLE_KEY)\b/);
+  if (!match) {
+    throw new Error(
+      `[eslint] Could not find the service-role key env var in ${factory}. ` +
+        "Refusing to run: the fence would silently stop detecting inline service-role clients.",
+    );
+  }
+  return match[1];
+})();
+
+/**
  * True for any module specifier that resolves to `lib/supabase/admin`. Relative
  * specifiers ending in `admin` count too: `lib/supabase/admin.ts` is the only
  * `admin*` module in the tree, so treating `./admin` as a hit is fail-closed, and
@@ -46,12 +70,28 @@ function isAdminClientModule(specifier) {
   return withoutExtension.startsWith(".") && /(?:^|\/)admin$/.test(withoutExtension);
 }
 
+/**
+ * The specifier of an import/require node, whatever syntax carries it. A
+ * TEMPLATE literal is a module specifier like any other — `import(\`./admin\`)`
+ * — and testing only `node.type === "Literal"` let that shape through. For a
+ * template with interpolations the static parts are tested both joined and
+ * individually, so a hit anywhere in the static text is a hit.
+ */
+function isAdminClientSpecifier(node) {
+  if (!node) return false;
+  if (node.type === "TemplateLiteral") {
+    const parts = node.quasis.map((quasi) => quasi.value.cooked ?? "");
+    return isAdminClientModule(parts.join("")) || parts.some(isAdminClientModule);
+  }
+  return node.type === "Literal" && isAdminClientModule(node.value);
+}
+
 const serviceRoleExceptionListRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Only modules enumerated in lib/supabase/service-role-exceptions.ts may reach for the Supabase service-role client.",
+        "Only modules enumerated in lib/supabase/service-role-exceptions.ts may hold the Supabase service-role client — whether by importing lib/supabase/admin or by reading the service-role key directly.",
     },
     schema: [
       {
@@ -69,18 +109,35 @@ const serviceRoleExceptionListRule = {
     const relative = path.relative(context.cwd, context.filename).split(path.sep).join("/");
     if (allow.has(relative)) return {};
 
-    const report = (node) =>
+    const REMEDY =
+      "Prefer the authenticated client (lib/supabase/server.ts) plus requireCasePermission (lib/cases/). " +
+      "If service-role is genuinely unavoidable, add this file to SERVICE_ROLE_EXCEPTIONS in lib/supabase/service-role-exceptions.ts " +
+      "with its justification, the case-authorization check that precedes it, and the audit event it emits.";
+
+    const reportModule = (node) =>
       context.report({
         node,
         message:
           "This module reaches for the Supabase service-role client, which bypasses Row Level Security — the tenant boundary. " +
-          "Prefer the authenticated client (lib/supabase/server.ts) plus requireCasePermission (lib/cases/). " +
-          "If service-role is genuinely unavoidable, add this file to SERVICE_ROLE_EXCEPTIONS in lib/supabase/service-role-exceptions.ts " +
-          "with its justification, the case-authorization check that precedes it, and the audit event it emits.",
+          REMEDY,
+      });
+
+    // The half a specifier match cannot see. An inline
+    // `createClient(url, process.env.<key>)` holds exactly the same RLS-bypassing
+    // client while importing no admin module at all — and it is what an author
+    // who does not know lib/supabase/admin.ts exists reaches for. Matching the
+    // KEY rather than the import path is what makes the registry the real fence.
+    const reportKey = (node) =>
+      context.report({
+        node,
+        message:
+          `This module reads ${serviceRoleKeyEnv} directly. That key bypasses Row Level Security — the tenant ` +
+          "boundary — so a client built from it is a service-role client no matter which module constructed it. " +
+          REMEDY,
       });
 
     const checkSource = (node) => {
-      if (node.source && isAdminClientModule(node.source.value)) report(node);
+      if (node.source && isAdminClientSpecifier(node.source)) reportModule(node);
     };
 
     return {
@@ -92,11 +149,24 @@ const serviceRoleExceptionListRule = {
       ExportNamedDeclaration: checkSource,
       ExportAllDeclaration: checkSource,
       ImportExpression(node) {
-        if (node.source?.type === "Literal" && isAdminClientModule(node.source.value)) report(node);
+        if (isAdminClientSpecifier(node.source)) reportModule(node);
       },
       "CallExpression[callee.name='require']"(node) {
-        const [first] = node.arguments;
-        if (first?.type === "Literal" && isAdminClientModule(first.value)) report(node);
+        if (isAdminClientSpecifier(node.arguments[0])) reportModule(node);
+      },
+      // Every syntax that can name the key resolves to one of these three nodes:
+      // `process.env.KEY` and `const { KEY } = process.env` are Identifiers,
+      // `process.env["KEY"]` and `readEnv("KEY")` are Literals, and
+      // `process.env[`KEY`]` is a TemplateElement. Comments are not in the AST,
+      // so prose naming the key — including this comment — is never a finding.
+      Identifier(node) {
+        if (node.name === serviceRoleKeyEnv) reportKey(node);
+      },
+      Literal(node) {
+        if (node.value === serviceRoleKeyEnv) reportKey(node);
+      },
+      TemplateElement(node) {
+        if (node.value?.cooked === serviceRoleKeyEnv) reportKey(node);
       },
     };
   },

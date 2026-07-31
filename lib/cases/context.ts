@@ -6,6 +6,7 @@ import {
   deriveAccessScope,
   type CaseAccessFacts,
   type CaseDenyReason,
+  type CaseGrant,
   type CaseRole,
   type MembershipStatus,
   type PermissionScope,
@@ -51,13 +52,18 @@ export interface CaseContext extends CaseAccessFacts {
   /** The case's organization, or null for a personal case / an unresolved case. */
   organizationId: string | null;
   /**
-   * `role` carries the database value verbatim. A value the migration does not
-   * define is deliberately NOT normalised to null, so `denyReason` can tell a
-   * widened enum ("unknown-role") apart from an absent relationship
-   * ("no-relationship"). Gate on `accessScope` / `hasAccess`, never on `role`.
+   * Every relationship the actor genuinely holds on this case — staff, student,
+   * or both. THIS is the authorization fact; `membershipRole` is only what the
+   * membership row said, carried verbatim so `denyReason` can tell a widened enum
+   * ("unknown-role") apart from an absent relationship ("no-relationship").
+   * Gate on `hasAccess` or on a decision, never on `membershipRole`.
    */
-  role: CaseRole | null;
-  /** The broadest scope the actor holds on THIS case; "deny" means no access. */
+  grantedRoles: readonly CaseRole[];
+  /**
+   * The BROADEST scope among `grantedRoles`; "deny" means no access. A summary
+   * for rendering and logging — it is not itself an authorization: a dual-role
+   * actor's broadest scope does not imply every claim that scope could satisfy.
+   */
   accessScope: PermissionScope;
   denyReason: CaseDenyReason | null;
   /** Convenience gate, exactly equivalent to `accessScope !== "deny"`. */
@@ -76,10 +82,11 @@ function noAccess(actorUserId: string, caseId: string, reason: CaseDenyReason): 
     caseExists: false,
     isOrgCase: false,
     organizationId: null,
-    role: null,
+    membershipRole: null,
     membershipStatus: null,
     isAssignedToCase: false,
     isLinkedStudent: false,
+    grantedRoles: [],
     accessScope: "deny",
     denyReason: reason,
     hasAccess: false,
@@ -118,7 +125,7 @@ export async function getCaseContext(
     // Membership is scoped to THIS case's organization, which is what makes a
     // found row proof of same-tenant standing: an owner of another organization
     // matches no row here, so cross-tenant reach never resolves a role.
-    let role: CaseRole | null = null;
+    let membershipRole: CaseRole | null = null;
     let membershipStatus: MembershipStatus | null = null;
     if (isOrgCase) {
       const membershipResult = await client
@@ -129,7 +136,7 @@ export async function getCaseContext(
         .maybeSingle();
       if (membershipResult.error) return noAccess(actorUserId, caseId, "lookup-failed");
       if (membershipResult.data) {
-        role = membershipResult.data.role as CaseRole;
+        membershipRole = membershipResult.data.role as CaseRole;
         membershipStatus = membershipResult.data.status as MembershipStatus;
       }
     }
@@ -138,7 +145,7 @@ export async function getCaseContext(
     // reachable only through the counsellor role, which requires a membership row.
     // Without one we skip the lookup — an orphan assignment grants nothing.
     let isAssignedToCase = false;
-    if (role !== null) {
+    if (membershipRole !== null) {
       const assignmentResult = await client
         .from("case_assignments")
         .select("user_id")
@@ -149,20 +156,19 @@ export async function getCaseContext(
       isAssignedToCase = assignmentResult.data !== null;
     }
 
-    // A student is not an org member — the role comes from the case linkage alone
-    // (migration line 52: `organization_memberships.role` excludes 'student').
-    if (role === null && isLinkedStudent) {
-      role = "student";
-    }
-
+    // NOTE: the student link is NOT folded into `membershipRole` here. It used to
+    // be — as a fallback taken only when the membership lookup found nothing —
+    // and that is exactly how a membership came to mask a person's rights over
+    // their own case. The two facts stay separate and `deriveCaseGrants` adds
+    // them (spec §"The dual-role rule").
     const facts: CaseAccessFacts = {
       isOrgCase,
-      role,
+      membershipRole,
       membershipStatus,
       isAssignedToCase,
       isLinkedStudent,
     };
-    const { scope, reason } = deriveAccessScope(facts);
+    const { scope, reason, grants } = deriveAccessScope(facts);
 
     return {
       ...facts,
@@ -170,6 +176,7 @@ export async function getCaseContext(
       caseId,
       caseExists: true,
       organizationId,
+      grantedRoles: grants.map((grant: CaseGrant) => grant.role),
       accessScope: scope,
       denyReason: reason,
       hasAccess: scope !== "deny",

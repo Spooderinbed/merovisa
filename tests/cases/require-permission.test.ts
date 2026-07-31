@@ -7,7 +7,7 @@ import {
   checkCasePermission,
   requireCasePermission,
 } from "@/lib/cases/require-permission";
-import { CASE_PERMISSIONS, type CasePermission } from "@/lib/cases/permissions";
+import { CASE_SCOPED_PERMISSIONS, type CaseScopedPermission } from "@/lib/cases/permissions";
 import { fakeCaseDb, type CaseDbFixture } from "@/tests/helpers/fake-case-db";
 import type { CaseAuthorizationClient } from "@/lib/cases/context";
 
@@ -41,7 +41,7 @@ describe("requireCasePermission — allowed claims resolve to the context", () =
   test("an owner passes and receives the resolved context", async () => {
     const { client } = db();
     const context = await requireCasePermission(OWNER_A, CASE_A1, "case.export", client);
-    expect(context.role).toBe("owner");
+    expect(context.membershipRole).toBe("owner");
     expect(context.accessScope).toBe("all-org");
     expect(context.hasAccess).toBe(true);
   });
@@ -55,14 +55,15 @@ describe("requireCasePermission — allowed claims resolve to the context", () =
   test("the linked student passes for a linked-scope claim", async () => {
     const { client } = db();
     const context = await requireCasePermission(STUDENT_A1, CASE_A1, "case.read", client);
-    expect(context.role).toBe("student");
+    expect(context.membershipRole).toBeNull();
+    expect(context.grantedRoles).toEqual(["student"]);
   });
 });
 
 describe("requireCasePermission — every denial throws the typed error", () => {
   async function expectDenied(
     actor: string,
-    permission: CasePermission,
+    permission: CaseScopedPermission,
     reason: string,
     client: CaseAuthorizationClient,
   ) {
@@ -100,7 +101,7 @@ describe("requireCasePermission — every denial throws the typed error", () => 
 
   test("a revoked owner is denied every single claim", async () => {
     const { client } = db();
-    for (const permission of CASE_PERMISSIONS) {
+    for (const permission of CASE_SCOPED_PERMISSIONS) {
       await expectDenied(REVOKED_OWNER_A, permission, "membership-inactive", client);
     }
   });
@@ -117,7 +118,7 @@ describe("requireCasePermission — every denial throws the typed error", () => 
 
   test("an unknown permission is denied even for an owner", async () => {
     const { client } = db();
-    await expectDenied(OWNER_A, "case.seize" as CasePermission, "unknown-permission", client);
+    await expectDenied(OWNER_A, "case.seize" as CaseScopedPermission, "unknown-permission", client);
   });
 
   test("a failed lookup is denied, not surfaced as a success or a raw crash", async () => {
@@ -202,12 +203,12 @@ describe("checkCasePermission — the non-throwing form", () => {
     const result = await checkCasePermission(UNASSIGNED_COUNSELLOR_A, CASE_A1, "case.read", client);
     expect(result.decision.allowed).toBe(false);
     expect(result.decision.reason).toBe("not-assigned");
-    expect(result.context.role).toBe("counsellor");
+    expect(result.context.membershipRole).toBe("counsellor");
   });
 
   test("agrees with requireCasePermission on every claim for every fixture actor", async () => {
     for (const actor of [OWNER_A, COUNSELLOR_A, UNASSIGNED_COUNSELLOR_A, REVOKED_OWNER_A, OWNER_B, STUDENT_A1]) {
-      for (const permission of CASE_PERMISSIONS) {
+      for (const permission of CASE_SCOPED_PERMISSIONS) {
         const { client } = db();
         const { decision } = await checkCasePermission(actor, CASE_A1, permission, client);
         const threw = await requireCasePermission(actor, CASE_A1, permission, db().client).then(

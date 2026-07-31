@@ -87,6 +87,20 @@
 - 2026-07-31 — **Tests use a new table-keyed fake (`tests/helpers/fake-case-db.ts`), not the shared positional `fake-supabase.ts`.** The shared fake serves rows from one positional queue, which would have made `getCaseContext`'s internal query order load-bearing on every assertion. Fixture rows are typed against the generated `Database` types so a later column rename breaks these tests instead of silently matching nothing (build session).
 - 2026-07-31 — **Scope fence held on the fence itself:** the review's "resolve one hop of re-exports" suggestion was declined. Once the rule covers every first-party root, a relay module is flagged *at the relay*, which is the root of the chain; hop-resolution would add complexity for no additional coverage.
 
+### Cross-layer review round (2026-08-02) — resolving against the canonical access matrix
+
+`docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md` is now **authoritative** for this card and for MV-152; where a layer disagrees with it, the layer is wrong. The four MV-151 items on its checklist are resolved as follows.
+
+- 2026-08-02 — **The fence now detects the service-role KEY, not the module specifier.** The old rule and sweep both matched `lib/supabase/admin`, so an unregistered file doing `createClient(url, process.env.<service-role key>)` inline passed *both* layers while holding an RLS-bypassing client — and that is what an author who does not know the helper exists reaches for, not an adversarial evasion. The rule now also reports the key by AST node (Identifier / Literal / TemplateElement, covering `process.env.KEY`, `process.env["KEY"]`, a destructure, and a by-name lookup), and both layers accept template-literal specifiers. **The key name is EXTRACTED from `lib/supabase/admin.ts` at config load** rather than restated — the same "one list a reviewer must trust" reasoning as the allow-list, and it is what stops the config from flagging its own definition of the thing it fences. Comments are not in the AST and the sweep strips them, so prose naming the key is never a finding.
+- 2026-08-02 — **Org-scoped verbs got an entry point rather than being deferred.** `case.list`, `case.create`, `org.audit.read`, `org.manage`, `org.settings` are questions about an organization; `requireCasePermission` takes a `caseId` and denies `unknown-case` when no row matches, so shipping them there was shipping claims no caller could check. Added `getOrgContext` + `requireOrgPermission` / `checkOrgPermission`, and **partitioned** the 13 claims into `CASE_SCOPED_PERMISSIONS` (8) and `ORG_SCOPED_PERMISSIONS` (5) so each verb is checkable in exactly one correct way — enforced by type at both entry points and re-checked at runtime in `decideOrgPermission` so a cast cannot borrow an org membership to answer a question about one case. Nothing was dropped or deferred.
+- 2026-08-02 — **`getOrgContext` runs ONE query and no `organizations` existence probe**, so an unknown org and "not a member" both answer `no-relationship`. Under RLS a non-member cannot read the `organizations` row either, so a probe would report "unknown" in both cases — while handing an outsider an org-enumeration oracle. Honest and safe in the same move.
+- 2026-08-02 — **`case.list` for a counsellor allows with scope `assigned`, and the scope is load-bearing.** It means "may list, filtered to their own `case_assignments`", never "may see every case in the org". Recorded in the README and added to the Stage 3 review-gate checklist, because an allow whose scope the caller ignores is a tenancy leak wearing an allow.
+- 2026-08-02 — **The dual-role rule is implemented as ADDITIVE GRANTS, and `CaseAccessFacts.role` is gone.** A single `role` field forced a choice between "staff" and "student", and its resolution order — membership first, student only as a fallback — was precisely the masking defect. `membershipRole` and `isLinkedStudent` are now separate facts, `deriveCaseGrants` returns a *list* (a dual-role actor holds two), and a claim is allowed if either grant satisfies its cell with neither lending the other its scope. `CaseContext.role` is replaced by `grantedRoles`; `membershipRole` is carried verbatim only so `unknown-role` stays distinguishable from `no-relationship`.
+- 2026-08-02 — **"Inactive membership = nothing" was narrowed to ORGANIZATION rights, deliberately.** The old rule denied *everything* and the old test asserted that a revoked staff member who is also the linked student "still gets nothing". Per the canonical rule, revocation never removes a person's rights over their own student case — they hold those as a data subject, not as staff. That test was replaced, not deleted, and the mutation check below proves the new behaviour is pinned.
+- 2026-08-02 — **`not-linked-student` was removed from `CaseDenyReason`.** With student-ness expressed as the link rather than a role, "a student who is not linked" is not a representable state; the honest reason is `no-relationship`. MV-153 should not assert against a reason that can no longer occur.
+- 2026-08-02 — **An unrecognised membership role costs the staff grant and nothing else.** A widened DB enum contributes no org rights, but the student link is read independently from `cases.student_user_id` — handing the actual linked student their own case is not an escalation. A `role: 'student'` membership row is treated as schema drift (the check constraint excludes it) and grants nothing.
+- 2026-08-02 — **`requireCasePermission` narrowed from `CasePermission` to `CaseScopedPermission`.** A signature change, taken because Stage 1 ships no callers and MV-153's harness is not yet written — the cost is zero now and permanent later. Flagged here because MV-153 is written against these signatures.
+
 ## Done evidence
 
 **Branch** `mv-151-case-permission-boundary` off `origin/master` @ `78414d0`.
@@ -119,3 +133,75 @@
 - **Student "permitted fields only"** (`case.update`): this layer authorizes the *claim*, not the *field set*. Recorded as a named gap in `lib/cases/README.md` with a checklist item — a Stage 3 mutation accepting an arbitrary student patch is a defect even though the cell allows.
 - **MV-152 must match this model.** `lib/cases/README.md` carries the grid in reviewable form; every enum value and column name was verified against the merged migration, and none was guessed.
 - No audit event is emitted anywhere: MV-150 shipped `private.write_audit_event` with EXECUTE revoked, so no path can emit one until MV-152's grant review. A test asserts every Stage-1 registry entry has `auditEvent: null` rather than claiming an emission the database cannot honour.
+
+---
+
+## Done evidence — round 2 (2026-08-02, canonical-matrix review)
+
+Resolves all four **MV-151 — TypeScript** items in `docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md`. The permission matrix itself was found correct on every role × case-shape cell and was **not** rewritten; what changed is the fence's detector, the registry's prose, the missing org entry point, and the dual-role resolution order.
+
+**Gate (all green, run in the worktree):**
+- `npm run typecheck` — clean.
+- `npm run lint` — clean, with the widened fence live repo-wide.
+- `npm test` — **323 files / 2470 tests passed** (from 322 / 2405: **+65 tests**, +1 file).
+- `npm run test:integration` — deliberately not run, per this card's Integration gate. No `*.itest.ts` added.
+
+**Checklist item 1 — the fence guards the key, not the module specifier.**
+- `eslint.config.mjs`: `merovisa/service-role-exception-list` now reports the service-role key by AST node and accepts template-literal specifiers on `import()` / `require()`. The key name is extracted from `lib/supabase/admin.ts` at config load, fail-closed (throws if absent).
+- `tests/supabase/service-role-exceptions.test.ts`: **8 new evasion shapes were red before the fix and green after** — an inline `createClient(url, <key>)` importing no admin module, bracket / backtick / destructured / by-name key reads, a template-literal dynamic import, a template-literal `require`, and a template specifier with an interpolated tail. Plus: the registered factory may still read the key; the differently-prefixed integration-test key is not swept up; and both fence layers are asserted to be watching for the name `lib/supabase/admin.ts` actually reads.
+- The drift sweep gained the same two detectors and now strips comments first, so prose naming the key or the module is not a finding. Six positive and four negative detector cases pin it.
+
+**Checklist item 2 — the dev/sign-in registry entry.** Corrected to the two real gates in `ensureDevAllowed` (`NODE_ENV !== "production"`, `ENABLE_DEV_SIGNIN === "1"`), states outright that there is no dev secret, and records that the URL check is **not** a third gate because `/\.supabase\.co/` matches every hosted project including production. A new `describe D` reads the route and the claim route and fails if either the prose or the source drifts — in **both** directions (tighten the route without updating the prose and it also fails).
+
+**Checklist item 3 — org-scoped entry point ADDED, not deferred.** `lib/cases/org-context.ts` (`getOrgContext`) and `lib/cases/require-org-permission.ts` (`requireOrgPermission` / `checkOrgPermission` / `OrgAuthorizationError`). `tests/cases/org-permissions.test.ts` — 27 tests covering the partition, the pure decision, the DB resolution, and the entry points.
+
+**Checklist item 4 — the dual-role rule.** `deriveCaseGrants` returns additive grants; proven both at the pure layer and end-to-end through `getCaseContext` against fixture actors who are staff **and** the linked student of one of their org's cases (`CASE_A3`, `CASE_A4`).
+
+**Guards proven by mutation, not assumed** (each mutation applied, suite run, file restored byte-identical):
+
+| Mutation | Result |
+|---|---|
+| Student grant taken only when `membershipRole === null` (restores the masking bug) | **8 tests fail** |
+| Drop the active-status gate from `deriveOrgStanding` | **19 tests fail** |
+| Drop the runtime entry-point split guard in `decideOrgPermission` | **1 test fails** |
+| Let an unknown / `student` membership role through `deriveOrgStanding` | **4 tests fail** |
+
+*(Method note: the first mutation attempt was a silent no-op — multi-line `perl -0p` patterns with bare `\n` match nothing in this CRLF working tree, so all three "passed" vacuously. Re-run with `\r?\n`. Same trap as the `board.md` CRLF split bug.)*
+
+**Exported signatures MV-153's harness is written against**
+
+```ts
+// lib/cases/permissions.ts — pure
+CASE_PERMISSIONS: readonly CasePermission[]                       // all 13
+ORG_SCOPED_PERMISSIONS: readonly OrgScopedPermission[]            // 5 — case.list, case.create, org.audit.read, org.manage, org.settings
+CASE_SCOPED_PERMISSIONS: readonly CaseScopedPermission[]          // 8 — the rest
+interface CaseAccessFacts { isOrgCase; membershipRole: CaseRole | null; membershipStatus; isAssignedToCase; isLinkedStudent }
+interface OrgAccessFacts  { membershipRole: CaseRole | null; membershipStatus: MembershipStatus | null }
+interface CaseGrant       { role: CaseRole; scope: Exclude<PermissionScope, "deny"> }
+deriveCaseGrants(facts: CaseAccessFacts): { grants: readonly CaseGrant[]; reason: CaseDenyReason | null }
+deriveAccessScope(facts: CaseAccessFacts): { scope: PermissionScope; reason: CaseDenyReason | null; grants: readonly CaseGrant[] }
+deriveOrgStanding(facts: OrgAccessFacts): { isActiveMember: boolean; reason: CaseDenyReason | null }
+decideCasePermission(permission: CasePermission, facts: CaseAccessFacts): CasePermissionDecision
+decideOrgPermission(permission: OrgScopedPermission, facts: OrgAccessFacts): CasePermissionDecision
+
+// lib/cases/context.ts
+getCaseContext(actorUserId: string, caseId: string, db?: CaseAuthorizationClient): Promise<CaseContext>
+// CaseContext extends CaseAccessFacts + { actorUserId; caseId; caseExists; organizationId; grantedRoles: readonly CaseRole[]; accessScope; denyReason; hasAccess }
+
+// lib/cases/org-context.ts
+getOrgContext(actorUserId: string, organizationId: string, db?: CaseAuthorizationClient): Promise<OrgContext>
+// OrgContext extends OrgAccessFacts + { actorUserId; organizationId; isActiveMember; denyReason; hasAccess }
+
+// lib/cases/require-permission.ts
+requireCasePermission(actorUserId, caseId, permission: CaseScopedPermission, db?): Promise<CaseContext>   // throws CaseAuthorizationError
+checkCasePermission(actorUserId, caseId, permission: CaseScopedPermission, db?): Promise<{ decision; context }>
+class AuthorizationError extends Error { permission; actorUserId; reason }
+class CaseAuthorizationError extends AuthorizationError { caseId }
+
+// lib/cases/require-org-permission.ts
+requireOrgPermission(actorUserId, organizationId, permission: OrgScopedPermission, db?): Promise<OrgContext>  // throws OrgAuthorizationError
+checkOrgPermission(actorUserId, organizationId, permission: OrgScopedPermission, db?): Promise<{ decision; context }>
+class OrgAuthorizationError extends AuthorizationError { organizationId }
+```
+
+`CaseDenyReason` = `invalid-input | unknown-case | unknown-role | unknown-permission | no-relationship | membership-inactive | role-not-permitted | not-assigned | scope-mismatch | lookup-failed`. **`not-linked-student` was removed** — it is no longer reachable.
