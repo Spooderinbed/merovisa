@@ -1880,25 +1880,25 @@
     },
     {
       "id": "MV-151",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-151-case-permission-boundary.md",
       "title": "Case-permission server boundary (getCaseContext / requireCasePermission) + service-role exception list",
       "summary": "Builds the server-only case-permission layer for the consultancy workspace: getCaseContext(actorUserId, caseId), requireCasePermission(actorUserId, caseId, permission), and the role→permission matrix (owner/admin = whole org, counsellor = assigned-only, student = linked-case-only, inactive membership = nothing, role read from the DB never from JWT/metadata). Establishes the enforcement-boundary doctrine — the authenticated client + RLS is the load-bearing tenant boundary and this layer is defense-in-depth — plus a machine-enforced service-role exception list (a registered allowlist + lint/test guard) so no new case-touching path can reach createSupabaseAdminClient unregistered. Unit + behavioral tests against a mocked client only; real-DB positive/negative proof is MV-153's exit gate. Depends on MV-150; consumed by MV-152 and MV-153.",
       "created": "2026-07-30",
-      "entered": "2026-08-01"
+      "entered": "2026-08-02"
     },
     {
       "id": "MV-152",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-152-case-aware-rls-policies.md",
       "title": "Case-aware RLS policies — replace deny-all with role-aware tenant isolation",
       "summary": "Replaces MV-150's deny-all default policies with real case-aware RLS on all six tenancy tables (organizations, organization_memberships, cases, case_assignments, invitations, audit_events), routing every membership/assignment/case lookup through `private` SECURITY DEFINER STABLE helpers with pinned `search_path = ''` so policies stay non-recursive and plan on MV-150's indexes. Covers org owner/admin full-org access, counsellor assigned-only, student linked-case-only, and inactive-membership = no access; every UPDATE carries USING + WITH CHECK, grants are authenticated-only (anon gets nothing), and audit_events keeps its append-only shape. This is the load-bearing tenant-isolation layer per the plan's enforcement boundary — tested as the authenticated user, never service-role — with an EXPLAIN check proving index usage and once-per-statement helper evaluation, and a clean security+performance advisor pass. P1, agent-owned; blocked by MV-150, coordinates with MV-151's role matrix, consumed by MV-153's exit-gate harness.",
       "created": "2026-07-30",
-      "entered": "2026-08-01"
+      "entered": "2026-08-02"
     },
     {
       "id": "MV-153",

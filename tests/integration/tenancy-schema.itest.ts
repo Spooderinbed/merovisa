@@ -5,11 +5,15 @@
  * tables LOCKED SHUT. Every guarantee it makes is a property of the database, and a mocked
  * supabase-js client structurally cannot observe any of them. This suite proves:
  *
- *  - **deny-all is total** — RLS is enabled AND *forced* on all six tables (a missing `force`
- *    leaves the table owner exempt and would silently reopen the door), the only policy on
- *    each is the named deny-all, and `anon`/`authenticated` hold no grants at all. Asserted
- *    from `pg_class` / `pg_policy` / `information_schema` rather than trusted from the DDL by
- *    eye, then confirmed behaviourally with a real signed-in client;
+ *  - **the tables stay closed by construction** — RLS is enabled AND *forced* on all six tables
+ *    (a missing `force` leaves the table owner exempt and would silently reopen the door), and
+ *    a client role that belongs to nothing reads and writes nothing. Asserted from `pg_class` /
+ *    `pg_policy` / `information_schema` rather than trusted from the DDL by eye, then confirmed
+ *    behaviourally with a real signed-in client. **Updated by MV-152** (20260730180000), which
+ *    replaced the deny-all policies with the real case-aware matrix and granted `authenticated`
+ *    a reviewed verb set: the assertions here narrowed to what survives that swap (no deny-all
+ *    left behind, every table still policied, anon still holds nothing, a non-member still sees
+ *    and changes nothing). The positive matrix itself is `case-rls.itest.ts`;
  *  - **append-only is a database property, not a convention** — an UPDATE on `audit_events`
  *    raises *even for `service_role`*, which bypasses RLS and holds full table grants. Revoked
  *    privileges alone could never prove this;
@@ -225,31 +229,44 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-150 tenancy core schema aga
       );
     });
 
-    it("carries exactly one policy per table: the named deny-all, false in both directions", () => {
-      const rows = sql(`
-        select c.relname || '|' || p.polname || '|' || coalesce(pg_get_expr(p.polqual, p.polrelid), 'NULL')
-               || '|' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), 'NULL')
-        from pg_policy p join pg_class c on c.oid = p.polrelid
+    // MV-152 (20260730180000) dropped the deny-all policies and landed the reviewed grant set,
+    // so the two assertions that used to live here — "exactly one deny-all policy per table"
+    // and "no grant whatsoever to anon or authenticated" — are now false BY DESIGN. They are
+    // not deleted: what they were really protecting is that the swap is total and that anon
+    // gained nothing on the way through. That is what the two below assert. The positive
+    // matrix itself lives in tests/integration/case-rls.itest.ts.
+    it("has no deny-all policy left, and every table still carries real policies", () => {
+      const denyAll = sql(`
+        select p.polname from pg_policy p
+        join pg_class c on c.oid = p.polrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and p.polname like '%_deny_all'
+          and c.relname in (${TENANCY_TABLES.map((t) => `'${t}'`).join(",")});
+      `);
+      expect(denyAll).toEqual([]);
+
+      const withPolicies = sql(`
+        select distinct c.relname from pg_policy p
+        join pg_class c on c.oid = p.polrelid
         join pg_namespace n on n.oid = c.relnamespace
         where n.nspname = 'public' and c.relname in (${TENANCY_TABLES.map((t) => `'${t}'`).join(",")})
         order by c.relname;
       `);
-      expect(rows.length).toBe(TENANCY_TABLES.length);
-      for (const table of TENANCY_TABLES) {
-        expect(rows).toContain(`${table}|${table}_deny_all|false|false`);
-      }
+      // A table that lost its deny-all without gaining a policy would be closed by accident
+      // rather than on purpose — and one grant away from being wide open.
+      expect(withPolicies).toEqual([...TENANCY_TABLES].sort());
     });
 
-    it("grants no privilege whatsoever to anon or authenticated", () => {
+    it("still grants anon no privilege whatsoever on any of the six", () => {
       const rows = sql(`
         select table_name || '|' || grantee || '|' || privilege_type
         from information_schema.role_table_grants
         where table_schema = 'public'
-          and grantee in ('anon','authenticated')
+          and grantee = 'anon'
           and table_name in (${TENANCY_TABLES.map((t) => `'${t}'`).join(",")});
       `);
-      // MV-152 replaces this with a reviewed grant set (authenticated only; anon nothing) and
-      // must update this expectation deliberately.
+      // authenticated now holds a reviewed set (asserted exactly in case-rls.itest.ts); anon
+      // was never meant to gain anything from that review and must not have.
       expect(rows).toEqual([]);
     });
   });
@@ -308,10 +325,22 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-150 tenancy core schema aga
           .from("organizations")
           .update({ name: "Renamed by an outsider" })
           .eq("id", orgId);
-        expect(updateError?.code, `${role} UPDATE must be rejected`).toBe("42501");
-
         const { error: deleteError } = await client.from("organizations").delete().eq("id", orgId);
-        expect(deleteError?.code, `${role} DELETE must be rejected`).toBe("42501");
+
+        if (role === "anon") {
+          // anon holds no grant at all, so the refusal is a hard privilege error.
+          expect(updateError?.code, "anon UPDATE must be rejected").toBe("42501");
+          expect(deleteError?.code, "anon DELETE must be rejected").toBe("42501");
+        } else {
+          // MV-152 changed the SHAPE of this denial, not its outcome. `authenticated` now
+          // holds the grant, and this user is a member of nothing, so the policy's USING
+          // clause simply matches no row: PostgREST reports success over zero rows. That is
+          // why the row check below is the real assertion and the error code never was —
+          // a silent no-op and a successful cross-tenant rename look identical from the
+          // error alone.
+          expect(updateError, "a non-member UPDATE is a silent USING miss, not an error").toBeNull();
+          expect(deleteError, "a non-member DELETE is a silent USING miss, not an error").toBeNull();
+        }
 
         // Prove the row is untouched, not merely that an error came back.
         const { data } = await admin.from("organizations").select("name").eq("id", orgId).single();
