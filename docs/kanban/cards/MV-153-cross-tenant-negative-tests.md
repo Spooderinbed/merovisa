@@ -83,6 +83,59 @@ A cold agent can `npx supabase start`, set the env vars, run `npm run test:integ
 
 ## Decision log
 - 2026-07-30 — Card carved from Stage 1 of the revised consultancy plan (integrator session).
+- 2026-07-31 — **Expectations come from the canonical access matrix, never from either implementation.** Every cell in the harness is written against `docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md`. Deriving them by reading MV-151's grid or MV-152's policies would have re-encoded whichever layer was wrong and re-created the exact failure the card exists to prevent.
+- 2026-07-31 — **The TypeScript layer is probed with the SERVICE-ROLE client injected as `getCaseContext`'s `db` argument; the database layer is probed only through `clientForUser`.** This is what makes the two assertions independent. `getCaseContext` uses the authenticated client in production, so probing TS through the actor's RLS client would let RLS silently answer for it — a TS matrix bug would hide behind a correct policy and the harness would report agreement. Injecting the unfiltered client asks the question that matters: *if RLS were bypassed, does TypeScript still deny?* It is the only service-role client in an assertion path, and `harness self-check` asserts the `role` claim on all 17 actor JWTs before any cell runs, closing the card's highest-rated risk (the service-role trap).
+- 2026-07-31 — **The matrix is declarative data, not hand-written tests.** `caseRow(actor, target, allowedVerbs, why)` names the verbs the canonical model ALLOWS and every other verb is asserted denied, so a verb added to `CASE_VERBS` defaults to "denied for everyone" until someone states otherwise — the safe direction for a table that is also a security boundary.
+- 2026-07-31 — **Vacuity proven by inversion, not by inspection.** A 292-cell run with every expectation flipped (`expected: !allowed.includes(verb)`) failed 292 of 292 — no cell passes for a reason unrelated to its probe. Re-run after the cross-tenant cells were added. Every read denial is additionally paired with a service-role existence proof that THROWS on a missing row, so "sees nothing" can never pass on an empty fixture.
+- 2026-07-31 — **Extended, not duplicated: MV-152's `case-rls.itest.ts` keeps the policy smoke** (catalog shape, grants, anti-recursion, `BYPASSRLS` ownership, InitPlan/index planning). MV-153 owns the matrix — every role × verb × case shape in both layers, the cross-tenant catalogue, and the dual-role sub-matrix. Both run in the same `npm run test:integration`.
+- 2026-07-31 — **Added one fixture shape the card did not enumerate:** `crossTenantDual`, an org **A** admin who is the linked student of an org **B** case. It is the sharpest test of the dual-role rule — a staff role must not follow a person into the tenant where they are the data subject, and being that data subject must not open that tenant. Both layers hold.
+- 2026-07-31 — **`continue-on-error: true` on the `integration` job left as-is — founder call, per this card's own risk note.** The card requires the CI wiring (anon-key export + the `0 skipped` guard) but records the advisory→gating flip as a founder decision to be recorded on MV-149. Flagged in the PR body rather than taken unilaterally. Until it is flipped, a red integration lane does not block merge, so **Stage 1's exit is evidenced by the recorded local run below, not by CI's green tick.**
+- 2026-07-31 — **Two layer asymmetries found and PINNED rather than papered over** (see Done evidence §Findings). Both are TypeScript-narrower-than-SQL, which the canonical matrix calls the safe direction, and both now have a test that fails if either layer changes.
+- 2026-07-31 — Per the integrator's instruction this session edited only the Decision log and Done evidence of this dossier, and touched no board file; the acceptance checkboxes above are left for the integrator to tick against the evidence below.
 
 ## Done evidence
-(pending)
+
+**Branch** `mv-153-cross-tenant-harness` off `origin/master` @ `a26c2fa`.
+
+### Files
+- `tests/integration/tenant-isolation.itest.ts` — the matrix (341 tests).
+- `tests/integration/fixtures/tenancy.ts` — two-org fixture factory, `clientForUser`, localhost hard-guard, and the probe machinery (one probe per verb, each returning a boolean plus the evidence behind it).
+- `.github/workflows/ci.yml` — `SUPABASE_TEST_ANON_KEY` exported and asserted; both tenancy suites asserted collected by name.
+
+### Gate — all green, 2026-07-31
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | clean |
+| `npm run lint` | clean |
+| `npm test` | **2470 passed** / 323 files |
+| **`npm run test:integration`** | **440 passed / 5 files / 0 skipped** (local stack, migrations `20260730120000` + `20260730180000` applied) |
+| of which this suite | **341 passed** in 7.4 s |
+| CI log guards, replayed locally | `>0 passed` ✔ · `0 skipped` ✔ · `tenant-isolation.itest.ts` collected ✔ · `case-rls.itest.ts` collected ✔ |
+
+### Coverage — what is asserted, and in which layer
+| Block | Cells | TS layer | DB layer |
+|---|---|---|---|
+| Case matrix (`case.read/update/archive/delete/assign/invite_student` × 38 actor×case rows) | 228 | ✔ | ✔ |
+| Organization matrix (`case.create/org.audit.read/org.manage/org.settings` × 16 actor×org rows) | 64 | ✔ | ✔ |
+| `case.list` — TS **scope** compared against the exact row set the DB returns | 13 | ✔ (scope, not boolean) | ✔ |
+| `case.notes.internal` / `case.export` — no Stage 1 DB surface | 14 | ✔ | n/a (documented) |
+| Cross-org denial, all six tenancy tables, read + write | 4 | — | ✔ |
+| Student cross-case denial (sibling case, audit trail, other members' rows) | 2 | ✔ | ✔ |
+| Write-surface intersection (column half: student / counsellor / dual-role / cross-tenant dual) | 5 | — | ✔ |
+| Known layer asymmetries, pinned | 2 | ✔ | ✔ |
+| Role forgery (metadata claims present in the JWT; metadata forgery; tampered `sub`) | 3 | ✔ | ✔ |
+| Revocation immediacy + self-reactivation refused | 2 | ✔ | ✔ |
+| Harness self-check (17 actor JWTs carry `role=authenticated`; every case shape seeded; anon holds nothing) | 3 | — | ✔ |
+
+Divergence-table coverage: **1** `org.settings` admin-deny · **2** `archived_at` owner/admin-only · **3** assigned counsellor invites their student · **4** student write surface is profile fields only · **5** admin may not mint a `role='owner'` invitation (held by MV-152's suite, which this one does not duplicate) · **6** dual-role, in four shapes — active staff + linked student, revoked member + linked student, revoked member + surviving assignment, and cross-tenant staff/student.
+
+### Not tested, and why
+- **`case.notes.internal`, `case.export`** — no Stage 1 database surface exists (no notes table, no export path). Asserted in TypeScript only and listed in `TS_ONLY_CELLS` so the gap is a stated fact rather than an omission; when either lands, its rows move into `CASE_CELLS`.
+- **Storage guessed-path denial · invitation expiry/replay/revocation acceptance · single acceptance under concurrency · repeated-invalid-token rate limiting · case export/download cross-org denial · service-role wrapper denial** — deferred by this card to Stages 4/5/6. Enumerated in `DEFERRED_BY_DESIGN` in the suite so a cold agent does not read silence as coverage.
+- **Forged top-level GoTrue `role` (e.g. a user minted with `role: 'service_role'`)** — not attacker-reachable: creating such a user already requires the service key. Metadata forgery and signature tampering, which a client *can* mount, are both covered.
+
+### Findings — two layer asymmetries, both TypeScript-narrower (the safe direction)
+1. **`case.update` is a whole-case verb in TypeScript and a per-column decision in the database.** The TS matrix has no field-level dimension, so it allows a linked student `case.update` and leaves "permitted fields only" to the caller (`lib/cases/README.md` §"Known gap: student permitted fields"). The database refuses `operational_status` and `archived_at` outright (42501, via `enforce_case_write_surface`). **Consequence a Stage 3 mutation route must respect: `requireCasePermission(actor, caseId, "case.update")` is not sufficient authorization to apply an arbitrary case patch on a student's behalf — today RLS is the only thing stopping it.** Pinned by `known layer asymmetries, pinned › TypeScript authorizes case.update as a whole verb…`.
+2. **`case.list` denies a student in TypeScript while the database still returns their own case rows.** `case.list` is an ORG-scoped question and a student holds no membership, so TS answers no; the database has no separate list verb, so a student's `select * from cases` returns exactly the rows they already hold `case.read` on. No row crosses a boundary in either layer. Pinned by the sibling test.
+
+No security-direction divergence (SQL more permissive than TS) was found in any of the 292 dual-asserted cells.

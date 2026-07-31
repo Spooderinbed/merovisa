@@ -49,13 +49,19 @@ jobs:
       # full stack and applies every migration in supabase/migrations.
       - name: Start Supabase
         run: npx supabase start
-      # Export the local stack's URL + service-role key as the env vars the smoke
-      # reads. Source the emitted env file and handle both the new and legacy key
-      # names — including the unprefixed names newer `supabase status -o env`
-      # versions emit (e.g. API_URL, SERVICE_ROLE_KEY, SECRET_KEY) — so a CLI
-      # rename can't silently leave the vars unset. If every fallback still
+      # Export the local stack's URL + service-role key + ANON key as the env vars
+      # the smoke reads. Source the emitted env file and handle both the new and
+      # legacy key names — including the unprefixed names newer `supabase status
+      # -o env` versions emit (e.g. API_URL, SERVICE_ROLE_KEY, SECRET_KEY) — so a
+      # CLI rename can't silently leave the vars unset. If every fallback still
       # misses, fail fast with the names actually present instead of letting an
       # empty env limp downstream into the smoke step.
+      #
+      # The anon key is NOT optional (MV-153): the tenancy suites assert Row Level
+      # Security as the AUTHENTICATED user, which needs a client signed in with the
+      # publishable key + that user's JWT. The service-role key holds BYPASSRLS, so
+      # without the anon key those suites skip — and a skipped tenancy suite is a
+      # green CI run that proved nothing about cross-tenant isolation.
       - name: Export Supabase test env
         shell: bash
         run: |
@@ -65,9 +71,10 @@ jobs:
           set +a
           url="${SUPABASE_URL:-${SUPABASE_API_URL:-${API_URL:-}}}"
           key="${SUPABASE_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}}}"
-          if [ -z "$url" ] || [ -z "$key" ]; then
-            echo "::error::Export Supabase test env: could not map URL/key from" \
-              "'supabase status -o env' output — the CLI likely renamed its" \
+          anon="${SUPABASE_ANON_KEY:-${ANON_KEY:-${SUPABASE_PUBLISHABLE_KEY:-${PUBLISHABLE_KEY:-}}}}"
+          if [ -z "$url" ] || [ -z "$key" ] || [ -z "$anon" ]; then
+            echo "::error::Export Supabase test env: could not map URL/service-role/anon key" \
+              "from 'supabase status -o env' output — the CLI likely renamed its" \
               "variable names again. Names present in supabase.env (values omitted):"
             cut -d= -f1 supabase.env | sort
             exit 1
@@ -75,6 +82,7 @@ jobs:
           {
             echo "SUPABASE_TEST_URL=$url"
             echo "SUPABASE_TEST_SERVICE_ROLE_KEY=$key"
+            echo "SUPABASE_TEST_ANON_KEY=$anon"
           } >> "$GITHUB_ENV"
       # The smoke `skipIf`s when its env vars are absent, so a silent export
       # failure would green CI having tested nothing. Assert the vars are set, the
@@ -88,11 +96,19 @@ jobs:
         run: |
           test -n "$SUPABASE_TEST_URL"
           test -n "$SUPABASE_TEST_SERVICE_ROLE_KEY"
+          # MV-153: asserted alongside the other two, because a missing anon key
+          # skips the tenancy matrix rather than failing it.
+          test -n "$SUPABASE_TEST_ANON_KEY"
           curl -fsS "$SUPABASE_TEST_URL/rest/v1/" \
             -H "apikey: $SUPABASE_TEST_SERVICE_ROLE_KEY" >/dev/null
           npm run test:integration -- --reporter=verbose | tee vitest-integration.log
           grep -Eq 'Tests[[:space:]]+[1-9][0-9]* passed' vitest-integration.log
           ! grep -Eq 'Tests[[:space:]]+[1-9][0-9]* skipped' vitest-integration.log
+          # MV-153: the Stage 1 exit gate must have actually RUN. The counters above
+          # stay green if this suite is renamed, moved, or dropped from collection —
+          # so assert the tenancy matrix by name, not just that "something passed".
+          grep -q 'tests/integration/tenant-isolation.itest.ts' vitest-integration.log
+          grep -q 'tests/integration/case-rls.itest.ts' vitest-integration.log
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup
