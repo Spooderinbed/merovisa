@@ -84,6 +84,84 @@
 - **MV-150's `tenancy-schema.itest.ts` was updated deliberately, as that card anticipated.** Two assertions became false by design (one deny-all policy per table; no grants to anon *or* authenticated) and were narrowed to what survives the swap: no deny-all left behind, every table still policied, anon still holds nothing. A third changed *shape* rather than outcome — a non-member's UPDATE/DELETE is now a silent USING miss (PostgREST reports success over zero rows) rather than a 42501, so the row-unchanged check became the real assertion.
 - **A student cannot read the `organizations` row of the consultancy handling their case** (they hold no membership). Real journey gap, opened knowingly: closing it needs a case→org read grant that widens the tenancy surface, which belongs with the Stage-5 student portal. Listed with the other deliberate omissions at the foot of the migration.
 
+### Matrix-alignment amendment (2026-08-02, same PR — migration edited in place)
+
+MV-151 and MV-152 were built in parallel by separate sessions and a three-lens review found six
+divergences between the SQL and TypeScript layers. `docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md`
+is now authoritative over both; where these policies disagreed with it, **the policies were wrong**.
+The migration has not been applied to production, so all six were fixed **in place** rather than
+bolted on as a corrective migration — a Stage-1 database that never had the holes beats one that had
+them for one migration.
+
+- **`organizations` UPDATE is owner-only, not admin** (divergence 1). The plan reserves
+  "organization-level settings" to the owner. Not cosmetic: `slug` is in the same column grant and is
+  the tenant's globally-unique URL identity, so the admin verb also carried "rename onto a slug a
+  competitor is about to claim, and break every existing link". Policy renamed `organizations_update_owner`.
+- **The `cases` write surface is split by actor** (divergences 2 and 4) — the second of the two
+  privilege-escalation paths. `cases_update_accessor` admits the linked student on the student
+  disjunct, and the flat column grant then handed them `operational_status` and `archived_at`: the
+  consultancy's own operational record on a case the consultancy owns. **The mechanism had to change,
+  because a column GRANT cannot express this.** Every client arrives as the single role
+  `authenticated`, so `grant update (…) to authenticated` is necessarily flat across owner, admin,
+  counsellor and student; and a policy `WITH CHECK` sees only NEW, so it cannot distinguish "the
+  student is archiving this case" from "the student is renaming a case that was already archived".
+  Shipped as a `BEFORE UPDATE` trigger (`cases_write_surface_guard` → `private.enforce_case_write_surface()`)
+  comparing OLD/NEW with `is distinct from`: `archived_at` → org owner/admin, `operational_status` →
+  `can_staff_case`, `display_name`/`email` → whoever the row policy already admits. It is
+  `SECURITY INVOKER` **on purpose** — that is what lets it read the caller's role and exempt exactly
+  the `rolbypassrls` roles RLS itself exempts, so Stage-2 claim and Stage-5 acceptance still work as
+  `service_role`. Deliberately unlike MV-150's append-only audit trigger, which raises even for
+  `service_role`: audit immutability is absolute, a write-surface split is a rule about actors.
+- **An assigned counsellor may now invite their own student** (divergence 3) — the plan's counsellor
+  "invites the student to collaborate", stated as an explicit duty.
+- **`invitations` INSERT constrains `role`** (divergence 5) — the first privilege-escalation path.
+  The memberships policies already reserve `owner` rows to owners; leaving invitations unconstrained
+  let an admin mint an owner *invitation* instead and walk through the same door with a different key.
+  Same two-clause carve-out, mirrored. **The schema trap is recorded in the migration**: `invitations.role`
+  includes `'student'` and `organization_memberships.role` does not — different sets, never to be
+  cross-checked or refactored into a shared predicate.
+- **The dual-role rule** (divergence 6, flagged in the matrix for founder override). Two leaks closed,
+  both on `case_assignments` SELECT: `user_id = (select auth.uid())` was ungated on membership status,
+  so a **revoked** counsellor kept the roster of every case they had worked, indefinitely; and
+  `can_access_case` carries the student disjunct, so a linked student could read who staffs their own
+  case — consultancy-internal operating data. Both collapse into one predicate,
+  `private.can_staff_case(case_id)`. The student's rights over their *own case* survive revocation
+  untouched, which is the half of the rule the matrix exists to protect.
+- **Minors from the same review:** `invitations.organization_id` is tied to the case's org with
+  `is not distinct from private.case_org_id(case_id)` (the shape check left it unconstrained, so a
+  student invite could be stamped with another tenant's org id — which the SELECT policy's org branch
+  would then have shown to *that* tenant's admins); the migration now **asserts** the migration role's
+  `BYPASSRLS` in a `do` block instead of relying on it implicitly, with a matching catalog assertion
+  that every definer helper's owner holds it; and the `case_assignments` INSERT happy-path fixture was
+  aimed at a case that already had a primary counsellor, so `case_assignments_primary_idx` made it a
+  guaranteed 23505 — the test could only assert "at least it wasn't a 42501", and would have stayed
+  green with the INSERT policy deleted outright. Re-aimed at the one case with a free slot, and it now
+  asserts the insert *succeeds* and the row lands.
+
+**Two new helpers.** `private.can_staff_case(uuid)` is `can_access_case` minus the student disjunct,
+and that subtraction is the point — anywhere the question is "may this actor act *as the consultancy*
+on this case", the student's own link must not answer yes. `can_access_case` is now defined as
+`student link OR can_staff_case`, so the two cannot drift. `private.case_org_id(uuid)` exists so the
+invitations org-tie can be expressed without an inline subquery against `cases`, which the
+anti-recursion rule (and the itest that enforces it structurally) forbids.
+
+**One deviation from the matrix's literal wording, recorded rather than hidden.** The checklist says
+"split the flat column grant". In PostgreSQL that is not expressible: a column grant is per-*role*,
+and every client is `authenticated`. The *outcome* the matrix specifies is implemented exactly; the
+mechanism is the trigger above. The grant list is unchanged, and the itest still asserts it.
+
+**One journey gap this opens, recorded with the other deliberate omissions:** nobody can archive a
+**personal** case (`organization_id` null) from a client, because archiving is now owner/admin-only
+and a personal case has no organization. Same shape as the personal-case DELETE gap already recorded,
+lands with the same Stage-2 personal-case path. Not a regression — MV-150 shipped that surface closed.
+
+**Mutation-tested, not merely green.** The four security fixes were reverted directly on the live
+local database (policy `ALTER`s + `DROP TRIGGER`) and the suite re-run: **12 tests failed, each one the
+test written for the reverted cell**, and every other test stayed green. A passing suite here proves
+nothing on its own — an RLS SELECT denial is silent, so `expect(data).toEqual([])` passes just as
+happily against a deleted policy. Every "sees nothing" assertion is now paired with a service-role
+read proving the rows exist, and usually with the actor who legitimately does see them.
+
 ## Done evidence
 
 **Branch** `mv-152-case-aware-rls` (off `origin/master` @ `78414d0`) · **PR** [#108](https://github.com/Spooderinbed/merovisa/pull/108) — *not merged; integrator applies the migration at merge time.*
@@ -97,7 +175,9 @@
 | `private.org_role(p_organization_id uuid)` | `text` | active-membership role, else null — the single `status='active'` choke point |
 | `private.is_org_admin(p_organization_id uuid)` | `boolean` | `org_role in ('owner','admin')`, null-safe |
 | `private.can_manage_case(p_case_id uuid)` | `boolean` | admin/owner of the case's org |
-| `private.can_access_case(p_case_id uuid)` | `boolean` | linked student **or** org admin **or** active-member assigned counsellor |
+| `private.can_staff_case(p_case_id uuid)` | `boolean` | **consultancy-side** access — org admin **or** active-member assigned counsellor. `can_access_case` minus the student disjunct |
+| `private.can_access_case(p_case_id uuid)` | `boolean` | linked student **or** `can_staff_case` — the two halves of the dual-role rule, additive by construction |
+| `private.case_org_id(p_case_id uuid)` | `uuid` | the case's owning org (null for a personal case) — lets a child policy tie itself to the tenant without an inline `cases` subquery |
 | `private.is_case_org_member(p_case_id uuid, p_user_id uuid)` | `boolean` | is the *subject* an active member of the case's org (assignee validation) |
 | `private.actor_org_ids()` | `uuid[]` | uncorrelated InitPlan set — any active membership |
 | `private.actor_admin_org_ids()` | `uuid[]` | uncorrelated InitPlan set — owner/admin |
@@ -108,11 +188,11 @@
 
 | Table | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
-| `organizations` | `organizations_select_member` | — (service-role onboarding) | `organizations_update_admin` | `organizations_delete_owner` |
+| `organizations` | `organizations_select_member` | — (service-role onboarding) | `organizations_update_owner` | `organizations_delete_owner` |
 | `organization_memberships` | `organization_memberships_select_member` | `organization_memberships_insert_admin` | `organization_memberships_update_admin` | `organization_memberships_delete_admin` |
-| `cases` | `cases_select_accessor` | `cases_insert_admin` | `cases_update_accessor` | `cases_delete_admin` |
+| `cases` | `cases_select_accessor` | `cases_insert_admin` | `cases_update_accessor` + `cases_write_surface_guard` (trigger — the column half) | `cases_delete_admin` |
 | `case_assignments` | `case_assignments_select_accessor` | `case_assignments_insert_admin` | — (delete+insert) | `case_assignments_delete_admin` |
-| `invitations` | `invitations_select_admin` | `invitations_insert_admin` | `invitations_update_admin` (revoke only) | — (revocation is the audited path) |
+| `invitations` | `invitations_select_staff` | `invitations_insert_staff` | `invitations_update_staff` (revoke only) | — (revocation is the audited path) |
 | `audit_events` | `audit_events_select_admin` | — | — | — (append-only preserved) |
 
 **Integration gate — all green** (local stack, `npx supabase db reset` applying all 19 migrations):
@@ -120,7 +200,7 @@
 - `npm run typecheck` — clean.
 - `npm run lint` — clean, 0 errors 0 warnings.
 - `npm test` — **318 files / 2230 tests passed**.
-- `npm run test:integration` — **4 files / 76 tests passed**, including the new `tests/integration/case-rls.itest.ts` (44 tests, evaluated as the **authenticated** user throughout; the service-role client is used only to seed fixtures and to read back rows for assertions).
+- `npm run test:integration` — **4 files / 95 tests passed**, including `tests/integration/case-rls.itest.ts` (63 tests, evaluated as the **authenticated** user throughout; the service-role client is used only to seed fixtures, to read back rows for assertions, and to prove that a denied read was denied rather than empty).
 
 **The four named proofs, all passing in `case-rls.itest.ts`:**
 

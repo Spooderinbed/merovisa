@@ -12,6 +12,21 @@
  * negative catalogue and the full positive matrix that ARE the Stage 1 exit gate belong to
  * MV-153, which builds on this being green.
  *
+ * Six cells here are fixed against the CANONICAL ACCESS MATRIX
+ * (`docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md`), which is authoritative
+ * over both this file and MV-151's TypeScript layer: organization settings are owner-only (1);
+ * `archived_at` is owner/admin-only and the student's write surface is profile fields only
+ * (2, 4); an assigned counsellor may invite their own student (3); an admin may not mint a
+ * `role='owner'` invitation (5); and the dual-role rule — membership grants org rights while
+ * active, the student link grants student rights on one case, additively, and revocation takes
+ * only the first (6). Where this file and that one disagree, this file is wrong.
+ *
+ * DENIAL IS SILENT. An RLS SELECT refusal returns zero rows, no error — indistinguishable from
+ * an empty table, a fixture that never seeded, or a row a previous test deleted. So every
+ * "sees nothing" assertion below is paired with a service-role read (BYPASSRLS) proving the
+ * rows exist, and usually with the actor who legitimately does see them. `expect(data).toEqual([])`
+ * on its own is not evidence of a policy.
+ *
  * The four proofs the card singles out:
  *
  *  - **anti-recursion** — a SELECT on `organization_memberships` as an active member returns
@@ -71,7 +86,9 @@ const HELPERS: ReadonlyArray<readonly [name: string, args: string]> = [
   ["org_role", "uuid"],
   ["is_org_admin", "uuid"],
   ["can_manage_case", "uuid"],
+  ["can_staff_case", "uuid"],
   ["can_access_case", "uuid"],
+  ["case_org_id", "uuid"],
   ["is_case_org_member", "uuid, uuid"],
   ["actor_org_ids", ""],
   ["actor_admin_org_ids", ""],
@@ -127,6 +144,10 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
   let counsellorLoner: Actor; // active member of org A, assigned to nothing
   let revokedA: Actor; // starts active + assigned to caseA2; flipped inactive mid-suite
   let studentA: Actor; // linked to caseA1 and to a personal case
+  // Both at once: an active counsellor in org A (assigned caseA4) who is ALSO the linked
+  // student of caseA3. The canonical matrix's dual-role rule lives or dies on this actor —
+  // revoking the membership must take the staff half and leave the student half standing.
+  let dualRole: Actor;
   // Org B — the neighbouring tenant. Everything it does to org A must fail.
   let adminB: Actor;
   // No membership anywhere.
@@ -136,6 +157,8 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
   let orgB: string;
   let caseA1: string;
   let caseA2: string;
+  let caseA3: string; // dualRole's own case — held as the student, not as staff
+  let caseA4: string; // dualRole's assigned case — held as staff, not as the student
   let caseB1: string;
   let casePersonal: string;
 
@@ -234,11 +257,49 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
     return (data ?? []).map((row) => row.id).sort();
   };
 
-  const caseField = async (caseId: string, column: "display_name" | "organization_id" | "student_user_id") => {
+  const caseField = async (
+    caseId: string,
+    column: "display_name" | "organization_id" | "student_user_id" | "operational_status" | "archived_at",
+  ) => {
     const { data, error } = await admin.from("cases").select(column).eq("id", caseId).single();
     if (error) throw new Error(error.message);
     return (data as Record<string, unknown>)[column];
   };
+
+  const orgName = async (orgId: string): Promise<string> => {
+    const { data, error } = await admin.from("organizations").select("name").eq("id", orgId).single();
+    if (error) throw new Error(error.message);
+    return data.name;
+  };
+
+  /**
+   * The service role's view of the same rows — the other half of every denial assertion here.
+   *
+   * An RLS SELECT denial is SILENT: zero rows, no error, indistinguishable from an empty table.
+   * So `expect(data).toEqual([])` alone proves nothing — it passes just as happily if the
+   * fixture never seeded the row, or if a previous test deleted it. Pairing it with the
+   * service-role read (BYPASSRLS) turns "sees nothing" into "the rows exist and this actor is
+   * being denied them", which is the claim actually worth making.
+   */
+  const assignmentCaseIdsAsServiceRole = async (userId: string): Promise<string[]> => {
+    const { data, error } = await admin.from("case_assignments").select("case_id").eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => row.case_id).sort();
+  };
+
+  const invitationIdsAsServiceRole = async (): Promise<string[]> => {
+    const { data, error } = await admin.from("invitations").select("id").like("token_hash", `mv152-%-${stamp}`);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => row.id).sort();
+  };
+
+  /** A distinct token_hash per invitation — the column is UNIQUE, so a collision reads as 23505. */
+  const invitationFixture = (label: string, extra: Record<string, unknown>) => ({
+    email: `${label}-${stamp}@example.test`,
+    token_hash: `mv152-${label}-${stamp}`,
+    expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+    ...extra,
+  });
 
   beforeAll(async () => {
     admin = createClient<Database>(url!, serviceKey!, {
@@ -247,16 +308,18 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
     dbContainer = resolveDbContainer();
     anon = createClient<Database>(url!, anonKey!, { auth: { autoRefreshToken: false, persistSession: false } });
 
-    [ownerA, adminA, counsellorA, counsellorLoner, revokedA, studentA, adminB, outsider] = await Promise.all([
-      mintActor("owner-a"),
-      mintActor("admin-a"),
-      mintActor("counsellor-a"),
-      mintActor("counsellor-loner"),
-      mintActor("revoked-a"),
-      mintActor("student-a"),
-      mintActor("admin-b"),
-      mintActor("outsider"),
-    ]);
+    [ownerA, adminA, counsellorA, counsellorLoner, revokedA, studentA, dualRole, adminB, outsider] =
+      await Promise.all([
+        mintActor("owner-a"),
+        mintActor("admin-a"),
+        mintActor("counsellor-a"),
+        mintActor("counsellor-loner"),
+        mintActor("revoked-a"),
+        mintActor("student-a"),
+        mintActor("dual-role"),
+        mintActor("admin-b"),
+        mintActor("outsider"),
+      ]);
 
     orgA = await seedOrg(`mv152-org-a-${stamp}`, "MV-152 Consultancy A");
     orgB = await seedOrg(`mv152-org-b-${stamp}`, "MV-152 Consultancy B");
@@ -266,10 +329,15 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
     await seedMembership(orgA, counsellorA.id, "counsellor");
     await seedMembership(orgA, counsellorLoner.id, "counsellor");
     await seedMembership(orgA, revokedA.id, "counsellor");
+    await seedMembership(orgA, dualRole.id, "counsellor");
     await seedMembership(orgB, adminB.id, "owner");
 
     caseA1 = await seedCase({ organization_id: orgA, student_user_id: studentA.id, display_name: "Case A1" });
     caseA2 = await seedCase({ organization_id: orgA, display_name: "Case A2 (unclaimed)" });
+    // The two halves of the dual-role actor, deliberately on separate cases so revocation can be
+    // observed taking one and leaving the other.
+    caseA3 = await seedCase({ organization_id: orgA, student_user_id: dualRole.id, display_name: "Case A3 (own)" });
+    caseA4 = await seedCase({ organization_id: orgA, display_name: "Case A4 (worked)" });
     caseB1 = await seedCase({ organization_id: orgB, display_name: "Case B1" });
     // organization_id null = the personal case an individual student drives themselves.
     casePersonal = await seedCase({ student_user_id: studentA.id, display_name: "Personal case" });
@@ -277,8 +345,12 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
     const { error: assignError } = await admin.from("case_assignments").insert([
       { case_id: caseA1, user_id: counsellorA.id, assignment_role: "primary_counsellor" },
       { case_id: caseA2, user_id: revokedA.id, assignment_role: "primary_counsellor" },
+      { case_id: caseA4, user_id: dualRole.id, assignment_role: "primary_counsellor" },
     ]);
     if (assignError) throw new Error(`failed to seed assignments: ${assignError.message}`);
+    // caseA3 is left deliberately UNASSIGNED: it is both the dual-role student's own file and
+    // the only case with a free `primary_counsellor` slot, which the assignment happy path below
+    // needs (`case_assignments_primary_idx` allows exactly one per case).
 
     // Audit rows for both tenants, written through MV-150's choke point.
     for (const [org, action] of [
@@ -373,6 +445,43 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([name, args]) => `${name}(${args})|true|s|search_path=""`),
       );
+    });
+
+    it("owns every definer helper with a role that actually holds BYPASSRLS", () => {
+      // The whole anti-recursion mechanism rests on this and, until now, only asserted it in a
+      // comment. A SECURITY DEFINER function executes as its OWNER; it is that owner's
+      // BYPASSRLS — not ownership, which FORCE ROW LEVEL SECURITY deliberately defeats — that
+      // stops the reads inside a membership helper being re-filtered by the policy that called
+      // it (42P17). The migration now refuses to apply without it; this asserts the applied
+      // state, so a future stack that grants the migration role less fails here rather than in
+      // a browser.
+      const rows = sql(`
+        select p.proname || '|' || pg_catalog.pg_get_userbyid(p.proowner) || '|' || r.rolbypassrls::text
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+        join pg_roles r on r.oid = p.proowner
+        where n.nspname = 'private' and p.prosecdef
+          and p.proname in (${HELPERS.map(([name]) => `'${name}'`).join(",")})
+        order by p.proname;
+      `);
+      expect(rows.length, "every helper must be SECURITY DEFINER and present").toBe(HELPERS.length);
+      for (const row of rows) expect(row.endsWith("|true"), `definer helper owner lacks BYPASSRLS: ${row}`).toBe(true);
+    });
+
+    it("guards the cases write surface with an enabled, invoker, pinned-search_path trigger", () => {
+      // RLS gates rows; this trigger is the column half (migration §5a). SECURITY INVOKER is
+      // load-bearing — it is what lets the guard read the CALLER's role and exempt exactly the
+      // BYPASSRLS roles RLS itself exempts. `O` = enabled for origin/local writes.
+      const rows = sql(`
+        select t.tgname || '|' || t.tgenabled::text || '|' || p.prosecdef::text || '|'
+               || coalesce(array_to_string(p.proconfig, ','), 'NONE')
+        from pg_trigger t
+        join pg_class c on c.oid = t.tgrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        join pg_proc p on p.oid = t.tgfoid
+        where n.nspname = 'public' and c.relname = 'cases' and t.tgname = 'cases_write_surface_guard';
+      `);
+      expect(rows).toEqual([`cases_write_surface_guard|O|false|search_path=""`]);
     });
 
     it("no policy predicate reads a tenancy table inline — every lookup goes through a helper", () => {
@@ -472,6 +581,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       expect(columnGrants).toEqual([]);
 
       expect(sqlOne(`select has_schema_privilege('anon', 'private', 'usage')::text;`)).toBe("false");
+
+      // The trigger guard is granted to authenticated (it is SECURITY INVOKER, so the updating
+      // client needs EXECUTE), which makes it the one new function anon could inherit through
+      // PUBLIC if the revoke were forgotten.
+      expect(
+        sqlOne(`select has_function_privilege('anon', 'private.enforce_case_write_surface()', 'execute')::text;`),
+      ).toBe("false");
     });
 
     it("lets authenticated execute the helpers but never anon", () => {
@@ -513,7 +629,9 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       expect(error, `recursion or denial: ${error?.code} ${error?.message}`).toBeNull();
 
       const ids = (data ?? []).map((row) => row.user_id).sort();
-      expect(ids).toEqual([ownerA.id, adminA.id, counsellorA.id, counsellorLoner.id, revokedA.id].sort());
+      expect(ids).toEqual(
+        [ownerA.id, adminA.id, counsellorA.id, counsellorLoner.id, revokedA.id, dualRole.id].sort(),
+      );
       // Never a co-member of the neighbouring tenant.
       expect(ids).not.toContain(adminB.id);
     });
@@ -535,8 +653,15 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
   describe("the positive matrix, evaluated as the authenticated user", () => {
     it("shows an org owner and an org admin every case in their org and nothing outside it", async () => {
       for (const actor of [ownerA, adminA]) {
-        expect(await visibleCaseIds(actor), `${actor.email}`).toEqual([caseA1, caseA2].sort());
+        expect(await visibleCaseIds(actor), `${actor.email}`).toEqual([caseA1, caseA2, caseA3, caseA4].sort());
       }
+    });
+
+    it("gives the dual-role actor the union of both halves, not the intersection", async () => {
+      // caseA4 through the active membership + assignment; caseA3 through the student link. The
+      // matrix's dual-role rule is ADDITIVE — holding a membership must not mask the rights a
+      // person has over their own file, and holding the student link must not confer the org's.
+      expect(await visibleCaseIds(dualRole)).toEqual([caseA3, caseA4].sort());
     });
 
     it("shows a counsellor only the cases they are assigned to", async () => {
@@ -576,6 +701,33 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
 
   // ===================================================================
   describe("writes: USING finds the row, WITH CHECK stops it escaping", () => {
+    it("lets an OWNER rename the organization, and refuses an admin", async () => {
+      // Canonical matrix, divergence 1: "controls organization-level settings" is the owner's
+      // line in the plan; the admin's is team access and cases. `slug` is in the same grant and
+      // is the tenant's globally-unique URL identity, so this is not a cosmetic distinction.
+      const renamed = `MV-152 Consultancy A renamed ${stamp}`;
+      const { error } = await ownerA.client.from("organizations").update({ name: renamed }).eq("id", orgA);
+      expect(error, `the owner must be able to rename their org: ${error?.message}`).toBeNull();
+      expect(await orgName(orgA)).toBe(renamed);
+
+      // The admin's UPDATE misses on USING: silent, zero rows, no error. The unchanged name is
+      // the assertion — and the owner's successful rename immediately above is what proves the
+      // write path works at all, so "unchanged" means denied rather than inert.
+      const { error: byAdmin } = await adminA.client
+        .from("organizations")
+        .update({ name: `renamed by admin ${stamp}` })
+        .eq("id", orgA);
+      expect(byAdmin).toBeNull();
+      expect(await orgName(orgA)).toBe(renamed);
+
+      const { error: bySlug } = await adminA.client
+        .from("organizations")
+        .update({ slug: `mv152-org-a-hijacked-${stamp}` })
+        .eq("id", orgA);
+      expect(bySlug).toBeNull();
+      expect(await orgName(orgA)).toBe(renamed);
+    });
+
     it("lets an org admin rename a case in their own org", async () => {
       const renamed = `Case A2 renamed ${stamp}`;
       const { error } = await adminA.client.from("cases").update({ display_name: renamed }).eq("id", caseA2);
@@ -672,6 +824,112 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
   });
 
   // ===================================================================
+  // The COLUMN half of the cases write surface (canonical matrix, divergences 2 and 4).
+  // cases_update_accessor admits the linked student on the student disjunct; without the
+  // section-5a guard the flat column grant then hands them the whole counsellor write surface.
+  // Every refusal below is a RAISE with errcode 42501 — a hard rejection, never a silent no-op,
+  // so each one is separable from "the row was not found".
+  describe("the cases write surface is split by actor, not flat across authenticated", () => {
+    it("lets the linked student edit profile fields on their own case", async () => {
+      const renamed = `Student-edited A1 ${stamp}`;
+      const { error } = await studentA.client.from("cases").update({ display_name: renamed }).eq("id", caseA1);
+      expect(error, `the student's own profile fields must stay writable: ${error?.message}`).toBeNull();
+      expect(await caseField(caseA1, "display_name")).toBe(renamed);
+    });
+
+    it("refuses the linked student operational_status — the consultancy's own record", async () => {
+      const before = await caseField(caseA1, "operational_status");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (studentA.client.from("cases") as any)
+        .update({ operational_status: "closed" })
+        .eq("id", caseA1);
+      expect(error, "a student writing operational_status must be rejected, not silently applied").not.toBeNull();
+      expect(error!.code).toBe("42501");
+      expect(await caseField(caseA1, "operational_status")).toBe(before);
+    });
+
+    it("refuses the linked student archived_at, even bundled with a legitimate profile edit", async () => {
+      // The bundling matters: PostgREST sends one UPDATE, and a guard that only inspected the
+      // permitted column would let the archive ride along on it.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (studentA.client.from("cases") as any)
+        .update({ display_name: `bundled ${stamp}`, archived_at: new Date().toISOString() })
+        .eq("id", caseA1);
+      expect(error!.code).toBe("42501");
+      expect(await caseField(caseA1, "archived_at")).toBeNull();
+      expect(await caseField(caseA1, "display_name")).not.toBe(`bundled ${stamp}`);
+    });
+
+    it("refuses an assigned counsellor archived_at, while leaving operational_status theirs", async () => {
+      // Divergence 2: the plan lists archive under the owner and gives the admin "all
+      // organization cases". A counsellor works the case; they do not close the file.
+      const { error: status } = await counsellorA.client
+        .from("cases")
+        .update({ operational_status: "ready_for_review" })
+        .eq("id", caseA1);
+      expect(status, `a counsellor must keep operational_status: ${status?.message}`).toBeNull();
+      expect(await caseField(caseA1, "operational_status")).toBe("ready_for_review");
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: archive } = await (counsellorA.client.from("cases") as any)
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", caseA1);
+      expect(archive!.code).toBe("42501");
+      expect(await caseField(caseA1, "archived_at")).toBeNull();
+    });
+
+    it("lets an org owner and an org admin archive, and un-archive, a case", async () => {
+      for (const actor of [ownerA, adminA]) {
+        const archivedAt = new Date().toISOString();
+        const { error } = await actor.client.from("cases").update({ archived_at: archivedAt }).eq("id", caseA2);
+        expect(error, `${actor.email} must be able to archive: ${error?.message}`).toBeNull();
+        expect(await caseField(caseA2, "archived_at")).not.toBeNull();
+
+        const { error: undo } = await actor.client.from("cases").update({ archived_at: null }).eq("id", caseA2);
+        expect(undo, `${actor.email} must be able to un-archive: ${undo?.message}`).toBeNull();
+        expect(await caseField(caseA2, "archived_at")).toBeNull();
+      }
+    });
+
+    it("leaves an unrelated edit on an ALREADY-archived case alone", async () => {
+      // The reason the guard is a BEFORE UPDATE trigger and not a WITH CHECK: a WITH CHECK sees
+      // only NEW, so `archived_at is null or is_org_admin(...)` would reject this — a student
+      // renaming a case somebody else archived — even though the student changes nothing.
+      const { error: archived } = await adminA.client
+        .from("cases")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", caseA1);
+      expect(archived).toBeNull();
+
+      const renamed = `Renamed while archived ${stamp}`;
+      const { error } = await studentA.client.from("cases").update({ display_name: renamed }).eq("id", caseA1);
+      expect(error, `an untouched archived_at must not trip the guard: ${error?.message}`).toBeNull();
+      expect(await caseField(caseA1, "display_name")).toBe(renamed);
+
+      const { error: undo } = await adminA.client.from("cases").update({ archived_at: null }).eq("id", caseA1);
+      expect(undo).toBeNull();
+    });
+
+    it("still exempts the roles that bypass RLS — the guard is its column half, no wider", () => {
+      // Stage 2's anonymous-claim path and Stage 5's invitation acceptance run as service_role
+      // and must be able to set operational_status. The trigger reads the CALLER's rolbypassrls,
+      // so its exemption set is exactly RLS's. (Contrast MV-150's append-only audit trigger,
+      // which deliberately raises even for service_role.)
+      expect(sqlOne(`select rolbypassrls::text from pg_roles where rolname = 'service_role';`)).toBe("true");
+      expect(sqlOne(`select rolbypassrls::text from pg_roles where rolname = 'authenticated';`)).toBe("false");
+      expect(
+        sqlOne(`
+          select p.prosecdef::text
+          from pg_trigger t join pg_class c on c.oid = t.tgrelid
+          join pg_namespace n on n.oid = c.relnamespace join pg_proc p on p.oid = t.tgfoid
+          where n.nspname = 'public' and c.relname = 'cases' and t.tgname = 'cases_write_surface_guard';
+        `),
+        "the guard must be SECURITY INVOKER or it cannot see the caller's role",
+      ).toBe("false");
+    });
+  });
+
+  // ===================================================================
   describe("team management stays inside the tenant", () => {
     it("lets an admin add a counsellor to their org but not to another", async () => {
       const { error } = await adminA.client
@@ -709,15 +967,17 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
     });
 
     it("lets an admin assign an in-org counsellor to a case, never an outsider", async () => {
+      // caseA3, because it is the one case with a free `primary_counsellor` slot. The earlier
+      // fixture aimed this at caseA2, which already had one: `case_assignments_primary_idx`
+      // made it a guaranteed 23505, so the happy path could only ever be asserted as "at least
+      // it was not a 42501" — a test that would have stayed green with the INSERT policy
+      // deleted outright. Assert the insert SUCCEEDS, and that the row lands.
       const { error } = await adminA.client
         .from("case_assignments")
-        .insert({ case_id: caseA2, user_id: counsellorLoner.id, assignment_role: "primary_counsellor" });
-      // caseA2 already has a primary counsellor (revokedA), so this must be the only reason a
-      // clash could appear — assert it is not a privilege refusal.
-      expect(error?.code === "42501").toBe(false);
-      if (!error) {
-        await admin.from("case_assignments").delete().eq("case_id", caseA2).eq("user_id", counsellorLoner.id);
-      }
+        .insert({ case_id: caseA3, user_id: counsellorLoner.id, assignment_role: "primary_counsellor" });
+      expect(error, `assigning an in-org counsellor must succeed: ${error?.code} ${error?.message}`).toBeNull();
+      expect(await assignmentCaseIdsAsServiceRole(counsellorLoner.id)).toEqual([caseA3]);
+      await admin.from("case_assignments").delete().eq("case_id", caseA3).eq("user_id", counsellorLoner.id);
 
       // Assigning a member of ANOTHER org would hand org A's case to org B's staff.
       const { error: outward } = await adminA.client
@@ -733,9 +993,9 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       expect(error?.code).toBe("42501");
     });
 
-    it("shows only an admin, and the assignee, an assignment row", async () => {
+    it("shows an assignment row to consultancy staff on that case, and to nobody else", async () => {
       const adminSees = await adminA.client.from("case_assignments").select("case_id, user_id");
-      expect((adminSees.data ?? []).map((r) => r.case_id).sort()).toEqual([caseA1, caseA2].sort());
+      expect((adminSees.data ?? []).map((r) => r.case_id).sort()).toEqual([caseA1, caseA2, caseA4].sort());
 
       const ownSees = await counsellorA.client.from("case_assignments").select("case_id");
       expect((ownSees.data ?? []).map((r) => r.case_id)).toEqual([caseA1]);
@@ -743,44 +1003,154 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       const outsiderSees = await outsider.client.from("case_assignments").select("case_id");
       expect(outsiderSees.data ?? []).toEqual([]);
     });
+
+    it("shows a linked student no assignment row, not even for their own case", async () => {
+      // Who staffs a case is consultancy-internal operating data. The student disjunct grants
+      // rights over the CASE, never over the organization's record of how it works that case
+      // (matrix, divergence 6).
+      const { data, error } = await studentA.client.from("case_assignments").select("case_id");
+      expect(error).toBeNull();
+      expect(data ?? []).toEqual([]);
+      // The distinguishing half: caseA1 really does have an assignment row, and the actor who
+      // may see it does. Without this pair, the assertion above passes on an empty table.
+      expect(await assignmentCaseIdsAsServiceRole(counsellorA.id)).toEqual([caseA1]);
+      const { data: staffSees } = await counsellorA.client.from("case_assignments").select("case_id");
+      expect((staffSees ?? []).map((r) => r.case_id)).toEqual([caseA1]);
+    });
   });
 
   // ===================================================================
-  describe("invitations: admin create/list/revoke, acceptance closed, token_hash unreachable", () => {
-    let invitationId: string;
+  describe("invitations: two shapes, two authorities, acceptance closed", () => {
+    let teamInvitationId: string;
+    let studentInvitationId: string;
 
-    it("lets an org admin create and list an invitation", async () => {
+    it("lets an org admin create and list a TEAM invitation", async () => {
       const { data, error } = await adminA.client
         .from("invitations")
-        .insert({
-          organization_id: orgA,
-          email: `invitee-${stamp}@example.test`,
-          role: "counsellor",
-          token_hash: `mv152-hash-${stamp}`,
-          expires_at: new Date(Date.now() + 86_400_000).toISOString(),
-        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("team", { organization_id: orgA, role: "counsellor" }) as any)
         .select("id")
         .single();
       expect(error).toBeNull();
-      invitationId = data!.id;
+      teamInvitationId = data!.id;
 
       const { data: listed } = await adminA.client.from("invitations").select("id, email");
-      expect((listed ?? []).map((r) => r.id)).toEqual([invitationId]);
+      expect((listed ?? []).map((r) => r.id)).toEqual([teamInvitationId]);
     });
 
-    it("hides invitations — and therefore token_hash — from everyone but an org admin", async () => {
-      for (const actor of [counsellorA, studentA, adminB, outsider]) {
+    it("hides invitations — and therefore token_hash — from everyone with no authority over them", async () => {
+      // counsellorA is deliberately absent: they hold a case-scoped carve-out, asserted
+      // precisely in the next test. A team invite carries case_id null, so it is out of reach
+      // for them either way.
+      for (const actor of [studentA, adminB, outsider]) {
         const { data, error } = await actor.client.from("invitations").select("id, token_hash");
         expect(error, `${actor.email} reading invitations`).toBeNull();
         expect(data ?? [], `${actor.email} must see no invitation`).toEqual([]);
       }
+      // Distinguishing "denied" from "no data": the row exists, and its holder can see it.
+      expect(await invitationIdsAsServiceRole()).toEqual([teamInvitationId]);
+    });
+
+    it("lets an ASSIGNED counsellor invite the student for their own case", async () => {
+      // Canonical matrix, divergence 3: the plan's counsellor "invites the student to
+      // collaborate". SQL denied it; the plan makes it an explicit counsellor duty.
+      const { data, error } = await counsellorA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("student", { case_id: caseA1, organization_id: orgA, role: "student" }) as any)
+        .select("id")
+        .single();
+      expect(error, `the assigned counsellor must be able to invite their student: ${error?.message}`).toBeNull();
+      studentInvitationId = data!.id;
+
+      // The `.select()` above only returned because SELECT admits them too — an invite you
+      // cannot read back is an invite you cannot chase or revoke, and PostgREST's
+      // `return=representation` fails outright on it. The carve-out is strictly case-scoped:
+      // the team invite from the first test stays invisible.
+      const { data: listed } = await counsellorA.client.from("invitations").select("id");
+      expect((listed ?? []).map((r) => r.id)).toEqual([studentInvitationId]);
+      expect(await invitationIdsAsServiceRole()).toEqual([teamInvitationId, studentInvitationId].sort());
+
+      // And they can revoke what they minted.
+      const { error: revoked } = await counsellorA.client
+        .from("invitations")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", studentInvitationId);
+      expect(revoked).toBeNull();
+    });
+
+    it("refuses a counsellor the student invite for a case they are not assigned to", async () => {
+      const { error } = await counsellorA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("reach", { case_id: caseA2, organization_id: orgA, role: "student" }) as any);
+      expect(error?.code).toBe("42501");
+
+      // Membership alone is not the grant — the assignment is.
+      const { error: loner } = await counsellorLoner.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("loner", { case_id: caseA1, organization_id: orgA, role: "student" }) as any);
+      expect(loner?.code).toBe("42501");
+    });
+
+    it("refuses a linked student the invite verb on their own case", async () => {
+      // The student disjunct is not a staff grant (matrix, divergence 6): the person invited to
+      // a case does not get to invite others to it.
+      const { error } = await studentA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("bystudent", { case_id: caseA1, organization_id: orgA, role: "student" }) as any);
+      expect(error?.code).toBe("42501");
+    });
+
+    it("refuses an admin a role='owner' invitation, and allows the owner one", async () => {
+      // Canonical matrix, divergence 5. organization_memberships already reserves owner rows to
+      // owners; an unconstrained invitations INSERT walks around that carve-out by minting an
+      // owner INVITATION instead — same escalation, different door.
+      const { error: byAdmin } = await adminA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("ownerbyadmin", { organization_id: orgA, role: "owner" }) as any);
+      expect(byAdmin?.code, "an admin minting an owner invitation must be rejected").toBe("42501");
+
+      // An admin keeps every non-owner role, so this is a role constraint, not a lost verb.
+      const { error: adminRole } = await adminA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("adminbyadmin", { organization_id: orgA, role: "admin" }) as any);
+      expect(adminRole).toBeNull();
+
+      const { error: byOwner } = await ownerA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("ownerbyowner", { organization_id: orgA, role: "owner" }) as any);
+      expect(byOwner, `an owner must still be able to invite an owner: ${byOwner?.message}`).toBeNull();
+    });
+
+    it("refuses a student invitation stamped with another tenant's organization_id", async () => {
+      // invitations_shape_check leaves organization_id unconstrained on a case invite, so
+      // without the tie this row would be legal — and invitations_select_staff's org branch
+      // would then show org B's admins a row (and a student's email) for a case in org A.
+      const { error: crossOrg } = await adminA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("crossorg", { case_id: caseA1, organization_id: orgB, role: "student" }) as any);
+      expect(crossOrg?.code).toBe("42501");
+
+      // Null is not a wildcard either: caseA1's org is orgA, so a null org id is just as wrong.
+      const { error: nullOrg } = await adminA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("nullorg", { case_id: caseA1, organization_id: null, role: "student" }) as any);
+      expect(nullOrg?.code).toBe("42501");
     });
 
     it("lets an admin revoke an invitation but never accept one", async () => {
       const { error: revoked } = await adminA.client
         .from("invitations")
         .update({ revoked_at: new Date().toISOString() })
-        .eq("id", invitationId);
+        .eq("id", teamInvitationId);
       expect(revoked).toBeNull();
 
       // Acceptance is an atomic service-role compare-and-swap (Stage 5). A client that could
@@ -788,18 +1158,15 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: accepted } = await (adminA.client.from("invitations") as any)
         .update({ accepted_at: new Date().toISOString() })
-        .eq("id", invitationId);
+        .eq("id", teamInvitationId);
       expect(accepted?.code).toBe("42501");
     });
 
-    it("refuses to let a counsellor create an invitation", async () => {
-      const { error } = await counsellorA.client.from("invitations").insert({
-        organization_id: orgA,
-        email: `sneaky-${stamp}@example.test`,
-        role: "admin",
-        token_hash: `mv152-sneaky-${stamp}`,
-        expires_at: new Date(Date.now() + 86_400_000).toISOString(),
-      });
+    it("refuses to let a counsellor create a TEAM invitation", async () => {
+      const { error } = await counsellorA.client
+        .from("invitations")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(invitationFixture("sneaky", { organization_id: orgA, role: "admin" }) as any);
       expect(error?.code).toBe("42501");
     });
   });
@@ -861,6 +1228,91 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       // Their own membership row stays visible (it is theirs, and the audit trail needs it to
       // survive) — but no co-member does.
       expect((members ?? []).map((r) => r.user_id)).toEqual([revokedA.id]);
+    });
+
+    it("stops a revoked member re-activating or promoting themselves", async () => {
+      // The write half of "inactive membership grants nothing". `status` and `role` are both in
+      // the column grant, and the revoked member can still SEE their own row — so if the UPDATE
+      // policy leaned on that visibility instead of on actor_admin_org_ids, revocation would be
+      // a suggestion. Their own row is readable; it is not writable by them.
+      const reactivate = await revokedA.client
+        .from("organization_memberships")
+        .update({ status: "active" })
+        .eq("organization_id", orgA)
+        .eq("user_id", revokedA.id);
+      expect(reactivate.error).toBeNull(); // silent USING miss
+      const promote = await revokedA.client
+        .from("organization_memberships")
+        .update({ role: "owner" })
+        .eq("organization_id", orgA)
+        .eq("user_id", revokedA.id);
+      expect(promote.error).toBeNull();
+      const remove = await revokedA.client
+        .from("organization_memberships")
+        .delete()
+        .eq("organization_id", orgA)
+        .eq("user_id", revokedA.id);
+      expect(remove.error).toBeNull();
+
+      // The row is the assertion — untouched, still inactive, still a counsellor, still there.
+      const { data } = await admin
+        .from("organization_memberships")
+        .select("status, role")
+        .eq("organization_id", orgA)
+        .eq("user_id", revokedA.id)
+        .single();
+      expect(data).toEqual({ status: "inactive", role: "counsellor" });
+    });
+
+    it("stops a revoked member reading the assignment rows they used to hold", async () => {
+      // The predicate that used to grant this was `user_id = (select auth.uid())`, ungated on
+      // membership status — so a fired counsellor kept the roster of every case they had worked,
+      // indefinitely. "Inactive membership grants nothing" has to mean nothing.
+      const { data, error } = await revokedA.client.from("case_assignments").select("case_id");
+      expect(error).toBeNull();
+      expect(data ?? []).toEqual([]);
+      // Denied, not merely absent: the row is still there, and adminA still reads it.
+      expect(await assignmentCaseIdsAsServiceRole(revokedA.id)).toEqual([caseA2]);
+      const { data: adminSees } = await adminA.client.from("case_assignments").select("case_id").eq("case_id", caseA2);
+      expect((adminSees ?? []).map((r) => r.case_id)).toEqual([caseA2]);
+    });
+
+    it("takes the staff half from a dual-role actor and leaves their own case standing", async () => {
+      // THE dual-role rule (canonical matrix, divergence 6, flagged there for founder override):
+      // membership grants org-scoped rights while active, the student link grants student-scoped
+      // rights on one case, the two are additive — and revoking staff access never removes a
+      // person's rights over their own file. A fired counsellor loses the org; they do not lose
+      // their own case.
+      expect(await visibleCaseIds(dualRole)).toEqual([caseA3, caseA4].sort());
+      const { data: assignedBefore } = await dualRole.client.from("case_assignments").select("case_id");
+      expect((assignedBefore ?? []).map((r) => r.case_id)).toEqual([caseA4]);
+
+      const { error } = await admin
+        .from("organization_memberships")
+        .update({ status: "inactive" })
+        .eq("organization_id", orgA)
+        .eq("user_id", dualRole.id);
+      expect(error).toBeNull();
+
+      // Student half: intact. This is the assertion the rule exists for.
+      expect(await visibleCaseIds(dualRole)).toEqual([caseA3]);
+      const stillMine = await dualRole.client.from("cases").select("id, display_name").eq("id", caseA3).single();
+      expect(stillMine.error).toBeNull();
+      expect(stillMine.data!.id).toBe(caseA3);
+
+      // Staff half: gone, on the same signed-in client, with no session refresh.
+      const { data: orgs } = await dualRole.client.from("organizations").select("id");
+      expect(orgs ?? []).toEqual([]);
+      const { data: assignedAfter } = await dualRole.client.from("case_assignments").select("case_id");
+      expect(assignedAfter ?? []).toEqual([]);
+      expect(await assignmentCaseIdsAsServiceRole(dualRole.id)).toEqual([caseA4]); // denied, not deleted
+      const { data: coMembers } = await dualRole.client.from("organization_memberships").select("user_id");
+      expect((coMembers ?? []).map((r) => r.user_id)).toEqual([dualRole.id]);
+
+      // And the student link confers none of what the membership used to: caseA3 is in org A,
+      // but its student cannot read org A, its team, or its other cases.
+      const { data: siblings } = await dualRole.client.from("cases").select("id").eq("id", caseA4);
+      expect(siblings ?? []).toEqual([]);
     });
   });
 
