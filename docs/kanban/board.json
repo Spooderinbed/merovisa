@@ -1902,7 +1902,7 @@
     },
     {
       "id": "MV-153",
-      "col": "ready",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-153-cross-tenant-negative-tests.md",
