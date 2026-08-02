@@ -41,6 +41,7 @@ export type Database = {
     Tables: {
       application_attempts: {
         Row: {
+          case_id: string | null
           created_at: string
           destination: string
           external_ref: string | null
@@ -52,6 +53,7 @@ export type Database = {
           program_id: string
         }
         Insert: {
+          case_id?: string | null
           created_at?: string
           destination?: string
           external_ref?: string | null
@@ -63,6 +65,7 @@ export type Database = {
           program_id: string
         }
         Update: {
+          case_id?: string | null
           created_at?: string
           destination?: string
           external_ref?: string | null
@@ -74,6 +77,13 @@ export type Database = {
           program_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "application_attempts_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "application_attempts_prediction_id_fkey"
             columns: ["prediction_id"]
@@ -99,6 +109,7 @@ export type Database = {
       }
       assessments: {
         Row: {
+          case_id: string | null
           claimed_at: string | null
           created_at: string
           destination_id: string
@@ -111,6 +122,7 @@ export type Database = {
           rule_version: string
         }
         Insert: {
+          case_id?: string | null
           claimed_at?: string | null
           created_at?: string
           destination_id: string
@@ -123,6 +135,7 @@ export type Database = {
           rule_version: string
         }
         Update: {
+          case_id?: string | null
           claimed_at?: string | null
           created_at?: string
           destination_id?: string
@@ -134,7 +147,15 @@ export type Database = {
           result?: Json
           rule_version?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assessments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_events: {
         Row: {
@@ -256,27 +277,39 @@ export type Database = {
       }
       document_status: {
         Row: {
+          case_id: string | null
           kind: string
           obtained: boolean
           owner: string
           updated_at: string
         }
         Insert: {
+          case_id?: string | null
           kind: string
           obtained?: boolean
           owner: string
           updated_at?: string
         }
         Update: {
+          case_id?: string | null
           kind?: string
           obtained?: boolean
           owner?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "document_status_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
+          case_id: string | null
           created_at: string
           file_path: string
           file_size: number
@@ -286,6 +319,7 @@ export type Database = {
           owner: string
         }
         Insert: {
+          case_id?: string | null
           created_at?: string
           file_path: string
           file_size: number
@@ -295,6 +329,7 @@ export type Database = {
           owner: string
         }
         Update: {
+          case_id?: string | null
           created_at?: string
           file_path?: string
           file_size?: number
@@ -303,7 +338,15 @@ export type Database = {
           original_name?: string
           owner?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invitations: {
         Row: {
@@ -468,6 +511,7 @@ export type Database = {
       outcome_events: {
         Row: {
           attempt_id: string
+          case_id: string | null
           decision_authority: string | null
           detail: Json
           event_type: string
@@ -485,6 +529,7 @@ export type Database = {
         }
         Insert: {
           attempt_id: string
+          case_id?: string | null
           decision_authority?: string | null
           detail?: Json
           event_type: string
@@ -502,6 +547,7 @@ export type Database = {
         }
         Update: {
           attempt_id?: string
+          case_id?: string | null
           decision_authority?: string | null
           detail?: Json
           event_type?: string
@@ -533,6 +579,13 @@ export type Database = {
             referencedColumns: ["id", "owner"]
           },
           {
+            foreignKeyName: "outcome_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "outcome_events_supersedes_event_id_fkey"
             columns: ["supersedes_event_id"]
             isOneToOne: false
@@ -544,6 +597,7 @@ export type Database = {
       plan_items: {
         Row: {
           body: string | null
+          case_id: string | null
           completed_at: string | null
           created_at: string
           id: number
@@ -558,6 +612,7 @@ export type Database = {
         }
         Insert: {
           body?: string | null
+          case_id?: string | null
           completed_at?: string | null
           created_at?: string
           id?: never
@@ -572,6 +627,7 @@ export type Database = {
         }
         Update: {
           body?: string | null
+          case_id?: string | null
           completed_at?: string | null
           created_at?: string
           id?: never
@@ -584,10 +640,19 @@ export type Database = {
           time_estimate?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "plan_items_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
+          case_id: string | null
           completeness: number
           created_at: string
           id: string
@@ -596,6 +661,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          case_id?: string | null
           completeness?: number
           created_at?: string
           id?: string
@@ -604,6 +670,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          case_id?: string | null
           completeness?: number
           created_at?: string
           id?: string
@@ -611,11 +678,20 @@ export type Database = {
           sections?: Json
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       program_predictions: {
         Row: {
           assessment_id: string
+          case_id: string | null
           id: string
           owner: string
           predicted_at: string
@@ -627,6 +703,7 @@ export type Database = {
         }
         Insert: {
           assessment_id: string
+          case_id?: string | null
           id?: string
           owner: string
           predicted_at?: string
@@ -638,6 +715,7 @@ export type Database = {
         }
         Update: {
           assessment_id?: string
+          case_id?: string | null
           id?: string
           owner?: string
           predicted_at?: string
@@ -653,6 +731,13 @@ export type Database = {
             columns: ["assessment_id"]
             isOneToOne: false
             referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_predictions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
             referencedColumns: ["id"]
           },
           {
@@ -792,6 +877,7 @@ export type Database = {
       }
       user_program_state: {
         Row: {
+          case_id: string | null
           created_at: string
           notes: string | null
           owner: string
@@ -800,6 +886,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          case_id?: string | null
           created_at?: string
           notes?: string | null
           owner: string
@@ -808,6 +895,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          case_id?: string | null
           created_at?: string
           notes?: string | null
           owner?: string
@@ -816,6 +904,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_program_state_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_program_state_program_id_fkey"
             columns: ["program_id"]

@@ -761,12 +761,68 @@ export function createDbProbes(fixture: TenancyFixture) {
    * keeps the roster has no free slot for an INSERT probe to land in. That constraint is why
    * `assign` probes BOTH halves of the roster verb rather than only the insert — see there.
    */
+  /**
+   * MV-155 made "the clone can hold the same link as its source" false for ONE shape, and only
+   * that one: `cases_personal_student_idx` is `unique (student_user_id) where organization_id is
+   * null`, so a PERSONAL case can have at most one linked student and `personalA` is exactly that
+   * shape. A clone keeping both `organization_id: null` and the source's link now raises 23505,
+   * which `svc` correctly escalates to a HARNESS DEFECT rather than letting a cell read it as a
+   * denial.
+   *
+   * The fix is here, in the fixture, and NOT in the index and NOT in the two suites: the clone must
+   * keep the student link, because dropping it is precisely the round-1 defect the comment above
+   * exists to prevent. So for a personal source the link MOVES for the clone's lifetime — the
+   * source is unlinked, the clone carries it, and `dropClone` puts it back. Consultancy cases are
+   * untouched: the index is partial on `organization_id is null`, so their clones still carry the
+   * link alongside the source exactly as before.
+   *
+   * The window is one probe long and strictly sequential: no probe reads its source between the
+   * clone insert and `dropClone` (both `remove` and `assign` call `proveExists` first), and every
+   * probe drops each clone before making the next. `cloneCase` additionally flushes any relink a
+   * THROWN probe left behind, so an earlier failure cannot silently change what a later cell
+   * asserts — the run is already red at that point, but a cascade of unrelated red is not evidence.
+   */
+  const pendingRelink = new Map<string, { caseId: string; studentUserId: string }>();
+
+  /**
+   * Put back any student link a THROWN probe left moved. It runs through `svc`, which escalates a
+   * failure to a HARNESS DEFECT, and the map entry is dropped only once the relink has actually
+   * landed.
+   *
+   * THE EARLIER VERSION SWALLOWED THE ERROR IN THE EXACT SCENARIO IT EXISTS FOR. It ignored the
+   * update's `error` and deleted the map entry unconditionally, so a failed relink left the source
+   * case permanently unlinked with the only record of that fact discarded — and every later cell
+   * reading the source's student link would then assert against a case that silently has none. This
+   * function only ever runs after something has already gone wrong; losing its own failure is
+   * precisely the case it must not lose.
+   */
+  const flushPendingRelinks = async (): Promise<void> => {
+    for (const [cloneId, { caseId, studentUserId }] of [...pendingRelink]) {
+      await svc(
+        "clone source relink",
+        admin.from("cases").update({ student_user_id: studentUserId }).eq("id", caseId).select("id").single(),
+      );
+      pendingRelink.delete(cloneId);
+    }
+  };
+
   const cloneCase = async (caseId: string, options: { assignments?: "keep" | "drop" } = {}): Promise<string> => {
+    await flushPendingRelinks();
+
     const source = await svc(
       "clone source read",
       admin.from("cases").select("organization_id, student_user_id").eq("id", caseId).single(),
     );
     if (!source) throw new Error(`could not clone case ${caseId}: the source row is missing`);
+
+    // Only the personal-case shape is constrained; see the comment above.
+    const movesTheLink = source.organization_id === null && source.student_user_id !== null;
+    if (movesTheLink) {
+      await svc(
+        "clone source unlink",
+        admin.from("cases").update({ student_user_id: null }).eq("id", caseId).select("id").single(),
+      );
+    }
 
     const clone = await svc(
       "clone insert",
@@ -774,8 +830,9 @@ export function createDbProbes(fixture: TenancyFixture) {
         .from("cases")
         .insert({
           organization_id: source.organization_id,
-          // `cases` carries no unique constraint on student_user_id, so the clone can hold the
-          // same link as its source — which is the whole point (see above).
+          // A consultancy case carries no unique constraint on student_user_id, so its clone holds
+          // the same link as its source — which is the whole point (see above). A PERSONAL case
+          // does carry one, so the link was moved off the source two statements ago.
           student_user_id: source.student_user_id,
           display_name: `clone ${nextTag()}`,
         })
@@ -784,6 +841,9 @@ export function createDbProbes(fixture: TenancyFixture) {
     );
     if (!clone) throw new Error("could not insert clone");
     disposableCaseIds.push(clone.id);
+    if (movesTheLink) {
+      pendingRelink.set(clone.id, { caseId, studentUserId: source.student_user_id! });
+    }
 
     if ((options.assignments ?? "keep") === "keep") {
       const assignments = await svcRows(
@@ -804,6 +864,22 @@ export function createDbProbes(fixture: TenancyFixture) {
 
   const dropClone = async (caseId: string): Promise<void> => {
     await admin.from("cases").delete().eq("id", caseId);
+    // Put a moved personal-case student link back on its source. Ordered AFTER the delete: while
+    // the clone still exists, re-linking the source would be the second personal case
+    // `cases_personal_student_idx` forbids.
+    const relink = pendingRelink.get(caseId);
+    if (relink) {
+      pendingRelink.delete(caseId);
+      await svc(
+        "clone source relink",
+        admin
+          .from("cases")
+          .update({ student_user_id: relink.studentUserId })
+          .eq("id", relink.caseId)
+          .select("id")
+          .single(),
+      );
+    }
   };
 
   /**

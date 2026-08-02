@@ -151,6 +151,17 @@ jobs:
           # the suite being gutted down to a token test that keeps the grep above happy.
           # Raise it when the matrix grows; do not lower it without saying why.
           test "$(grep -c '✓ tests/integration/tenant-isolation.itest.ts' vitest-integration.log)" -ge 400
+          # MV-155: the ONE suite that proves the live-data movement — personal-case
+          # minting, the owner→case backfill, the narrowed prediction guard and the
+          # column-grant rewrite. Anchored by name for the same reason as the two above:
+          # the lane's other guards catch a skip and a collection failure, but NOT the
+          # file being deleted, renamed off `*.itest.ts`, having its top-level `describe`
+          # commented out, or being gutted to two tests. In every one of those cases the
+          # summary line still reads "N passed (N)" with a smaller N and CI stays green.
+          grep -q '✓ tests/integration/case-backfill.itest.ts' vitest-integration.log
+          # 36 tests today. Floor set below that so an incidental removal does not trip it,
+          # high enough that a gutted suite does. Raise it when the suite grows.
+          test "$(grep -c '✓ tests/integration/case-backfill.itest.ts' vitest-integration.log)" -ge 30
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup
