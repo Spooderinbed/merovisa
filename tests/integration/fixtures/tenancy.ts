@@ -10,26 +10,36 @@
  *
  * Three properties here are load-bearing:
  *
- *  1. **`clientForUser` returns an RLS-scoped client, never the service-role admin.** The
- *     service role holds BYPASSRLS, so a tenancy assertion issued through it proves exactly
- *     nothing — it is the single defect most likely to produce a green suite that tests
- *     nothing (MV-153 card §Risk notes, "the service-role trap"). Every actor client here is
- *     built from the anon/publishable key plus that user's real signed-in JWT, and the suite
- *     asserts the `role` claim on each one before it asserts anything else.
+ *  1. **Every client is RLS-scoped, never the service-role admin.** The service role holds
+ *     BYPASSRLS, so a tenancy assertion issued through it proves exactly nothing — it is the
+ *     single defect most likely to produce a green suite that tests nothing (MV-153 card
+ *     §Risk notes, "the service-role trap"). `rawClient` below is the ONLY `createClient` call
+ *     site in this file, `rlsClient` is the only way to mint a JWT-bearing one, and every
+ *     client it mints is recorded in `issuedClients` so the suite's self-check can assert the
+ *     property on the CLIENT (its reads are filtered) and not only on the TOKEN (its `role`
+ *     claim reads `authenticated`). Those are different claims: a token can say
+ *     `authenticated` while the client that issues the query carries the service key.
  *
  *  2. **Denial is silent, so every denial is paired with a service-role existence proof.** An
  *     RLS SELECT refusal returns zero rows and no error — indistinguishable from an empty
  *     table, a fixture that never seeded, or a row an earlier test deleted. `proveExists`
  *     below THROWS when the row is genuinely missing, which converts "the fixture is lying"
- *     into a loud failure instead of a passing negative test.
+ *     into a loud failure instead of a passing negative test. Every service-role read-back
+ *     goes through `svc`, which throws on error rather than letting a FAILED proof read as a
+ *     definite "the write did not land".
  *
- *  3. **Probes restore what they touch.** The mutation probes capture the prior value, attempt
- *     the write, read the row back through the service role, and put it back. Delete and
- *     insert probes work on disposable clones so a cell that unexpectedly ALLOWS cannot
- *     destroy the fixture the remaining cells depend on.
+ *  3. **Probes restore what they touch, and the disposable rows they touch carry the same
+ *     facts as the rows they stand in for.** The mutation probes capture the prior value,
+ *     attempt the write, read the row back through the service role, and put it back. Delete
+ *     and insert probes work on clones so a cell that unexpectedly ALLOWS cannot destroy the
+ *     fixture the remaining cells depend on — and `cloneCase` copies `organization_id`,
+ *     `student_user_id` AND the assignment roster, so the clone is indistinguishable from its
+ *     source under every predicate those verbs could read (see the comment on `cloneCase`:
+ *     round 1 dropped the student link, which made a whole family of cells assert something
+ *     other than their own name).
  *
  * The localhost hard-guard from `anon-purge.itest.ts` is reproduced as `assertLocalStack`:
- * this factory mints ~17 auth users, writes across all six tenancy tables, flips memberships
+ * this factory mints ~19 auth users, writes across all six tenancy tables, flips memberships
  * to inactive, and cascade-deletes organizations. Pointed at a real project by a stale
  * `SUPABASE_TEST_URL` it would destroy consultancy records.
  */
@@ -46,6 +56,33 @@ export const TENANCY_TABLES = [
   "audit_events",
 ] as const;
 export type TenancyTable = (typeof TENANCY_TABLES)[number];
+
+export type WriteVerb = "insert" | "update" | "delete";
+
+/**
+ * The write verbs `authenticated` ACTUALLY HOLDS, transcribed from the reviewed grant set in
+ * `20260730180000_case_aware_rls_policies.sql` §9 — `grant select, delete on organizations`,
+ * `grant select, insert, delete on organization_memberships`, the same on `case_assignments`,
+ * `grant update (revoked_at) on invitations`, and so on.
+ *
+ * It lives here, next to the table list, because the card's criterion is "verified across all
+ * six tenant tables" and round 1 met that for READS only: the single cross-org write test
+ * covered seven verbs and silently omitted five, including `organizations` DELETE — total
+ * tenant destruction, cascading every case, membership, assignment and invitation. The
+ * cross-org catalogue in the suite records each verb it attempts and asserts the recorded set
+ * EQUALS this one, so adding a grant without adding an assertion fails a test instead of
+ * quietly widening the surface.
+ */
+export const GRANTED_WRITE_VERBS: Record<TenancyTable, readonly WriteVerb[]> = {
+  organizations: ["update", "delete"],
+  organization_memberships: ["insert", "update", "delete"],
+  cases: ["insert", "update", "delete"],
+  case_assignments: ["insert", "delete"],
+  invitations: ["insert", "update"],
+  // No write grant of any kind: `grant select on public.audit_events to authenticated`. The
+  // refusal is the boundary, so the catalogue asserts all three verbs anyway.
+  audit_events: [],
+};
 
 const isLocalStack = (u: string | undefined): boolean => {
   if (!u) return false;
@@ -86,6 +123,25 @@ export function assertLocalStack(suiteName: string, url: string | undefined): vo
  *  - `crossTenantDual` org A ADMIN who is the linked student of an org **B** case — the
  *    sharpest shape available: a staff role must not follow a person into the tenant where
  *    they are the data subject, and being that data subject must not open that tenant.
+ *
+ * `inactiveOwnerA` and `inactiveAdminA` exist because every OTHER revoked actor here (and in
+ * `case-rls.itest.ts`) is a counsellor, and a revoked counsellor exercises only ONE of the SQL
+ * layer's two independent revocation gates:
+ *
+ *   * `actor_org_ids` / `actor_admin_org_ids` / `actor_owner_org_ids` /
+ *     `actor_assigned_case_ids` each filter `status = 'active'` themselves — well covered.
+ *   * `private.org_role` -> `private.is_org_admin` is the ONLY status filter behind
+ *     `can_manage_case` (case_assignments INSERT/DELETE), `can_staff_case`'s admin disjunct
+ *     (case_assignments SELECT, and the student-invite branch of invitations INSERT/SELECT/
+ *     UPDATE), and the `archived_at` branch of `enforce_case_write_surface`. `is_org_admin` is
+ *     false for a counsellor whatever their status, so no counsellor can ever catch a
+ *     regression there. Delete `and m.status = 'active'` from `org_role` and, before these two
+ *     actors existed, nothing in any suite went red.
+ *
+ * Both are also the LINKED STUDENT of their own case, which is what makes the gate observable
+ * in isolation: the student link carries them past `cases_update_accessor`'s USING clause, so
+ * an `archived_at` / `operational_status` write actually reaches the write-surface trigger,
+ * whose only refusal on that path is `is_org_admin` / `can_staff_case`.
  */
 export const ACTOR_KEYS = [
   "ownerA",
@@ -94,6 +150,8 @@ export const ACTOR_KEYS = [
   "counsellorUnassignedA",
   "studentA",
   "inactiveAssignedA",
+  "inactiveOwnerA",
+  "inactiveAdminA",
   "dualActiveA",
   "dualInactiveA",
   "revocableA",
@@ -120,6 +178,8 @@ export const CASE_KEYS = [
   "dualWorkA",
   "inactiveStudentA",
   "inactiveWorkA",
+  "inactiveOwnerCaseA",
+  "inactiveAdminCaseA",
   "revocableWorkA",
   "personalA",
   "orgAssignedB",
@@ -143,6 +203,17 @@ export interface LayerOutcome {
   how: string;
 }
 
+/**
+ * A JWT-bearing client the suite has issued. Recorded so the harness self-check can prove the
+ * property that matters — *this client's reads are filtered by RLS* — on every client that will
+ * ever issue an assertion, including ones a single test builds for itself.
+ */
+export interface IssuedClient {
+  label: string;
+  token: string;
+  client: SupabaseClient<Database>;
+}
+
 export interface TenancyFixture {
   /** Service-role client. Seeding, teardown, and existence proofs ONLY — never an assertion. */
   admin: SupabaseClient<Database>;
@@ -155,8 +226,26 @@ export interface TenancyFixture {
   cases: Record<CaseKey, string>;
   /** The org each case belongs to; null for the personal case. */
   caseOrg: Record<CaseKey, string | null>;
-  invitations: { teamA: string; teamB: string; studentB: string };
+  invitations: { teamA: string; teamB: string; studentA: string; studentB: string };
   auditEvents: { orgA: string; orgB: string };
+  /**
+   * Mint an RLS-scoped client for an arbitrary token AND record it. Tests that need their own
+   * client (the tampered-JWT attacker) must come through here rather than calling
+   * `createClient` themselves, so the self-check covers them too.
+   */
+  rlsClient: (label: string, token: string) => SupabaseClient<Database>;
+  /** Every client `rlsClient` has minted so far, actor clients included. */
+  issuedClients: IssuedClient[];
+  /**
+   * A throwaway organization with a membership set of the caller's choosing, registered for
+   * teardown. The `organizations` DELETE probes need it: a delete that unexpectedly SUCCEEDS
+   * cascades every case, membership, assignment and invitation of its tenant, so the probe
+   * proving "an admin cannot destroy their OWN org" must not be aimed at org A.
+   */
+  seedDisposableOrg: (
+    label: string,
+    members: ReadonlyArray<{ userId: string; role: string; status?: "active" | "inactive" }>,
+  ) => Promise<string>;
   teardown: () => Promise<void>;
 }
 
@@ -201,12 +290,27 @@ export async function seedTenancyFixture(args: {
   const stamp = Date.now();
   const password = `pw-${stamp}-Aa!`;
 
-  const admin = createClient<Database>(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const anon = createClient<Database>(url, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  /**
+   * The ONLY `createClient` call site in this file, and the suite makes that structural: a
+   * self-check counts the call sites in both files and fails if a second one appears. Without
+   * that, a client minted inside a future test would sit outside `issuedClients` and outside
+   * the BYPASSRLS check that is this harness's whole foundation.
+   */
+  const rawClient = (key: string, authorization?: string): SupabaseClient<Database> =>
+    createClient<Database>(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      ...(authorization ? { global: { headers: { Authorization: authorization } } } : {}),
+    });
+
+  const issuedClients: IssuedClient[] = [];
+  const rlsClient = (label: string, token: string): SupabaseClient<Database> => {
+    const client = rawClient(anonKey, `Bearer ${token}`);
+    issuedClients.push({ label, token, client });
+    return client;
+  };
+
+  const admin = rawClient(serviceKey);
+  const anon = rawClient(anonKey);
 
   const seededUserIds: string[] = [];
   const seededOrgIds: string[] = [];
@@ -225,9 +329,10 @@ export async function seedTenancyFixture(args: {
     if (error || !data.user) throw new Error(`failed to mint ${label}: ${error?.message}`);
     seededUserIds.push(data.user.id);
 
-    const signIn = createClient<Database>(url, anonKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    // A throwaway client for the sign-in round trip only: signing in on the shared `anon`
+    // client would attach a session to it and quietly turn the "anon holds nothing" assertions
+    // into "some authenticated user holds nothing".
+    const signIn = rawClient(anonKey);
     const { data: session, error: signInError } = await signIn.auth.signInWithPassword({ email, password });
     if (signInError || !session.session) throw new Error(`failed to sign in ${label}: ${signInError?.message}`);
 
@@ -236,10 +341,7 @@ export async function seedTenancyFixture(args: {
       id: data.user.id,
       email,
       accessToken: session.session.access_token,
-      client: createClient<Database>(url, anonKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-        global: { headers: { Authorization: `Bearer ${session.session.access_token}` } },
-      }),
+      client: rlsClient(label, session.session.access_token),
     };
   };
 
@@ -273,6 +375,20 @@ export async function seedTenancyFixture(args: {
     if (error) throw new Error(`failed to seed membership (${role}/${status}): ${error.message}`);
   };
 
+  let disposableOrgSequence = 0;
+  const seedDisposableOrg = async (
+    label: string,
+    members: ReadonlyArray<{ userId: string; role: string; status?: "active" | "inactive" }>,
+  ): Promise<string> => {
+    disposableOrgSequence += 1;
+    const id = await seedOrg(
+      `mv153-${label}-${stamp}-${disposableOrgSequence}`,
+      `MV-153 disposable ${label} ${stamp}-${disposableOrgSequence}`,
+    );
+    for (const member of members) await seedMembership(id, member.userId, member.role, member.status ?? "active");
+    return id;
+  };
+
   // --- actors -------------------------------------------------------------------------
   const minted = await Promise.all(
     ACTOR_KEYS.map((key) =>
@@ -304,6 +420,12 @@ export async function seedTenancyFixture(args: {
     // state in the matrix, not only a transition. The transition is proven separately by
     // `revocableA`, which starts active and is flipped mid-suite.
     seedMembership(orgA, actors.inactiveAssignedA.id, "counsellor", "inactive"),
+    // A revoked OWNER and a revoked ADMIN. See the ACTOR_KEYS comment: these two are the only
+    // actors in either tenancy suite that can observe `private.org_role`'s status filter, which
+    // is the sole revocation gate behind can_manage_case, can_staff_case's admin disjunct, and
+    // the archived_at branch of the write-surface trigger.
+    seedMembership(orgA, actors.inactiveOwnerA.id, "owner", "inactive"),
+    seedMembership(orgA, actors.inactiveAdminA.id, "admin", "inactive"),
     seedMembership(orgA, actors.dualActiveA.id, "counsellor"),
     seedMembership(orgA, actors.dualInactiveA.id, "counsellor", "inactive"),
     seedMembership(orgA, actors.revocableA.id, "counsellor"),
@@ -336,6 +458,20 @@ export async function seedTenancyFixture(args: {
       display_name: "A · revoked member's OWN case",
     }),
     inactiveWorkA: await seedCase({ organization_id: orgA, display_name: "A · revoked member's worked case" }),
+    // The revoked owner's / revoked admin's OWN case. The student link is what carries them
+    // past `cases_update_accessor`'s USING clause so an archived_at or operational_status write
+    // reaches `enforce_case_write_surface` — where `is_org_admin` / `can_staff_case`, i.e.
+    // `org_role`'s status filter, is the only thing left to refuse them.
+    inactiveOwnerCaseA: await seedCase({
+      organization_id: orgA,
+      student_user_id: actors.inactiveOwnerA.id,
+      display_name: "A · revoked OWNER's own case",
+    }),
+    inactiveAdminCaseA: await seedCase({
+      organization_id: orgA,
+      student_user_id: actors.inactiveAdminA.id,
+      display_name: "A · revoked ADMIN's own case",
+    }),
     revocableWorkA: await seedCase({ organization_id: orgA, display_name: "A · revocation subject's case" }),
     // organization_id null = the personal case an individual student drives themselves.
     personalA: await seedCase({ student_user_id: actors.studentA.id, display_name: "Personal case" }),
@@ -360,6 +496,8 @@ export async function seedTenancyFixture(args: {
     dualWorkA: orgA,
     inactiveStudentA: orgA,
     inactiveWorkA: orgA,
+    inactiveOwnerCaseA: orgA,
+    inactiveAdminCaseA: orgA,
     revocableWorkA: orgA,
     personalA: null,
     orgAssignedB: orgB,
@@ -393,6 +531,12 @@ export async function seedTenancyFixture(args: {
     .insert([
       invitationRow("team-a", { organization_id: orgA, role: "counsellor" }),
       invitationRow("team-b", { organization_id: orgB, role: "counsellor" }),
+      // An org A STUDENT invitation, so the second disjunct of invitations_select_staff /
+      // _update_staff — `can_staff_case(case_id)`, whose admin half is gated only by
+      // `org_role` — has a row on the org A side to be asked about. Without it a revoked org A
+      // admin "sees no invitation" for the uninteresting reason that the only org A invitation
+      // is a team invite, which the first (already status-gated) disjunct handles.
+      invitationRow("student-a", { organization_id: orgA, case_id: cases.orgAssignedA, role: "student" }),
       invitationRow("student-b", { organization_id: orgB, case_id: cases.orgAssignedB, role: "student" }),
     ] as never)
     .select("id, token_hash");
@@ -446,9 +590,13 @@ export async function seedTenancyFixture(args: {
     invitations: {
       teamA: invitationIdFor("team-a"),
       teamB: invitationIdFor("team-b"),
+      studentA: invitationIdFor("student-a"),
       studentB: invitationIdFor("student-b"),
     },
     auditEvents,
+    rlsClient,
+    issuedClients,
+    seedDisposableOrg,
     teardown,
   };
 }
@@ -466,6 +614,31 @@ export function createDbProbes(fixture: TenancyFixture) {
   let probeSequence = 0;
   const nextTag = (): string => `mv153-probe-${fixture.stamp}-${(probeSequence += 1)}`;
   const disposableCaseIds: string[] = [];
+
+  /**
+   * Every service-role read-back in this file goes through here. Reading `data` without
+   * checking `error` turns a FAILED proof — a dropped connection, a renamed column, a
+   * malformed filter — into a definite "the write did not land", which is a passing denial
+   * manufactured by a broken harness. Three probes did exactly that in round 1.
+   */
+  const svc = async <T>(
+    what: string,
+    query: PromiseLike<{ data: T; error: { message: string } | null }>,
+  ): Promise<T> => {
+    const { data, error } = await query;
+    if (error) {
+      throw new Error(
+        `HARNESS DEFECT: the service-role ${what} failed (${error.message}). A failed proof ` +
+          "must never be read as a definite outcome — this probe can no longer tell you anything.",
+      );
+    }
+    return data;
+  };
+
+  const svcRows = async <T>(
+    what: string,
+    query: PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  ): Promise<T[]> => (await svc(what, query)) ?? [];
 
   /** Turns "the fixture never seeded this" into a loud failure instead of a passing denial. */
   const proveExists = async (table: TenancyTable, id: string): Promise<void> => {
@@ -486,40 +659,65 @@ export function createDbProbes(fixture: TenancyFixture) {
   };
 
   /**
-   * A same-shape throwaway of a fixture case: same organization, same student link, same
-   * assignment roster. Destructive probes (delete) and slot-consuming probes (assign) run
-   * against the clone, so a cell that unexpectedly ALLOWS cannot take the fixture down with it.
+   * A same-shape throwaway of a fixture case. Destructive probes (delete) and slot-consuming
+   * probes (assign) run against the clone, so a cell that unexpectedly ALLOWS cannot take the
+   * fixture down with it.
+   *
+   * "SAME SHAPE" IS LOAD-BEARING, and round 1 got it wrong. The clone deliberately dropped
+   * `student_user_id`, so cells whose actor's ONLY relationship to the target is the student
+   * link — `DENY studentA case.delete orgAssignedA`, whose rationale reads "a student never
+   * deletes their own case" — actually asserted that a STRANGER cannot delete a case they have
+   * no link to. The stated justification ("no policy under test reads the student link for
+   * these verbs") was true of TODAY's policies, which is precisely the defect: the probe was
+   * calibrated to the implementation it exists to falsify. Widen `cases_delete_admin` to
+   * include `student_user_id = auth.uid()` and every one of those cells would still have
+   * passed.
+   *
+   * The clone now carries every fact the delete/assign predicates could read —
+   * `organization_id`, `student_user_id`, and the assignment roster — so it is
+   * indistinguishable from its source under both the current policies and a widened one.
+   *
+   * `assignments: "drop"` exists for exactly one reason: `assignment_role` has a single legal
+   * value and `case_assignments_primary_idx` is partial-unique on `case_id`, so a clone that
+   * keeps the roster has no free slot for an INSERT probe to land in. That constraint is why
+   * `assign` probes BOTH halves of the roster verb rather than only the insert — see there.
    */
-  const cloneCase = async (caseId: string, options: { withAssignments?: boolean } = {}): Promise<string> => {
-    const { data: source, error } = await admin
-      .from("cases")
-      .select("organization_id, student_user_id")
-      .eq("id", caseId)
-      .single();
-    if (error || !source) throw new Error(`could not clone case ${caseId}: ${error?.message}`);
+  const cloneCase = async (caseId: string, options: { assignments?: "keep" | "drop" } = {}): Promise<string> => {
+    const source = await svc(
+      "clone source read",
+      admin.from("cases").select("organization_id, student_user_id").eq("id", caseId).single(),
+    );
+    if (!source) throw new Error(`could not clone case ${caseId}: the source row is missing`);
 
-    const { data: clone, error: cloneError } = await admin
-      .from("cases")
-      .insert({
-        organization_id: source.organization_id,
-        // The student link is deliberately dropped: `cases` carries no unique constraint on
-        // it, but two rows claiming the same student is a shape the product never produces,
-        // and no policy under test reads it for the delete/assign verbs.
-        display_name: `clone ${nextTag()}`,
-      })
-      .select("id")
-      .single();
-    if (cloneError || !clone) throw new Error(`could not insert clone: ${cloneError?.message}`);
+    const clone = await svc(
+      "clone insert",
+      admin
+        .from("cases")
+        .insert({
+          organization_id: source.organization_id,
+          // `cases` carries no unique constraint on student_user_id, so the clone can hold the
+          // same link as its source — which is the whole point (see above).
+          student_user_id: source.student_user_id,
+          display_name: `clone ${nextTag()}`,
+        })
+        .select("id")
+        .single(),
+    );
+    if (!clone) throw new Error("could not insert clone");
     disposableCaseIds.push(clone.id);
 
-    if (options.withAssignments !== false) {
-      const { data: assignments } = await admin.from("case_assignments").select("user_id").eq("case_id", caseId);
-      for (const assignment of assignments ?? []) {
-        await admin.from("case_assignments").insert({
+    if ((options.assignments ?? "keep") === "keep") {
+      const assignments = await svcRows(
+        "clone roster read",
+        admin.from("case_assignments").select("user_id").eq("case_id", caseId),
+      );
+      for (const assignment of assignments) {
+        const { error } = await admin.from("case_assignments").insert({
           case_id: clone.id,
           user_id: assignment.user_id,
           assignment_role: "primary_counsellor",
         });
+        if (error) throw new Error(`could not copy the assignment roster onto the clone: ${error.message}`);
       }
     }
     return clone.id;
@@ -594,12 +792,15 @@ export function createDbProbes(fixture: TenancyFixture) {
       };
     },
 
-    /** Deletes a same-shape CLONE, never the fixture row. */
+    /** Deletes a same-shape CLONE — same org, same student link, same roster — never the fixture row. */
     async remove(actor: Actor, caseId: string): Promise<LayerOutcome> {
       await proveExists("cases", caseId);
       const clone = await cloneCase(caseId);
       const { error } = await actor.client.from("cases").delete().eq("id", clone);
-      const { data: survivor } = await admin.from("cases").select("id").eq("id", clone).maybeSingle();
+      const survivor = await svc(
+        "delete read-back",
+        admin.from("cases").select("id").eq("id", clone).maybeSingle(),
+      );
       const allowed = survivor === null;
       await dropClone(clone);
       return {
@@ -608,20 +809,84 @@ export function createDbProbes(fixture: TenancyFixture) {
       };
     },
 
+    /**
+     * `case.assign` is the roster verb, and the roster has TWO halves — INSERT and DELETE on
+     * `case_assignments` — gated by exactly one predicate, `private.can_manage_case`. Both are
+     * probed, because neither alone is falsifiable:
+     *
+     *  - The INSERT half needs a FREE primary slot (`assignment_role` has one legal value;
+     *    `case_assignments_primary_idx` allows one holder per case), so its target cannot carry
+     *    the source roster. For an actor whose only relationship to the case is their own
+     *    assignment row, that target is a case they have no link to — a real denial, for the
+     *    wrong reason.
+     *  - The DELETE half's target carries the full roster, so that actor DOES hold the named
+     *    relationship. Widen `can_manage_case` to assigned counsellors and this half turns
+     *    green while the cell expects red. That is the mutation the insert-only probe missed.
+     *
+     * They are one verb, so they must agree. A split is a FINDING about the policies, not
+     * something to average into a boolean, so it is raised rather than folded away.
+     */
     async assign(actor: Actor, caseId: string): Promise<LayerOutcome> {
       await proveExists("cases", caseId);
-      const clone = await cloneCase(caseId, { withAssignments: false });
-      const { error } = await actor.client.from("case_assignments").insert({
-        case_id: clone,
+
+      const addTarget = await cloneCase(caseId, { assignments: "drop" });
+      const { error: addError } = await actor.client.from("case_assignments").insert({
+        case_id: addTarget,
         user_id: inOrgAssignee(caseId),
         assignment_role: "primary_counsellor",
       });
-      const { data: landed } = await admin.from("case_assignments").select("id").eq("case_id", clone);
-      const allowed = (landed ?? []).length > 0;
-      await dropClone(clone);
-      return { allowed, how: allowed ? "assignment row landed" : `rejected ${error?.code ?? "(no row, no error)"}` };
+      const added =
+        (await svcRows("assignment insert read-back", admin.from("case_assignments").select("id").eq("case_id", addTarget)))
+          .length > 0;
+      await dropClone(addTarget);
+
+      const dropTarget = await cloneCase(caseId, { assignments: "keep" });
+      let roster = await svcRows(
+        "clone roster read-back",
+        admin.from("case_assignments").select("id").eq("case_id", dropTarget),
+      );
+      if (roster.length === 0) {
+        // The source case has no roster, so the DELETE half would have nothing to aim at. Seed
+        // one for a legal in-tenant assignee — never the actor — so the question stays "may
+        // this actor take work off a case", not "may they resign".
+        const { error } = await admin.from("case_assignments").insert({
+          case_id: dropTarget,
+          user_id: inOrgAssignee(caseId),
+          assignment_role: "primary_counsellor",
+        });
+        if (error) throw new Error(`could not seed a delete target on the clone: ${error.message}`);
+        roster = await svcRows(
+          "seeded roster read-back",
+          admin.from("case_assignments").select("id").eq("case_id", dropTarget),
+        );
+      }
+      const { error: dropError } = await actor.client.from("case_assignments").delete().eq("case_id", dropTarget);
+      const survivors = await svcRows(
+        "assignment delete read-back",
+        admin.from("case_assignments").select("id").eq("case_id", dropTarget),
+      );
+      const removed = survivors.length < roster.length;
+      await dropClone(dropTarget);
+
+      if (added !== removed) {
+        throw new Error(
+          `FINDING — not a harness defect: case_assignments INSERT and DELETE disagree for ${actor.key} ` +
+            `on case ${caseId} (insert ${added ? "allowed" : "denied"}, delete ${removed ? "allowed" : "denied"}). ` +
+            "Both are gated by private.can_manage_case alone, so the roster verb has split in two. " +
+            "Report it — do not average it away.",
+        );
+      }
+      return {
+        allowed: added,
+        how: added
+          ? "assignment row landed, and an existing one could be removed"
+          : `insert rejected ${addError?.code ?? "(no row, no error)"} · delete removed nothing (${
+              dropError?.code ?? "silent USING miss"
+            })`,
+      };
     },
 
+    /** Runs against the REAL case, not a clone: an invitation is additive and is cleaned up. */
     async inviteStudent(actor: Actor, caseId: string): Promise<LayerOutcome> {
       await proveExists("cases", caseId);
       const tag = nextTag();
@@ -633,8 +898,11 @@ export function createDbProbes(fixture: TenancyFixture) {
         token_hash: tag,
         expires_at: new Date(Date.now() + 86_400_000).toISOString(),
       } as never);
-      const { data: landed } = await admin.from("invitations").select("id").eq("token_hash", tag);
-      const allowed = (landed ?? []).length > 0;
+      const landed = await svcRows(
+        "invitation insert read-back",
+        admin.from("invitations").select("id").eq("token_hash", tag),
+      );
+      const allowed = landed.length > 0;
       if (allowed) await admin.from("invitations").delete().eq("token_hash", tag);
       return { allowed, how: allowed ? "invitation row landed" : `rejected ${error?.code ?? "(no row, no error)"}` };
     },
@@ -659,8 +927,11 @@ export function createDbProbes(fixture: TenancyFixture) {
       if (error) throw new Error(`a SELECT must never error under RLS: ${error.code} ${error.message}`);
       const allowed = (data ?? []).length > 0;
       if (!allowed) {
-        const { data: real } = await admin.from("audit_events").select("id").eq("organization_id", organizationId);
-        if ((real ?? []).length === 0) {
+        const real = await svcRows(
+          "audit_events existence proof",
+          admin.from("audit_events").select("id").eq("organization_id", organizationId),
+        );
+        if (real.length === 0) {
           throw new Error(`HARNESS DEFECT: no audit_events exist for ${organizationId}; "sees nothing" proves nothing`);
         }
       }
@@ -671,12 +942,15 @@ export function createDbProbes(fixture: TenancyFixture) {
       const { error } = await actor.client
         .from("organization_memberships")
         .insert({ organization_id: organizationId, user_id: fixture.actors.spare.id, role: "counsellor" });
-      const { data: landed } = await admin
-        .from("organization_memberships")
-        .select("id")
-        .eq("organization_id", organizationId)
-        .eq("user_id", fixture.actors.spare.id);
-      const allowed = (landed ?? []).length > 0;
+      const landed = await svcRows(
+        "membership insert read-back",
+        admin
+          .from("organization_memberships")
+          .select("id")
+          .eq("organization_id", organizationId)
+          .eq("user_id", fixture.actors.spare.id),
+      );
+      const allowed = landed.length > 0;
       if (allowed) {
         await admin
           .from("organization_memberships")
@@ -696,7 +970,10 @@ export function createDbProbes(fixture: TenancyFixture) {
       if (readError || !before) throw new Error(`could not read organization ${organizationId}`);
       const probeValue = nextTag();
       const { error } = await actor.client.from("organizations").update({ name: probeValue }).eq("id", organizationId);
-      const { data: after } = await admin.from("organizations").select("name").eq("id", organizationId).single();
+      const after = await svc(
+        "organization rename read-back",
+        admin.from("organizations").select("name").eq("id", organizationId).single(),
+      );
       const allowed = after?.name === probeValue;
       if (allowed) await admin.from("organizations").update({ name: before.name }).eq("id", organizationId);
       else await proveExists("organizations", organizationId);
