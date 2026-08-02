@@ -29,12 +29,23 @@ jobs:
   # exercises constraints the mocked unit tests structurally cannot (e.g. the
   # partial-unique index assessments_primary_idx behind the MV-16 regression).
   # Separate job: the Docker stack startup is slow and must not gate the fast
-  # validate lane. Advisory for now (continue-on-error) until the flake rate is
-  # measured; promote to a required check via branch protection once stable.
+  # validate lane.
+  #
+  # GATING since 2026-08-03 (was `continue-on-error: true` while the flake rate was
+  # unmeasured). It has now been measured: across PRs #95-#110 this job ran ~12 times
+  # and failed once, on #102 — a true positive (a stale assertion), not a flake.
+  #
+  # The flag had to go because MV-153 put the cross-tenant authorization matrix in
+  # this lane: advisory, a tenant-isolation regression turned the job red and merged
+  # anyway, which is the exact assurance-instead-of-evidence posture that card exists
+  # to end. A red run here must now block.
+  #
+  # Still to do OUTSIDE this file: mark `integration` a required check in branch
+  # protection. Removing the flag makes the workflow run fail; branch protection is
+  # what makes a failed run un-mergeable.
   integration:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       # Node 22, not 20: supabase-js realtime needs native WebSocket, which Node
