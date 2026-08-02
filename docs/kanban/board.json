@@ -1858,14 +1858,14 @@
     },
     {
       "id": "MV-149",
-      "col": "inprogress",
+      "col": "done",
       "pri": "P1",
       "owner": "founder",
       "file": "cards/MV-149-stage1-umbrella.md",
       "title": "Umbrella: Stage 1 tenancy foundation (MV-150 schema · MV-151 server boundary · MV-152 RLS · MV-153 negative-test gate)",
       "summary": "READY (tracking) — umbrella for Stage 1 of the revised consultancy plan (tenancy foundation): organizations/memberships/cases/assignments/invitations/audit_events, the server-only case-permission boundary, case-aware RLS, and the real-Supabase cross-tenant test harness. Carries four slices — MV-150 (additive schema + deny-all RLS), MV-151 (getCaseContext/requireCasePermission + service-role exception list), MV-152 (SECURITY DEFINER RLS policies), MV-153 (negative catalogue + positive matrix harness) — in the DAG 150→{151,152}→153. Stage exit gate is MV-153: the authorization matrix passes positive AND negative real-DB tests under npm run test:integration; a green unit/lint run is NOT sufficient evidence. Not blocked by the Stage 0 legal gate (D-B): Stage 1 runs entirely on seed data, no real student data. Carries two still-open founder decisions as design inputs (deciding nothing): fate of an unclaimed case, and the bounded case-creation→student-notice window.",
       "created": "2026-07-30",
-      "entered": "2026-08-01"
+      "entered": "2026-08-02"
     },
     {
       "id": "MV-150",
@@ -1902,14 +1902,14 @@
     },
     {
       "id": "MV-153",
-      "col": "inprogress",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-153-cross-tenant-negative-tests.md",
       "title": "Cross-tenant negative-test harness + positive authorization matrix (Stage 1 exit gate)",
       "summary": "The Stage 1 exit gate: a real-Supabase integration harness that proves the tenancy authorization matrix both DENIES and GRANTS. Extends the *.itest.ts pattern + localhost hard-guard from tests/integration/anon-purge.itest.ts, but adds the capability the two existing itests lack — per-role AUTHENTICATED clients (anon key + user JWT), because RLS only proves anything when queries run as the actual user; the service-role admin bypasses RLS and is used only for seeding/teardown and for exercising MV-151's service-role exception wrappers. A two-org fixture factory mints 2 orgs x users in every role (owner/admin/counsellor/student) x cases + assignments + student links. Implements the Stage-1 slice of the plan's negative catalogue (cross-org list/read/change/delete deny across all six tenant tables; unassigned-counsellor deny; student cross-case deny; revoked-member immediate loss; role forgery from user/app-metadata rejected; service-role path rejects unauthorized case ids) AND the positive matrix in the same run (an all-deny bug passes every negative test while breaking the product). Wires the CI integration job to export the new anon key and keeps the 0-skipped/>0-passed guard so the suite can never green having tested nothing. Depends on MV-150+151+152. Stage 1 cannot exit until this suite is green as a gating check.",
       "created": "2026-07-30",
-      "entered": "2026-08-03"
+      "entered": "2026-08-02"
     }
   ]
 }

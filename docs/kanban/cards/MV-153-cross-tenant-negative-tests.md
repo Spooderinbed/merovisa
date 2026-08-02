@@ -20,30 +20,30 @@
 A cold agent can `npx supabase start`, set the env vars, run `npm run test:integration`, and observe the following — every tenant query issued through an **authenticated** client (anon key + that user's JWT), never through the service-role admin (which bypasses RLS).
 
 **Harness capability**
-- [ ] A two-org fixture factory seeds, in one local database: 2 organizations (A, B), each with an owner, an admin, ≥2 counsellors, and ≥1 student; ≥2 cases per org; `case_assignments` linking *some* counsellors to *some* cases (so "assigned" vs "unassigned-but-same-org" both exist); ≥1 case per org with a linked `student_user_id`. Seeding is unique-per-run (`Date.now()` suffix idiom) and fully torn down in `afterAll` (seeded rows deleted, every minted auth user removed via `auth.admin.deleteUser`).
-- [ ] A `clientForUser(userId)` helper returns an RLS-scoped supabase-js client that carries the user's real session (anon/publishable key + authenticated JWT) — the capability neither existing itest has. The service-role admin is used ONLY for seeding, teardown, and exercising MV-151's service-role exception wrappers.
-- [ ] The localhost hard-guard from `anon-purge.itest.ts` is reproduced: the suite throws at import if `SUPABASE_TEST_URL` is set to any non-local host, because the fixtures create and delete many rows and auth users.
+- [x] A two-org fixture factory seeds, in one local database: 2 organizations (A, B), each with an owner, an admin, ≥2 counsellors, and ≥1 student; ≥2 cases per org; `case_assignments` linking *some* counsellors to *some* cases (so "assigned" vs "unassigned-but-same-org" both exist); ≥1 case per org with a linked `student_user_id`. Seeding is unique-per-run (`Date.now()` suffix idiom) and fully torn down in `afterAll` (seeded rows deleted, every minted auth user removed via `auth.admin.deleteUser`).
+- [x] A `clientForUser(userId)` helper returns an RLS-scoped supabase-js client that carries the user's real session (anon/publishable key + authenticated JWT) — the capability neither existing itest has. The service-role admin is used ONLY for seeding, teardown, and exercising MV-151's service-role exception wrappers.
+- [x] The localhost hard-guard from `anon-purge.itest.ts` is reproduced: the suite throws at import if `SUPABASE_TEST_URL` is set to any non-local host, because the fixtures create and delete many rows and auth users.
 
 **Positive matrix — proves policies GRANT correctly (an all-deny bug must not pass silently)**
-- [ ] Org A **owner** can list, read, update, and delete every case in org A.
-- [ ] Org A **admin** can list, read, update, and delete every case in org A.
-- [ ] A **counsellor** can read and update the case they are **assigned** to.
-- [ ] A **student** can read their **linked** case (the case whose `student_user_id` is their auth id).
+- [x] Org A **owner** can list, read, update, and delete every case in org A.
+- [x] Org A **admin** can list, read, update, and delete every case in org A.
+- [x] A **counsellor** can read and update the case they are **assigned** to.
+- [x] A **student** can read their **linked** case (the case whose `student_user_id` is their auth id).
 
 **Negative catalogue (Stage 1 subset) — proves policies DENY**
-- [ ] **Cross-org denial:** org A's owner AND admin (fully privileged *inside* A) cannot **list**, **read** (by a known case id), **update/change**, or **delete** any org B case — verified across all six tenant tables (`organizations`, `organization_memberships`, `cases`, `case_assignments`, `invitations`, `audit_events`), so knowing an id or table grants nothing.
-- [ ] **Unassigned-counsellor denial:** a counsellor in org A who is **not** assigned to a given org-A case cannot read, list, or change it (the assigned-only rule; contrast with the positive assigned-counsellor case above).
-- [ ] **Student cross-case denial:** a student linked to case X cannot read, list, or change case Y (another student's case), and cannot read `audit_events` or other members' `organization_memberships`.
-- [ ] **Revoked-member immediate loss:** flipping a member's `organization_memberships.status` to inactive causes their very next query to lose all org access — no reliance on re-login or cache expiry; the re-query in the same test run returns nothing.
-- [ ] **Role forgery rejected:** a client whose `user_metadata`/`app_metadata` (or a forged header) claims owner/admin of org B gains nothing — authorization is read from the DB membership tables, never from JWT metadata or browser state.
+- [x] **Cross-org denial:** org A's owner AND admin (fully privileged *inside* A) cannot **list**, **read** (by a known case id), **update/change**, or **delete** any org B case — verified across all six tenant tables (`organizations`, `organization_memberships`, `cases`, `case_assignments`, `invitations`, `audit_events`), so knowing an id or table grants nothing.
+- [x] **Unassigned-counsellor denial:** a counsellor in org A who is **not** assigned to a given org-A case cannot read, list, or change it (the assigned-only rule; contrast with the positive assigned-counsellor case above).
+- [x] **Student cross-case denial:** a student linked to case X cannot read, list, or change case Y (another student's case), and cannot read `audit_events` or other members' `organization_memberships`.
+- [x] **Revoked-member immediate loss:** flipping a member's `organization_memberships.status` to inactive causes their very next query to lose all org access — no reliance on re-login or cache expiry; the re-query in the same test run returns nothing.
+- [x] **Role forgery rejected:** a client whose `user_metadata`/`app_metadata` (or a forged header) claims owner/admin of org B gains nothing — authorization is read from the DB membership tables, never from JWT metadata or browser state.
 
 **CI wiring**
-- [ ] `.github/workflows/ci.yml`'s `integration` job exports the anon/publishable key (`SUPABASE_TEST_ANON_KEY`, from `supabase status -o env`) in addition to the existing URL + service-role key, so `clientForUser` has a key to sign in with.
-- [ ] The existing `>0 passed / 0 skipped` log guard covers the new suite — a missing env var must fail CI, never green a run that skipped every tenancy assertion.
+- [x] `.github/workflows/ci.yml`'s `integration` job exports the anon/publishable key (`SUPABASE_TEST_ANON_KEY`, from `supabase status -o env`) in addition to the existing URL + service-role key, so `clientForUser` has a key to sign in with.
+- [x] The existing `>0 passed / 0 skipped` log guard covers the new suite — a missing env var must fail CI, never green a run that skipped every tenancy assertion.
 
 **Deferred — respect the stage seams (do NOT build here)**
-- [ ] (Documented, not implemented) Storage guessed-path download denial → Stage 4; invitation expired/replayed/revoked/email-mismatch acceptance and single-acceptance-under-concurrency → Stage 5; repeated-invalid-token rate-limit/alert → Stage 5; case export/download cross-org denial → Stage 4/6. This card lists them as deferred so a cold agent does not absorb them.
-- [ ] (Documented, not implemented) service-role case-authorization check on a privileged wrapper → deferred to the stage that ships the first service-role case wrapper (Stage 5 invitation acceptance / Stage 4 storage admin), because MV-151 ships only the enumerated exception list + lint in Stage 1, with no runtime service-role case wrapper to invoke.
+- [x] (Documented, not implemented) Storage guessed-path download denial → Stage 4; invitation expired/replayed/revoked/email-mismatch acceptance and single-acceptance-under-concurrency → Stage 5; repeated-invalid-token rate-limit/alert → Stage 5; case export/download cross-org denial → Stage 4/6. This card lists them as deferred so a cold agent does not absorb them.
+- [x] (Documented, not implemented) service-role case-authorization check on a privileged wrapper → deferred to the stage that ships the first service-role case wrapper (Stage 5 invitation acceptance / Stage 4 storage admin), because MV-151 ships only the enumerated exception list + lint in Stage 1, with no runtime service-role case wrapper to invoke.
 
 ## Test plan
 - **New real-DB suite** `tests/integration/tenant-isolation.itest.ts` (+ a fixture helper, e.g. `tests/integration/fixtures/tenancy.ts`), collected by `vitest.integration.config.ts` and run by `npm run test:integration` only — excluded from the default `npm test`, `skipIf` when env vars are absent.
@@ -214,3 +214,30 @@ Divergence-table coverage: **1** `org.settings` admin-deny · **2** `archived_at
 No security-direction divergence (SQL more permissive than TS) was found in any of the 362 dual-asserted cells, in any round.
 
 **No real policy bug was found by any round-2 or round-3 fix.** Every new assertion — the previously-unasserted cross-tenant write verbs (including `cases.email`), tenant destruction by a non-owner member, in-tenant roster control and the owner carve-out on UPDATE and DELETE, the relationship-carrying delete/assign clones, and both `org_role`-gated revocation paths — passed against the unmutated database on its first run. The seven mutations above are what establish the assertions are live rather than vacuous; MV-152's policies were already correct on all of them. The defects found in these two rounds were in the HARNESS and in the CLAIMS made for it, not in the tenancy boundary.
+
+## Integrator acceptance — 2026-08-02
+
+All 16 acceptance criteria ticked against evidence, not on the author's assertion. Merged as PR #110
+(`9c20660`) after three review rounds:
+
+- **Round 1** — sent back: 2 blockers, 4 majors (cross-tenant WRITE verbs unasserted on 4 of 6 tables
+  incl. `organizations` DELETE; `cloneCase` stripping `student_user_id`; both CI "did it run" guards
+  inert; no inactive owner/admin fixture; a tautological inversion proof).
+- **Round 2** — independently verified: all four mutation counts confirmed *by enumeration*, CI guards
+  confirmed against vitest's own `VerboseReporter` source, clone fidelity proven exhaustively. Found
+  one remaining major (`organization_memberships` UPDATE/DELETE probed only where the probe is blind)
+  and one false claim (the "self-policing" grant guard compared a hand-written literal to itself).
+- **Round 3** — both closed, each with a mutation proving the new assertion is live. The grant guard
+  now reads `information_schema` at run time, so adding a grant to the migration fails a test until a
+  probe exists — verified by mutation, and by CI passing on a clean runner.
+
+Seven mutations across the rounds were invisible to the prior harness and are now caught. **No mutation
+revealed a real policy bug** — MV-150/151/152 were correct throughout; what was missing was proof.
+
+Known limits, recorded rather than hidden: the BYPASSRLS self-check is one-sided (an under-privileged
+client also passes, bounded by the ≥1-sighting floor); 7 verbs are TypeScript-only with no Stage 1
+database surface (`DEFERRED_BY_DESIGN`); policy *text* is pinned in the sibling `case-rls.itest.ts`,
+not here; nothing is asserted about query plans or RLS performance at scale.
+
+Founder gate: this acceptance is the integrator's, on technical evidence. Reversible — reopen the card
+if you want to review the run yourself.
