@@ -33,6 +33,41 @@
 -- EXECUTE revoked in the same migration (20260730120000 / 20260730180000); split-the-flat-column-
 -- grant as the remedy for a write surface that is wider than the policy (20260730180000 §9);
 -- role-independent immutability triggers (20260620000000).
+--
+-- ============================== HOW THIS IS APPLIED, AND WHY IT IS ATOMIC ==============================
+-- THE APPLY COMMAND IS `npx supabase db push`, AND IT RUNS THIS FILE ALL-OR-NOTHING.
+-- The whole safety argument of this card is all-or-nothing, so this is not an incidental detail — it
+-- is the mechanism, and it was VERIFIED rather than assumed. Against this repo's pinned CLI
+-- (2.107.0), applying a `create table; create table; select 1/0;` migration to a scratch database:
+--
+--   * no `begin;`/`commit;` in the file  → the failing statement rolled BOTH earlier `create table`s
+--     back and wrote NO `supabase_migrations.schema_migrations` row. All-or-nothing holds.
+--   * with `begin;`/`commit;` in the file → the inner `commit;` COMMITTED THE CLI'S OWN IMPLICIT
+--     TRANSACTION EARLY: the pre-`commit` table SURVIVED the later failure and the bookkeeping row
+--     was still never written — a half-applied schema the migration history does not know about.
+--
+-- THAT IS WHY THIS FILE CARRIES NO `begin;`/`commit;`, matching all 19 predecessors. Adding them is
+-- not a belt-and-braces improvement, it is the exact failure mode this card exists to prevent. The
+-- CLI submits the file as ONE multi-statement simple query, which Postgres executes as a single
+-- IMPLICIT transaction; an explicit `commit` inside that ends it early, which is precisely what the
+-- second probe above observed. If some other operator path is ever used instead, it MUST be
+-- `psql --single-transaction` (and the `schema_migrations` row then has to be written by hand). See
+-- supabase/rehearsal/README.md §"Applying MV-155 to production" and the card's Founder-gated section.
+--
+-- `lock_timeout` bounds the nine ACCESS EXCLUSIVE locks below: on a live database an
+-- `ALTER TABLE … ADD COLUMN` queues behind any open transaction touching the table and then blocks
+-- every reader behind itself. Failing fast and retrying is strictly better than an unbounded stall on
+-- the student-facing tables, and under the implicit transaction above a timeout aborts the whole
+-- apply cleanly rather than leaving part of it behind.
+--
+-- It is a plain `set`, NOT `set local`, and that is deliberate. Both were probed and both take effect
+-- for the rest of the file, but `set local` additionally emits `WARNING (25P01): SET LOCAL can only
+-- be used in transaction blocks` on every apply — an IMPLICIT transaction is not an explicit
+-- "transaction block" for that check, so the warning is cosmetic and permanent. A warning that fires
+-- on every legitimate apply is a warning everyone learns to ignore. `reset lock_timeout` at the foot
+-- of the file keeps the plain form from leaking into a later migration on the same connection, and
+-- an aborted apply rolls the setting back with everything else.
+set lock_timeout = '10s';
 
 -- =====================================================================
 -- 1  cases_personal_student_idx — one personal case per Auth user
@@ -162,9 +197,24 @@ create index outcome_events_case_id_idx on public.outcome_events (case_id);
 -- raising. The narrowed trigger keeps the guard live during the exact operation it exists to
 -- protect against.
 --
--- Exactly ONE transition is permitted: case_id null → not-null, with every other column
--- byte-identical. The `to_jsonb(new) - 'case_id' = to_jsonb(old) - 'case_id'` comparison covers
--- columns added LATER automatically, so the allowance cannot silently widen.
+-- Exactly ONE transition is permitted: case_id null → not-null **to the row's OWN owner's personal
+-- case**, with every other column byte-identical. The `to_jsonb(new) - 'case_id' = to_jsonb(old) -
+-- 'case_id'` comparison covers columns added LATER automatically, so the allowance cannot silently
+-- widen.
+--
+-- THE `exists` CLAUSE IS THE THIRD CONDITION AND IT IS NOT DECORATION. Without it the allowance
+-- reads "null → ANY case", so a mistyped `set case_id = <some other student's case>` in this very
+-- migration would be PERMITTED by the guard and caught only by §9's closing assert — which is the
+-- right net but the wrong layer, because the guard exists precisely to make the backfill statement
+-- unable to damage a prediction-of-record in the first place. Bounding the target to the owner's own
+-- personal case makes the permitted transition exactly the one §5 performs and nothing else.
+--
+-- It FAILS CLOSED, deliberately. The trigger is SECURITY INVOKER (see below) and `public.cases`
+-- carries FORCE RLS, so a role without BYPASSRLS cannot see the case row and the `exists` is false —
+-- and a false `exists` raises. For an immutability guard that is the correct direction: the reachable
+-- writers all hold BYPASSRLS (the migration and the rehearsal run as `postgres`; `service_role` holds
+-- it; `authenticated` has no UPDATE grant on this table at all), and any future caller that does not
+-- gets a loud abort of the whole transaction rather than a silent re-point.
 --
 -- It is SELF-CLOSING: once MV-160 sets `case_id NOT NULL`, `old.case_id is null` is unreachable and
 -- the guard is unconditional again by construction. MV-160 additionally restores the original body
@@ -182,7 +232,14 @@ as $$
 begin
   if old.case_id is null
      and new.case_id is not null
-     and (to_jsonb(new) - 'case_id'::text) = (to_jsonb(old) - 'case_id'::text) then
+     and (to_jsonb(new) - 'case_id'::text) = (to_jsonb(old) - 'case_id'::text)
+     and exists (
+           select 1
+             from public.cases c
+            where c.id = new.case_id
+              and c.organization_id is null
+              and c.student_user_id = new.owner
+         ) then
     return new;
   end if;
   raise exception 'program_predictions is immutable (no UPDATE permitted)';
@@ -211,6 +268,7 @@ create function private.mv155_backfill_personal_cases()
 as $$
 declare
   v_cases                int;
+  v_case_ids             jsonb;
   v_profiles             int;
   v_assessments          int;
   v_plan_items           int;
@@ -224,27 +282,56 @@ begin
   -- ---- personal cases, one per Auth user, idempotent -----------------------------------------
   -- display_name is `not null` on public.cases, so the coalesce chain must end in a literal. The
   -- profile name is preferred over the OAuth metadata because it is the name the student edited.
-  insert into public.cases (organization_id, student_user_id, created_by, email, display_name)
-  select null,
-         u.id,
-         u.id,
-         u.email,
-         coalesce(
-           nullif(btrim(p.sections -> 'personal' ->> 'name'), ''),
-           nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''),
-           nullif(btrim(u.raw_user_meta_data ->> 'name'), ''),
+  --
+  -- THE `returning id` IS LOAD-BEARING, NOT TELEMETRY. The rollback's non-destructive path
+  -- (`-v personal_case_ids=…`, the only correct unwind once MV-157 has merged) needs the exact ids
+  -- THIS migration minted, and nothing else in the schema can reconstruct them: `created_by`,
+  -- `student_user_id`, `operational_status` and `organization_id` all take values a real MV-157
+  -- signup would also take, and cases are inserted here directly rather than through
+  -- `private.write_audit_event`, so there is no audit row to mine either. A `raise notice` carrying
+  -- only COUNTS made the rollback's own documented path unusable. The ids ride in the report, and
+  -- supabase/rehearsal/README.md §"Applying MV-155 to production" step 4 captures them.
+  with inserted as (
+    insert into public.cases (organization_id, student_user_id, created_by, email, display_name)
+    select null,
+           u.id,
+           u.id,
            u.email,
-           'MeroVisa student'
-         )
-    from auth.users u
-    left join public.profiles p on p.owner = u.id   -- profiles_owner_key is unique: cannot fan out
-   where not exists (
-           select 1
-             from public.cases c
-            where c.organization_id is null
-              and c.student_user_id = u.id
-         );
-  get diagnostics v_cases = row_count;
+           coalesce(
+             nullif(btrim(p.sections -> 'personal' ->> 'name'), ''),
+             nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''),
+             nullif(btrim(u.raw_user_meta_data ->> 'name'), ''),
+             u.email,
+             'MeroVisa student'
+           )
+      from auth.users u
+      left join public.profiles p on p.owner = u.id   -- profiles_owner_key is unique: cannot fan out
+     where not exists (
+             select 1
+               from public.cases c
+              where c.organization_id is null
+                and c.student_user_id = u.id
+           )
+    returning id
+  )
+  select count(*)::int, coalesce(jsonb_agg(id order by id), '[]'::jsonb)
+    into v_cases, v_case_ids
+    from inserted;
+
+  -- ---- preserve `updated_at` on the two tables that maintain it ------------------------------
+  -- `private.set_updated_at()` is `new.updated_at = now()`, unconditionally, and it is a BEFORE
+  -- UPDATE trigger on exactly two of the nine: `profiles` and `user_program_state`. Left alone, the
+  -- backfill would stamp migration time onto every one of those rows — 19 of them on the captured
+  -- live inventory (7 + 12) — destroying "when did this student last edit their profile / shortlist"
+  -- for every existing user. The rollback CANNOT restore it: `drop column case_id` takes the column,
+  -- not the clock, and the original timestamps exist nowhere else.
+  --
+  -- So the triggers are disabled for the duration of the backfill and re-enabled before it returns.
+  -- This is safe rather than clever: the ALTERs are transactional and take a lock no weaker than the
+  -- ACCESS EXCLUSIVE this migration already holds on both tables from §2's ADD COLUMN, so no other
+  -- session can write through the disabled window, and an abort anywhere restores them.
+  alter table public.profiles           disable trigger profiles_set_updated_at;
+  alter table public.user_program_state disable trigger user_program_state_set_updated_at;
 
   -- ---- owner → case, one statement per table -------------------------------------------------
   -- Every one has the SAME shape, and every clause in it is load-bearing:
@@ -300,8 +387,12 @@ begin
      and t.owner is not null and t.case_id is null;
   get diagnostics v_outcome_events = row_count;
 
+  alter table public.profiles           enable trigger profiles_set_updated_at;
+  alter table public.user_program_state enable trigger user_program_state_set_updated_at;
+
   return jsonb_build_object(
     'cases_created',        v_cases,
+    'personal_case_ids',    v_case_ids,
     'profiles',             v_profiles,
     'assessments',          v_assessments,
     'plan_items',           v_plan_items,
@@ -555,10 +646,26 @@ grant update (status, completed_at, started_at) on public.plan_items to authenti
 --
 -- WHAT §H ACTUALLY ASKS FOR IS UNCHANGED AND STILL HOLDS: `case_id` appears in NO UPDATE list
 -- anywhere. Probed: an authenticated `update … set case_id` on this table is 42501 under exactly
--- these grants, and an authenticated attempt to re-point `owner` is 42501 too — refused by the RLS
--- WITH CHECK, which is where an authorization question belongs. Both lists remain strictly NARROWER
--- than the flat table-level grant they replace: `case_id`, `created_at` and `updated_at` are off
--- `user_program_state`'s surface and `case_id` and `updated_at` are off `document_status`'s.
+-- these grants. Both lists remain strictly NARROWER than the flat table-level grant they replace:
+-- `case_id`, `created_at` and `updated_at` are off `user_program_state`'s surface and `case_id` and
+-- `updated_at` are off `document_status`'s.
+--
+-- GRANTING `update (owner, …)` DOES NOT LET A STUDENT MOVE OR ERASE THEIR OWN `owner`, AND BOTH
+-- DIRECTIONS WERE TRACED AGAINST THE SHIPPED POLICIES RATHER THAN ARGUED (each pinned by a test):
+--
+--   owner → another user   42501  `new row violates row-level security policy`
+--   owner → NULL           42501  same policy, same code
+--
+-- The second one is the non-obvious half and the reason it is written out here. A reader can
+-- reasonably expect `ups_update_own` / `ds_update_own`'s `with check ((select auth.uid()) = owner)`
+-- to catch only a re-point to a DIFFERENT uid and to let a NULL through, since `auth.uid() = null`
+-- is not false. Postgres admits a row only when a WITH CHECK evaluates to TRUE — NULL is refused
+-- exactly like FALSE — so the same clause closes both. And underneath it there is a second,
+-- independent barrier: `owner` is `NOT NULL` on both tables AND a PRIMARY KEY column
+-- (`(owner, program_id)` / `(owner, kind)`), so even with RLS and grants entirely out of the picture
+-- a superuser `set owner = null` raises 23502. MV-156 replaces those primary keys and relaxes
+-- `owner`; when it does, the NOT NULL barrier goes and the WITH CHECK is the only one left — which
+-- is why the trace above ships as an assertion, not as a comment.
 revoke insert, update on public.user_program_state from authenticated;
 grant insert (owner, program_id, status, notes, case_id) on public.user_program_state to authenticated;
 grant update (owner, program_id, status, notes) on public.user_program_state to authenticated;
@@ -597,6 +704,11 @@ grant insert (id, owner, attempt_id, event_type, gate, reason_code, decision_aut
 -- =====================================================================
 -- INERT on a fresh database: no auth.users ⇒ 0 cases, 0 rows updated on all nine. The notice is the
 -- rehearsal's primary artifact against real data.
+--
+-- THE OPERATOR MUST KEEP THIS NOTICE. It carries `personal_case_ids` — the only record of which
+-- cases this migration minted, and the input the rollback's non-destructive path requires once
+-- MV-157 has merged. `supabase/rehearsal/README.md` §"Applying MV-155 to production" makes capturing
+-- it a numbered step for exactly that reason.
 do $$
 declare
   v_report jsonb;
@@ -610,3 +722,8 @@ $$;
 -- 9  assert the invariant — the LAST statement, so a violation aborts the whole migration
 -- =====================================================================
 select private.mv155_assert_case_backfill();
+
+-- Release the `lock_timeout` set at the head of the file so it cannot leak into a later migration
+-- applied on the same connection (MV-156's primary-key replacements are heavier DDL and must be free
+-- to choose their own bound). Last line, after the assert, so it never runs on a failed apply.
+reset lock_timeout;

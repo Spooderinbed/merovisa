@@ -53,6 +53,30 @@ const url = process.env.SUPABASE_TEST_URL;
 const serviceKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
 const anonKey = process.env.SUPABASE_TEST_ANON_KEY;
 
+/**
+ * The right-to-delete test below drives the REAL `/api/account/delete` route against this stack,
+ * rather than replaying its delete sequence in the test — a replayed sequence proves the test and
+ * the route agree today and nothing about tomorrow, and the whole point of that test is that the
+ * route must not drift back into leaving a case behind.
+ *
+ * `createSupabaseAdminClient()` reads these two vars, so pointing them at the local stack is enough
+ * to make the route's own admin client the right one. Only `createSupabaseServerClient` is mocked
+ * (below): it wants Next's cookie store, and the route uses it for nothing but `getUser`/`signOut`.
+ */
+if (url && serviceKey) {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = url;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = serviceKey;
+}
+
+const routeAuth = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  signOut: vi.fn(async () => ({ error: null })),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: async () => ({ auth: routeAuth }),
+}));
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** The nine student-owned tables Stage 2 re-keys. Order is the migration's. */
@@ -247,7 +271,17 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
     throw new Error(`expected this statement to raise, but it succeeded: ${statement}`);
   };
 
-  const backfill = (): Record<string, number> => JSON.parse(sqlOne("select private.mv155_backfill_personal_cases();"));
+  /**
+   * `personal_case_ids` is the rollback's input, not telemetry: once MV-157 has merged, the only
+   * non-destructive unwind is `-v personal_case_ids=…`, and nothing in the schema can reconstruct
+   * which cases MV-155 minted. Hence the union type — the report is no longer counts-only.
+   */
+  type BackfillReport = {
+    cases_created: number;
+    personal_case_ids: string[];
+    [table: string]: number | string[];
+  };
+  const backfill = (): BackfillReport => JSON.parse(sqlOne("select private.mv155_backfill_personal_cases();"));
   const reconcile = (): void => {
     sql("select private.mv155_assert_case_backfill();");
   };
@@ -422,11 +456,24 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
     if (!admin) return;
     if (seededAssessmentIds.length) await admin.from("assessments").delete().in("id", seededAssessmentIds);
     for (const id of seededUserIds) {
-      // owner is ON DELETE CASCADE on all nine, so this clears the student-owned rows; the personal
-      // case survives with student_user_id nulled (ON DELETE SET NULL), so delete it explicitly or
-      // the next run inherits a case with a dangling display name.
+      // CAPTURE THE CASE ID FIRST — this order is the whole fix, and the earlier version had it
+      // wrong in a way that was invisible. It ran `deleteUser` and then
+      // `.delete().eq("created_by", id)`, but `cases.created_by` is ON DELETE **SET NULL** just like
+      // `student_user_id`, so by the time that delete ran BOTH columns were already NULL and it
+      // matched nothing. Every run leaked one personal case per seeded user, each still carrying a
+      // `display_name` — the exact retention artifact the "right to delete" block above exists to
+      // prove is gone. The teardown has to look the case up while the links still exist.
+      const { data: cases } = await admin
+        .from("cases")
+        .select("id")
+        .is("organization_id", null)
+        .or(`student_user_id.eq.${id},created_by.eq.${id}`);
+      const caseIds = (cases ?? []).map((c) => (c as { id: string }).id);
+
+      // owner is ON DELETE CASCADE on all nine, so this clears the student-owned rows that would
+      // otherwise hold the case down through `case_id`'s ON DELETE RESTRICT.
       await admin.auth.admin.deleteUser(id);
-      await admin.from("cases").delete().eq("created_by", id);
+      if (caseIds.length) await admin.from("cases").delete().in("id", caseIds);
     }
   });
 
@@ -576,11 +623,19 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       // construction (its population is `auth.users`), so asserting an exact total would make this
       // test a hostage to whatever else the run has already created.
       expect(report.cases_created).toBeGreaterThanOrEqual(2);
-      for (const table of NINE) expect(report[table], `${table} backfilled`).toBeGreaterThanOrEqual(2);
+      for (const table of NINE) expect(report[table] as number, `${table} backfilled`).toBeGreaterThanOrEqual(2);
+
+      // The rollback's id list, produced by the apply that minted them. Without this the
+      // `-v personal_case_ids=…` path in MV-155-rollback.sql names an input nothing generates.
+      expect(Array.isArray(report.personal_case_ids)).toBe(true);
+      expect(report.personal_case_ids).toHaveLength(report.cases_created);
+      for (const id of report.personal_case_ids) expect(id).toMatch(/^[0-9a-f-]{36}$/);
 
       for (const actor of [userA, userB]) {
         const caseId = personalCaseOf(actor.id);
         expect(caseId).toMatch(/^[0-9a-f-]{36}$/);
+        // Every case this call reported really is one it created.
+        expect(report.personal_case_ids, `${actor.id}'s case must appear in the report`).toContain(caseId);
 
         const shape = sqlOne(`
           select organization_id is null and student_user_id = '${actor.id}' and created_by = '${actor.id}'
@@ -595,7 +650,12 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
             `select count(*) filter (where case_id = '${caseId}') || '/' || count(*)
                from public.${table} where owner = '${actor.id}';`,
           );
-          expect(owned, `${table} rows for ${actor.id} must all point at their personal case`).toMatch(/^(\d+)\/\1$/);
+          // `^(\d+)/\1$` alone is satisfied by "0/0" — a table the fixture never seeded, or one a
+          // future edit stops seeding, would pass while proving nothing. Both halves must be
+          // non-zero AND equal, so the assertion needs the rows to exist before it can be met.
+          expect(owned, `${table} rows for ${actor.id} must all point at their personal case`).toMatch(
+            /^([1-9]\d*)\/\1$/,
+          );
         }
       }
 
@@ -606,6 +666,9 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       const second = backfill();
       expect(second).toEqual({
         cases_created: 0,
+        // Empty rather than absent: the key is always present, so a rollback operator reading a
+        // re-apply's notice cannot mistake "created nothing" for "the report lost the field".
+        personal_case_ids: [],
         profiles: 0,
         assessments: 0,
         plan_items: 0,
@@ -619,11 +682,60 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       reconcile();
     });
 
-    it("only ever UPDATEs — per-table row counts are identical across a backfill", () => {
+    it("only ever UPDATEs — per-table row counts are identical across a backfill that DOES work", async () => {
+      // AS ORDERED, THIS TEST USED TO BE A GUARANTEED NO-OP. The suite's earlier cases have already
+      // run the backfill to completion, so a bare `backfill()` here updates 0 rows and creates 0
+      // cases — and "the row counts did not change" is then true of doing nothing at all. It would
+      // have passed against a backfill that INSERTed, as long as that backfill had nothing left to
+      // do. The fix is to give it work: mint a fresh user with rows across all nine, so this call
+      // creates a case and moves real rows, and the parity claim is about a backfill that acted.
+      const fresh = await mint("parity");
+      await seedNine(fresh.id, programA);
+
       const counts = (): string[] => NINE.map((t) => `${t}=${sqlOne(`select count(*) from public.${t};`)}`);
       const before = counts();
-      backfill();
+
+      const report = backfill();
+      expect(report.cases_created, "the backfill must have had work to do").toBeGreaterThanOrEqual(1);
+      for (const table of NINE) {
+        expect(report[table] as number, `${table} must have been backfilled by this call`).toBeGreaterThanOrEqual(1);
+      }
+
       expect(counts()).toEqual(before);
+      reconcile();
+    });
+
+    it("does not rewrite updated_at, and leaves set_updated_at enabled and working", async () => {
+      // `private.set_updated_at()` is `new.updated_at = now()`, unconditionally, and it is a BEFORE
+      // UPDATE trigger on exactly two of the nine. Left alone, the backfill stamps migration time
+      // onto every profile and program-state row — 19 of them on the captured live inventory —
+      // destroying "when did this student last edit this" for every existing user, and the rollback
+      // cannot restore it: `drop column case_id` takes the column, not the clock.
+      const fresh = await mint("updatedat");
+      await seedNine(fresh.id, programA);
+
+      const fingerprint = (): string =>
+        sqlOne(`select md5(coalesce((select string_agg(updated_at::text, ',' order by owner)
+                                       from public.profiles where owner = '${fresh.id}'), '')
+                        || '|' ||
+                        coalesce((select string_agg(updated_at::text, ',' order by program_id)
+                                    from public.user_program_state where owner = '${fresh.id}'), ''));`);
+
+      const before = fingerprint();
+      const report = backfill();
+      expect(report.profiles as number, "the backfill must have touched this user's profile").toBeGreaterThanOrEqual(1);
+      expect(fingerprint(), "updated_at must survive the backfill byte-identical").toBe(before);
+
+      // The disable is scoped to the backfill and reverted before it returns. If a later edit drops
+      // the re-enable, this is what catches it — a permanently disabled set_updated_at would be
+      // silent until someone noticed timestamps had stopped moving months later.
+      for (const t of ["profiles_set_updated_at", "user_program_state_set_updated_at"] as const) {
+        expect(sqlOne(`select tgenabled::text from pg_trigger where tgname = '${t}';`), `${t} re-enabled`).toBe("O");
+      }
+      // Enabled in the catalogue AND actually firing.
+      sql(`update public.profiles set completeness = completeness where owner = '${fresh.id}';`);
+      expect(fingerprint(), "an ordinary UPDATE must still bump updated_at").not.toBe(before);
+      reconcile();
     });
 
     it("leaves anonymous assessments case-less, and MV-135's purge still selects them", () => {
@@ -726,6 +838,28 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
             ),
           `role=${role ?? "postgres"}`,
         ).not.toThrow();
+      }
+    });
+
+    it("REFUSES null → a case that is NOT the row's own owner's personal case, for every role", () => {
+      // The permitted transition is bounded to the row's OWN owner's personal case, not to "any
+      // case". Without the `exists` clause in the guard the allowance reads null → ANY case, and a
+      // mistyped `set case_id = <another student's case>` in the backfill itself would be PERMITTED
+      // — caught only by the closing `mv155_assert_case_backfill()`, which is the right net at the
+      // wrong layer. The guard exists so the backfill statement cannot damage a prediction-of-record
+      // in the first place.
+      for (const role of ROLES) {
+        const fresh = randomUUID();
+        expect(
+          sqlError(
+            inTx(
+              `${seedCaseless(fresh, `v-wrongcase-${role ?? "postgres"}`)}
+               update public.program_predictions set case_id = '${otherCaseId}' where id = '${fresh}';`,
+              role,
+            ),
+          ),
+          `role=${role ?? "postgres"}`,
+        ).toContain("program_predictions is immutable");
       }
     });
 
@@ -919,11 +1053,42 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       }
     });
 
-    it("refuses an authenticated PostgREST RPC call to the backfill", async () => {
+    it("refuses an authenticated PostgREST RPC call to the backfill — and the function still exists", async () => {
       // The catalogue assertion alone would pass against a function `authenticated` was separately
       // granted, or against a `private` schema someone later exposed. This is the behavioural half.
       const { error } = await userA.client.rpc("mv155_backfill_personal_cases" as never);
       expect(error, "an authenticated client must not be able to run the backfill").not.toBeNull();
+
+      // `not.toBeNull()` ON ITS OWN IS SATISFIED BY SCHEMA EXPOSURE ALONE, which is the whole
+      // problem with it: delete the function outright, or typo its name, and PostgREST still
+      // returns an error and this test still goes green. So pin both halves of the actual claim.
+      //
+      // (a) The refusal is a REACHABILITY refusal, not a crash or a timeout. `private` is not in
+      //     PostgREST's exposed schemas, so the surface answers PGRST202 / 404.
+      expect(
+        [error?.code, String(error?.message)].join(" "),
+        "expected a not-exposed/not-found refusal from PostgREST",
+      ).toMatch(/PGRST202|Could not find the function|schema must be one of/i);
+
+      // (b) The function IS there and IS callable — by `postgres`, through psql. Without this the
+      //     test cannot distinguish "authenticated cannot reach it" from "it does not exist".
+      expect(
+        sqlOne(`select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'private' and p.proname = 'mv155_backfill_personal_cases';`),
+      ).toBe("1");
+      expect(Array.isArray(backfill().personal_case_ids), "callable as postgres").toBe(true);
+
+      // (c) Positive control on the SAME client: it can reach the exposed surface fine. Without
+      //     this, a broken session or a down PostgREST would produce an error at (a) too, and the
+      //     refusal above would be evidence of nothing.
+      const control = await userA.client.from("programs").select("id").limit(1);
+      expect(control.error, "the same authenticated client must still reach the exposed surface").toBeNull();
+
+      // NOTE ON WHAT THIS TEST CAN AND CANNOT SEPARATE. `private` is not in PostgREST's exposed
+      // schemas, so the 404 at (a) is a schema-boundary refusal and would look identical if the
+      // EXECUTE grant were wide open. The grant is therefore asserted from the catalogue in the
+      // sibling test above, and that is the load-bearing one; this test's job is to prove the
+      // browser-reachable surface agrees with it today.
     });
   });
 
@@ -956,6 +1121,84 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         const { error } = await p;
         expect(error?.code, `${table}: an authenticated UPDATE naming case_id must be refused`).toBe("42501");
       }
+    });
+
+    // -------------------------------------------------------------------------------------
+    // The `update (owner, …)` widening — the second-order consequence, pinned.
+    // -------------------------------------------------------------------------------------
+    // §4.4/§4.6 of the matrix spec specify `UPDATE (status, notes)` / `UPDATE (obtained)`. Both are
+    // unexecutable against a PostgREST upsert (see the "leaves today's behaviour intact" test), so
+    // MV-155 ships the payload lists, which include `owner`. THE WHOLE SAFETY ARGUMENT FOR THAT
+    // WIDENING RESTS ON THE RLS `WITH CHECK` — and until now nothing anywhere asserted it. These
+    // two tests are that assertion.
+    it("refuses an authenticated UPDATE that re-points owner at another user — the WITH CHECK backstop", async () => {
+      backfill();
+      const probes: Array<[string, PromiseLike<{ error: { code?: string; message?: string } | null }>]> = [
+        [
+          "user_program_state",
+          userA.client.from("user_program_state").update({ owner: userB.id }).eq("owner", userA.id),
+        ],
+        ["document_status", userA.client.from("document_status").update({ owner: userB.id }).eq("owner", userA.id)],
+      ];
+      for (const [table, p] of probes) {
+        const { error } = await p;
+        expect(error?.code, `${table}: re-pointing owner must be refused`).toBe("42501");
+        expect(error?.message, `${table}: and refused by the POLICY, not by a grant`).toMatch(
+          /row-level security policy/i,
+        );
+      }
+      reconcile();
+    });
+
+    it("refuses an authenticated UPDATE that NULLs owner — the same WITH CHECK, and a NOT NULL under it", async () => {
+      // THIS IS THE NON-OBVIOUS HALF, AND IT IS WHY THIS TEST EXISTS SEPARATELY FROM THE ONE ABOVE.
+      // A reader can reasonably expect `with check ((select auth.uid()) = owner)` to catch only a
+      // re-point to a DIFFERENT uid and to let NULL through, since `auth.uid() = null` is NULL
+      // rather than false — which would mean `update (owner, …)` lets a student strip their own
+      // row's owner, and the seam trigger would not fire to stop it because it is qualified
+      // `when (new.owner is not null)`. Traced against the shipped policies: it does not hold.
+      // Postgres admits a row only when a WITH CHECK evaluates to TRUE, and NULL is refused exactly
+      // like FALSE.
+      backfill();
+      // THE CAST IS DELIBERATE AND IS ITSELF PART OF THE FINDING. `lib/supabase/types.ts` types
+      // `owner` as non-nullable on both tables, so TypeScript refuses this payload outright — a
+      // THIRD barrier, and the one a MeroVisa-authored caller meets first. It is also the weakest:
+      // it binds our own code and nothing else, so a hand-rolled PostgREST request from a browser
+      // never sees it. Casting past it is what makes the two runtime barriers below observable.
+      const nullOwner = { owner: null } as unknown as { owner: string };
+      const probes: Array<[string, PromiseLike<{ error: { code?: string; message?: string } | null }>]> = [
+        ["user_program_state", userA.client.from("user_program_state").update(nullOwner).eq("owner", userA.id)],
+        ["document_status", userA.client.from("document_status").update(nullOwner).eq("owner", userA.id)],
+      ];
+      for (const [table, p] of probes) {
+        const { error } = await p;
+        expect(error?.code, `${table}: nulling owner must be refused`).toBe("42501");
+        expect(error?.message, `${table}: refused by the policy`).toMatch(/row-level security policy/i);
+      }
+
+      // THE SECOND, INDEPENDENT BARRIER — pinned so MV-156 cannot remove it silently. `owner` is
+      // NOT NULL on both tables AND a PRIMARY KEY column (`(owner, program_id)` / `(owner, kind)`),
+      // so even with grants and RLS entirely out of the picture a superuser `set owner = null`
+      // raises 23502. MV-156 replaces those primary keys and relaxes `owner`; when it does, this
+      // assertion goes red and the WITH CHECK above becomes the ONLY barrier left — which is
+      // exactly the moment someone should re-read the two tests above rather than discover the
+      // question later.
+      for (const table of ["user_program_state", "document_status"] as const) {
+        expect(
+          sqlOne(`select is_nullable from information_schema.columns
+                   where table_schema='public' and table_name='${table}' and column_name='owner';`),
+          `${table}.owner is NOT NULL today; if MV-156 relaxed it, re-read the WITH CHECK tests above`,
+        ).toBe("NO");
+        expect(
+          sqlOne(`select count(*) from information_schema.key_column_usage k
+                   join information_schema.table_constraints c
+                     on c.constraint_name = k.constraint_name and c.constraint_schema = k.constraint_schema
+                  where c.constraint_type = 'PRIMARY KEY' and k.table_schema = 'public'
+                    and k.table_name = '${table}' and k.column_name = 'owner';`),
+          `${table}.owner is a PRIMARY KEY column today`,
+        ).toBe("1");
+      }
+      reconcile();
     });
 
     it("ALLOWS an authenticated INSERT that carries case_id, on every insert-granted table", async () => {
@@ -1255,6 +1498,136 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       } finally {
         sql(`drop table if exists public.${scratch};`);
       }
+    });
+  });
+
+  // =====================================================================
+  // Right to delete — the contract MV-155 would otherwise have broken
+  // =====================================================================
+  // `/api/account/delete` promises it "removes every trace of the signed-in user". Before MV-155
+  // that was true by accident: `public.cases` held zero rows. MV-155 mints one personal case per
+  // Auth user carrying `display_name` (their real name) and `email` (their real address), and
+  // `cases.student_user_id` is ON DELETE **SET NULL** while all nine student tables are ON DELETE
+  // CASCADE on `owner` — so deleting the Auth user cascades every owned row away and leaves the
+  // cases row STANDING, unlinked, still carrying the identity. A privacy regression introduced by
+  // this card, so this card closes it, and this is the test that proves it stays closed.
+  //
+  // It drives the REAL route (see the mock at the head of this file), not a replay of its delete
+  // sequence, because a replay only ever proves the test and the route agree at the moment it was
+  // written.
+  describe("right to delete", () => {
+    it("leaves no row anywhere carrying the student's name or email — cases included", async () => {
+      const victim = await mint("rtbf");
+
+      // A name nothing else in the database could plausibly hold, so the sweep at the end cannot
+      // pass by accident and cannot be satisfied by some other fixture's row.
+      const uniqueName = `RTBF Sentinel ${stamp} ${randomUUID()}`;
+      await seedNine(victim.id, programA);
+      // seedNine writes the profile row with `sections: {}`. Build the object outright rather than
+      // `jsonb_set(…, '{personal,name}', …, true)` — jsonb_set will not create a MISSING
+      // intermediate key, so against `{}` it silently returns `{}` and the sentinel never lands.
+      sql(`update public.profiles
+              set sections = jsonb_build_object('personal', jsonb_build_object('name', '${uniqueName}'))
+            where owner = '${victim.id}';`);
+      // The coalesce chain prefers the profile name, so this is the branch under test.
+      expect(
+        sqlOne(`select sections -> 'personal' ->> 'name' from public.profiles where owner = '${victim.id}';`),
+      ).toBe(uniqueName);
+
+      const report = backfill();
+      expect(report.cases_created, "the victim must have got a personal case").toBeGreaterThanOrEqual(1);
+
+      // Precondition — the artifact really exists before we delete. Without this the sweep below
+      // would pass just as happily against a migration that never minted the case at all.
+      const caseId = personalCaseOf(victim.id);
+      expect(
+        sqlOne(`select display_name || '|' || coalesce(email,'') from public.cases where id = '${caseId}';`),
+        "the personal case carries the student's real name and email",
+      ).toBe(`${uniqueName}|${victim.email}`);
+
+      // Drive the real route.
+      routeAuth.getUser.mockResolvedValue({ data: { user: { id: victim.id } } });
+      const { POST } = await import("@/app/api/account/delete/route");
+      const res = await POST(
+        new Request("http://localhost/api/account/delete", {
+          method: "POST",
+          headers: { origin: "http://localhost" },
+        }),
+      );
+      expect(await res.json(), "the delete must report complete success").toEqual({ ok: true });
+      expect(res.status).toBe(200);
+
+      // THE SWEEP. Not "the case row is gone" — "no row anywhere carries this person". `cases` is
+      // scanned for BOTH columns, including rows whose `student_user_id` has been nulled, which is
+      // exactly the shape the regression produced and the shape a link-based check would miss.
+      expect(
+        sqlOne(`select count(*) from public.cases
+                 where display_name = '${uniqueName}' or email = '${victim.email}';`),
+        "a case still carries the deleted student's name or email",
+      ).toBe("0");
+      expect(
+        sqlOne(`select count(*) from public.cases where student_user_id is null and display_name = '${uniqueName}';`),
+        "an UNLINKED case still carries the deleted student's name",
+      ).toBe("0");
+
+      // ...and nothing survives on the nine either, by owner or by the case they pointed at.
+      for (const table of NINE) {
+        expect(
+          sqlOne(`select count(*) from public.${table} where owner = '${victim.id}';`),
+          `${table} still holds rows for the deleted user`,
+        ).toBe("0");
+        expect(
+          sqlOne(`select count(*) from public.${table} where case_id = '${caseId}';`),
+          `${table} still points at the deleted user's case`,
+        ).toBe("0");
+      }
+
+      // The auth identity itself.
+      expect(sqlOne(`select count(*) from auth.users where id = '${victim.id}';`)).toBe("0");
+      reconcile();
+    });
+
+    it("does NOT delete a consultancy case for the same student — that one belongs to the org", async () => {
+      // The delete is scoped `organization_id is null`. A consultancy case is the organisation's
+      // record, not the student's, and Stage 3 owns its lifecycle — deleting it here would destroy
+      // an org's data because one of its students closed their MeroVisa account.
+      const victim = await mint("rtbf-org");
+      const slug = `rtbf-org-${stamp}`;
+      // Wrapped in a CTE so the TOP-LEVEL command is a SELECT. A bare `insert … returning` prints
+      // its `INSERT 0 1` command tag on stdout even under `-tAX`, which `sqlOne` counts as a second
+      // row; every other call site in this file happens to be a plain SELECT.
+      const orgId = sqlOne(`
+        with ins as (
+          insert into public.organizations (name, slug, created_by)
+          values ('RTBF Org ${stamp}', '${slug}', '${victim.id}')
+          returning id
+        ) select id from ins;`);
+      const orgCaseId = sqlOne(`
+        with ins as (
+          insert into public.cases (organization_id, student_user_id, created_by, email, display_name)
+          values ('${orgId}', '${victim.id}', '${victim.id}', '${victim.email}', 'RTBF Org Case ${stamp}')
+          returning id
+        ) select id from ins;`);
+
+      backfill();
+      const personalId = personalCaseOf(victim.id);
+
+      routeAuth.getUser.mockResolvedValue({ data: { user: { id: victim.id } } });
+      const { POST } = await import("@/app/api/account/delete/route");
+      const res = await POST(
+        new Request("http://localhost/api/account/delete", {
+          method: "POST",
+          headers: { origin: "http://localhost" },
+        }),
+      );
+      expect(res.status).toBe(200);
+
+      expect(sqlOne(`select count(*) from public.cases where id = '${personalId}';`), "personal case deleted").toBe("0");
+      expect(sqlOne(`select count(*) from public.cases where id = '${orgCaseId}';`), "consultancy case KEPT").toBe("1");
+
+      sql(`delete from public.cases where id = '${orgCaseId}';
+           delete from public.organizations where id = '${orgId}';`);
+      reconcile();
     });
   });
 });

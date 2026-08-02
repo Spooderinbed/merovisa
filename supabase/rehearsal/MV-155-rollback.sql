@@ -32,7 +32,26 @@
 -- same delete would destroy cases created by REAL SIGNUPS — irreversible data loss, with nothing
 -- in the schema to distinguish the two populations. SQL cannot answer "has MV-157 merged", so the
 -- script refuses to guess: it requires `-v mv157_merged=no`, or an explicit `-v personal_case_ids`
--- list of the ids this migration actually created (captured from the rehearsal's forward log).
+-- list of the ids this migration actually created.
+--
+-- WHERE THAT ID LIST COMES FROM — it is produced, not reconstructed. The forward migration's
+-- `raise notice 'MV-155 backfill report: %'` carries a `personal_case_ids` key holding a jsonb array
+-- of exactly the ids that apply minted:
+--
+--     {"cases_created": 9, "personal_case_ids": ["…","…"], "profiles": 7, …}
+--
+-- `supabase/rehearsal/README.md` §"Applying MV-155 to production" step 4 makes capturing that notice
+-- a numbered step of the apply, precisely so this path is usable rather than nominal. Pass them
+-- comma-separated and unquoted:
+--
+--     -v personal_case_ids="7b1f…,9c02…,…"
+--
+-- THERE IS NO RECOVERY IF THE NOTICE WAS NOT KEPT. `created_by`, `student_user_id`,
+-- `operational_status` and `organization_id` all take values a real MV-157 signup also takes, and
+-- these rows are inserted directly rather than through `private.write_audit_event`, so there is no
+-- audit trail to mine either. Losing the notice does not merely make this path inconvenient; it
+-- removes it. (An earlier draft described the list as "captured from the rehearsal's forward log"
+-- when the log carried only counts — the list did not exist at all.)
 -- ===========================================================================================
 
 \set ON_ERROR_STOP on
@@ -169,6 +188,15 @@ drop index if exists public.cases_personal_student_idx;
 -- =====================================================================
 -- 7  delete the personal cases — the step with the expiry
 -- =====================================================================
+-- THIS DELETE CASCADES, and the two children are not `case_id`-on-the-nine (those are ON DELETE
+-- RESTRICT and step 2 has already removed the column). `case_assignments.case_id` and
+-- `invitations.case_id` are both **ON DELETE CASCADE** onto `public.cases`, so any row either table
+-- holds for a personal case goes with it, silently and without appearing in the post-conditions
+-- below. For MV-155-minted personal cases both are empty by construction — the migration creates
+-- cases and nothing else, and neither table has a Stage 2 writer — which is why this is a note
+-- rather than a guard. It stops being merely a note the moment anything assigns a counsellor to a
+-- personal case or invites against one; at that point this step is destroying Stage 1 tenancy rows
+-- as well as the case.
 \if :{?personal_case_ids}
   \echo '-- step 7: deleting the RECORDED id list only'
   delete from public.cases

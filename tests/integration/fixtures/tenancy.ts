@@ -784,9 +784,24 @@ export function createDbProbes(fixture: TenancyFixture) {
    */
   const pendingRelink = new Map<string, { caseId: string; studentUserId: string }>();
 
+  /**
+   * Put back any student link a THROWN probe left moved. It runs through `svc`, which escalates a
+   * failure to a HARNESS DEFECT, and the map entry is dropped only once the relink has actually
+   * landed.
+   *
+   * THE EARLIER VERSION SWALLOWED THE ERROR IN THE EXACT SCENARIO IT EXISTS FOR. It ignored the
+   * update's `error` and deleted the map entry unconditionally, so a failed relink left the source
+   * case permanently unlinked with the only record of that fact discarded — and every later cell
+   * reading the source's student link would then assert against a case that silently has none. This
+   * function only ever runs after something has already gone wrong; losing its own failure is
+   * precisely the case it must not lose.
+   */
   const flushPendingRelinks = async (): Promise<void> => {
     for (const [cloneId, { caseId, studentUserId }] of [...pendingRelink]) {
-      await admin.from("cases").update({ student_user_id: studentUserId }).eq("id", caseId);
+      await svc(
+        "clone source relink",
+        admin.from("cases").update({ student_user_id: studentUserId }).eq("id", caseId).select("id").single(),
+      );
       pendingRelink.delete(cloneId);
     }
   };
