@@ -1913,7 +1913,7 @@
     },
     {
       "id": "MV-154",
-      "col": "backlog",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "founder",
       "file": "cards/MV-154-stage2-umbrella.md",
@@ -1924,7 +1924,7 @@
     },
     {
       "id": "MV-155",
-      "col": "backlog",
+      "col": "ready",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-155-personal-cases-and-backfill.md",
