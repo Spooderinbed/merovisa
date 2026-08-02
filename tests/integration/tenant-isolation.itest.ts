@@ -85,11 +85,12 @@ import type { CaseScopedPermission, OrgScopedPermission } from "@/lib/cases/perm
 import {
   ACTOR_KEYS,
   CASE_KEYS,
-  GRANTED_WRITE_VERBS,
   TENANCY_TABLES,
   assertLocalStack,
   createDbProbes,
   jwtRoleClaim,
+  readGrantedWriteSurface,
+  readUngrantedWriteTables,
   seedTenancyFixture,
   tamperJwtSubject,
   type Actor,
@@ -98,8 +99,6 @@ import {
   type DbProbes,
   type LayerOutcome,
   type TenancyFixture,
-  type TenancyTable,
-  type WriteVerb,
 } from "./fixtures/tenancy";
 
 const url = process.env.SUPABASE_TEST_URL;
@@ -417,6 +416,27 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
   const orgId = (key: "orgA" | "orgB"): string => (key === "orgA" ? fixture.orgA : fixture.orgB);
 
   /**
+   * The behavioural BYPASSRLS check over every client the fixture has issued so far. Shared by
+   * the opening self-check (actor clients) and the closing one (which also covers clients a
+   * single test built for itself). Returns how many clients saw at least one seeded case, so
+   * the caller can assert the check is not passing merely because nothing works at all.
+   */
+  const assertNoClientBypassesRls = async (everySeededCase: string[]): Promise<number> => {
+    let sighted = 0;
+    for (const issued of fixture.issuedClients) {
+      expect(jwtRoleClaim(issued.token), `${issued.label} token`).toBe("authenticated");
+      const { data } = await issued.client.from("cases").select("id");
+      const seen = (data ?? []).map((r) => r.id).filter((id) => everySeededCase.includes(id));
+      if (seen.length > 0) sighted += 1;
+      expect(
+        seen.sort(),
+        `${issued.label}'s client returned every seeded case — that is a BYPASSRLS client, not an RLS-scoped one`,
+      ).not.toEqual(everySeededCase);
+    }
+    return sighted;
+  };
+
+  /**
    * The TypeScript layer, asked with an UNFILTERED view of the facts (see the file header).
    * This is the only service-role client in an assertion path, and it is what makes the two
    * layers independent rather than one wrapping the other.
@@ -492,18 +512,19 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       // "deny" probe with rows while a correctly-signed token sat unused beside it. So assert
       // the behavioural property instead: BYPASSRLS sees every seeded case, and no actor in
       // this fixture may (org A's staff cannot see org B's rows, and vice versa).
+      //
+      // LIMIT, stated because the check is one-sided: "sees fewer than all" excludes a
+      // BYPASSRLS client but would equally pass for an under-privileged one — a client whose
+      // token was rejected outright sees zero and satisfies it. The lower bound below is what
+      // keeps that from being vacuous in aggregate; per-actor row sets are the `case.list`
+      // block's job, and that is where an under-privileged client actually fails.
+      //
+      // Covers every client issued SO FAR, which at this point is exactly the actor clients.
+      // The tampered-JWT client the forgery test builds is registered later; the closing
+      // self-check at the foot of this file re-runs the property over the full registry.
       const everySeededCase = CASE_KEYS.map(caseId).sort();
       expect(fixture.issuedClients.length, "every actor must have an issued client").toBe(ACTOR_KEYS.length);
-
-      for (const issued of fixture.issuedClients) {
-        expect(jwtRoleClaim(issued.token), `${issued.label} token`).toBe("authenticated");
-        const { data } = await issued.client.from("cases").select("id");
-        const seen = (data ?? []).map((r) => r.id).filter((id) => everySeededCase.includes(id));
-        expect(
-          seen.sort(),
-          `${issued.label}'s client returned every seeded case — that is a BYPASSRLS client, not an RLS-scoped one`,
-        ).not.toEqual(everySeededCase);
-      }
+      expect(await assertNoClientBypassesRls(everySeededCase), "at least one client must see rows").toBeGreaterThan(0);
     });
 
     it("keeps client construction centralised, so the check above cannot be walked around", async () => {
@@ -829,9 +850,15 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
   // So: every granted write verb, on every table, across the boundary, in BOTH directions —
   // and a closing test that asserts the attempted set equals the granted set, so the next added
   // grant cannot slip through unasserted.
-  describe("cross-org WRITE denial — every write verb `authenticated` holds, on all six tables", () => {
+  describe("WRITE denial — every verb `authenticated` holds: across the boundary, and inside a tenant", () => {
+    /**
+     * Keys match `readGrantedWriteSurface()`: `table.insert`, `table.delete`,
+     * `table.update(column)`. Column-granular for UPDATE because the GRANTS are — round 2's
+     * verb-level guard collapsed `cases` UPDATE into one key and was therefore blind to
+     * `cases.email`, which is granted and was probed by nothing.
+     */
     const attempted = new Set<string>();
-    const record = (table: TenancyTable, verb: WriteVerb) => attempted.add(`${table}.${verb}`);
+    const record = (key: string) => attempted.add(key);
 
     interface Victim {
       orgId: string;
@@ -889,8 +916,9 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
         "organization read",
         fixture.admin.from("organizations").select("name, slug").eq("id", v.orgId).single(),
       );
-      record("organizations", "update");
+      record("organizations.update(name)");
       await attacker.client.from("organizations").update({ name: `seized ${fixture.stamp}` }).eq("id", v.orgId);
+      record("organizations.update(slug)");
       await attacker.client.from("organizations").update({ slug: `seized-${fixture.stamp}` }).eq("id", v.orgId);
 
       // DELETE is the one that ends a tenant: `on delete cascade` runs through cases,
@@ -906,7 +934,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       expect((casesBefore ?? []).length, "HARNESS DEFECT: the victim tenant has no cases to lose").toBeGreaterThan(0);
       expect((membersBefore ?? []).length, "HARNESS DEFECT: the victim tenant has no members").toBeGreaterThan(0);
 
-      record("organizations", "delete");
+      record("organizations.delete");
       const { error: orgDelete } = await attacker.client.from("organizations").delete().eq("id", v.orgId);
       expect(orgDelete, "the row is invisible, so the DELETE matches nothing — a silent USING miss").toBeNull();
 
@@ -923,25 +951,26 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       ).toBe((casesBefore ?? []).length);
 
       // ---- organization_memberships: INSERT, UPDATE (role, status), DELETE -------------
-      record("organization_memberships", "insert");
+      record("organization_memberships.insert");
       const { error: memberInsert } = await attacker.client
         .from("organization_memberships")
         .insert({ organization_id: v.orgId, user_id: attacker.id, role: "owner" });
       expect(memberInsert?.code, "planting a membership in another tenant must be rejected").toBe("42501");
 
-      record("organization_memberships", "update");
       // Promotion and suspension: the two ways to take a tenant over from inside its roster.
+      record("organization_memberships.update(role)");
       await attacker.client
         .from("organization_memberships")
         .update({ role: "owner" })
         .eq("organization_id", v.orgId)
         .eq("user_id", actor(v.member).id);
+      record("organization_memberships.update(status)");
       await attacker.client
         .from("organization_memberships")
         .update({ status: "inactive" })
         .eq("organization_id", v.orgId);
 
-      record("organization_memberships", "delete");
+      record("organization_memberships.delete");
       const { error: memberDelete } = await attacker.client
         .from("organization_memberships")
         .delete()
@@ -958,13 +987,12 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       ).toEqual([...(membersBefore ?? [])].sort((a, b) => a.user_id.localeCompare(b.user_id)));
 
       // ---- cases: INSERT, UPDATE (including the tenant-move), DELETE -------------------
-      record("cases", "insert");
+      record("cases.insert");
       const { error: caseInsert } = await attacker.client
         .from("cases")
         .insert({ organization_id: v.orgId, display_name: "planted" });
       expect(caseInsert?.code).toBe("42501");
 
-      record("cases", "update");
       const ownCase = which === "orgB" ? caseId("orgAssignedA") : caseId("orgAssignedB");
       const ownOrg = which === "orgB" ? fixture.orgA : fixture.orgB;
       // Moving one of the attacker's OWN cases into the victim tenant — the tenant-escape
@@ -979,25 +1007,42 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
         (await read("tenant-move read-back", fixture.admin.from("cases").select("organization_id").eq("id", ownCase).single()))
           ?.organization_id,
       ).toBe(ownOrg);
-      // And an ordinary edit of the victim's case: invisible row, so nothing matches.
+      // And an ordinary edit of the victim's case: invisible row, so nothing matches. EVERY
+      // granted column, one statement each — `email` is here because the round-2 completeness
+      // guard was verb-granular and never noticed it was granted and unprobed. It is the column
+      // that will carry a real student's address from Stage 3 on.
+      const victimColumns = "display_name, email, operational_status, archived_at";
       const victimCaseBefore = await read(
         "victim case read",
-        fixture.admin.from("cases").select("display_name, operational_status, archived_at").eq("id", caseId(v.linkedCase)).single(),
+        fixture.admin.from("cases").select(victimColumns).eq("id", caseId(v.linkedCase)).single(),
       );
+      record("cases.update(display_name)");
       await attacker.client
         .from("cases")
-        .update({ display_name: `seized ${fixture.stamp}`, operational_status: "closed" })
+        .update({ display_name: `seized ${fixture.stamp}` })
+        .eq("id", caseId(v.linkedCase));
+      record("cases.update(email)");
+      await attacker.client
+        .from("cases")
+        .update({ email: `seized-${fixture.stamp}@example.test` })
+        .eq("id", caseId(v.linkedCase));
+      record("cases.update(operational_status)");
+      await attacker.client.from("cases").update({ operational_status: "closed" }).eq("id", caseId(v.linkedCase));
+      record("cases.update(archived_at)");
+      await attacker.client
+        .from("cases")
+        .update({ archived_at: new Date().toISOString() })
         .eq("id", caseId(v.linkedCase));
 
-      record("cases", "delete");
+      record("cases.delete");
       const { error: caseDelete } = await attacker.client.from("cases").delete().eq("id", caseId(v.linkedCase));
       expect(caseDelete).toBeNull();
       expect(
         await read(
           "victim case read-back",
-          fixture.admin.from("cases").select("display_name, operational_status, archived_at").eq("id", caseId(v.linkedCase)).maybeSingle(),
+          fixture.admin.from("cases").select(victimColumns).eq("id", caseId(v.linkedCase)).maybeSingle(),
         ),
-        "the victim's case survives untouched",
+        "the victim's case survives untouched, on every granted column",
       ).toEqual(victimCaseBefore);
 
       // ---- case_assignments: INSERT and DELETE -----------------------------------------
@@ -1007,7 +1052,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       );
       expect((rosterBefore ?? []).length, "HARNESS DEFECT: the victim's case has no assignment to steal").toBe(1);
 
-      record("case_assignments", "insert");
+      record("case_assignments.insert");
       // Handing the attacker's own staff a case in the victim tenant.
       const { error: assignInsert } = await attacker.client.from("case_assignments").insert({
         case_id: caseId(v.unassignedCase),
@@ -1016,7 +1061,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       });
       expect(assignInsert?.code).toBe("42501");
 
-      record("case_assignments", "delete");
+      record("case_assignments.delete");
       // Taking the victim's counsellor OFF their own case — denial of service rather than
       // exfiltration, and just as much a tenant breach.
       const { error: assignDelete } = await attacker.client
@@ -1033,7 +1078,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       ).toEqual(rosterBefore);
 
       // ---- invitations: INSERT (both shapes) and UPDATE (revoked_at) -------------------
-      record("invitations", "insert");
+      record("invitations.insert");
       const plantedTeam = `mv153-planted-team-${attackerKey}-${fixture.stamp}`;
       const { error: teamInvite } = await attacker.client.from("invitations").insert({
         organization_id: v.orgId,
@@ -1062,7 +1107,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
         "no planted invitation may exist",
       ).toBe(0);
 
-      record("invitations", "update");
+      record("invitations.update(revoked_at)");
       // `revoked_at` is the acceptance kill switch: an attacker who could set it across the
       // boundary could not read the token, but could stop the victim's staff and students from
       // ever joining. It is the only column of `invitations` in the UPDATE grant.
@@ -1086,20 +1131,20 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       }
 
       // ---- audit_events: no client write grant exists at all ---------------------------
-      record("audit_events", "insert");
+      record("audit_events.insert");
       const { error: auditInsert } = await attacker.client
         .from("audit_events")
         .insert({ action: "forged.entry", organization_id: v.orgId } as never);
       expect(auditInsert?.code, "forging an entry in another tenant's security log").toBe("42501");
 
-      record("audit_events", "update");
+      record("audit_events.update");
       const { error: auditUpdate } = await attacker.client
         .from("audit_events")
         .update({ action: "tampered" })
         .eq("id", v.auditEvent);
       expect(auditUpdate?.code).toBe("42501");
 
-      record("audit_events", "delete");
+      record("audit_events.delete");
       const { error: auditDelete } = await attacker.client.from("audit_events").delete().eq("id", v.auditEvent);
       expect(auditDelete?.code).toBe("42501");
 
@@ -1161,20 +1206,215 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       await fixture.admin.from("organizations").delete().eq("id", revoked);
     });
 
-    it("attempted every write verb the reviewed grant set actually hands `authenticated`", () => {
-      // `toEqual`, not "contains": an entry here with no grant behind it is as much a defect as
-      // a grant with no entry — it would mean the catalogue is asserting a verb nobody holds.
-      const required = [
-        ...TENANCY_TABLES.flatMap((table) => GRANTED_WRITE_VERBS[table].map((verb) => `${table}.${verb}`)),
-        // audit_events carries no write grant at all; the refusal IS the boundary, so all three
-        // verbs are attempted anyway and listed here explicitly.
-        "audit_events.insert",
-        "audit_events.update",
-        "audit_events.delete",
-      ].sort();
-      expect([...attempted].sort(), "every granted write verb must be asserted across the tenant boundary").toEqual(
-        required,
-      );
+    // -------------------------------------------------------------------------------
+    // `organization_memberships` UPDATE and DELETE are the SAME blind spot `organizations`
+    // DELETE was, and round 2 recorded them as covered without applying the remedy it had just
+    // built for the other one. Every client-issued membership write in all three suites is
+    // either (a) a cross-tenant attacker, who holds no membership in the victim org, or (b) a
+    // REVOKED member on their own row. Widen `organization_memberships_update_admin` /
+    // `_delete_admin` from `actor_admin_org_ids()` to `actor_org_ids()` and neither notices:
+    // (a) is still excluded by having no membership there at all, (b) still by the status
+    // filter. An ordinary ACTIVE counsellor acquiring the power to delete the owner's row was
+    // invisible to the exit gate.
+    //
+    // Disposable orgs again, for the same reason as tenant destruction: a genuine failure here
+    // rewrites or empties a roster, and doing that to org A would take the rest of the suite
+    // down with it.
+    it("holds the roster shut against an active, in-tenant, non-admin member", async () => {
+      const prober = actor("rosterProber");
+      const org = await fixture.seedDisposableOrg("roster-counsellor", [
+        { userId: prober.id, role: "counsellor" },
+        { userId: actor("rosterOwner").id, role: "owner" },
+        { userId: actor("spare").id, role: "counsellor" },
+      ]);
+      const roster = async () =>
+        [
+          ...((
+            await read(
+              "disposable roster read",
+              fixture.admin
+                .from("organization_memberships")
+                .select("user_id, role, status")
+                .eq("organization_id", org),
+            )
+          ) ?? []),
+        ].sort((a, b) => a.user_id.localeCompare(b.user_id));
+
+      const before = await roster();
+      expect(before.length, "HARNESS DEFECT: the disposable roster did not seed").toBe(3);
+
+      // Denied, not absent: `organization_memberships_select_member` shows any active member
+      // the whole roster, so every refusal below is a refusal of a row they can plainly see.
+      const { data: visible } = await prober.client
+        .from("organization_memberships")
+        .select("user_id")
+        .eq("organization_id", org);
+      expect((visible ?? []).length, "an active member reads the roster — the writes are what is shut").toBe(3);
+
+      const asProber = () => prober.client.from("organization_memberships");
+      // Promote themselves to admin, then to owner.
+      await asProber().update({ role: "admin" }).eq("organization_id", org).eq("user_id", prober.id);
+      await asProber().update({ role: "owner" }).eq("organization_id", org).eq("user_id", prober.id);
+      // Suspend the owner, then demote them.
+      await asProber().update({ status: "inactive" }).eq("organization_id", org).eq("user_id", actor("rosterOwner").id);
+      await asProber().update({ role: "counsellor" }).eq("organization_id", org).eq("user_id", actor("rosterOwner").id);
+      // Evict the owner, then a colleague, then everyone.
+      const { error: evictOwner } = await asProber()
+        .delete()
+        .eq("organization_id", org)
+        .eq("user_id", actor("rosterOwner").id);
+      expect(evictOwner, "an invisible-to-DELETE row is a silent USING miss, not an error").toBeNull();
+      await asProber().delete().eq("organization_id", org).eq("user_id", actor("spare").id);
+      await asProber().delete().eq("organization_id", org);
+
+      expect(
+        await roster(),
+        "a counsellor rewrote or emptied their organization's roster — organization_memberships " +
+          "UPDATE/DELETE have been widened past actor_admin_org_ids()",
+      ).toEqual(before);
+
+      await fixture.admin.from("organizations").delete().eq("id", org);
+    });
+
+    it("lets an admin run the roster but never touch an OWNER row, and never mint themselves one", async () => {
+      const prober = actor("rosterProber");
+      const owner = actor("rosterOwner");
+      const member = actor("spare");
+      const org = await fixture.seedDisposableOrg("roster-admin", [
+        { userId: prober.id, role: "admin" },
+        { userId: owner.id, role: "owner" },
+        { userId: member.id, role: "counsellor" },
+      ]);
+      const rowOf = async (userId: string) =>
+        await read(
+          "disposable membership read",
+          fixture.admin
+            .from("organization_memberships")
+            .select("role, status")
+            .eq("organization_id", org)
+            .eq("user_id", userId)
+            .maybeSingle(),
+        );
+      const asProber = () => prober.client.from("organization_memberships");
+
+      // POSITIVE half first — without it every refusal below also passes when the verbs are
+      // unreachable for everybody, which is the failure mode the whole catalogue exists to
+      // separate from a real denial.
+      const { error: suspend } = await asProber()
+        .update({ status: "inactive" })
+        .eq("organization_id", org)
+        .eq("user_id", member.id);
+      expect(suspend, `an admin suspends a counsellor: ${suspend?.message}`).toBeNull();
+      expect(await rowOf(member.id)).toEqual({ role: "counsellor", status: "inactive" });
+
+      const { error: evict } = await asProber().delete().eq("organization_id", org).eq("user_id", member.id);
+      expect(evict, `an admin evicts a counsellor: ${evict?.message}`).toBeNull();
+      expect(await rowOf(member.id), "the admin's delete really removed the row").toBeNull();
+
+      // NEGATIVE — the owner carve-out on UPDATE. `case-rls.itest.ts`'s test named "lets only an
+      // owner mint or change an owner membership" contains two INSERTs and no UPDATE, so the
+      // `role <> 'owner'` clause in `organization_memberships_update_admin` (migration
+      // 20260730180000 lines 373-383) was asserted for INSERT only. Here it is, for UPDATE.
+      const ownerBefore = await rowOf(owner.id);
+      expect(ownerBefore, "HARNESS DEFECT: the owner row is missing").toEqual({ role: "owner", status: "active" });
+
+      const { error: suspendOwner } = await asProber()
+        .update({ status: "inactive" })
+        .eq("organization_id", org)
+        .eq("user_id", owner.id);
+      expect(suspendOwner, "the USING clause hides the owner row, so this is a silent miss").toBeNull();
+      const { error: demoteOwner } = await asProber()
+        .update({ role: "counsellor" })
+        .eq("organization_id", org)
+        .eq("user_id", owner.id);
+      expect(demoteOwner).toBeNull();
+      expect(await rowOf(owner.id), "an admin suspended or demoted the owner").toEqual(ownerBefore);
+
+      // NEGATIVE — the WITH CHECK half: the row they are allowed to touch is their own, and the
+      // value they may not write into it is `owner`. This is the escalation `case-rls` closes
+      // for INSERT (mint an owner membership) arriving by the other door (promote yourself).
+      const { error: selfPromote } = await asProber()
+        .update({ role: "owner" })
+        .eq("organization_id", org)
+        .eq("user_id", prober.id);
+      expect(selfPromote?.code, "an admin must not promote themselves to owner").toBe("42501");
+      expect(await rowOf(prober.id)).toEqual({ role: "admin", status: "active" });
+
+      // NEGATIVE — the carve-out on DELETE.
+      const { error: evictOwner } = await asProber().delete().eq("organization_id", org).eq("user_id", owner.id);
+      expect(evictOwner).toBeNull();
+      expect(await rowOf(owner.id), "an admin evicted the owner").toEqual(ownerBefore);
+
+      await fixture.admin.from("organizations").delete().eq("id", org);
+    });
+
+    it("lets the OWNER do everything the admin could not — so none of the above is 'nobody can'", async () => {
+      const prober = actor("rosterProber");
+      const other = actor("rosterOwner");
+      const member = actor("spare");
+      const org = await fixture.seedDisposableOrg("roster-owner", [
+        { userId: prober.id, role: "owner" },
+        { userId: other.id, role: "owner" },
+        { userId: member.id, role: "counsellor" },
+      ]);
+      const rowOf = async (userId: string) =>
+        await read(
+          "disposable membership read",
+          fixture.admin
+            .from("organization_memberships")
+            .select("role, status")
+            .eq("organization_id", org)
+            .eq("user_id", userId)
+            .maybeSingle(),
+        );
+      const asProber = () => prober.client.from("organization_memberships");
+
+      const { error: promote } = await asProber()
+        .update({ role: "owner" })
+        .eq("organization_id", org)
+        .eq("user_id", member.id);
+      expect(promote, `an owner may promote to owner — the WITH CHECK half: ${promote?.message}`).toBeNull();
+      expect(await rowOf(member.id)).toEqual({ role: "owner", status: "active" });
+
+      const { error: suspend } = await asProber()
+        .update({ status: "inactive" })
+        .eq("organization_id", org)
+        .eq("user_id", other.id);
+      expect(suspend, `an owner may suspend another owner — the USING half: ${suspend?.message}`).toBeNull();
+      expect(await rowOf(other.id)).toEqual({ role: "owner", status: "inactive" });
+
+      const { error: evict } = await asProber().delete().eq("organization_id", org).eq("user_id", other.id);
+      expect(evict, `an owner may evict another owner: ${evict?.message}`).toBeNull();
+      expect(await rowOf(other.id), "the owner's delete really removed the row").toBeNull();
+
+      await fixture.admin.from("organizations").delete().eq("id", org);
+    });
+
+    it("attempted every write verb the LIVE GRANT SET actually hands `authenticated`", () => {
+      // Round 2 claimed this was self-policing when it was not: the "granted" side was a
+      // hand-written literal in the same file as the probes, so a new grant in the migration
+      // moved neither side of the comparison. It is now read out of `information_schema` at
+      // run time — add `grant update (status) on public.cases` and this test fails until
+      // somebody probes it.
+      //
+      // Column-granular for UPDATE, because the grants are: a verb-level guard was blind to
+      // `cases.email` being granted and probed by nothing.
+      //
+      // `toEqual`, not "contains", in both directions: a probe for a verb nobody holds is as
+      // much a defect as a grant with no probe — it would mean the catalogue is asserting a
+      // boundary that does not exist.
+      const granted = readGrantedWriteSurface();
+      expect(granted.length, "HARNESS DEFECT: the grant catalogue query returned nothing").toBeGreaterThan(0);
+
+      const ungranted = readUngrantedWriteTables();
+      // Tables with no write grant at all: the refusal is the absence of the grant rather than
+      // a policy, so all three verbs are attempted anyway.
+      const required = [...granted, ...ungranted.flatMap((t) => [`${t}.insert`, `${t}.update`, `${t}.delete`])].sort();
+
+      expect(
+        [...attempted].sort(),
+        "every write verb `authenticated` holds must be asserted across the tenant boundary",
+      ).toEqual(required);
     });
   });
 
@@ -1626,8 +1866,10 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       // token is signed. Take a real session, repoint `sub` at org A's owner, keep the
       // original signature — a valid-looking token that must not authenticate.
       //
-      // Built through `fixture.rlsClient`, not a bare `createClient`, so the harness self-check
-      // covers this client too — see "keeps client construction centralised".
+      // Built through `fixture.rlsClient`, not a bare `createClient`, so it is REGISTERED —
+      // which is not the same as asserted. The opening self-check had already run by the time
+      // this line executes, so the check that actually covers this client is the closing
+      // self-check at the foot of the file, which re-runs the property over the full registry.
       const forged = tamperJwtSubject(actor("outsider").accessToken, actor("ownerA").id);
       const client = fixture.rlsClient("tampered-sub", forged);
       const { data, error } = await client.from("cases").select("id");
@@ -1706,6 +1948,30 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
         status: "inactive",
         role: "counsellor",
       });
+    });
+  });
+
+  // ===================================================================================
+  // Last, because it is the only point at which the registry is complete. The opening
+  // self-check runs before any test body, so a client a single test builds for itself — the
+  // tampered-JWT attacker — is registered after it and was NOT covered by it, whatever the
+  // comment there used to claim. Recording a client is not asserting anything about it.
+  describe("harness self-check, closing: every client the suite issued, including late ones", () => {
+    it("still finds no BYPASSRLS client after every test has built the ones it needed", async () => {
+      const everySeededCase = CASE_KEYS.map(caseId).sort();
+
+      // The registry must have GROWN — otherwise this test is re-checking the same clients the
+      // opening one did and the late-registration hole is still open, just differently.
+      expect(
+        fixture.issuedClients.length,
+        "a test built a client outside the factory, or the forgery test stopped registering its own",
+      ).toBeGreaterThan(ACTOR_KEYS.length);
+      expect(
+        fixture.issuedClients.map((c) => c.label),
+        "the tampered-JWT client must be in the registry by now",
+      ).toContain("tampered-sub");
+
+      expect(await assertNoClientBypassesRls(everySeededCase), "at least one client must see rows").toBeGreaterThan(0);
     });
   });
 });

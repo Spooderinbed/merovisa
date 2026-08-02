@@ -33,16 +33,17 @@
  *     attempt the write, read the row back through the service role, and put it back. Delete
  *     and insert probes work on clones so a cell that unexpectedly ALLOWS cannot destroy the
  *     fixture the remaining cells depend on — and `cloneCase` copies `organization_id`,
- *     `student_user_id` AND the assignment roster, so the clone is indistinguishable from its
- *     source under every predicate those verbs could read (see the comment on `cloneCase`:
- *     round 1 dropped the student link, which made a whole family of cells assert something
- *     other than their own name).
+ *     `student_user_id` AND the assignment roster, which is every fact a delete-path or
+ *     assign-path predicate reads (see the comment on `cloneCase` for why `archived_at` and
+ *     `operational_status` cannot matter there, and for the round-1 defect: dropping the
+ *     student link made a whole family of cells assert something other than their own name).
  *
  * The localhost hard-guard from `anon-purge.itest.ts` is reproduced as `assertLocalStack`:
  * this factory mints ~19 auth users, writes across all six tenancy tables, flips memberships
  * to inactive, and cascade-deletes organizations. Pointed at a real project by a stale
  * `SUPABASE_TEST_URL` it would destroy consultancy records.
  */
+import { execFileSync } from "node:child_process";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -60,29 +61,87 @@ export type TenancyTable = (typeof TENANCY_TABLES)[number];
 export type WriteVerb = "insert" | "update" | "delete";
 
 /**
- * The write verbs `authenticated` ACTUALLY HOLDS, transcribed from the reviewed grant set in
- * `20260730180000_case_aware_rls_policies.sql` §9 — `grant select, delete on organizations`,
- * `grant select, insert, delete on organization_memberships`, the same on `case_assignments`,
- * `grant update (revoked_at) on invitations`, and so on.
- *
- * It lives here, next to the table list, because the card's criterion is "verified across all
- * six tenant tables" and round 1 met that for READS only: the single cross-org write test
- * covered seven verbs and silently omitted five, including `organizations` DELETE — total
- * tenant destruction, cascading every case, membership, assignment and invitation. The
- * cross-org catalogue in the suite records each verb it attempts and asserts the recorded set
- * EQUALS this one, so adding a grant without adding an assertion fails a test instead of
- * quietly widening the surface.
+ * Run SQL as `postgres` inside the stack's DB container. Same idiom as `case-rls.itest.ts`, and
+ * deliberately so: `information_schema` is not an exposed PostgREST schema, so a catalogue
+ * question cannot be asked through supabase-js at all.
  */
-export const GRANTED_WRITE_VERBS: Record<TenancyTable, readonly WriteVerb[]> = {
-  organizations: ["update", "delete"],
-  organization_memberships: ["insert", "update", "delete"],
-  cases: ["insert", "update", "delete"],
-  case_assignments: ["insert", "delete"],
-  invitations: ["insert", "update"],
-  // No write grant of any kind: `grant select on public.audit_events to authenticated`. The
-  // refusal is the boundary, so the catalogue asserts all three verbs anyway.
-  audit_events: [],
+const resolveDbContainer = (): string => {
+  if (process.env.SUPABASE_TEST_DB_CONTAINER) return process.env.SUPABASE_TEST_DB_CONTAINER;
+  const [first] = execFileSync("docker", ["ps", "--filter", "name=supabase_db_", "--format", "{{.Names}}"], {
+    encoding: "utf8",
+  })
+    .split("\n")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (first === undefined) {
+    throw new Error(
+      "no running supabase_db_* container found. Start the stack with `npx supabase start`, " +
+        "or set SUPABASE_TEST_DB_CONTAINER.",
+    );
+  }
+  return first;
 };
+
+const sqlLines = (statement: string): string[] =>
+  execFileSync(
+    "docker",
+    ["exec", "-i", resolveDbContainer(), "psql", "-U", "postgres", "-d", "postgres", "-tAX", "-c", statement],
+    { encoding: "utf8" },
+  )
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+/**
+ * THE WRITE SURFACE `authenticated` ACTUALLY HOLDS, read out of the LIVE DATABASE.
+ *
+ * This was a hand-written literal in round 2, and the claim built on it — "adding a grant
+ * without adding an assertion fails a test" — was false: the literal and the probes lived in
+ * the same file, and the completeness test compared the literal only to the probes' own
+ * records. Add a grant to the migration and both sides of the comparison stayed untouched and
+ * green. That is the second time a load-bearing claim on this card overstated what an artifact
+ * proved, so the mechanism is now real rather than the prose softened.
+ *
+ * Two granularities, because the grants have two granularities and a verb-level guard would be
+ * blind to a column being added to an existing verb (`cases.email` was exactly that: granted,
+ * and probed by nothing):
+ *
+ *  - INSERT and DELETE are table-level, from `role_table_grants`.
+ *  - UPDATE is read from `column_privileges`, which is column-exact. Note it also EXPANDS a
+ *    table-level grant into one row per column — so if someone ever writes
+ *    `grant update on public.cases`, this returns every column of `cases` and the completeness
+ *    test demands a probe for each. Loud, and correct: that grant would be a serious change.
+ *
+ * Keys: `table.insert`, `table.delete`, `table.update(column)`.
+ */
+export function readGrantedWriteSurface(): string[] {
+  const tables = TENANCY_TABLES.map((t) => `'${t}'`).join(",");
+  return sqlLines(`
+    select table_name || '.' || lower(privilege_type)
+      from information_schema.role_table_grants
+     where table_schema = 'public' and grantee = 'authenticated'
+       and privilege_type in ('INSERT', 'DELETE')
+       and table_name in (${tables})
+    union
+    select table_name || '.update(' || column_name || ')'
+      from information_schema.column_privileges
+     where table_schema = 'public' and grantee = 'authenticated'
+       and privilege_type = 'UPDATE'
+       and table_name in (${tables})
+    order by 1;
+  `);
+}
+
+/**
+ * Tables holding NO write grant at all. The refusal is the boundary rather than a policy, so
+ * the catalogue attempts all three verbs against them anyway. Derived too — a table that
+ * acquires a write grant drops out of this list and appears in the one above, and the
+ * completeness test fails either way until somebody says what the new probe is.
+ */
+export function readUngrantedWriteTables(): TenancyTable[] {
+  const granted = new Set(readGrantedWriteSurface().map((key) => key.split(".")[0]));
+  return TENANCY_TABLES.filter((table) => !granted.has(table));
+}
 
 const isLocalStack = (u: string | undefined): boolean => {
   if (!u) return false;
@@ -163,6 +222,16 @@ export const ACTOR_KEYS = [
   "outsider",
   "forger",
   "spare",
+  // Roster probers. `organization_memberships` UPDATE and DELETE are the same blind spot
+  // `organizations` DELETE was: every client-issued membership write in all three suites is
+  // either a cross-tenant attacker (who holds no membership in the victim org) or a REVOKED
+  // member on their own row — and `actor_org_ids()` excludes both. Widen
+  // `organization_memberships_update_admin`/`_delete_admin` from `actor_admin_org_ids()` to
+  // `actor_org_ids()` and nothing goes red unless an ACTIVE, in-tenant, non-admin member is
+  // holding the query. These two exist to be that member, and the owner row they act against.
+  // They hold no membership in org A or org B — only in the disposable orgs those tests seed.
+  "rosterProber",
+  "rosterOwner",
 ] as const;
 export type ActorKey = (typeof ACTOR_KEYS)[number];
 
@@ -674,8 +743,18 @@ export function createDbProbes(fixture: TenancyFixture) {
    * passed.
    *
    * The clone now carries every fact the delete/assign predicates could read —
-   * `organization_id`, `student_user_id`, and the assignment roster — so it is
-   * indistinguishable from its source under both the current policies and a widened one.
+   * `organization_id`, `student_user_id`, and the assignment roster.
+   *
+   * It does NOT carry `archived_at` or `operational_status`, and the earlier note claiming they
+   * were "unset on both" was wrong in the same loose way the original justification was. The
+   * accurate reason they cannot matter here is structural: the only thing in Stage 1 that reads
+   * either column for an authorization decision is `enforce_case_write_surface`, which is a
+   * BEFORE **UPDATE** trigger. It does not fire on `cases` DELETE, and it does not exist on
+   * `case_assignments` at all, so no predicate on the delete or assign path can observe them.
+   * (Whether a case is archived also does not appear in `cases_delete_admin`,
+   * `case_assignments_insert_admin` or `_delete_admin`.) Should a future policy start reading
+   * them — an "archived cases cannot be deleted" rule, say — this comment is the thing that
+   * has to change, and the clone must start copying them.
    *
    * `assignments: "drop"` exists for exactly one reason: `assignment_role` has a single legal
    * value and `case_assignments_primary_idx` is partial-unique on `case_id`, so a clone that
@@ -727,12 +806,24 @@ export function createDbProbes(fixture: TenancyFixture) {
     await admin.from("cases").delete().eq("id", caseId);
   };
 
-  /** An active counsellor inside the target case's organization — a legal assignee. */
-  const inOrgAssignee = (caseId: string): string => {
+  /**
+   * An active member of the target case's organization — a legal assignee — who is NEVER the
+   * actor doing the probing. "May this actor staff a case with somebody else" and "may this
+   * actor assign themselves" are different questions with different answers (`case-rls.itest.ts`
+   * owns the second), and round 2 conflated them for one actor: `counsellorUnassignedA` was
+   * handed their own id on the two org A cells they appear in.
+   */
+  const inOrgAssignee = (caseId: string, actorId: string): string => {
     const key = (Object.keys(fixture.cases) as CaseKey[]).find((k) => fixture.cases[k] === caseId);
     const org = key ? fixture.caseOrg[key] : null;
-    if (org === fixture.orgB) return fixture.actors.counsellorAssignedB.id;
-    return fixture.actors.counsellorUnassignedA.id;
+    if (org === fixture.orgB) {
+      return actorId === fixture.actors.counsellorAssignedB.id
+        ? fixture.actors.ownerB.id
+        : fixture.actors.counsellorAssignedB.id;
+    }
+    return actorId === fixture.actors.counsellorUnassignedA.id
+      ? fixture.actors.counsellorAssignedA.id
+      : fixture.actors.counsellorUnassignedA.id;
   };
 
   const orgOfCase = (caseId: string): string | null => {
@@ -832,7 +923,7 @@ export function createDbProbes(fixture: TenancyFixture) {
       const addTarget = await cloneCase(caseId, { assignments: "drop" });
       const { error: addError } = await actor.client.from("case_assignments").insert({
         case_id: addTarget,
-        user_id: inOrgAssignee(caseId),
+        user_id: inOrgAssignee(caseId, actor.id),
         assignment_role: "primary_counsellor",
       });
       const added =
@@ -847,11 +938,14 @@ export function createDbProbes(fixture: TenancyFixture) {
       );
       if (roster.length === 0) {
         // The source case has no roster, so the DELETE half would have nothing to aim at. Seed
-        // one for a legal in-tenant assignee — never the actor — so the question stays "may
-        // this actor take work off a case", not "may they resign".
+        // one for a legal in-tenant assignee — never the actor, per `inOrgAssignee` — so the
+        // question stays "may this actor take work off a case", not "may they resign".
+        // (When the source DOES have a roster it is copied verbatim, so the row in question may
+        // well be the actor's own. That is the sharper form of the same question, and is left
+        // exactly as the fixture has it.)
         const { error } = await admin.from("case_assignments").insert({
           case_id: dropTarget,
-          user_id: inOrgAssignee(caseId),
+          user_id: inOrgAssignee(caseId, actor.id),
           assignment_role: "primary_counsellor",
         });
         if (error) throw new Error(`could not seed a delete target on the clone: ${error.message}`);
