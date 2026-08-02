@@ -221,7 +221,7 @@ The REVOKE-FROM-PUBLIC discipline holds on **every definer helper**, as designed
 trigger functions retain the default PUBLIC EXECUTE, which is harmless because they are SECURITY
 INVOKER and raise outside a trigger context — but **any new definer function Stage 2 adds must be
 revoked**, and `private.mv155_backfill_personal_cases()` / `mv155_assert_case_backfill()` /
-MV-155 §H's UPSERT-seam definer trigger are all in that class.
+MV-155 §H's UPSERT-seam definer trigger (the one qualified `when (new.owner is not null)` — §4 rule 2) are all in that class.
 
 ### 2.6 RLS state and policies
 
@@ -352,6 +352,45 @@ never widens.
 - **S2** = in Stage 2 · **S3** = deferred to Stage 3 · **—** = never
 - A cell marked **S3 (grant)** is blocked by the absent `authenticated` grant, not by policy. See §7.
 
+**Three rules added 2026-08-02 that apply across every table below, recorded once here so nine cells do
+not each state them differently.**
+
+1. **The case-keyed uniqueness indexes are FULL, not partial.** MV-155 §E originally created each of
+   them with `where case_id is not null`. Postgres infers a **partial** unique index for `ON CONFLICT`
+   only when the statement supplies the index predicate, and PostgREST's `on_conflict=` emits a bare
+   column list — so every upsert MV-157 §F re-points would raise **42P10**, making that section
+   unexecutable and §4.4's stated dependency on it false. The predicate is therefore dropped: **NULLs
+   are distinct in a unique index**, so legacy `case_id`-null rows still cannot collide during the
+   nullable window, and a full unique on the same nullable columns *is* inferrable from a bare column
+   list. Confirmed empirically against this project's own Postgres in a rolled-back transaction, in
+   both directions. **Four of the indexes are `ON CONFLICT` arbiters and MUST be full** —
+   `profiles (case_id)`, `user_program_state (case_id, program_id)`, `documents (case_id, kind)`,
+   `document_status (case_id, kind)`. Two keep a predicate for a **domain** reason, not the nullable
+   window, and neither is an arbiter: `assessments UNIQUE (case_id) WHERE is_primary` and
+   `plan_items UNIQUE (case_id, kind) WHERE status = 'todo'`. The `assessments (case_id)` **lookup**
+   index also stays partial — it keeps anonymous rows out of the index and a lookup index is never an
+   arbiter.
+2. **MV-155 §H's UPSERT-seam definer trigger fires only `when (new.owner is not null)`.** With `owner`
+   set it derives `case_id` from that owner's personal case and **overwrites** any supplied value (the
+   re-pointing hazard stays closed). With `owner IS NULL` the row is consultancy-created, there is
+   nothing to derive from, the trigger does not fire, and the **statement-supplied `case_id` is
+   honoured** — bounded by MV-159's `WITH CHECK`, not by the trigger. Unqualified, the trigger's
+   overwrite hardening destroyed the only `case_id` an `owner IS NULL` row could carry, which made
+   MV-160 §D's counsellor-write proof (INSERT/UPDATE/DELETE on these two tables "each succeeding with
+   `owner IS NULL`") unsatisfiable by construction. Residual seam, no Stage 2 caller, recorded as a
+   Stage 3 input: a consultancy row written through an **upsert** must supply `case_id`, so its
+   `ON CONFLICT DO UPDATE SET` list needs `UPDATE(case_id)`, which Stage 2 does not grant — MV-160 §D
+   drives plain statements, and MV-157 keeps `case_id` out of both upsert payloads.
+3. **The policy lifecycle is two slices, not one.** Every *Policy form* row below describes what
+   **MV-159** creates, including the transitional `owner = (select auth.uid()) OR …` disjunct.
+   **MV-160 §D re-creates every one of those policies with the disjunct removed**, as step (d) of its
+   migration — after its `SET NOT NULL`s, which are what make the disjunct redundant — and only then
+   asserts that no predicate reads `owner`. Read each *Slice ownership* row's `policies → MV-159`
+   as `policies → MV-159, disjunct removal → MV-160 §D`. The removal is behaviour-preserving on
+   SELECT and UPDATE (a row's `case_id` provably resolves to the case whose `student_user_id` is its
+   `owner`, and `private.actor_case_ids()` reaches every such case) and **strictly tightening on
+   INSERT**, where it closes a cross-case insert the disjunct's first branch would have admitted.
+
 ---
 
 ### 4.1 `profiles`
@@ -362,7 +401,7 @@ never widens.
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; `owner` nullable; `profiles_owner_key` dropped |
 | **Owner/case invariant** | §3. Profile-per-case is the domain rule; profile-per-owner is its Stage-1 shadow. |
 | **Uniqueness before** | `UNIQUE (owner)` |
-| **Uniqueness after** | `UNIQUE (case_id) WHERE case_id IS NOT NULL` (MV-155 §E) → legacy dropped at MV-160 |
+| **Uniqueness after** | `UNIQUE (case_id)` — **full, not partial; an `onConflict` arbiter (`upsertProfile`)** (MV-155 §E; rule 1 above) → legacy dropped at MV-160 |
 | **Slice ownership** | `case_id` + index + backfill + grant rewrite → **MV-155**; `owner` nullable + `_ownership_axis_present` → **MV-156**; repositories + `onConflict` → **MV-157**; policies → **MV-159**; NOT NULL + drop `profiles_owner_key` → **MV-160** |
 | **Grants before** | `authenticated`: SELECT(all), UPDATE(all). No INSERT, no DELETE. |
 | **Grants after** | `authenticated`: SELECT(all), **UPDATE (sections, completeness)** — `case_id`, `owner`, `id`, `created_at`, `updated_at` all removed from the write surface. **No INSERT added in Stage 2.** |
@@ -383,8 +422,8 @@ never widens.
 | **Target Stage 2 shape** | `+ case_id uuid NULLABLE REFERENCES cases(id) ON DELETE RESTRICT` — **the one column that stays nullable at MV-160**, covered instead by `CHECK (case_id IS NOT NULL OR (owner IS NULL AND claimed_at IS NULL))` |
 | **Owner/case invariant** | §3, plus the anonymous carve-out: `owner IS NULL ⇒ case_id IS NULL`. A successful `SET NOT NULL` here means the anonymous rows were destroyed — treat as failure. |
 | **Uniqueness before** | `assessments_primary_idx UNIQUE (owner) WHERE is_primary` |
-| **Uniqueness after** | `+ UNIQUE (case_id) WHERE is_primary AND case_id IS NOT NULL` (MV-155 §E), **both** live until MV-160 — the MV-158 interlock (a partial unique treats NULLs as distinct; swapping early makes two primaries per case insertable) |
-| **Slice ownership** | MV-155 (`case_id`, partial index on `(case_id) WHERE case_id IS NOT NULL`, backfill, anonymous rows left case-less); MV-158 (claim writes `owner` + `case_id` + `claimed_at` in **one** statement); MV-159 (policies); MV-160 (CHECK, drop `assessments_primary_idx`) |
+| **Uniqueness after** | `+ UNIQUE (case_id) WHERE is_primary` — the `is_primary` predicate is the **domain** rule and stays; `AND case_id IS NOT NULL` is dropped (rule 1); not an `onConflict` arbiter (MV-155 §E), **both** live until MV-160 — the MV-158 interlock (a partial unique treats NULLs as distinct; swapping early makes two primaries per case insertable) |
+| **Slice ownership** | MV-155 (`case_id`, **lookup** index `(case_id) WHERE case_id IS NOT NULL` — partial by design, it keeps anonymous rows out and is never an `ON CONFLICT` arbiter — backfill, anonymous rows left case-less); MV-158 (claim writes `owner` + `case_id` + `claimed_at` in **one** statement); MV-159 (policies); MV-160 (CHECK, drop `assessments_primary_idx`) |
 | **Grants before** | `authenticated`: **SELECT only.** |
 | **Grants after** | **Unchanged — SELECT only.** MV-155 §H correctly excludes this table. |
 | **Role × verb** | SELECT: O/A/C/S = **S2** · anon = — · INSERT / UPDATE / DELETE: **S3 (grant)** for every role. Anonymous assessment creation, refresh, and claim are and remain **service-role**. |
@@ -404,7 +443,7 @@ never widens.
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; `owner` nullable |
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | `plan_items_kind_open_idx UNIQUE (owner, kind) WHERE status = 'todo'` (+ lookup `plan_items_open_idx (owner, created_at DESC) WHERE status='todo'`) |
-| **Uniqueness after** | `+ UNIQUE (case_id, kind) WHERE status='todo' AND case_id IS NOT NULL`, plus lookup `(case_id, created_at DESC) WHERE status='todo'` — MV-155 §E. Legacy dropped at MV-160. |
+| **Uniqueness after** | `+ UNIQUE (case_id, kind) WHERE status='todo'` — the `status` predicate is the **domain** rule and stays; `AND case_id IS NOT NULL` is dropped (rule 1); not an `onConflict` arbiter — plus lookup `(case_id, created_at DESC) WHERE status='todo'` — MV-155 §E. Legacy dropped at MV-160. |
 | **Slice ownership** | MV-155 (column, indexes, backfill, grant rewrite); MV-156 (`owner` nullable, `_ownership_axis_present`); MV-157 (repos); MV-159 (policies); MV-160 (NOT NULL, drop `plan_items_kind_open_idx`) |
 | **Grants before** | `authenticated`: SELECT(all), UPDATE(all). No INSERT, no DELETE. |
 | **Grants after** | `authenticated`: SELECT(all), **UPDATE (status, completed_at, started_at)**. `case_id`/`owner`/`kind`/`title` off the write surface. **No INSERT added in Stage 2.** |
@@ -425,15 +464,15 @@ never widens.
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; **surrogate `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`**; composite PK dropped; `owner` nullable |
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | PK `(owner, program_id)` |
-| **Uniqueness after** | `UNIQUE (case_id, program_id) WHERE case_id IS NOT NULL` (MV-155 §E) **+** MV-156's interim `UNIQUE (owner, program_id) WHERE owner IS NOT NULL`, which **must also be dropped at MV-160** (§9.4) |
-| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, UPSERT-seam definer trigger); **MV-156 (PK replacement — a PK column cannot be nullable; this is not an `alter column`)**; MV-157 (`onConflict` string move); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
+| **Uniqueness after** | `UNIQUE (case_id, program_id)` — **full, not partial; the `onConflict` arbiter for `upsertProgramState`, so it cannot be partial** (MV-155 §E; rule 1 above) **+** MV-156's interim `UNIQUE (owner, program_id) WHERE owner IS NOT NULL`, which **must also be dropped at MV-160** (§9.4) |
+| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the UPSERT-seam definer trigger **qualified `when (new.owner is not null)`** — rule 2 above); **MV-156 (PK replacement — a PK column cannot be nullable; this is not an `alter column`)**; MV-157 (`onConflict` string move); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), UPDATE(all), DELETE. |
 | **Grants after** | SELECT(all) · **INSERT (owner, program_id, status, notes, case_id)** · **UPDATE (status, notes)** · DELETE. `case_id` is **in** the INSERT list and **out** of the UPDATE list — the asymmetry in MV-155 §H, and it is deliberate: INSERT creates a row (bounded by `WITH CHECK`), UPDATE re-points one. |
 | **Role × verb** | SELECT / INSERT / UPDATE / DELETE: O/A/C/S = **S2** for all four · anon = — |
 | **Policy form** | Four policies, transitional disjunct, UPDATE with USING + WITH CHECK. This is one of only two tables where the assigned-counsellor **write** proof is expressible in Stage 2 (§7). |
-| **Service-role disposition** | **Leaves the list.** `app/api/shortlist/route.ts` flips to the authenticated client at MV-157 §G — sound, because the grant already exists. Depends on MV-155 §H's definer trigger deriving `case_id` from `owner`, because PostgREST compiles the upsert to `INSERT … ON CONFLICT DO UPDATE SET`, whose SET list would otherwise need `UPDATE(case_id)`. |
+| **Service-role disposition** | **Leaves the list.** `app/api/shortlist/route.ts` flips to the authenticated client at MV-157 §G — sound, because the grant already exists. Depends on MV-155 §H's definer trigger deriving `case_id` from `owner`, because PostgREST compiles the upsert to `INSERT … ON CONFLICT DO UPDATE SET`, whose SET list would otherwise need `UPDATE(case_id)` — so **MV-157 must keep `case_id` out of the `upsertProgramState` payload**; the conflict *target* may name it, the payload may not. The trigger fires only `when (new.owner is not null)` (rule 2), so the personal-case path is derived-and-overwritten while the consultancy path (`owner IS NULL`) supplies its own `case_id`, bounded by MV-159's `WITH CHECK`. Also depends on the `onConflict` arbiter being a **full** unique index (rule 1), or the upsert raises 42P10. |
 | **Storage path** | none |
-| **Rollback** | Drop `case_id`; drop the definer trigger; restore flat grants; restore the composite PK (requires no NULL owners — **this rollback expires when Stage 3 writes its first consultancy row**); restore the four `ups_*_own` policies. |
+| **Rollback** | Drop `case_id`; drop the definer trigger (and its `WHEN` clause with it); restore flat grants; restore the composite PK (requires no NULL owners — **this rollback expires when Stage 3 writes its first consultancy row**); restore the four `ups_*_own` policies. |
 | **Final Stage 2 state** | Surrogate PK, `case_id NOT NULL`, unique per `(case_id, program_id)`, no owner-keyed unique, `owner` retained. |
 
 ---
@@ -446,7 +485,7 @@ never widens.
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; `owner` nullable. **Nothing else.** The header/versions replacement is Stage 4. |
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | `documents_owner_kind_key UNIQUE (owner, kind)` |
-| **Uniqueness after** | `+ UNIQUE (case_id, kind) WHERE case_id IS NOT NULL`; legacy dropped at MV-160 |
+| **Uniqueness after** | `+ UNIQUE (case_id, kind)` — **full, not partial; the `onConflict` arbiter for `upsertDocument`** (rule 1 above); legacy dropped at MV-160 |
 | **Slice ownership** | MV-155 (column, index, backfill — **no grant change needed**); MV-156 (`owner` nullable); MV-157 (`upsertDocument` `onConflict`); MV-159 (policies, incl. the two `to`-clause fixes); MV-160 (NOT NULL, drop `documents_owner_kind_key`) |
 | **Grants before** | `authenticated`: SELECT(all), DELETE. **No INSERT, no UPDATE.** |
 | **Grants after** | **Unchanged — SELECT, DELETE.** MV-155 §H correctly excludes this table. |
@@ -467,13 +506,13 @@ never widens.
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; **surrogate `id uuid PRIMARY KEY`**; composite PK dropped; `owner` nullable |
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | PK `(owner, kind)` |
-| **Uniqueness after** | `UNIQUE (case_id, kind) WHERE case_id IS NOT NULL` **+** MV-156's interim `UNIQUE (owner, kind) WHERE owner IS NOT NULL`, which **must also be dropped at MV-160** (§9.4) |
-| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, definer trigger); **MV-156 (PK replacement)**; MV-157 (`setObtained` `onConflict`); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
+| **Uniqueness after** | `UNIQUE (case_id, kind)` — **full, not partial; the `onConflict` arbiter for `setObtained`** (rule 1 above) **+** MV-156's interim `UNIQUE (owner, kind) WHERE owner IS NOT NULL`, which **must also be dropped at MV-160** (§9.4) |
+| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the definer trigger **qualified `when (new.owner is not null)`** — rule 2 above); **MV-156 (PK replacement)**; MV-157 (`setObtained` `onConflict`); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), UPDATE(all), DELETE. |
 | **Grants after** | SELECT(all) · **INSERT (owner, kind, obtained, case_id)** · **UPDATE (obtained)** · DELETE |
 | **Role × verb** | SELECT / INSERT / UPDATE / DELETE: O/A/C/S = **S2** for all four · anon = — |
 | **Policy form** | Four policies, transitional disjunct, UPDATE with USING + WITH CHECK. Second of the two tables where the counsellor write proof is expressible in Stage 2 (§7). |
-| **Service-role disposition** | **Not on the list today** — `app/api/documents/status/route.ts` already uses `createSupabaseServerClient()`. Stays authenticated; depends on MV-155 §H's definer trigger for the same UPSERT reason as `user_program_state`. |
+| **Service-role disposition** | **Not on the list today** — `app/api/documents/status/route.ts` already uses `createSupabaseServerClient()`. Stays authenticated; depends on MV-155 §H's definer trigger — qualified `when (new.owner is not null)` (rule 2) — for the same UPSERT reason as `user_program_state`, and on the `(case_id, kind)` arbiter being **full** (rule 1). **MV-157 must keep `case_id` out of the `setObtained` payload.** |
 | **Storage path** | none |
 | **Rollback** | Drop `case_id`; drop the trigger; restore flat grants; restore composite PK; restore the four `ds_*_own` policies. **Trivially safe today — the table is empty.** |
 | **Final Stage 2 state** | Surrogate PK, `case_id NOT NULL`, unique per `(case_id, kind)`, no owner-keyed unique. |
@@ -488,7 +527,7 @@ never widens.
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; `owner` nullable; `+ UNIQUE (id, case_id)` as the new composite-FK target; legacy `UNIQUE (id, owner)` retained through the window, dropped at MV-160 |
 | **Owner/case invariant** | §3, **plus the chain invariant**: a child's `case_id` must equal its parent's. `MATCH SIMPLE` (verified, `confmatchtype='s'`) means a composite FK containing a NULL is satisfied **without any lookup** — so the case chain enforces nothing while `case_id` is nullable. MV-156's `check (owner is not null or case_id is not null)` plus the **retained owner chain** is what covers the window. |
 | **Uniqueness before** | `UNIQUE (id, owner)` · `UNIQUE (owner, assessment_id, program_id, rule_version)` |
-| **Uniqueness after** | `+ UNIQUE (id, case_id)` · `+ UNIQUE (case_id, assessment_id, program_id, rule_version) WHERE case_id IS NOT NULL`. **Both legacy uniques drop at MV-160 — including `program_predictions_owner_assessment_id_program_id_rule_ver_key`, which MV-160's drop list currently omits (§9.3).** |
+| **Uniqueness after** | `+ UNIQUE (id, case_id)` · `+ UNIQUE (case_id, assessment_id, program_id, rule_version)` (full — rule 1; predictions are insert-only, nothing upserts against it). **Both legacy uniques drop at MV-160 — including `program_predictions_owner_assessment_id_program_id_rule_ver_key`, which MV-160's drop list currently omits (§9.3).** |
 | **Slice ownership** | **MV-155** (column, index, backfill **through the narrowed trigger**, and the `case_id`-in-INSERT-list grant rewrite); MV-156 (`owner` nullable, `unique (id, case_id)`, `_ownership_axis_present`); MV-157 (repos); MV-159 (policies via `private.assessment_case_id()`); MV-160 (NOT NULL, drop compensating check, drop legacy chain, restore the unconditional trigger body) |
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), DELETE. **No UPDATE — and there must never be one.** |
 | **Grants after** | SELECT(all) · **INSERT (id, owner, assessment_id, program_id, verdict, rule_version, score_snapshot, supersedes_prediction_id, case_id)** · DELETE. **No UPDATE grant, ever.** |
@@ -855,7 +894,7 @@ MV-135's purge has run and cleared the anonymous population.
 
 ### 9.7 `[D]`/`[B]` Ownership of the six case-keyed uniqueness indexes is stated three different ways.
 
-- **MV-155 §E** creates all six/seven case-keyed partial uniques. Unambiguous.
+- **MV-155 §E** creates all six/seven case-keyed uniques — **FULL, not partial, as of 2026-08-02 (§4 rule 1)**; the two that keep a predicate keep it on a domain column (`is_primary`, `status = 'todo'`), never on `case_id is not null`. Unambiguous.
 - **MV-157 §F and Decision log** correctly defer to MV-155: *"section F stops shipping the six
   uniqueness indexes — MV-155 §E already does … Two migrations creating the same six indexes means one
   fails on apply or is a silent no-op."* MV-157 ships **no migration**.
@@ -930,8 +969,8 @@ schema.
 
 | # | Undo | Valid predecessor state (what must be true before this script runs) | Failure if run out of order |
 |---:|---|---|---|
-| **R1** | **MV-160** — re-widen `case_id` to nullable on the eight; drop the `assessments` CHECK; **re-create** the eight `_ownership_axis_present` checks; re-create `UNIQUE (id, owner)` ×3, then the two legacy composite FKs `(prediction_id, owner)` / `(attempt_id, owner)`, then `outcome_events_attempt_id_owner_idx`; re-create the four legacy owner uniques (`profiles_owner_key`, `assessments_primary_idx`, `plan_items_kind_open_idx`, `documents_owner_kind_key`) **and** the two from §9.4; restore the narrowed `reject_prediction_update()` body | Stage 2 fully applied. **Re-creating a `unique (id, owner)` requires no duplicate `(id, owner)` pairs and no NULL owners in those rows** — true only if Stage 3 has written nothing. | Re-create the FKs before their unique targets → `42830`. Re-widen `case_id` **without** re-creating `_ownership_axis_present` → the MATCH SIMPLE hole reopens **silently**; nothing complains. This is the one step whose misordering does not fail loudly. |
-| **R2** | **MV-159** — re-apply the previous policy set verbatim (the reverse migration MV-159 §"Reversibility" holds in its PR); drop the new `private` helpers (`actor_case_ids`, `assessment_case_id`, `prediction_case_id`, `attempt_case_id`) | R1 done. Policy-only, so exact and instant. | Dropping a helper while a policy still references it → `2BP01`. Drop policies **first**, helpers second. |
+| **R1** | **MV-160** — **FIRST, re-create MV-159's policy set with the transitional owner disjunct restored** (MV-160 §D removes it as step (d) of its apply, so the undo puts it back — and it must go back *before* the column is re-widened: a pure case predicate over re-widened nullable rows makes a case-less row invisible to its own owner, silently, for the length of the window); then re-widen `case_id` to nullable on the eight; drop the `assessments` CHECK; **re-create** the eight `_ownership_axis_present` checks; re-create `UNIQUE (id, owner)` ×3, then the two legacy composite FKs `(prediction_id, owner)` / `(attempt_id, owner)`, then `outcome_events_attempt_id_owner_idx`; re-create the four legacy owner uniques (`profiles_owner_key`, `assessments_primary_idx`, `plan_items_kind_open_idx`, `documents_owner_kind_key`) **and** the two from §9.4; restore the narrowed `reject_prediction_update()` body | Stage 2 fully applied. **Re-creating a `unique (id, owner)` requires no duplicate `(id, owner)` pairs and no NULL owners in those rows** — true only if Stage 3 has written nothing. | Re-create the FKs before their unique targets → `42830`. Re-widen `case_id` **without** re-creating `_ownership_axis_present` → the MATCH SIMPLE hole reopens **silently**; nothing complains. This is the one step whose misordering does not fail loudly. |
+| **R2** | **MV-159** — re-apply the **pre-Stage-2 (legacy owner)** policy set verbatim (the reverse migration MV-159 §"Reversibility" holds in its PR); drop the new `private` helpers (`actor_case_ids`, `assessment_case_id`, `prediction_case_id`, `attempt_case_id`) | R1 done. Policy-only, so exact and instant. | Dropping a helper while a policy still references it → `2BP01`. Drop policies **first**, helpers second. |
 | **R3** | **MV-158** — revert the claim path to the owner-only bind | R2 done. Any assessment claimed under the case model keeps a valid `owner`, so no data repair is needed — **this is only true because MV-158 binds `owner` and `case_id` in one statement**. If it ever regressed to two statements, R3 needs a repair pass for owned-but-case-less rows. | Reverting the code while MV-159's case-only policies are still live hides claimed assessments from their owners. |
 | **R4** | **MV-157** — revert repositories/routes to `.eq("owner", …)`; restore the service-role exception registry entries that flipped | R3 done, **and MV-159 reverted (R2) so the owner-only predicate still authorizes**. Code-only: MV-157 ships no migration. | Reverting repositories while MV-159's policies are live = every read returns 0 rows for a case-scoped actor. |
 | **R5** | **MV-156** — drop the two case-side composite FKs, then the three `UNIQUE (id, case_id)` targets, then their covering indexes; drop all eight `_ownership_axis_present` checks; restore the composite PKs on `user_program_state` / `document_status` and drop the surrogate `id` columns; `SET NOT NULL` on `owner` ×8 | R4 done. **`SET NOT NULL` on `owner` succeeds only while no NULL-owner row exists** — i.e. only before Stage 3's first consultancy row. **This is the stage's hard rollback expiry.** Restoring a composite PK requires no NULL owners and no duplicate `(owner, program_id)` / `(owner, kind)` pairs. | Drop the unique targets before their FKs → `2BP01`. `SET NOT NULL` with a consultancy row present → `23502`, and the only way forward is deleting consultancy data. |
@@ -1051,6 +1090,36 @@ D-A work item 1 is satisfied for the current schema.
 - **2026-08-02** — **D-A work item 1 discharged (§11)**, with three open items handed to owners:
   `profiles.sections` per-section provenance (Stage 3 blocker), a documents uploader marker (Stage 4),
   and the standing rule that any new table or Storage path adds a row to §11 in the same PR.
+- **2026-08-02** — **Three collisions BETWEEN the blocker fixes, found on a second pass and resolved
+  here as §4 rules 1-3.** Each was produced by one correct fix meeting another correct fix, which is why
+  none existed before the first pass and none was visible from a single card.
+  **(a) The UPSERT-seam definer trigger is qualified `when (new.owner is not null)`.** MV-155 §H
+  specified it to derive `case_id` from `owner` on every write and to *overwrite* any supplied value;
+  blocker 4's fix then narrowed MV-160 §D to require counsellor INSERT/UPDATE/DELETE on exactly those
+  two tables with `owner IS NULL`. An `owner IS NULL` row has nothing to derive from, and the overwrite
+  destroys the only value that could identify its case — the two criteria were mutually unsatisfiable.
+  Qualifying the trigger keeps the re-pointing hazard closed on the owner-set branch and moves the bound
+  on the owner-null branch to MV-159's `WITH CHECK`, which is the right layer for what is an
+  authorization question. Rejected alternative: re-narrow MV-160 §D to owner-set writes, which would
+  delete the one Stage 2 proof that a write path needs no Auth user — the property Stage 3 depends on.
+  Residual seam recorded rather than hidden: a consultancy row written through an **upsert** still needs
+  `UPDATE(case_id)`; no Stage 2 caller does that, and it joins §6's Stage 3 list.
+  **(b) The case-keyed uniques are FULL, not partial.** `where case_id is not null` makes an index
+  uninferrable by PostgREST's bare `on_conflict=`, so MV-157 §F's only remaining job — moving every
+  `onConflict` target onto them — would have raised **42P10** at runtime, and §4.4's stated dependency
+  on that path was false. Confirmed empirically in both directions against the project's own Postgres in
+  a rolled-back transaction. NULLs are distinct in a unique index, so dropping the predicate costs
+  nothing during the nullable window; the two indexes that keep a predicate keep it on a **domain**
+  column (`is_primary`, `status = 'todo'`) and neither is an arbiter.
+  **(c) MV-160 ships the policy rewrite that drops MV-159's transitional owner disjunct.** MV-159 stated
+  four times that the removal was MV-160's; MV-160 held no policy DDL anywhere, only an assertion that
+  no predicate reads `owner` — which would have gone red against MV-159's own correct output, with ~20
+  policies owned by nobody in executable form. It lands as step (d) of MV-160's migration, after the
+  `SET NOT NULL`s that make the disjunct redundant. Recorded alongside it: MV-159's transitional-window
+  test cannot survive those `SET NOT NULL`s **whatever** happens to the policies — the case-less fixture
+  becomes unseedable (`23502`) — so MV-160 §E's "MV-159's suites pass UNEDITED" was already false before
+  this change. It now carries one named exception: the deletion of a single isolated block that MV-159
+  is required to keep free of any matrix cell.
 - **2026-08-02** — Eleven dossier/board/reality contradictions recorded in §9, each with the required
   correction. Two would have produced a migration that cannot apply (§9.3 owner-keyed unique omitted
   from MV-160's drop list; §9.4 MV-156's replacement uniques unknown to MV-160), one would have sent
