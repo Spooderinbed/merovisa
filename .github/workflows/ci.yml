@@ -40,9 +40,10 @@ jobs:
   # anyway, which is the exact assurance-instead-of-evidence posture that card exists
   # to end. A red run here must now block.
   #
-  # Still to do OUTSIDE this file: mark `integration` a required check in branch
-  # protection. Removing the flag makes the workflow run fail; branch protection is
-  # what makes a failed run un-mergeable.
+  # The other half, OUTSIDE this file, is now done too: the "master protection"
+  # repository ruleset (active, no bypass) requires `integration` and `validate` as
+  # status checks, strict/up-to-date. Removing the flag makes the workflow run fail;
+  # the ruleset is what makes a failed run un-mergeable.
   integration:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -60,13 +61,19 @@ jobs:
       # full stack and applies every migration in supabase/migrations.
       - name: Start Supabase
         run: npx supabase start
-      # Export the local stack's URL + service-role key as the env vars the smoke
-      # reads. Source the emitted env file and handle both the new and legacy key
-      # names — including the unprefixed names newer `supabase status -o env`
-      # versions emit (e.g. API_URL, SERVICE_ROLE_KEY, SECRET_KEY) — so a CLI
-      # rename can't silently leave the vars unset. If every fallback still
+      # Export the local stack's URL + service-role key + ANON key as the env vars
+      # the smoke reads. Source the emitted env file and handle both the new and
+      # legacy key names — including the unprefixed names newer `supabase status
+      # -o env` versions emit (e.g. API_URL, SERVICE_ROLE_KEY, SECRET_KEY) — so a
+      # CLI rename can't silently leave the vars unset. If every fallback still
       # misses, fail fast with the names actually present instead of letting an
       # empty env limp downstream into the smoke step.
+      #
+      # The anon key is NOT optional (MV-153): the tenancy suites assert Row Level
+      # Security as the AUTHENTICATED user, which needs a client signed in with the
+      # publishable key + that user's JWT. The service-role key holds BYPASSRLS, so
+      # without the anon key those suites skip — and a skipped tenancy suite is a
+      # green CI run that proved nothing about cross-tenant isolation.
       - name: Export Supabase test env
         shell: bash
         run: |
@@ -76,9 +83,10 @@ jobs:
           set +a
           url="${SUPABASE_URL:-${SUPABASE_API_URL:-${API_URL:-}}}"
           key="${SUPABASE_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}}}"
-          if [ -z "$url" ] || [ -z "$key" ]; then
-            echo "::error::Export Supabase test env: could not map URL/key from" \
-              "'supabase status -o env' output — the CLI likely renamed its" \
+          anon="${SUPABASE_ANON_KEY:-${ANON_KEY:-${SUPABASE_PUBLISHABLE_KEY:-${PUBLISHABLE_KEY:-}}}}"
+          if [ -z "$url" ] || [ -z "$key" ] || [ -z "$anon" ]; then
+            echo "::error::Export Supabase test env: could not map URL/service-role/anon key" \
+              "from 'supabase status -o env' output — the CLI likely renamed its" \
               "variable names again. Names present in supabase.env (values omitted):"
             cut -d= -f1 supabase.env | sort
             exit 1
@@ -86,12 +94,33 @@ jobs:
           {
             echo "SUPABASE_TEST_URL=$url"
             echo "SUPABASE_TEST_SERVICE_ROLE_KEY=$key"
+            echo "SUPABASE_TEST_ANON_KEY=$anon"
           } >> "$GITHUB_ENV"
       # The smoke `skipIf`s when its env vars are absent, so a silent export
       # failure would green CI having tested nothing. Assert the vars are set, the
-      # stack answers, and that the run actually executed (>0 passed, 0 skipped).
+      # stack answers, and that the run actually executed.
       # NO_COLOR: the greps below parse the log, so vitest's ANSI color codes
       # must be off or the escape bytes break the pattern match.
+      #
+      # Both of the round-1 guards were INERT, reproduced against a real vitest
+      # 4.1.8 run rather than inferred:
+      #
+      #   * `! grep -Eq 'Tests[[:space:]]+[1-9][0-9]* skipped'` only fired at a 100%
+      #     skip. Vitest emits ONE combined counter line —
+      #     `Tests  7 passed | 517 skipped (524)` — so the digits straight after
+      #     `Tests` are the PASS count and ` skipped` never follows them. A run that
+      #     skipped the entire tenancy matrix while the other itests passed matched
+      #     nothing, and CI stayed green.
+      #   * `grep -q 'tests/integration/tenant-isolation.itest.ts'` matched a fully
+      #     SKIPPED suite: the verbose reporter prints the full path on `↓` lines
+      #     too. It proved collection, not execution.
+      #
+      # Both are replaced by assertions that FAIL CLOSED. The counter checks are
+      # positive — the summary line must have the shape "N passed (N)" and nothing
+      # else — so a renamed counter, an added `skipped`/`todo`/`failed` column, or a
+      # reporter format change all go red instead of silently matching nothing. The
+      # execution checks are anchored on `✓`, which the reporter prints only for a
+      # test that actually ran and passed.
       - name: Run integration smoke
         shell: bash
         env:
@@ -99,11 +128,29 @@ jobs:
         run: |
           test -n "$SUPABASE_TEST_URL"
           test -n "$SUPABASE_TEST_SERVICE_ROLE_KEY"
+          # MV-153: asserted alongside the other two, because a missing anon key
+          # skips the tenancy matrix rather than failing it.
+          test -n "$SUPABASE_TEST_ANON_KEY"
           curl -fsS "$SUPABASE_TEST_URL/rest/v1/" \
             -H "apikey: $SUPABASE_TEST_SERVICE_ROLE_KEY" >/dev/null
           npm run test:integration -- --reporter=verbose | tee vitest-integration.log
-          grep -Eq 'Tests[[:space:]]+[1-9][0-9]* passed' vitest-integration.log
-          ! grep -Eq 'Tests[[:space:]]+[1-9][0-9]* skipped' vitest-integration.log
+          # Something ran at all.
+          grep -Eq '^[[:space:]]+Tests[[:space:]]+[1-9][0-9]* passed' vitest-integration.log
+          # ...and the summary reports passes and NOTHING else. `Tests  N passed (N)`
+          # is the only accepted shape, at test and at file granularity.
+          grep -Eq '^[[:space:]]+Tests[[:space:]]+[1-9][0-9]* passed \([0-9]+\)[[:space:]]*$' \
+            vitest-integration.log
+          grep -Eq '^[[:space:]]+Test Files[[:space:]]+[1-9][0-9]* passed \([0-9]+\)[[:space:]]*$' \
+            vitest-integration.log
+          # The Stage 1 exit gate must have EXECUTED. `✓ <path>` is printed per passing
+          # test; a skipped suite prints `↓ <path>` instead, so this cannot be satisfied
+          # by collection alone.
+          grep -q '✓ tests/integration/tenant-isolation.itest.ts' vitest-integration.log
+          grep -q '✓ tests/integration/case-rls.itest.ts' vitest-integration.log
+          # ...and it must still be the matrix. 425 cells/tests today; the floor catches
+          # the suite being gutted down to a token test that keeps the grep above happy.
+          # Raise it when the matrix grows; do not lower it without saying why.
+          test "$(grep -c '✓ tests/integration/tenant-isolation.itest.ts' vitest-integration.log)" -ge 400
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup
