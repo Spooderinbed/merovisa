@@ -5,11 +5,11 @@ vi.mock("server-only", () => ({}));
 const {
   getUser,
   checkRateLimit,
-  getDocumentByKind,
+  getDocumentByKindForCase,
   insertDocument,
   upsertDocument,
   deleteDocument,
-  patchProfileSection,
+  patchProfileSectionForCase,
   invalidatePlan,
   reScoreAssessment,
   storageUpload,
@@ -18,11 +18,11 @@ const {
 } = vi.hoisted(() => ({
   getUser: vi.fn(),
   checkRateLimit: vi.fn(),
-  getDocumentByKind: vi.fn(),
+  getDocumentByKindForCase: vi.fn(),
   insertDocument: vi.fn(),
   upsertDocument: vi.fn(),
   deleteDocument: vi.fn(),
-  patchProfileSection: vi.fn(),
+  patchProfileSectionForCase: vi.fn(),
   invalidatePlan: vi.fn(),
   reScoreAssessment: vi.fn(),
   storageUpload: vi.fn(),
@@ -39,12 +39,12 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 vi.mock("@/lib/documents/repo", () => ({
-  getDocumentByKind,
+  getDocumentByKindForCase,
   insertDocument,
   upsertDocument,
   deleteDocument,
 }));
-vi.mock("@/lib/profiles/repo", () => ({ patchProfileSection }));
+vi.mock("@/lib/profiles/repo", () => ({ patchProfileSectionForCase }));
 vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
 vi.mock("@/lib/assessments/re-score", () => ({ reScoreAssessment }));
 vi.mock("@/lib/rate-limit/upstash", () => ({ checkRateLimit }));
@@ -55,6 +55,22 @@ vi.mock("@/lib/documents/upload-validation", () => ({
   verifyFileMagic,
   extensionFor: () => "png",
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { POST } from "@/app/api/documents/upload/route";
 
@@ -75,10 +91,10 @@ describe("POST /api/documents/upload", () => {
     vi.clearAllMocks();
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     checkRateLimit.mockResolvedValue(true);
-    getDocumentByKind.mockResolvedValue(null);
+    getDocumentByKindForCase.mockResolvedValue(null);
     upsertDocument.mockResolvedValue("doc-1");
     verifyFileMagic.mockReturnValue(true);
-    patchProfileSection.mockResolvedValue(undefined);
+    patchProfileSectionForCase.mockResolvedValue(undefined);
     invalidatePlan.mockResolvedValue(undefined);
     storageUpload.mockResolvedValue({ error: null });
     storageRemove.mockResolvedValue({ error: null });
@@ -89,9 +105,9 @@ describe("POST /api/documents/upload", () => {
     expect(res.status).toBe(200);
 
     // The profile flag still flips — it drives the plan/checklist.
-    expect(patchProfileSection).toHaveBeenCalledWith(
+    expect(patchProfileSectionForCase).toHaveBeenCalledWith(
       expect.anything(),
-      "u1",
+      "case-1",
       "finance",
       { proofUploaded: true },
     );
@@ -104,9 +120,9 @@ describe("POST /api/documents/upload", () => {
   it("flips the english flag without re-scoring", async () => {
     const res = await POST(uploadReq("ielts"));
     expect(res.status).toBe(200);
-    expect(patchProfileSection).toHaveBeenCalledWith(
+    expect(patchProfileSectionForCase).toHaveBeenCalledWith(
       expect.anything(),
-      "u1",
+      "case-1",
       "english",
       { reportUploaded: true },
     );
@@ -117,7 +133,7 @@ describe("POST /api/documents/upload", () => {
   it("does not touch flags, plan, or re-score for a non-flag kind", async () => {
     const res = await POST(uploadReq("passport"));
     expect(res.status).toBe(200);
-    expect(patchProfileSection).not.toHaveBeenCalled();
+    expect(patchProfileSectionForCase).not.toHaveBeenCalled();
     expect(invalidatePlan).not.toHaveBeenCalled();
     expect(reScoreAssessment).not.toHaveBeenCalled();
   });
@@ -133,7 +149,7 @@ describe("POST /api/documents/upload", () => {
     // Orphaned object rolled back (upload succeeded, then remove on the new path).
     expect(storageRemove).toHaveBeenCalled();
     // No false flag-flip after a failed primary write.
-    expect(patchProfileSection).not.toHaveBeenCalled();
+    expect(patchProfileSectionForCase).not.toHaveBeenCalled();
   });
 
   // --- C-8: an upload that fails must never destroy the document it replaces ---
@@ -149,7 +165,7 @@ describe("POST /api/documents/upload", () => {
   };
 
   it("keeps the existing document when the replacement fails the magic-byte check", async () => {
-    getDocumentByKind.mockResolvedValue(EXISTING);
+    getDocumentByKindForCase.mockResolvedValue(EXISTING);
     verifyFileMagic.mockReturnValue(false); // a renamed HEIC — contents don't match
     const res = await POST(uploadReq("passport"));
     expect(res.status).toBe(422);
@@ -161,7 +177,7 @@ describe("POST /api/documents/upload", () => {
   });
 
   it("keeps the existing document when the replacement upload fails", async () => {
-    getDocumentByKind.mockResolvedValue(EXISTING);
+    getDocumentByKindForCase.mockResolvedValue(EXISTING);
     storageUpload.mockResolvedValue({ error: { message: "network" } });
     const res = await POST(uploadReq("passport"));
     expect(res.status).toBe(500);
@@ -171,7 +187,7 @@ describe("POST /api/documents/upload", () => {
   });
 
   it("rolls back only the new object, keeping the original, when the row upsert fails", async () => {
-    getDocumentByKind.mockResolvedValue(EXISTING);
+    getDocumentByKindForCase.mockResolvedValue(EXISTING);
     upsertDocument.mockResolvedValue(null);
     const res = await POST(uploadReq("passport"));
     expect(res.status).toBe(500);
@@ -182,7 +198,7 @@ describe("POST /api/documents/upload", () => {
   });
 
   it("uploads the replacement before removing the superseded object", async () => {
-    getDocumentByKind.mockResolvedValue(EXISTING);
+    getDocumentByKindForCase.mockResolvedValue(EXISTING);
     const res = await POST(uploadReq("passport"));
     expect(res.status).toBe(200);
     // On success the superseded object is cleaned up by its old path...

@@ -59,6 +59,10 @@ Each authorizes, then reads/writes by `case_id`:
 - [ ] **Writes:** `case_id` is written **always**; `owner` is written **only when the case has a `student_user_id`**. Consultancy-created rows (no student user) carry `case_id` with `owner` NULL — possible only once MV-156 lands, which is why MV-156 is a hard blocker for the write half.
 - [ ] **Reads:** filter on `case_id` **only**. No migrated read retains an `owner` predicate — not "as a belt", not "for the index". A residual owner filter makes every case-scoping bug invisible until MV-159 (see Risk 1).
 - [ ] **`owner` is never a caller-supplied parameter next to `case_id`.** One internal writer helper derives it from the case row (`cases.student_user_id`) so a caller structurally cannot make the two disagree. A repo signature accepting both is rejected in review.
+  - **This was stated but not true, and it is now true — amended 2026-08-03 from review.** Four `owner:` write payloads lived outside the helper, all on `assessments`, and one of them — `claimAssessment(db, { id, userId, caseId, nowIso })` — took **both** axes as independent parameters, on the table where the divergence is worst (`assessments.case_id` is the one column that stays nullable at MV-160, and `owner IS NULL` is what MV-135's purge keys on). MV-160 §D is being designed around this guarantee, so it was made **true** rather than softened: `claimAssessment` now takes ONE `ownership` value produced by `caseBindColumns`; `/api/assess`'s signed-in insert and `app/api/dev/sign-in/route.ts` spread the same derived value. The disagreement is unrepresentable rather than untested.
+  - **The single remaining exception, characterised exactly.** `createAnonymousAssessment` writes the literal `owner: null` on a row with **no case at all** — the anonymous carve-out (spec §3, `owner IS NULL ⇒ case_id IS NULL`). There is no case id in scope to derive an owner from and therefore no pair that can diverge. It is the only `owner:` payload key left in `lib/` or `app/` outside the helper, and MV-160 §D's sweep should allow-list exactly it, by that reason.
+- [ ] **The residue leg — added 2026-08-03 from review.** Four write paths must TOLERATE an owner-keyed row that never received a `case_id` rather than 23505 on the still-live legacy uniques: profile save (`profiles_owner_key`), document upload (`documents_owner_kind_key`), the assessment persist's `is_primary` computation (`assessments_primary_idx` — the case-scoped lookup cannot see a legacy primary, so it computes `true` and collides), and `invalidatePlan`'s batch insert (`plan_items_kind_open_idx`, which additionally did not destructure its error, so the whole batch failed silently). Each adopts the residue onto the case and retries **once**, only on a 23505, so a fully-backfilled user pays nothing. The two UPSERT-seam tables are deliberately excluded: their routes run on the authenticated client, which Stage 2 grants no `UPDATE (case_id)`, and they are the two tables carrying MV-155 §H's derive trigger, so they cannot accumulate this residue.
+- [ ] **The owner-predicate scan covers every FORM of the predicate, not only `.eq` — added 2026-08-03 from review.** `.or("owner.eq.…")`, `.match({owner})`, `.filter("owner","eq",…)`, `.in("owner",…)`, `.neq`, and the indirect `.eq(OWNER_COL, …)` dodge all slipped past the original regex — **and this PR itself shipped one**: `lib/assessments/claim.ts`'s demote uses `.or("owner.eq.…,case_id.eq.…")`, which is CORRECT (it must satisfy both live primary indexes) but was invisible to the guard while the file was absent from an allow-list whose header called itself "complete". The scan is widened, `claim.ts` and `lib/cases/residue.ts` are allow-listed with their reasons, a self-test proves each form is detected, and the stale-exemption check now demands a live predicate rather than the mere word "owner".
 - [ ] **The dual-write DOES NOT STOP at MV-160, and that is a decision, not an omission.** MV-160's source sweep (`tests/architecture/no-actor-equals-student.test.ts`) flags any `owner:` key in an insert or upsert payload — which this card's writer helper deliberately writes on every personal-case row. It is resolved as an **explicit, justified allowlist of exactly one entry**: this writer helper, registered by path with the reason "deliberate Stage 2 dual-write; `owner` is derived from `cases.student_user_id`, never caller-supplied, and is retained as the provenance link that `app/api/account/delete` and MV-135's `owner is null` purge predicate both still read". Every **other** `owner:` payload site anywhere in `lib`/`app` fails the sweep. Removal of the dual-write is a **Stage 6** item, sequenced with dropping the `owner` columns themselves and after those two consumers are gone — not a tightening step MV-160 performs. Written on this card because this card creates the writes; asserted on MV-160 §D because that is where the detector lives.
 - [ ] **The owner/case agreement has NO live database enforcement during Stage 2.** MV-155 §F is explicit: the invariant is cross-table, no `CHECK` can express it, and a `NOT VALID` check was considered and rejected. What MV-155 ships is `private.mv155_assert_case_backfill()` — an assertion **function**, called by its migration and by tests. It is a detector, not a constraint: a mismatched write is **not** rejected at write time. The single writer helper that derives `owner` from `cases.student_user_id` (criterion above) is therefore the **only** guard until MV-160, and this card proves it holds by calling `private.mv155_assert_case_backfill()` at the end of **every** mutating integration test and asserting it returns clean.
 
@@ -90,11 +94,16 @@ Plan step 7 ("add case indexes and consistency constraints") belongs to **MV-155
 - [ ] **MV-157 and MV-158 ship as ONE PULL REQUEST — one branch, separate commits, merged once. This is an acceptance criterion of this card, not a coordination note.** A PR containing this card's changes without MV-158's does not satisfy it and must not be opened for merge.
 - [ ] **Why the earlier "may merge ahead, must not reach production" wording was not executable, recorded so it is not reinstated.** `master` **is** production: Vercel auto-deploys every merge to it. So "merge but do not deploy" describes two things that are the same event. Merging this card alone *creates* the window both cards forbid — this card moves the assessment reads onto `case_id` while `lib/assessments/claim.ts` still writes `owner` only, so every assessment claimed between the two merges is written `owner`-set / `case_id`-null by the untouched claim path and is **invisible** to the case-scoped dashboard the student lands on seconds later. There is no operational step between "merge" and "deploy" in which somebody could have held it. **Alternatives considered and rejected:** an `owner` fallback on the assessment reads (rejected by section E — it re-introduces the residual owner predicate and hides exactly the case-scoping bugs Risk 1 exists to surface); a feature flag over the case-scoped reads (rejected — it is a second read path on the seam whose failure mode is a silently empty dashboard, and a flag introduced to bridge two PRs is a flag nobody deletes). One PR is the only mechanism that is genuinely atomic under auto-deploy, and it is the lower-risk one.
 - [ ] **Production deploy of the combined PR is gated on MV-155's AND MV-156's migrations being APPLIED AND RECONCILED ON THE HOSTED DATABASE `obfvrxixtautamflzxzq`** — applied, and their reconciliation queries re-run against the hosted data with the results recorded, not merely merged to `master` and not merely applied to a local stack. Merging this PR auto-deploys code that queries `case_id` and calls `private.mv155_assert_case_backfill()`; against a hosted database that has not had those migrations applied, every migrated read returns `42703` (undefined column) for every signed-in student, on the first request after the deploy. The founder gate on the merge names both applies and both reconciliations by date. **Verify, do not assume:** a migration merged in a predecessor PR is applied to the hosted project only when someone applies it — this repo's deploy pipeline ships code, not schema.
+- [ ] **THE LAST PRE-MERGE STEP IS A REPAIR, NOT A COUNT — amended 2026-08-03 from review.** Immediately before the merge, **re-run `private.mv155_backfill_personal_cases()` against the hosted project `obfvrxixtautamflzxzq`**, then assert **zero non-anonymous `case_id IS NULL` rows across all nine tables** and record the output with its timestamp in Done evidence. The function is idempotent — it `UPDATE`s all nine where `owner is not null and case_id is null` and mints a personal case for any owner lacking one — so re-running it on a clean database is a no-op, and running it is therefore strictly better than measuring.
+  - **Why counting is not enough.** The previous wording inherited MV-155's *apply-time* reconciliation as the evidence. Counting at MV-155 apply time is not counting at MERGE time: the two are days apart, production has been serving writes throughout, and MV-155's derive trigger exists on only **two** of the nine tables (`user_program_state`, `document_status` — §H). The other seven received `case_id` from a **one-shot** backfill, so any row written to them in the gap carries `owner` and no `case_id`.
+  - **The class this closes is the one that BREAKS rather than degrades.** A user with **no** personal case degrades gracefully — every migrated read returns nothing, the same empty state a new account sees. A user who **has** a personal case but owns case-less rows does not: the legacy owner-keyed uniques (`profiles_owner_key`, `documents_owner_kind_key`, `assessments_primary_idx`, `plan_items_kind_open_idx`) are still live while every new upsert conflict-targets `case_id`, so the write takes the INSERT branch and raises **23505**. Neither card named this class. Measured on production 2026-08-03: residue **zero on all nine tables**, and **zero** users without a personal case — so this is a window to close, not an outage to fix, and the window is open until merge.
+  - **The code half is defence in depth and ships regardless** (§E's residue leg): profile save, document upload, the assessment persist's `is_primary` computation, and `invalidatePlan`'s batch insert each adopt the residue onto the case and retry ONCE on a 23505. It is lazy, not pre-emptive, so a fully-backfilled user pays nothing.
 - [ ] Anonymous claim / create-or-resolve-a-case-at-claim (**MV-158**) · `owner` NULLABLE + composite-FK rebase (**MV-156**) · case-aware RLS + grant review on these tables (**MV-159**) · `case_id` NOT NULL, dropping compensating checks and legacy indexes (**MV-160**) · document header/versions + case-aware Storage paths + at-mint audit (**Stage 4**) · any `/workspace/[orgSlug]/…` route or consultancy UI (**Stage 3**). Absorbing any of these breaks the seam.
 
 ## Test plan
 - **Unit / semantics (`npm test`).** Extend the existing per-repo suites under `tests/lib/`, `tests/plan/`, `tests/outcomes/`, `tests/documents/`, `tests/profiles/`, `tests/matches/` so each migrated function is asserted to (a) query by `case_id`, (b) write `case_id` unconditionally, (c) write `owner` **only** when the fixture case carries a `student_user_id`, and (d) reject a call that supplies `owner` directly. Reuse `tests/helpers/fake-case-db.ts` (MV-151's in-memory fake) for the resolver and permission calls — and note in the file, as `lib/cases/README.md` insists, that these prove *semantics only* and cannot prove the database denies anything.
 - **Route-level (`npm test`).** For each of the 15 routes: an authorized happy path; an **unauthorized** path where `requireCasePermission` denies and the route 403s **before any query is issued** (assert the db mock recorded zero calls — "authorized after reading" is the defect this catches); and a byte-identical-response snapshot against the pre-card fixture.
+  - **This line did not ship in round 1 and does now — amended 2026-08-03 from review.** `git grep 'allowed: false' -- tests` returned **nothing**: all 26 touched suites mocked `checkCasePermission` to `{allowed:true}` in a shared `beforeEach` and never varied it, and `resolvePersonalCaseId` was never mocked to null, so the 403 branch in 15 routes, the redirect branch in 12 Server Components and every `caseId === null` branch were unexecuted. The coverage lands as two matrices — `tests/api/case-denial.test.ts` and `tests/app/case-denial-pages.test.tsx` — rather than 26 scattered cases, because three of these paths have no suite of their own at all and a per-suite edit would have covered most of them and called it done. Both carry the assert-zero-db-calls form (the Supabase clients are mocked with `from` as a spy and the repositories are **not** mocked, so the assertion is about ORDERING) and both cover the `caseId === null` leg with its per-route expected status written down — it is deliberately not uniform, and an undocumented mix is how one of them silently becomes the wrong one.
 - **Real DB (`npm run test:integration`) — new `tests/integration/case-data-access.itest.ts`,** extending the localhost hard-guard + env-gated `skipIf` idiom from `tests/integration/anon-purge.itest.ts` and the RLS-client factory from `tests/integration/fixtures/tenancy.ts`:
   - **The case_id filter is what selects the rows, proven with RLS out of the way.** Seed two personal cases, then issue each migrated read through the **service-role** client (RLS bypassed) and assert it returns case A's rows and none of case B's. This is the only probe that can see a case-scoping bug while the legacy owner-scoped policies are still in force (Risk 1); a read issued as the authenticated user is silently ANDed with `owner = auth.uid()` and would pass regardless.
   - **Dual-write:** every insert path leaves `case_id` set and `owner` equal to the case's `student_user_id`. A deliberate mismatched write (service-role, bypassing the writer helper) is **DETECTED** by `private.mv155_assert_case_backfill()` — and the test says so in a comment: **nothing rejects it at write time**. There is no constraint to catch this until MV-160; the assert function is a detector the tests call, and the writer helper is the only thing standing between a mismatched write and the database. Every mutating case in this suite ends with that call.
@@ -107,6 +116,8 @@ Plan step 7 ("add case indexes and consistency constraints") belongs to **MV-155
 
 ## Integration gate
 `npm run typecheck` · `npm run lint` · `npm test` · **`npm run test:integration`** (mandatory — this card changes which predicate selects a row and which index an upsert conflicts against; unit tests against a fake cannot prove either). **This card ships no migration** — plan step 7's indexes are MV-155 §E's (see section F).
+
+**The two new itest suites are ANCHORED BY NAME with floors in `.github/workflows/ci.yml` — added 2026-08-03 from review.** The lane already anchors `tenant-isolation` (≥400), `case-rls`, `case-backfill` (≥30) and `owner-nullable-rebase` (≥38), for a reason the workflow states in its own comments: the other guards catch a skip and a collection failure, but **not** a suite being deleted, renamed off `*.itest.ts`, having its top-level `describe` commented out, or gutted to two tests — in every one of those cases the summary line still reads "N passed (N)" with a smaller N and CI stays green. `case-data-access.itest.ts` (34 today, floor 28) and `claim-path.itest.ts` (13 today, floor 11) now carry the same anchors. `case-data-access.itest.ts` is a NEW file, so without one the lane would have gone green on the day somebody deleted it.
 
 **Repo posture (changed since Stage 1 — this is not advisory any more).** `master` is protected by an active ruleset with **no bypass**: required PR, no direct pushes, no force pushes, and two required status checks — **`validate`** (`npm ci` → typecheck → lint → test → build) and **`integration`** (`npx supabase start` → `npm run test:integration`) — both **strict / up-to-date with master**. `continue-on-error` is gone from the `integration` job, so a red integration lane blocks the merge. Locally: `npx supabase start`, then export `SUPABASE_TEST_URL`, `SUPABASE_TEST_SERVICE_ROLE_KEY`, `SUPABASE_TEST_ANON_KEY` from `npx supabase status -o env`. Run `npm run board` after any `board.json` edit and commit the regenerated views.
 
@@ -159,7 +170,171 @@ Plan step 7 ("add case indexes and consistency constraints") belongs to **MV-155
 - 2026-08-02 — **The service-role flip is split from the grant review.** Only paths that need no new grant flip here (`shortlist`, since `user_program_state` already grants `authenticated` full CRUD); the rest keep an entry naming the grant they wait on, because grants and policies are one reviewed unit in MV-159 and shipping a grant ahead of its policy is how a table ends up briefly open.
 - 2026-08-02 — **`app/(focused)/assessment/[id]/page.tsx` keeps id-as-credential for unclaimed rows.** Plan line 354 ("knowing a case ID grants no access") governs cases; a pre-claim anonymous assessment has no case, is purged in 3 days under MV-135, and is reachable only by an unguessable id. The two regimes are made explicit in the file rather than resolved by pretending the anonymous one does not exist.
 - 2026-08-02 — **Resolved upstream, not flagged from here: `user_program_state` and `document_status` carried `owner` in the PRIMARY KEY.** A `drop not null` cannot apply to a PK column. MV-156 — this card's direct predecessor — already ships the fix (surrogate `id` PK plus a partial unique on the legacy pair), so this card's job is to **verify** the replaced PKs on arrival, not to raise the finding. The earlier "flag to MV-156" wording was written before the DAG order was settled and read as an open question after it.
+- 2026-08-03 — **Builder: the repository count is SEVEN, not eight, and §B's own header is the
+  off-by-one §9.8 flagged in board.json.** Settled by counting the shipped diff. What the "8" appears
+  to absorb is the orchestrator layer, which is five modules and which §B already lists separately.
+  Recorded in spec §9.8 rather than only here, per A0.
+- 2026-08-03 — **Builder: §D undercounts. There are TWELVE case-scoped Server Components; the
+  twelfth is `app/(app)/layout.tsx`,** which calls `getJourneySignals` → six case-scoped repository
+  reads on every signed-in render. **The transferable part is why the compiler did not catch it:**
+  this card's rename discipline (`…ForUser` → `…ForCase`) makes a stale REPOSITORY call site fail to
+  compile, but an orchestrator whose scoping argument is a bare `string` changes meaning silently —
+  `getJourneySignals(supabase, string)` type-checked perfectly with a user id where a case id
+  belonged. `app/api/outcomes/prediction/route.ts` (which IS on §C's list) had the identical defect
+  via `freezePredictionForProgram(db, string, string)` and was caught only by a manual grep of every
+  orchestrator call site, after a route test went red. Recorded as spec §9.8a so Stage 3 expects the
+  class. The chrome degrades to *no journey marker* on a null case or a denial rather than
+  redirecting — wayfinding must never be the thing that decides a student cannot see their own app.
+- 2026-08-03 — **Builder, measured: an AUTHENTICATED client cannot create a personal case**
+  (`cases_insert_admin` `WITH CHECK` requires `organization_id IS NOT NULL` → `42501`). This decides
+  which client every caller hands `ensurePersonalCase`: the service-role one, from the two
+  already-registered account-linking exceptions, so go-forward creation adds **no new service-role
+  call site**. It also settles why the resolver is a read-then-insert-then-re-read rather than an
+  upsert — `cases_personal_student_idx` is partial, and a partial index is not an inferrable
+  `ON CONFLICT` arbiter (spec §4 rule 1, arriving a third time on a third axis). Amended into spec §5;
+  widening the policy is **MV-159's** decision, not this card's.
+- 2026-08-03 — **Builder: a signed-in actor with NO personal case is reachable and is handled without
+  inventing a creation path.** MV-155 backfilled owners existing at migration time; anyone who signed
+  up between that hosted apply and this deploy has none until they next sign in. Reads render the
+  empty state (byte-identical to a new account), mutations return an honest 5xx, and
+  `/api/assess`'s signed-in branch calls `ensurePersonalCase` — so the first thing such a user does
+  repairs it. The bulk remedy is MV-160 §B's existing sweep. Rejected: adding a service-role creation
+  path to pages or ordinary routes, which would grow the exception list to cover a transient window.
 - 2026-08-02 — **This card owns half the Stage 2 exit gate, and says so.** "Case-scoped repositories no longer depend on actor equals student" is delivered here; "existing students see the same correct data" is kept true here and *proved* by MV-160's production-shaped before/after regression. Splitting the claim keeps this card falsifiable without making it the stage exit.
 
 ## Done evidence
-(pending)
+
+**Branch `mv-157-158-case-aware-access`, commit 1 of 2 (`4ab7a18`). Ships in ONE PR with MV-158 (`05cde96`) per criterion J.**
+
+### Gate (run on the COMBINED branch, which is what merges)
+`npm run typecheck` clean · `npm run lint` clean · `npm test` **2526/2526 in 325 files** ·
+`npm run test:integration` **649/649 in 8 files** against a local `npx supabase start` stack ·
+`npm run build` clean, with **every** case-scoped route rendering `ƒ` (dynamic) — criterion I, read
+off the build output rather than asserted.
+
+Baseline for comparison: `origin/master` is 323 files / 2472 tests. This PR is 325 / 2526 — two new
+files (`tests/cases/personal-case.test.ts`, `tests/cases/dual-write.test.ts`) and net **+54** tests.
+Checked explicitly because a renamed-function sweep can silently stop collecting a suite.
+
+**Re-run after the review round (2026-08-03), same local stack:** `npm run typecheck` clean ·
+`npm run lint` clean · `npm test` **2598/2598 in 328 files** · `npm run test:integration`
+**654/654 in 8 files**. Net **+72** unit tests and **+5** integration tests over the round; the three
+new files are `tests/api/case-denial.test.ts` (30), `tests/app/case-denial-pages.test.tsx` (26) and
+`lib/cases/errors.ts` / `lib/cases/residue.ts`'s coverage inside the existing suites. Per-suite
+integration counts, read off the `--reporter=verbose` log the CI anchors grep: tenant-isolation 429,
+case-rls 67, case-backfill 37, owner-nullable-rebase 45, **case-data-access 34**, **claim-path 13**.
+
+**Mutation-verified, not asserted.** Deleting the residue-adopt leg from `upsertProfileForCase` turns
+`"profile save adopts an owner-keyed, case-less profile"` red with exactly the production symptom —
+`expected null not to be null`, i.e. the upsert took the INSERT branch and 23505'd on
+`profiles_owner_key`. The four tests after it also went red, on `mv155_assert_case_backfill()` seeing
+the residue the failed test left behind, which is the `afterEach` detector doing its job.
+
+### Preconditions VERIFIED from the catalogs, not the dossiers (Risk 10)
+Read out of `pg_index` / `pg_constraint` / `information_schema` before a line of repository code, and
+re-asserted as the first `describe` of `tests/integration/case-data-access.itest.ts`:
+- the four `ON CONFLICT` arbiters are **FULL** (`indpred IS NULL`): `profiles_case_idx`,
+  `user_program_state_case_program_idx`, `documents_case_kind_idx`, `document_status_case_kind_idx`;
+- the two domain-predicated uniques keep their predicate and are not arbiters
+  (`assessments_case_primary_idx`, `plan_items_case_kind_open_idx`);
+- `cases_personal_student_idx` exists and is `UNIQUE (student_user_id) WHERE organization_id IS NULL`;
+- `user_program_state` and `document_status` both arrive with `PRIMARY KEY (id)` (MV-156's surrogate);
+- both index generations are live (six legacy owner-keyed uniques still present);
+- `case_id` exists and is nullable on all nine tables; `owner` is nullable on all nine;
+- all eight `_ownership_axis_present` checks are present and **validated**;
+- `authenticated` holds **no** `UPDATE(case_id)` on either upsert-seam table — the fact the payload
+  rule depends on;
+- the two definer triggers are qualified `WHEN (new.owner IS NOT NULL)`.
+
+### A0 — spec amended IN THIS PR
+`git diff --stat origin/master -- docs/superpowers/` is non-empty:
+`docs/superpowers/specs/2026-08-02-stage2-migration-and-access-matrix.md` gains **§5**'s
+authenticated-cannot-create-a-personal-case fact, **§9.8**'s settled repository count (seven, not
+eight), new **§9.8a** (twelve Server Components, not eleven), an amended **§4.2** slice-ownership
+row, and a dated **§12** entry covering all four. `board.json` is deliberately untouched — the
+builder was instructed to leave the generated board alone — so §9.8's board correction is handed to
+the integrator.
+
+### What moved
+- **7 repository modules** (not eight — see §9.8, settled by counting the diff): `lib/profiles/repo.ts`,
+  `lib/assessments/repo.ts` (read side), `lib/plan/repo.ts`, `lib/matches/repo.ts`,
+  `lib/documents/repo.ts`, `lib/documents/status-repo.ts`, `lib/outcomes/repo.ts`.
+- **5 orchestrators:** `lib/plan/invalidate.ts`, `lib/outcomes/freeze.ts`, `lib/outcomes/on-apply.ts`,
+  `lib/assessments/re-score.ts`, `lib/journey/signals.ts`.
+- **15 routes** as enumerated in §C, plus `app/api/account/delete/route.ts` verified unchanged and
+  still owner-keyed by design.
+- **12 Server Components** — §D's eleven **plus `app/(app)/layout.tsx`**, which §D omits and which
+  reads six case-scoped repositories on every signed-in render (§9.8a).
+- **New:** `lib/cases/personal-case.ts`, `lib/cases/dual-write.ts`,
+  `tests/integration/case-data-access.itest.ts` (29 cases).
+
+### Every `onConflict` string in the codebase, enumerated (criterion F)
+| Call site | Before | After | Index named | Moved? |
+|---|---|---|---|---|
+| `lib/matches/repo.ts` `upsertProgramState` | `owner,program_id` | `case_id,program_id` | `user_program_state_case_program_idx` (FULL) | **yes** |
+| `lib/documents/status-repo.ts` `setObtained` | `owner,kind` | `case_id,kind` | `document_status_case_kind_idx` (FULL) | **yes** |
+| `lib/profiles/repo.ts` `upsertProfileForCase` | `owner` | `case_id` | `profiles_case_idx` (FULL) | **yes** |
+| `lib/documents/repo.ts` `upsertDocument` | `owner,kind` | `case_id,kind` | `documents_case_kind_idx` (FULL) | **yes** |
+| `lib/assessments/repo.ts` `createLead` | `assessment_id,email` | unchanged | `leads_assessment_email_uniq` | no — `leads` is not case-scoped |
+
+All four moved targets are covered by a real-DB **upsert-twice** test asserting exactly one row —
+the only assertion that distinguishes "target matched" from "target silently missed", since a missed
+target does not error.
+
+### How `case_id` was kept OUT of the two upsert payloads while the target moved
+`lib/cases/dual-write.ts` exports **two** functions rather than one, because the two shapes are
+governed by opposite rules and look identical at the call site:
+- `caseWriteColumns(db, caseId)` → `{ case_id, owner }` for plain inserts and for the `profiles` /
+  `documents` upserts, whose tables carry no derive-trigger and whose writes are service-role.
+- `caseUpsertColumns(db, caseId)` → `{ owner }` **only**, for `user_program_state` and
+  `document_status`. It cannot return `case_id`: the type says so, so a call site cannot spread one
+  in by accident.
+
+Proved rather than asserted: `tests/integration/case-data-access.itest.ts` drives, as
+`authenticated`, an upsert whose payload names `case_id` and asserts the **42501**. The unit tests
+additionally assert `expect(payload).not.toHaveProperty("case_id")` at both call sites, and both
+call sites carry the comment the criterion asks for.
+
+### The service-role registry (criterion G)
+`app/api/shortlist/route.ts` **flipped and left the list** — the only flip Stage 2 makes. Every
+remaining `legacy-owner-scoped` entry was rewritten to name the real `checkCasePermission` call now
+preceding it and the grant its flip waits on; the file's "STAGE 1 STATUS" paragraph — which claimed
+every path filters `.eq("owner", userId)` — is replaced, because it is no longer true of any of them.
+`auditEvent: null` is re-justified rather than left stale. `tests/supabase/service-role-exceptions.test.ts`
+**54/54**, ESLint fence unchanged, no rule weakened, no new call site.
+
+### `lib/cases/README.md` Stage 3 review-gate checklist, walked item by item
+1. *Case authorization before the first read/write* — **met.** All 15 routes and 12 components call
+   `checkCasePermission` before their first query; the route tests assert the db mock recorded zero
+   calls on a denial.
+2. *Actor from the server session only* — **met.** Every `actorUserId` comes from
+   `supabase.auth.getUser()`; none from a body, query param, header, or prop.
+3. *No role from JWT/metadata* — **met.** Nothing in this PR reads `app_metadata`/`user_metadata` for
+   a role; `user_metadata` is read only for a display name.
+4. *Read the scope on an allow* — **n/a in Stage 2.** A personal case yields scope `linked`; no call
+   site branches on scope yet. Stage 3 will.
+5. *Service-role only from the registry* — **met**, and the list shrank by one.
+6. *Audit the access* — **NOT met, and cannot be.** `private.write_audit_event` has EXECUTE revoked
+   from PUBLIC and Stage 2 adds no grant (spec §7.3). Stated, not ticked.
+7. *The DB enforces it too* — **NOT met, and cannot be.** No case-aware policy exists until MV-159;
+   the database still enforces the legacy owner predicate. Stated, not ticked. This is exactly why
+   every case-scoping assertion in the itest runs **service-role with RLS bypassed** (Risk 1).
+
+### Anything that should NOT be done as directed
+- **§B's "all eight modules" is an off-by-one.** There are seven repository modules. Settled in spec
+  §9.8 by counting the diff.
+- **§D's eleven Server Components should be twelve.** `app/(app)/layout.tsx` is a case-scoped reader
+  and §D omits it. Recorded as spec §9.8a, along with *why the compiler did not catch it*: the rename
+  discipline makes stale REPOSITORY call sites fail to compile, but an orchestrator taking a bare
+  `string` scoping argument changes meaning silently. `app/api/outcomes/prediction/route.ts` was
+  caught by the same manual sweep.
+- **A signed-in actor with no personal case is reachable**, for anyone who signed up between MV-155's
+  hosted apply and this PR's deploy. Reads render the empty state (identical to a new account),
+  mutations return an honest 5xx, and `/api/assess` calls `ensurePersonalCase` so the next assessment
+  self-heals it. The bulk remedy is **MV-160 §B's sweep** (re-run `private.mv155_backfill_personal_cases()`),
+  which already exists. No new service-role path was invented for it.
+
+### Deferred, recorded so silence is not read as coverage
+Cross-tenant denial on the nine tables (**MV-159** — no case-aware policy exists yet) and the
+production-shaped before/after regression (**MV-160**, which carries the stage exit). Both are stated
+in the itest header.

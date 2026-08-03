@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DOCUMENT_KINDS, type DocumentKind } from "@/lib/documents/types";
-import { getDocumentByKind, upsertDocument } from "@/lib/documents/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { getDocumentByKindForCase, upsertDocument } from "@/lib/documents/repo";
 import { getFlagForKind } from "@/lib/documents/flags";
-import { patchProfileSection } from "@/lib/profiles/repo";
+import { patchProfileSectionForCase } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
 import {
@@ -54,6 +56,24 @@ export async function POST(request: Request): Promise<Response> {
 
   const docKind = kind as DocumentKind;
 
+  // Authorize the case through the AUTHENTICATED client BEFORE any Storage call.
+  // Service-role stays here under the plan's sanctioned "storage administration"
+  // category (the authenticated client cannot write the private bucket) and
+  // because `documents` grants `authenticated` no INSERT — but the case check now
+  // precedes it, which is what MV-157 §G requires of every retained entry.
+  //
+  // NOTE the object path below stays OWNER-keyed. Case-aware Storage paths are
+  // Stage 4 (spec §8): a `<case_id>/…` object matches the live
+  // `(storage.foldername(name))[1] = auth.uid()::text` policy for NOBODY, so
+  // moving it here would force the Stage 4 policy rewrite into Stage 2 without
+  // its authorization model.
+  const caseId = await resolvePersonalCaseId(userId, supabase);
+  if (caseId === null) {
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
+  const { decision } = await checkCasePermission(userId, caseId, "case.update", supabase);
+  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   let admin;
   try {
     admin = createSupabaseAdminClient();
@@ -68,7 +88,7 @@ export async function POST(request: Request): Promise<Response> {
   // replacement is validated, stored, and committed. Destroying it up front is
   // how a rejected re-upload silently erased a student's passport scan while the
   // card still read "Uploaded" (audit C-8).
-  const existing = await getDocumentByKind(admin, userId, docKind);
+  const existing = await getDocumentByKindForCase(admin, caseId, docKind);
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -96,10 +116,10 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
-  // Atomic replace on the unique (owner, kind) index — no delete-then-insert
+  // Atomic replace on the unique (case_id, kind) index — no delete-then-insert
   // window. If this fails, the original row is untouched.
   const docId = await upsertDocument(admin, {
-    owner: userId,
+    caseId,
     kind: docKind,
     filePath,
     fileSize: file.size,
@@ -109,7 +129,7 @@ export async function POST(request: Request): Promise<Response> {
   // The row write failed — roll back the bytes we just uploaded and surface the
   // failure. The original document (row + object) is still fully intact.
   if (!docId) {
-    console.error("[documents/upload] upsertDocument failed", { userId, docKind, filePath });
+    console.error("[documents/upload] upsertDocument failed", { caseId, docKind, filePath });
     await admin.storage.from("documents").remove([filePath]);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
@@ -126,17 +146,17 @@ export async function POST(request: Request): Promise<Response> {
   if (flag) {
     try {
       if (flag.section === "english") {
-        await patchProfileSection(admin, userId, "english", { reportUploaded: true });
+        await patchProfileSectionForCase(admin, caseId, "english", { reportUploaded: true });
       } else if (flag.section === "finance") {
-        await patchProfileSection(admin, userId, "finance", { proofUploaded: true });
+        await patchProfileSectionForCase(admin, caseId, "finance", { proofUploaded: true });
       } else if (flag.section === "work") {
-        await patchProfileSection(admin, userId, "work", { docs: true });
+        await patchProfileSectionForCase(admin, caseId, "work", { docs: true });
       }
     } catch (err) {
-      console.error("[documents/upload] patchProfileSection failed", err);
+      console.error("[documents/upload] patchProfileSectionForCase failed", err);
     }
     try {
-      await invalidatePlan(admin, userId);
+      await invalidatePlan(admin, caseId);
     } catch (err) {
       console.error("[documents/upload] invalidatePlan failed", err);
     }

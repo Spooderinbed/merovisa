@@ -3,14 +3,14 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getPrimaryAssessmentForUser, getProfile, listDocumentsForUser, listAllPlanForUser, getOutcomesForUser, listShortlistForUser, listAllPrograms, listAllUniversities } = vi.hoisted(() => ({
+const { getUser, getPrimaryAssessmentForCase, getProfileForCase, listDocumentsForCase, listAllPlanForCase, getOutcomesForCase, listShortlistForCase, listAllPrograms, listAllUniversities } = vi.hoisted(() => ({
   getUser: vi.fn(),
-  getPrimaryAssessmentForUser: vi.fn(),
-  getProfile: vi.fn(),
-  listDocumentsForUser: vi.fn(),
-  listAllPlanForUser: vi.fn(),
-  getOutcomesForUser: vi.fn(),
-  listShortlistForUser: vi.fn(),
+  getPrimaryAssessmentForCase: vi.fn(),
+  getProfileForCase: vi.fn(),
+  listDocumentsForCase: vi.fn(),
+  listAllPlanForCase: vi.fn(),
+  getOutcomesForCase: vi.fn(),
+  listShortlistForCase: vi.fn(),
   listAllPrograms: vi.fn(),
   listAllUniversities: vi.fn(),
 }));
@@ -18,12 +18,12 @@ const { getUser, getPrimaryAssessmentForUser, getProfile, listDocumentsForUser, 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
-vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
-vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
-vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
-vi.mock("@/lib/plan/repo", () => ({ listAllPlanForUser }));
-vi.mock("@/lib/outcomes/repo", () => ({ getOutcomesForUser }));
-vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
+vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForCase }));
+vi.mock("@/lib/profiles/repo", () => ({ getProfileForCase }));
+vi.mock("@/lib/documents/repo", () => ({ listDocumentsForCase }));
+vi.mock("@/lib/plan/repo", () => ({ listAllPlanForCase }));
+vi.mock("@/lib/outcomes/repo", () => ({ getOutcomesForCase }));
+vi.mock("@/lib/matches/repo", () => ({ listShortlistForCase }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/components/dashboard/snapshot-card", () => ({
   SnapshotCard: ({ primary }: { primary: unknown }) => <div data-testid="snap">{primary ? "has-snap" : "empty-snap"}</div>,
@@ -44,21 +44,37 @@ vi.mock("@/components/dashboard/journey-rail", () => ({
   ),
 }));
 
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
+
 import DashboardPage from "@/app/(app)/dashboard/page";
 import { CatalogReadError } from "@/lib/programs/errors";
 
 describe("/dashboard page", () => {
   beforeEach(() => {
     getUser.mockReset();
-    getPrimaryAssessmentForUser.mockReset();
-    getProfile.mockReset();
-    listDocumentsForUser.mockReset();
-    listAllPlanForUser.mockReset();
-    listAllPlanForUser.mockResolvedValue([]);
-    getOutcomesForUser.mockReset();
-    getOutcomesForUser.mockResolvedValue({ predictions: [], attempts: [], events: [] });
-    listShortlistForUser.mockReset();
-    listShortlistForUser.mockResolvedValue([]);
+    getPrimaryAssessmentForCase.mockReset();
+    getProfileForCase.mockReset();
+    listDocumentsForCase.mockReset();
+    listAllPlanForCase.mockReset();
+    listAllPlanForCase.mockResolvedValue([]);
+    getOutcomesForCase.mockReset();
+    getOutcomesForCase.mockResolvedValue({ predictions: [], attempts: [], events: [] });
+    listShortlistForCase.mockReset();
+    listShortlistForCase.mockResolvedValue([]);
     listAllPrograms.mockReset();
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockReset();
@@ -82,12 +98,12 @@ describe("/dashboard page", () => {
 
   it("renders the kept sections for a signed-in user", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
       destination_id: "australia",
     });
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav Sharma" } }, completeness: 12 });
-    listDocumentsForUser.mockResolvedValue([]);
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav Sharma" } }, completeness: 12 });
+    listDocumentsForCase.mockResolvedValue([]);
 
     const ui = await DashboardPage();
     render(ui);
@@ -100,12 +116,12 @@ describe("/dashboard page", () => {
 
   it("renders the real, signal-backed 'Your journey' panel (the old fake empty tracker is gone)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
       destination_id: "australia",
     });
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
-    listDocumentsForUser.mockResolvedValue([]);
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listDocumentsForCase.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
     // The panel now exists AND is fed the real profile-completeness signal (80) —
@@ -115,12 +131,12 @@ describe("/dashboard page", () => {
 
   it("does not render the always-empty 'Recent updates' panel (no source yet)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
       destination_id: "australia",
     });
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
-    listDocumentsForUser.mockResolvedValue([]);
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listDocumentsForCase.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.queryByText(/Recent updates/i)).not.toBeInTheDocument();
@@ -129,9 +145,9 @@ describe("/dashboard page", () => {
 
   it("renders the empty snapshot when user has no primary assessment", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue(null);
-    getProfile.mockResolvedValue(null);
-    listDocumentsForUser.mockResolvedValue([]);
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
+    getProfileForCase.mockResolvedValue(null);
+    listDocumentsForCase.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("snap")).toHaveTextContent("empty-snap");
@@ -140,13 +156,13 @@ describe("/dashboard page", () => {
 
   it("never says caught up while the plan has open items (audit repro, inverted)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
       destination_id: "australia",
     });
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
-    listDocumentsForUser.mockResolvedValue([]);
-    listAllPlanForUser.mockResolvedValue([openItem]);
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listDocumentsForCase.mockResolvedValue([]);
+    listAllPlanForCase.mockResolvedValue([openItem]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("prompt")).toHaveTextContent("next:Upload your IELTS report");
@@ -154,13 +170,13 @@ describe("/dashboard page", () => {
 
   it("is caught up only when the plan has zero open items", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
       destination_id: "australia",
     });
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
-    listDocumentsForUser.mockResolvedValue([]);
-    listAllPlanForUser.mockResolvedValue([]);
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listDocumentsForCase.mockResolvedValue([]);
+    listAllPlanForCase.mockResolvedValue([]);
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("prompt")).toHaveTextContent("caught-up");
@@ -168,13 +184,13 @@ describe("/dashboard page", () => {
 
   it("reports waiting when every open item is in progress", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue({
       result: { result: { verdict: "strong", dimensions: {} } },
       destination_id: "australia",
     });
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
-    listDocumentsForUser.mockResolvedValue([]);
-    listAllPlanForUser.mockResolvedValue([
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listDocumentsForCase.mockResolvedValue([]);
+    listAllPlanForCase.mockResolvedValue([
       { ...openItem, kind: "apply-for-noc", startedAt: "2026-06-10T00:00:00Z" },
     ]);
     const ui = await DashboardPage();
@@ -188,10 +204,10 @@ describe("/dashboard page", () => {
   // student keeps their plan, snapshot and readiness. Every other read path propagates.
   it("still renders when the catalogue name-lookup for the outcome funnel fails", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue(null);
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
-    listDocumentsForUser.mockResolvedValue([]);
-    getOutcomesForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav" } }, completeness: 80 });
+    listDocumentsForCase.mockResolvedValue([]);
+    getOutcomesForCase.mockResolvedValue({
       predictions: [],
       attempts: [{ id: "at1", owner: "u1", predictionId: "pr1", programId: "p1" }],
       events: [],

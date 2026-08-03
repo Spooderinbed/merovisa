@@ -39,16 +39,37 @@ export type FakeCaseDbOptions = {
   errorOn?: Partial<Record<CaseDbTable, { message: string }>>;
   /** Tables whose query throws outright (dropped connection, aborted request). */
   throwOn?: CaseDbTable[];
+  /**
+   * Tables whose INSERT answers with a PostgREST error. `code` matters: `23505`
+   * is the lost-race branch a create-or-resolve helper must treat as a resolve.
+   */
+  insertError?: Partial<Record<CaseDbTable, { code?: string; message: string }>>;
+  /**
+   * Rows that only become visible AFTER an insert has been attempted — the
+   * concurrent winner a losing racer re-reads. Without this a fake cannot tell
+   * "resolved on the retry" from "returned a stale first read".
+   */
+  appearAfterInsert?: CaseDbFixture;
 };
 
 export type RecordedQuery = { table: string; filters: Array<[string, unknown]> };
+export type RecordedInsert = { table: string; row: Record<string, unknown> };
 
 type Row = Record<string, unknown>;
 
 export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptions = {}) {
   const queries: RecordedQuery[] = [];
+  const inserts: RecordedInsert[] = [];
   const errorOn = options.errorOn ?? {};
+  const insertError = options.insertError ?? {};
   const throwOn = new Set<string>(options.throwOn ?? []);
+  // Mutable so an insert can make its own row readable to a later query, which is
+  // what lets a test distinguish "read it back" from "returned what it wrote".
+  const rows: Record<string, Row[]> = {};
+  for (const [table, seed] of Object.entries(fixture)) {
+    rows[table] = [...((seed ?? []) as Row[])];
+  }
+  let insertAttempts = 0;
 
   const from = vi.fn((table: string) => {
     const filters: Array<[string, unknown]> = [];
@@ -56,7 +77,7 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
     queries.push(record);
 
     const rowsFor = (): Row[] => {
-      const all = (fixture[table as CaseDbTable] ?? []) as Row[];
+      const all = rows[table] ?? [];
       return all.filter((row) => filters.every(([column, value]) => row[column] === value));
     };
 
@@ -64,6 +85,8 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
       if (throwOn.has(table)) {
         throw new Error(`fakeCaseDb: query on "${table}" threw`);
       }
+      if (insertFailure) return { data: null, error: insertFailure };
+      if (inserted) return { data: mode === "one" ? inserted : [inserted], error: null };
       const failure = errorOn[table as CaseDbTable];
       if (failure) {
         return { data: null, error: failure };
@@ -75,12 +98,34 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
       return { data: matches, error: null };
     };
 
+    // An insert resolves from the row it wrote rather than from the fixture, and
+    // (unless it errored) makes that row visible to every later query.
+    let inserted: Row | null = null;
+    let insertFailure: { code?: string; message: string } | null = null;
+
     // PostgREST builders are chainable AND awaitable; every chain method returns
     // the same builder and only a terminal (or an await) resolves.
     const builder: Record<string, unknown> = {};
     for (const method of ["select", "order", "limit"]) {
       builder[method] = vi.fn(() => builder);
     }
+    builder.insert = vi.fn((row: Row) => {
+      insertAttempts += 1;
+      inserts.push({ table, row });
+      const failure = insertError[table as CaseDbTable];
+      if (failure) {
+        insertFailure = failure;
+        // The winner of a lost race becomes visible only now, so a re-read after
+        // a 23505 sees it and a re-read that never happened cannot.
+        for (const [t, late] of Object.entries(options.appearAfterInsert ?? {})) {
+          rows[t] = [...(rows[t] ?? []), ...((late ?? []) as Row[])];
+        }
+        return builder;
+      }
+      inserted = { id: `fake-case-db-generated-${insertAttempts}`, ...row };
+      rows[table] = [...(rows[table] ?? []), inserted];
+      return builder;
+    });
     for (const method of ["eq", "is"]) {
       builder[method] = vi.fn((column: string, value: unknown) => {
         filters.push([column, value]);
@@ -94,7 +139,7 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
   });
 
   const client = { from } as unknown as SupabaseClient<Database>;
-  return { client, queries, from };
+  return { client, queries, inserts, from };
 }
 
 /** Did the fake see a query against `table` carrying every one of `filters`? */

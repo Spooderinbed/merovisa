@@ -1,8 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
-import { getProfile } from "@/lib/profiles/repo";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
+import { getProfileForCase } from "@/lib/profiles/repo";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { sectionsToStudentProfile } from "@/lib/scoring/from-sections";
 import { assembleAssessment } from "@/lib/results/assemble";
@@ -16,10 +16,10 @@ type DB = SupabaseClient<Database>;
  * are rebuilt alongside the verdict so /assessment/[id] reflects the latest
  * profile data, not a half-stale snapshot.
  */
-export async function reScoreAssessment(db: DB, userId: string): Promise<void> {
+export async function reScoreAssessment(db: DB, caseId: string): Promise<void> {
   const [profileRow, primaryRow, programs, universities] = await Promise.all([
-    getProfile(db, userId),
-    getPrimaryAssessmentForUser(db, userId),
+    getProfileForCase(db, caseId),
+    getPrimaryAssessmentForCase(db, caseId),
     listAllPrograms(db),
     listAllUniversities(db),
   ]);
@@ -34,5 +34,5 @@ export async function reScoreAssessment(db: DB, userId: string): Promise<void> {
     .from("assessments")
     .update({ result: freshPayload as unknown as Json })
     .eq("id", primaryRow.id)
-    .eq("owner", userId);
+    .eq("case_id", caseId);
 }

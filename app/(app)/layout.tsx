@@ -7,6 +7,8 @@ import { Footer } from "@/components/layout/footer";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { JourneyMarker } from "@/components/journey/journey-marker";
 import { IdentifyUser } from "@/components/analytics/identify-user";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
 import { getJourneySignals } from "@/lib/journey/signals";
 import { buildJourney, type Journey } from "@/lib/journey/journey";
 import { DEFAULT_CORRIDOR } from "@/lib/theme/corridor";
@@ -23,9 +25,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // The persistent "where am I" marker (MV-103) rides in the chrome on every
   // signed-in page. Wayfinding is non-critical, so a signals failure degrades to
   // no marker — it must never take a page down with it.
+  //
+  // MV-157: the six signal reads are case-scoped like every other read, so the
+  // chrome resolves and authorizes the case exactly as a page does. No case (or a
+  // denial) degrades to no marker rather than a redirect — the chrome must never
+  // be the thing that decides a student cannot see their own app.
   let journey: Journey | null = null;
   try {
-    journey = buildJourney(await getJourneySignals(supabase, data.user.id));
+    const caseId = await resolvePersonalCaseId(data.user.id, supabase);
+    if (caseId !== null) {
+      const { decision } = await checkCasePermission(data.user.id, caseId, "case.read", supabase);
+      if (decision.allowed) {
+        journey = buildJourney(await getJourneySignals(supabase, caseId));
+      }
+    }
   } catch {
     journey = null;
   }

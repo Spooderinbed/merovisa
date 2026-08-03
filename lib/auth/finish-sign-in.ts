@@ -1,14 +1,21 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
+import { ensurePersonalCase } from "@/lib/cases/personal-case";
 import { safeNext } from "./safe-next";
 import { verifyClaim } from "./hmac-claim";
 
-/** The shape of `supabase.auth.getUser()`'s user that this path actually reads. */
+/**
+ * The shape of `supabase.auth.getUser()`'s user that this path actually reads.
+ *
+ * `name` joins `full_name` because `ensurePersonalCase` derives `display_name`
+ * from both (MV-158 §A) and this is the verified session object it is handed —
+ * there is no separate identity parameter anywhere on the path.
+ */
 export interface SignedInUser {
   id: string;
   email?: string | null;
-  user_metadata?: { full_name?: string | null } | null;
+  user_metadata?: { full_name?: string | null; name?: string | null } | null;
 }
 
 export interface SignInParams {
@@ -34,17 +41,44 @@ export async function resolveSignInDestination(
 ): Promise<string> {
   const fallback = safeNext(params.next) ?? "/dashboard";
 
-  if (!params.claim) return fallback;
+  if (!params.claim) {
+    // GO-FORWARD PERSONAL-CASE CREATION (MV-157 §A). MV-155's migration
+    // backfilled cases for owners that existed AT migration time; a user who
+    // signs up afterwards needs one too, and this is the seam every provider
+    // converges on. Idempotent, so an existing user pays one indexed read.
+    //
+    // It needs the ADMIN client: `cases_insert_admin` is the only INSERT policy
+    // on `cases` and its WITH CHECK requires `organization_id IS NOT NULL`, so a
+    // student cannot create their own (organization-less) personal case through
+    // the authenticated client — it is refused 42501. This module is already a
+    // registered `sanctioned` service-role exception for account linking, so no
+    // new call site is introduced.
+    //
+    // Best-effort: a failure here must never block a successful sign-in. The
+    // student lands on a dashboard with no case-scoped rows, which is what a
+    // brand-new account looks like anyway, and the next sign-in retries.
+    if (user?.id) {
+      const caseId = await ensurePersonalCase(user, createSupabaseAdminClient());
+      if (caseId === null) {
+        console.error("[finish-sign-in] personal case creation failed", { userId: user.id });
+      }
+    }
+    return fallback;
+  }
 
   const verified = verifyClaim(params.claim);
   if (!verified) return "/assess?error=invalid-claim";
   if (!user?.id) return fallback;
 
+  // MV-158: the verified session object goes in whole. There is no `googleName`
+  // and no `email` parameter any more — identity is derived inside, so all four
+  // entry points (Google OAuth, the emailed 6-digit code, the emailed link, and
+  // the recover-in-place endpoint) produce byte-identical results from the same
+  // available data. `claimAndBootstrapProfile` create-or-resolves the personal
+  // case itself, before it touches the row.
   const { claimed, reason } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
     assessmentId: verified.assessmentId,
-    userId: user.id,
-    googleName: user.user_metadata?.full_name ?? undefined,
-    email: user.email ?? undefined,
+    user,
   });
   if (claimed) return `/assessment/${verified.assessmentId}`;
 

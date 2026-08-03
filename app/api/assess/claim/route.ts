@@ -49,11 +49,13 @@ export async function POST(request: Request): Promise<Response> {
   }
   const { assessmentId } = parsed.data;
 
+  // MV-158: same seam, same function, same case behaviour as the sign-in
+  // redirect — this route calls `claimAndBootstrapProfile` rather than
+  // re-implementing a claim, and it stays token-less and rate-limited with the
+  // conditional-update predicate as its only authorization.
   const { claimed, reason } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
     assessmentId,
-    userId: user.id,
-    googleName: user.user_metadata?.full_name ?? undefined,
-    email: user.email ?? undefined,
+    user,
   });
 
   // `already-mine` is a success from the student's chair — they own the row, so send

@@ -10,7 +10,7 @@ const {
   getAttemptById,
   listEventTypesForAttempt,
   insertEvent,
-  getOutcomesForUser,
+  getOutcomesForCase,
 } = vi.hoisted(() => ({
   getUser: vi.fn(),
   freezePredictionForProgram: vi.fn(),
@@ -19,7 +19,7 @@ const {
   getAttemptById: vi.fn(),
   listEventTypesForAttempt: vi.fn(),
   insertEvent: vi.fn(),
-  getOutcomesForUser: vi.fn(),
+  getOutcomesForCase: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -32,8 +32,24 @@ vi.mock("@/lib/outcomes/repo", () => ({
   getAttemptById,
   listEventTypesForAttempt,
   insertEvent,
-  getOutcomesForUser,
+  getOutcomesForCase,
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { POST as predictionPOST } from "@/app/api/outcomes/prediction/route";
 import { POST as attemptPOST } from "@/app/api/outcomes/attempt/route";
@@ -78,7 +94,7 @@ describe("POST /api/outcomes/prediction (F16 freeze)", () => {
     freezePredictionForProgram.mockResolvedValue({ ok: true, prediction: { id: "pred1" }, created: true });
     const res = await predictionPOST(post("http://x/api/outcomes/prediction", { programId: "p1" }));
     expect(res.status).toBe(201);
-    expect(freezePredictionForProgram).toHaveBeenCalledWith(expect.anything(), "owner1", "p1");
+    expect(freezePredictionForProgram).toHaveBeenCalledWith(expect.anything(), "case-1", "p1");
   });
 
   it("200s on an idempotent re-freeze (created: false)", async () => {
@@ -119,7 +135,7 @@ describe("POST /api/outcomes/attempt", () => {
     expect(res.status).toBe(201);
     expect(insertAttempt).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ owner: "owner1", predictionId: UUID, programId: "p1", intake: "2027-02" }),
+      expect.objectContaining({ caseId: "case-1", predictionId: UUID, programId: "p1", intake: "2027-02" }),
     );
   });
 });
@@ -177,7 +193,7 @@ describe("POST /api/outcomes/event", () => {
     expect(insertEvent).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        owner: "owner1",
+        caseId: "case-1",
         attemptId: UUID,
         eventType: "offer_received",
         gate: "admission",
@@ -196,11 +212,11 @@ describe("GET /api/outcomes", () => {
 
   it("returns the user's predictions/attempts/events", async () => {
     signedIn();
-    getOutcomesForUser.mockResolvedValue({ predictions: [{ id: "pred1" }], attempts: [], events: [] });
+    getOutcomesForCase.mockResolvedValue({ predictions: [{ id: "pred1" }], attempts: [], events: [] });
     const res = await outcomesGET();
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.predictions).toHaveLength(1);
-    expect(getOutcomesForUser).toHaveBeenCalledWith(expect.anything(), "owner1");
+    expect(getOutcomesForCase).toHaveBeenCalledWith(expect.anything(), "case-1");
   });
 });

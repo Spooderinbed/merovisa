@@ -2,8 +2,10 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
 import { listObtainedKinds } from "@/lib/documents/status-repo";
-import { DOCUMENT_META, GROUPS, GROUP_LABELS } from "@/lib/documents/types";
+import { DOCUMENT_META, GROUPS, GROUP_LABELS, type DocumentKind } from "@/lib/documents/types";
 import { DocumentStatusToggle } from "@/components/documents/document-status-toggle";
 
 // MV-53 — the global, program-agnostic document checklist. Lets a signed-in user
@@ -20,7 +22,17 @@ export default async function GlobalChecklistPage() {
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
 
-  const obtained = await listObtainedKinds(supabase, user.id);
+  // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
+  // the first read. A signed-in actor with no personal case sees the same empty
+  // state a brand-new account does (see the dashboard for the full note).
+  const caseId = await resolvePersonalCaseId(user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) redirect("/auth?next=/checklist/all");
+  }
+  const obtained = caseId === null
+    ? new Set<DocumentKind>()
+    : await listObtainedKinds(supabase, caseId);
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">

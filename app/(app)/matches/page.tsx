@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
-import { getProfile } from "@/lib/profiles/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { getProfileForCase } from "@/lib/profiles/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
-import { listShortlistForUser } from "@/lib/matches/repo";
+import { listShortlistForCase } from "@/lib/matches/repo";
 import { computeMatches } from "@/lib/matches/compute";
 import { hasSufficientInputs } from "@/lib/matches/sufficiency";
 import { uncoveredField } from "@/lib/matches/coverage";
@@ -36,11 +38,22 @@ export default async function MatchesPage() {
     const next = safeNext(h.get("x-pathname")) ?? "/dashboard";
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
+  // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
+  // the first read — never per repo call. A signed-in actor with no personal case
+  // is the residue of the MV-155-apply-to-this-deploy window; they see the same
+  // empty state a brand-new account does, and `/api/assess` heals it by calling
+  // `ensurePersonalCase` on their next assessment (MV-160 §B's sweep is the bulk
+  // remedy).
+  const caseId = await resolvePersonalCaseId(user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) redirect("/auth?next=/matches");
+  }
   const [profile, programs, universities, shortlist] = await Promise.all([
-    getProfile(supabase, user.id),
+    caseId === null ? null : getProfileForCase(supabase, caseId),
     listAllPrograms(supabase),
     listAllUniversities(supabase),
-    listShortlistForUser(supabase, user.id),
+    caseId === null ? [] : listShortlistForCase(supabase, caseId),
   ]);
 
   const sections: ProfileSections = (profile?.sections as ProfileSections | undefined) ?? {};

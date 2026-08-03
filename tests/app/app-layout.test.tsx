@@ -1,11 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
+vi.mock("server-only", () => ({}));
+
 const { getUser, redirect, getJourneySignals } = vi.hoisted(() => ({
   getUser: vi.fn(),
   redirect: vi.fn(() => { throw new Error("REDIRECT"); }),
   getJourneySignals: vi.fn(),
 }));
+
+// MV-157: the chrome's six signal reads are case-scoped like every other read, so
+// the layout resolves and authorizes the case before calling getJourneySignals.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),

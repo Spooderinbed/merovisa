@@ -1,5 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { AssessFlow } from "@/components/assess/assess-flow";
 import { AssessInterstitial } from "@/components/assess/assess-interstitial";
 import { ClaimFailure } from "@/components/assess/claim-failure";
@@ -20,7 +22,16 @@ export default async function AssessPage({ searchParams }: { searchParams: Promi
 
   if (!data.user) return <AssessFlow fresh={sp.new === "1"} />;
 
-  const primary = await getPrimaryAssessmentForUser(supabase, data.user.id);
+  // MV-157: a signed-in visitor's interstitial is keyed on their case. No case (or
+  // no `case.read` on it) means no primary to offer — fall through to the wizard,
+  // which is the same branch a signed-in user with no assessment already takes.
+  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
+  const allowed =
+    caseId !== null &&
+    (await checkCasePermission(data.user.id, caseId, "case.read", supabase)).decision.allowed;
+  const primary = caseId === null || !allowed
+    ? null
+    : await getPrimaryAssessmentForCase(supabase, caseId);
   if (!primary || sp.new === "1") return <AssessFlow signedIn fresh={sp.new === "1"} />;
 
   return (

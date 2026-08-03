@@ -2,19 +2,35 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { getPrimaryAssessmentForUser, getProfile, getProgram, listAllUniversities, insertPrediction } =
+const { getPrimaryAssessmentForCase, getProfileForCase, getProgram, listAllUniversities, insertPrediction } =
   vi.hoisted(() => ({
-    getPrimaryAssessmentForUser: vi.fn(),
-    getProfile: vi.fn(),
+    getPrimaryAssessmentForCase: vi.fn(),
+    getProfileForCase: vi.fn(),
     getProgram: vi.fn(),
     listAllUniversities: vi.fn(),
     insertPrediction: vi.fn(),
   }));
 
-vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
-vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
+vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForCase }));
+vi.mock("@/lib/profiles/repo", () => ({ getProfileForCase }));
 vi.mock("@/lib/programs/repo", () => ({ getProgram, listAllUniversities }));
 vi.mock("@/lib/outcomes/repo", () => ({ insertPrediction }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { freezePredictionForProgram } from "@/lib/outcomes/freeze";
 import { CatalogReadError } from "@/lib/programs/errors";
@@ -72,25 +88,25 @@ const strongSections = {
 
 describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-derived assessment)", () => {
   beforeEach(() => {
-    getPrimaryAssessmentForUser.mockReset();
-    getProfile.mockReset();
+    getPrimaryAssessmentForCase.mockReset();
+    getProfileForCase.mockReset();
     getProgram.mockReset();
     listAllUniversities.mockReset();
     insertPrediction.mockReset();
-    getProfile.mockResolvedValue({ sections: strongSections });
+    getProfileForCase.mockResolvedValue({ sections: strongSections });
     getProgram.mockResolvedValue(program);
     listAllUniversities.mockResolvedValue([uni]);
   });
 
   it("409s when the user has no primary assessment to anchor the prediction", async () => {
-    getPrimaryAssessmentForUser.mockResolvedValue(null);
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
     const r = await freezePredictionForProgram(db, "owner1", "p1");
     expect(r).toEqual({ ok: false, status: 409, error: expect.any(String) });
     expect(insertPrediction).not.toHaveBeenCalled();
   });
 
   it("404s when the program is unknown", async () => {
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1" });
     getProgram.mockResolvedValue(null);
     const r = await freezePredictionForProgram(db, "owner1", "ghost");
     expect(r).toEqual({ ok: false, status: 404, error: expect.any(String) });
@@ -99,7 +115,7 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
   // MV-133: "this program does not exist" and "we couldn't read the catalogue" are
   // different answers. The 404 above is honest only when the query answered.
   it("503s (not 404 'unknown program') when the program read fails", async () => {
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1" });
     getProgram.mockRejectedValue(new CatalogReadError("programs"));
     const r = await freezePredictionForProgram(db, "owner1", "p1");
     expect(r).toEqual({ ok: false, status: 503, error: expect.any(String) });
@@ -107,7 +123,7 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
   });
 
   it("503s (not 409 'missing its university') when the university read fails", async () => {
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1" });
     listAllUniversities.mockRejectedValue(new CatalogReadError("universities"));
     const r = await freezePredictionForProgram(db, "owner1", "p1");
     expect(r).toEqual({ ok: false, status: 503, error: expect.any(String) });
@@ -115,7 +131,7 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
   });
 
   it("freezes the recomputed verdict against the primary assessment (F16, server-side)", async () => {
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1" });
     insertPrediction.mockResolvedValue({
       row: { id: "pred1", owner: "owner1", assessmentId: "a1", programId: "p1", verdict: "strong" },
       created: true,
@@ -126,7 +142,7 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
     // The server recomputed the verdict; the client never supplied it.
     expect(insertPrediction).toHaveBeenCalledWith(
       db,
-      expect.objectContaining({ owner: "owner1", assessmentId: "a1", programId: "p1", verdict: "strong" }),
+      expect.objectContaining({ caseId: "owner1", assessmentId: "a1", programId: "p1", verdict: "strong" }),
     );
   });
 
@@ -134,15 +150,15 @@ describe("freezePredictionForProgram (Decision B/C: signed-in adapter + server-d
     // A name-only signed-in profile: no grade/English/budget. buildPrediction would run
     // computeMatch on inputs floored to 0 and freeze a fabricated "Reach" verdict-of-
     // record. Abstain instead — return a 422 and write nothing (audit C-4).
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1" });
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
     const r = await freezePredictionForProgram(db, "owner1", "p1");
     expect(r).toEqual({ ok: false, status: 422, error: expect.any(String) });
     expect(insertPrediction).not.toHaveBeenCalled();
   });
 
   it("is idempotent — a re-freeze returns the existing prediction (created: false)", async () => {
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1" });
     insertPrediction.mockResolvedValue({
       row: { id: "pred1", owner: "owner1", assessmentId: "a1", programId: "p1", verdict: "strong" },
       created: false,

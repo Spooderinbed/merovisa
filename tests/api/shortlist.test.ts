@@ -15,6 +15,22 @@ vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag
 vi.mock("@/lib/matches/repo", () => ({ upsertProgramState, deleteProgramState }));
 vi.mock("@/lib/outcomes/on-apply", () => ({ captureApplication }));
 
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
+
 import { POST } from "@/app/api/shortlist/route";
 
 const req = (body: unknown) =>
@@ -52,7 +68,9 @@ describe("POST /api/shortlist", () => {
     deleteProgramState.mockResolvedValue(true);
     const res = await POST(req({ programId: "p1", status: null }));
     expect(res.status).toBe(200);
-    expect(deleteProgramState).toHaveBeenCalledWith({ tag: "admin" }, "u1", "p1");
+    // MV-157 §G: this route FLIPPED off the service-role client, so the write now
+    // goes out on the authenticated client and is scoped by the resolved case.
+    expect(deleteProgramState).toHaveBeenCalledWith(expect.anything(), "case-1", "p1");
   });
 
   it("422s on invalid body", async () => {
@@ -66,7 +84,7 @@ describe("POST /api/shortlist", () => {
     upsertProgramState.mockResolvedValue(true);
     const res = await POST(req({ programId: "p1", status: "applied" }));
     expect(res.status).toBe(200);
-    expect(captureApplication).toHaveBeenCalledWith(expect.anything(), "u1", "p1");
+    expect(captureApplication).toHaveBeenCalledWith(expect.anything(), "case-1", "p1");
   });
 
   it("does not capture an application for non-applied statuses", async () => {

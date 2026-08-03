@@ -6,15 +6,31 @@ const mockGetProfile = vi.fn();
 const mockGetPrimary = vi.fn();
 
 vi.mock("@/lib/profiles/repo", () => ({
-  getProfile: (...a: unknown[]) => mockGetProfile(...a),
+  getProfileForCase: (...a: unknown[]) => mockGetProfile(...a),
 }));
 vi.mock("@/lib/assessments/repo", () => ({
-  getPrimaryAssessmentForUser: (...a: unknown[]) => mockGetPrimary(...a),
+  getPrimaryAssessmentForCase: (...a: unknown[]) => mockGetPrimary(...a),
 }));
 vi.mock("@/lib/programs/repo", () => ({
   listAllPrograms: vi.fn().mockResolvedValue([]),
   listAllUniversities: vi.fn().mockResolvedValue([]),
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { reScoreAssessment } from "@/lib/assessments/re-score";
 import { listAllPrograms } from "@/lib/programs/repo";

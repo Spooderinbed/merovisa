@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
+import { caseWriteColumns } from "@/lib/cases/dual-write";
+import { CaseReadError } from "@/lib/cases/errors";
 import type { DecisionAuthority, EventType, Gate, Source } from "./types";
 
 type DB = SupabaseClient<Database>;
@@ -51,15 +53,21 @@ export interface EventRow {
 
 /**
  * Freeze a prediction run. Idempotent: a re-freeze of the same
- * (owner, assessment, program, rule_version) collides on the unique constraint —
+ * (case, assessment, program, rule_version) collides on the unique constraint —
  * we then return the EXISTING prediction-of-record (created: false) rather than
  * overwriting it (the UPDATE-guard trigger forbids overwrites anyway). A new rule
  * version yields a new row. Insert goes through the RLS-scoped client (S4).
+ *
+ * Predictions stay INSERT-ONLY. MV-157 introduces no UPDATE here and none may be
+ * added: `program_predictions_no_update` calls a SECURITY INVOKER function, so
+ * even `service_role` does not bypass it, and there is no UPDATE grant on the
+ * table for any role — permanently (spec §4.7). Backfilling `case_id` onto legacy
+ * prediction rows was MV-155's, done through a narrowed trigger.
  */
 export async function insertPrediction(
   db: DB,
   input: {
-    owner: string;
+    caseId: string;
     assessmentId: string;
     programId: string;
     verdict: string;
@@ -67,10 +75,13 @@ export async function insertPrediction(
     scoreSnapshot: Json;
   },
 ): Promise<{ row: PredictionRow; created: boolean } | null> {
+  const ownership = await caseWriteColumns(db, input.caseId);
+  if (ownership === null) return null;
+
   const { data, error } = await db
     .from("program_predictions")
     .insert({
-      owner: input.owner,
+      ...ownership,
       assessment_id: input.assessmentId,
       program_id: input.programId,
       verdict: input.verdict,
@@ -84,7 +95,7 @@ export async function insertPrediction(
     const { data: existing } = await db
       .from("program_predictions")
       .select("*")
-      .eq("owner", input.owner)
+      .eq("case_id", input.caseId)
       .eq("assessment_id", input.assessmentId)
       .eq("program_id", input.programId)
       .eq("rule_version", input.ruleVersion)
@@ -94,22 +105,55 @@ export async function insertPrediction(
   return null;
 }
 
-export async function getPredictionById(db: DB, id: string): Promise<PredictionRow | null> {
-  // RLS scopes to the owner — another user's prediction simply returns no row.
-  const { data, error } = await db.from("program_predictions").select("*").eq("id", id).maybeSingle();
-  if (error || !data) return null;
+/**
+ * MV-157 completed here: the four id-keyed reads below now take the
+ * already-authorized `caseId` and filter on it.
+ *
+ * They were the last reads in any migrated repository still selecting a row by a
+ * CLIENT-SUPPLIED id with no case predicate, relying on "RLS scopes to the owner"
+ * as the whole gate. Two things are wrong with that as the resting state. First,
+ * the comment describes a policy MV-159 is about to REPLACE — the moment the
+ * owner predicate leaves, these become unscoped reads of an id the caller chose,
+ * in a card that is not looking at this file. Second, it is the "authorized
+ * after reading" shape MV-157 §A exists to remove: the route authorizes a case,
+ * then reads a row that has nothing to do with that case, then writes against the
+ * row's ids. Passing the case makes the read's scope the same scope the route
+ * authorized, and it does so while the legacy policy is still there to catch a
+ * mistake rather than after it is gone.
+ */
+export async function getPredictionById(
+  db: DB,
+  id: string,
+  caseId: string,
+): Promise<PredictionRow | null> {
+  const { data, error } = await db
+    .from("program_predictions")
+    .select("*")
+    .eq("id", id)
+    .eq("case_id", caseId)
+    .maybeSingle();
+  if (error) throw new CaseReadError("program_predictions", error);
+  if (!data) return null;
   return mapPrediction(data);
 }
 
 /**
  * Open an application attempt against a frozen prediction. `programId` is taken
  * from the prediction (not the client) so the attempt can't drift from what was
- * predicted; the composite FK (prediction_id, owner) enforces owner consistency.
+ * predicted.
+ *
+ * TWO composite FKs guard the chain through Stage 2: the legacy
+ * `(prediction_id, owner)` and MV-156's `(prediction_id, case_id)`. Both are
+ * MATCH SIMPLE, so a composite FK containing a NULL is satisfied with no lookup
+ * at all — which means the CASE chain enforces nothing while `case_id` is
+ * nullable, and the retained OWNER chain is what actually bites until MV-160's
+ * `SET NOT NULL` (spec §4.7/§4.8). Keeping the dual-write is therefore load-
+ * bearing here, not merely tidy.
  */
 export async function insertAttempt(
   db: DB,
   input: {
-    owner: string;
+    caseId: string;
     predictionId: string;
     programId: string;
     institutionId?: string | null;
@@ -117,10 +161,13 @@ export async function insertAttempt(
     externalRef?: string | null;
   },
 ): Promise<AttemptRow | null> {
+  const ownership = await caseWriteColumns(db, input.caseId);
+  if (ownership === null) return null;
+
   const { data, error } = await db
     .from("application_attempts")
     .insert({
-      owner: input.owner,
+      ...ownership,
       prediction_id: input.predictionId,
       program_id: input.programId,
       institution_id: input.institutionId ?? null,
@@ -133,30 +180,52 @@ export async function insertAttempt(
   return mapAttempt(data);
 }
 
-export async function getAttemptById(db: DB, id: string): Promise<AttemptRow | null> {
-  const { data, error } = await db.from("application_attempts").select("*").eq("id", id).maybeSingle();
-  if (error || !data) return null;
+export async function getAttemptById(db: DB, id: string, caseId: string): Promise<AttemptRow | null> {
+  const { data, error } = await db
+    .from("application_attempts")
+    .select("*")
+    .eq("id", id)
+    .eq("case_id", caseId)
+    .maybeSingle();
+  if (error) throw new CaseReadError("application_attempts", error);
+  if (!data) return null;
   return mapAttempt(data);
 }
 
 /** Attempts already opened against a prediction (used to keep the apply hook idempotent). */
-export async function listAttemptsForPrediction(db: DB, predictionId: string): Promise<AttemptRow[]> {
+export async function listAttemptsForPrediction(
+  db: DB,
+  predictionId: string,
+  caseId: string,
+): Promise<AttemptRow[]> {
   const { data, error } = await db
     .from("application_attempts")
     .select("*")
-    .eq("prediction_id", predictionId);
-  if (error || !data) return [];
-  return data.map(mapAttempt);
+    .eq("prediction_id", predictionId)
+    .eq("case_id", caseId);
+  if (error) throw new CaseReadError("application_attempts", error);
+  return (data ?? []).map(mapAttempt);
 }
 
-/** Event types already on the attempt — the input to the funnel state machine (S7). */
-export async function listEventTypesForAttempt(db: DB, attemptId: string): Promise<EventType[]> {
+/**
+ * Event types already on the attempt — the input to the funnel state machine (S7).
+ *
+ * The case filter matters MORE here than on a plain read: an empty list is what
+ * tells the state machine a transition has not happened yet, so a wrongly-empty
+ * answer re-files an event the student already filed.
+ */
+export async function listEventTypesForAttempt(
+  db: DB,
+  attemptId: string,
+  caseId: string,
+): Promise<EventType[]> {
   const { data, error } = await db
     .from("outcome_events")
     .select("event_type")
-    .eq("attempt_id", attemptId);
-  if (error || !data) return [];
-  return data.map((r) => r.event_type as EventType);
+    .eq("attempt_id", attemptId)
+    .eq("case_id", caseId);
+  if (error) throw new CaseReadError("outcome_events", error);
+  return (data ?? []).map((r) => r.event_type as EventType);
 }
 
 /**
@@ -167,7 +236,7 @@ export async function listEventTypesForAttempt(db: DB, attemptId: string): Promi
 export async function insertEvent(
   db: DB,
   input: {
-    owner: string;
+    caseId: string;
     attemptId: string;
     eventType: EventType;
     gate: Gate | null;
@@ -179,10 +248,13 @@ export async function insertEvent(
     detail?: Record<string, unknown>;
   },
 ): Promise<EventRow | null> {
+  const ownership = await caseWriteColumns(db, input.caseId);
+  if (ownership === null) return null;
+
   const { data, error } = await db
     .from("outcome_events")
     .insert({
-      owner: input.owner,
+      ...ownership,
       attempt_id: input.attemptId,
       event_type: input.eventType,
       gate: input.gate,
@@ -200,16 +272,23 @@ export async function insertEvent(
   return mapEvent(data);
 }
 
-/** The signed-in user's full outcome history (RLS owner-scoped). */
-export async function getOutcomesForUser(
+/** The case's full outcome history. */
+export async function getOutcomesForCase(
   db: DB,
-  owner: string,
+  caseId: string,
 ): Promise<{ predictions: PredictionRow[]; attempts: AttemptRow[]; events: EventRow[] }> {
   const [p, a, e] = await Promise.all([
-    db.from("program_predictions").select("*").eq("owner", owner),
-    db.from("application_attempts").select("*").eq("owner", owner),
-    db.from("outcome_events").select("*").eq("owner", owner),
+    db.from("program_predictions").select("*").eq("case_id", caseId),
+    db.from("application_attempts").select("*").eq("case_id", caseId),
+    db.from("outcome_events").select("*").eq("case_id", caseId),
   ]);
+  // MV-133 on the case axis. None of these three destructured `error`, so a
+  // failed read rendered as "no applications tracked" — the same screen a student
+  // who has tracked none sees, on the surface where they went to check whether
+  // their offer was recorded.
+  if (p.error) throw new CaseReadError("program_predictions", p.error);
+  if (a.error) throw new CaseReadError("application_attempts", a.error);
+  if (e.error) throw new CaseReadError("outcome_events", e.error);
   return {
     predictions: (p.data ?? []).map(mapPrediction),
     attempts: (a.data ?? []).map(mapAttempt),

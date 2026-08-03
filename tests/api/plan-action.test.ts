@@ -14,6 +14,22 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/plan/repo", () => ({ setPlanItemStatus, setPlanItemStarted, getPlanItemKind }));
 
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
+
 import { POST } from "@/app/api/plan/action/route";
 
 const req = (body: unknown) =>
@@ -44,7 +60,7 @@ describe("POST /api/plan/action", () => {
     setPlanItemStatus.mockResolvedValue(true);
     const res = await POST(req({ id: 1, status: "done" }));
     expect(res.status).toBe(200);
-    expect(setPlanItemStatus).toHaveBeenCalledWith({ tag: "admin" }, "u1", 1, "done");
+    expect(setPlanItemStatus).toHaveBeenCalledWith({ tag: "admin" }, "case-1", 1, "done");
   });
 
   it("422s on invalid body", async () => {
@@ -66,7 +82,7 @@ describe("POST /api/plan/action", () => {
     setPlanItemStarted.mockResolvedValue(true);
     const res = await POST(req({ id: 7, started: true }));
     expect(res.status).toBe(200);
-    expect(setPlanItemStarted).toHaveBeenCalledWith({ tag: "admin" }, "u1", 7, true);
+    expect(setPlanItemStarted).toHaveBeenCalledWith({ tag: "admin" }, "case-1", 7, true);
   });
 
   it("rejects manual done on a verified item (computed truth wins)", async () => {
@@ -91,6 +107,6 @@ describe("POST /api/plan/action", () => {
     setPlanItemStatus.mockResolvedValue(true);
     const res = await POST(req({ id: 7, status: "dismissed" }));
     expect(res.status).toBe(200);
-    expect(setPlanItemStatus).toHaveBeenCalledWith({ tag: "admin" }, "u1", 7, "dismissed");
+    expect(setPlanItemStatus).toHaveBeenCalledWith({ tag: "admin" }, "case-1", 7, "dismissed");
   });
 });

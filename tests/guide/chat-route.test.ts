@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, checkRateLimit, getPrimaryAssessmentForUser, listOpenPlanForUser, deepseekChat } = vi.hoisted(
+const { getUser, checkRateLimit, getPrimaryAssessmentForCase, listOpenPlanForCase, deepseekChat } = vi.hoisted(
   () => ({
     getUser: vi.fn(),
     checkRateLimit: vi.fn(),
-    getPrimaryAssessmentForUser: vi.fn(),
-    listOpenPlanForUser: vi.fn(),
+    getPrimaryAssessmentForCase: vi.fn(),
+    listOpenPlanForCase: vi.fn(),
     deepseekChat: vi.fn(),
   }),
 );
@@ -16,9 +16,25 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
 vi.mock("@/lib/rate-limit/upstash", () => ({ checkRateLimit, ipFromRequest: () => "1.2.3.4" }));
-vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
-vi.mock("@/lib/plan/repo", () => ({ listOpenPlanForUser }));
+vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForCase }));
+vi.mock("@/lib/plan/repo", () => ({ listOpenPlanForCase }));
 vi.mock("@/lib/guide/deepseek", () => ({ deepseekChat }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { POST } from "@/app/api/guide/chat/route";
 
@@ -35,8 +51,8 @@ const signedOut = () => getUser.mockResolvedValue({ data: { user: null } });
 beforeEach(() => {
   vi.clearAllMocks();
   checkRateLimit.mockResolvedValue(true);
-  getPrimaryAssessmentForUser.mockResolvedValue(null);
-  listOpenPlanForUser.mockResolvedValue([]);
+  getPrimaryAssessmentForCase.mockResolvedValue(null);
+  listOpenPlanForCase.mockResolvedValue([]);
   deepseekChat.mockResolvedValue("a grounded, sourced answer");
 });
 
@@ -81,7 +97,7 @@ describe("POST /api/guide/chat", () => {
     signedIn();
     // The DB row stores the full AssessmentPayload under `result` (the payload itself
     // then carries a nested `result` AssessmentResult) — mirror that exact shape.
-    getPrimaryAssessmentForUser.mockResolvedValue({
+    getPrimaryAssessmentForCase.mockResolvedValue({
       result: {
         result: {
           verdict: "strong",

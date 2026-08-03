@@ -41,7 +41,10 @@ describe("POST /api/assess/claim (signed-in recover-in-place, MV-130)", () => {
 
     expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ assessmentId: ASSESSMENT_UUID, userId: "u1", email: "a@b.com" }),
+      expect.objectContaining({
+        assessmentId: ASSESSMENT_UUID,
+        user: expect.objectContaining({ id: "u1", email: "a@b.com" }),
+      }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, redirectTo: `/assessment/${ASSESSMENT_UUID}` });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -12,12 +12,28 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/assessments/repo", () => ({
   createAnonymousAssessment: vi.fn().mockResolvedValue(null),
-  getPrimaryAssessmentForUser: vi.fn().mockResolvedValue(null),
+  getPrimaryAssessmentForCase: vi.fn().mockResolvedValue(null),
 }));
 vi.mock("@/lib/profiles/repo", () => ({
-  getProfile: vi.fn().mockResolvedValue(null),
-  upsertProfile: vi.fn().mockResolvedValue(null),
+  getProfileForCase: vi.fn().mockResolvedValue(null),
+  upsertProfileForCase: vi.fn().mockResolvedValue(null),
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 vi.mock("@/lib/programs/repo", async () => {
   const { TEST_PROGRAMS, TEST_UNIVERSITIES } = await import("../fixtures/catalog");
   return {

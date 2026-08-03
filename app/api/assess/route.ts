@@ -6,9 +6,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import type { Program, University } from "@/lib/programs/types";
-import { createAnonymousAssessment, getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
+import { createAnonymousAssessment, getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
+import { ensurePersonalCase } from "@/lib/cases/personal-case";
+import { caseBindColumns } from "@/lib/cases/dual-write";
+import { adoptOwnerKeyedResidue } from "@/lib/cases/residue";
+import { isUniqueViolation } from "@/lib/cases/errors";
+import { checkCasePermission } from "@/lib/cases/require-permission";
 import { assessmentExpiry } from "@/lib/assessments/expiry";
-import { getProfile, upsertProfile } from "@/lib/profiles/repo";
+import { getProfileForCase, upsertProfileForCase } from "@/lib/profiles/repo";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
 import { invalidatePlan } from "@/lib/plan/invalidate";
@@ -84,52 +89,108 @@ export async function POST(request: Request): Promise<Response> {
     user = userData.user;
 
     if (user) {
-      const existingPrimary = await getPrimaryAssessmentForUser(supabase, user.id);
-      const { data, error } = await adminDb
-        .from("assessments")
-        .insert({
-          owner: user.id,
-          profile_snapshot: parsed.data as unknown as Json,
-          destination_id: parsed.data.destination,
-          result: payload as unknown as Json,
-          rule_version: payload.result.ruleVersion,
-          expires_at: FAR_FUTURE,
-          is_primary: !existingPrimary,
-        })
-        .select("id")
-        .single();
-      if (error || !data) {
-        // PostgREST reports a failed write as a value, not a throw — surface it
-        // instead of returning 200 with id:null. Skip the dependent writes.
-        console.error("[/api/assess] assessment insert failed", { owner: user.id, err: error });
+      // MV-157: resolve AND authorize the case before the signed-in insert.
+      // `ensurePersonalCase` (not the read-only resolver) is used here because
+      // this is the first student-owned row a converting account writes, and an
+      // assessment persisted with a null `case_id` is exactly the silent-loss
+      // state Stage 2 exists to prevent: the row is saved, the sign-in succeeded,
+      // and the case-scoped dashboard renders nothing. The admin client is
+      // required — `cases_insert_admin` refuses a personal case (its WITH CHECK
+      // demands `organization_id IS NOT NULL`), so the authenticated client
+      // cannot create one. This route is already a registered service-role
+      // exception, so no new call site is introduced.
+      const caseId = await ensurePersonalCase(user, adminDb);
+      const allowed =
+        caseId !== null &&
+        (await checkCasePermission(user.id, caseId, "case.update", supabase)).decision.allowed;
+
+      // `owner` is DERIVED from `cases.student_user_id`, not taken from
+      // `user.id`. It was a second, independent source for the same fact, on the
+      // one table where `owner`/`case_id` divergence is worst — and
+      // `lib/cases/dual-write.ts` claims no write site outside it supplies both.
+      // Routing this through the choke point makes that claim true here rather
+      // than nearly true. A case with no `student_user_id` is refused for the
+      // same reason a claim refuses one: `owner: null` on a saved assessment
+      // lands it on the anonymous side of the carve-out and MV-135 purges it.
+      //
+      // It is read AFTER the authorization check, not alongside it: the choke
+      // point issues a `cases` query, and "a denial costs zero reads" is the
+      // property `tests/api/case-denial.test.ts` pins for every migrated route.
+      const ownership = caseId === null || !allowed ? null : await caseBindColumns(adminDb, caseId);
+
+      if (caseId === null || !allowed || ownership === null) {
+        console.error("[/api/assess] case resolution or authorization failed", {
+          userId: user.id,
+          resolved: caseId !== null,
+          authorized: allowed,
+          derivedOwner: ownership !== null,
+        });
         persistFailed = true;
       } else {
-        id = data.id;
+        // `is_primary` is computed from a CASE-scoped lookup, which cannot see a
+        // legacy primary that never received a `case_id` (MV-155 residue). For
+        // that student this computes `true`, and `assessments_primary_idx (owner)
+        // WHERE is_primary` — still live until MV-160 — raises 23505: the
+        // assessment does not save at all. On that collision the residue is
+        // adopted onto the case, `is_primary` is RE-computed against the now
+        // complete picture, and the insert retried once.
+        const insertAssessment = async (isPrimary: boolean) =>
+          adminDb
+            .from("assessments")
+            .insert({
+              ...ownership,
+              profile_snapshot: parsed.data as unknown as Json,
+              destination_id: parsed.data.destination,
+              result: payload as unknown as Json,
+              rule_version: payload.result.ruleVersion,
+              expires_at: FAR_FUTURE,
+              is_primary: isPrimary,
+            })
+            .select("id")
+            .single();
 
-        const existingProfile = await getProfile(supabase, user.id);
-        if (!existingProfile) {
-          const googleName = user.user_metadata?.full_name as string | undefined;
-          const sections = profileSectionsFromAssessment(parsed.data as unknown as Record<string, unknown>, { name: googleName }, { nowYear: new Date().getUTCFullYear() });
-          const { pct } = computeCompleteness(sections);
-          const bootstrapId = await upsertProfile(adminDb, { owner: user.id, sections, completeness: pct });
-          if (!bootstrapId) {
-            console.error("[/api/assess] profile bootstrap upsert failed", { owner: user.id });
+        const existingPrimary = await getPrimaryAssessmentForCase(supabase, caseId);
+        let { data, error } = await insertAssessment(!existingPrimary);
+        if (isUniqueViolation(error)) {
+          const adopted = await adoptOwnerKeyedResidue(adminDb, "assessments", caseId);
+          if (adopted > 0) {
+            const primaryNow = await getPrimaryAssessmentForCase(supabase, caseId);
+            ({ data, error } = await insertAssessment(!primaryNow));
           }
         }
+        if (error || !data) {
+          // PostgREST reports a failed write as a value, not a throw — surface it
+          // instead of returning 200 with id:null. Skip the dependent writes.
+          console.error("[/api/assess] assessment insert failed", { caseId, err: error });
+          persistFailed = true;
+        } else {
+          id = data.id;
 
-        // Derived side-effects: the assessment is already saved, so a failure here must
-        // not be reported as a failed save. Both can now throw on their own (their own
-        // catalogue reads surface errors since MV-133) — caught and logged, as they are
-        // at every other call site.
-        try {
-          await invalidatePlan(adminDb, user.id);
-        } catch (err) {
-          console.error("[/api/assess] invalidatePlan failed", err);
-        }
-        try {
-          await reScoreAssessment(adminDb, user.id);
-        } catch (err) {
-          console.error("[/api/assess] reScoreAssessment failed", err);
+          const existingProfile = await getProfileForCase(supabase, caseId);
+          if (!existingProfile) {
+            const googleName = user.user_metadata?.full_name as string | undefined;
+            const sections = profileSectionsFromAssessment(parsed.data as unknown as Record<string, unknown>, { name: googleName }, { nowYear: new Date().getUTCFullYear() });
+            const { pct } = computeCompleteness(sections);
+            const bootstrapId = await upsertProfileForCase(adminDb, { caseId, sections, completeness: pct });
+            if (!bootstrapId) {
+              console.error("[/api/assess] profile bootstrap upsert failed", { caseId });
+            }
+          }
+
+          // Derived side-effects: the assessment is already saved, so a failure here must
+          // not be reported as a failed save. Both can now throw on their own (their own
+          // catalogue reads surface errors since MV-133) — caught and logged, as they are
+          // at every other call site.
+          try {
+            await invalidatePlan(adminDb, caseId);
+          } catch (err) {
+            console.error("[/api/assess] invalidatePlan failed", err);
+          }
+          try {
+            await reScoreAssessment(adminDb, caseId);
+          } catch (err) {
+            console.error("[/api/assess] reScoreAssessment failed", err);
+          }
         }
       }
     } else {

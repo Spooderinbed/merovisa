@@ -2,17 +2,39 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { getProfile, getPrimaryAssessmentForUser, listAllPrograms, listAllUniversities, listDocumentsForUser } = vi.hoisted(() => ({
-  getProfile: vi.fn(),
-  getPrimaryAssessmentForUser: vi.fn(),
+const { getProfileForCase, getPrimaryAssessmentForCase, listAllPrograms, listAllUniversities, listDocumentsForCase } = vi.hoisted(() => ({
+  getProfileForCase: vi.fn(),
+  getPrimaryAssessmentForCase: vi.fn(),
   listAllPrograms: vi.fn(),
   listAllUniversities: vi.fn(),
-  listDocumentsForUser: vi.fn(),
+  listDocumentsForCase: vi.fn(),
 }));
-vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
-vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
+vi.mock("@/lib/profiles/repo", () => ({ getProfileForCase }));
+vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForCase }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
-vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
+vi.mock("@/lib/documents/repo", () => ({ listDocumentsForCase }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+// The dual-write helper reads `cases` for the owner it derives; this suite is
+// about the generator reconciliation, not that derivation (which has its own
+// tests in tests/cases/dual-write.test.ts).
+const { caseWriteColumns } = vi.hoisted(() => ({ caseWriteColumns: vi.fn() }));
+vi.mock("@/lib/cases/dual-write", () => ({ caseWriteColumns }));
+beforeEach(() => caseWriteColumns.mockResolvedValue({ case_id: "case-1", owner: "u1" }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 // select(...).eq("owner", u).eq("status", "todo")  -> resolves the open-todo read
 const selectEqEq = vi.fn().mockResolvedValue({ data: [], error: null });
@@ -47,8 +69,8 @@ function openTodos(rows: Array<Record<string, unknown> & { id: number; kind: str
 
 describe("invalidatePlan", () => {
   beforeEach(() => {
-    getProfile.mockReset();
-    getPrimaryAssessmentForUser.mockReset();
+    getProfileForCase.mockReset();
+    getPrimaryAssessmentForCase.mockReset();
     listAllPrograms.mockReset();
     listAllUniversities.mockReset();
     selectEqEq.mockReset().mockResolvedValue({ data: [], error: null });
@@ -60,11 +82,11 @@ describe("invalidatePlan", () => {
     from.mockClear();
 
     // Default world: empty profile, no assessment, no programs.
-    getProfile.mockResolvedValue(null);
-    getPrimaryAssessmentForUser.mockResolvedValue(null);
+    getProfileForCase.mockResolvedValue(null);
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockResolvedValue([]);
-    listDocumentsForUser.mockReset().mockResolvedValue([]);
+    listDocumentsForCase.mockReset().mockResolvedValue([]);
   });
 
   // MV-133: the plan is regenerated FROM the catalogue. Reading it as empty on failure
@@ -72,8 +94,8 @@ describe("invalidatePlan", () => {
   // persisted as if it were the truth. The read now throws before any write happens, and
   // callers (every route that triggers a rebuild) catch and log, leaving the prior plan.
   it("writes nothing when the catalogue read fails", async () => {
-    getProfile.mockResolvedValue({ sections: { academic: { gradePercent: 75 } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1" });
+    getProfileForCase.mockResolvedValue({ sections: { academic: { gradePercent: 75 } } });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1" });
     listAllPrograms.mockRejectedValue(new CatalogReadError("programs"));
 
     await expect(invalidatePlan(fakeAdmin, "u1")).rejects.toThrow(CatalogReadError);
@@ -213,8 +235,8 @@ describe("invalidatePlan", () => {
     // so computeMatches would floor them to 0 and call every program a reach — seeding
     // add-safer-options ("your current matches are all reach") off a fabricated verdict.
     // The gate skips the match-driven items; the profile-completeness prompts still fire.
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({ destination_id: "australia" });
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
+    getPrimaryAssessmentForCase.mockResolvedValue({ destination_id: "australia" });
     listAllPrograms.mockResolvedValue([program]);
     listAllUniversities.mockResolvedValue([uni]);
 
@@ -233,7 +255,7 @@ describe("invalidatePlan", () => {
     // A sufficient profile (grade + English + budget present) whose tiny budget makes the
     // one program a genuine reach with no strong. The match-driven item must still fire —
     // the gate abstains only when there is nothing real to score.
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         academic: { gradePercent: 72 },
         english: { overall: 7 },
@@ -241,7 +263,7 @@ describe("invalidatePlan", () => {
         "intended-study": { field: "computer-science" },
       },
     });
-    getPrimaryAssessmentForUser.mockResolvedValue({ destination_id: "australia" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ destination_id: "australia" });
     listAllPrograms.mockResolvedValue([program]);
     listAllUniversities.mockResolvedValue([uni]);
 
@@ -257,8 +279,8 @@ describe("invalidatePlan", () => {
     // auto-close as 'condition satisfied': a legacy row seeded by the very zero-floor bug
     // this slice fixes would otherwise be struck 'Done', telling the student they added
     // safer options when they never did — a fresh fabrication in place of the old one.
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({ destination_id: "australia" });
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Asha" } } });
+    getPrimaryAssessmentForCase.mockResolvedValue({ destination_id: "australia" });
     listAllPrograms.mockResolvedValue([program]);
     listAllUniversities.mockResolvedValue([uni]);
     openTodos([{ id: 9, kind: "add-safer-options" }]);
@@ -273,7 +295,7 @@ describe("invalidatePlan", () => {
   });
 
   it("does not emit start-passport-process once a passport is uploaded, and auto-closes an open one", async () => {
-    listDocumentsForUser.mockResolvedValue([{ kind: "passport" }]);
+    listDocumentsForCase.mockResolvedValue([{ kind: "passport" }]);
     openTodos([{ id: 5, kind: "start-passport-process" }]);
 
     await invalidatePlan(fakeAdmin, "u1");

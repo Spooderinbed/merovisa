@@ -171,6 +171,29 @@ jobs:
           grep -q '✓ tests/integration/owner-nullable-rebase.itest.ts' vitest-integration.log
           # 45 tests today. Same floor rationale as MV-155's.
           test "$(grep -c '✓ tests/integration/owner-nullable-rebase.itest.ts' vitest-integration.log)" -ge 38
+          # MV-157: the ONLY probe that can see a case-scoping bug while the LEGACY
+          # owner-scoped policies are still in force. Every assertion in it runs through
+          # the service-role client with RLS bypassed, precisely because a read issued as
+          # the authenticated user is silently ANDed with `owner = auth.uid()` and would
+          # pass against a wrong, missing, or accidentally-still-owner-scoped `case_id`
+          # filter (card Risk 1). It also owns the six unique-index probes and the
+          # upsert-twice test for every `onConflict` target. Anchored for the same reason
+          # as the four above — and it is a NEW file, so without an anchor the lane would
+          # go green on the day somebody deleted it.
+          grep -q '✓ tests/integration/case-data-access.itest.ts' vitest-integration.log
+          # 34 tests today. Floor below that so an incidental removal does not trip it,
+          # high enough that a gutted suite does. Raise it when the suite grows.
+          test "$(grep -c '✓ tests/integration/case-data-access.itest.ts' vitest-integration.log)" -ge 28
+          # MV-158: the claim path against a real Postgres — the atomic owner+case_id
+          # bind, "exactly one primary under BOTH keys" (the assertion that goes red if
+          # the demote is scoped to one key), the concurrent-claim race, F2's heal, and
+          # the MV-135 landmine in both directions. None of it is provable on a mock:
+          # the partial unique index, the `cases` unique constraint and the FK cascade
+          # are all invisible to supabase-js. It also now carries MV-154's detector call
+          # after every test, so a gutted suite silently stops reconciling too.
+          grep -q '✓ tests/integration/claim-path.itest.ts' vitest-integration.log
+          # 13 tests today. Same floor rationale.
+          test "$(grep -c '✓ tests/integration/claim-path.itest.ts' vitest-integration.log)" -ge 11
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup
