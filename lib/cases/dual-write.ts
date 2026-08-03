@@ -27,12 +27,32 @@ import type { CaseAuthorizationClient } from "./context";
  * first. Every mutating integration test calls the detector at the end as the
  * compensating frequency.
  *
+ * ## The `assessments` exception, stated precisely — it USED to falsify the above
+ *
+ * The paragraph above was written as a whole-codebase structural claim while four
+ * `owner:` write payloads lived outside this module, all on `assessments`, and one
+ * of them — `claimAssessment(db, { id, userId, caseId, … })` — took **both** axes
+ * as independent parameters and was therefore able to make them disagree. A
+ * guarantee MV-160 §D is being designed around cannot be approximately true, so
+ * three of the four were routed through this module rather than the sentence
+ * softened (`claimAssessment`, `/api/assess`'s signed-in insert, and the dev
+ * sign-in harness now all take or spread a value **produced here**).
+ *
+ * **One remains, and it cannot make the two disagree.**
+ * `createAnonymousAssessment` (`lib/assessments/repo.ts`) writes the literal
+ * `owner: null` on a row that has **no case at all**. That is not a dual-write: it
+ * is the anonymous carve-out — spec §3, `owner IS NULL ⇒ case_id IS NULL` — the
+ * state MV-135's purge keys on and the state a claim transitions a row *out of*.
+ * There is no case id in scope to derive an owner from, and no pair to diverge.
+ * It is the ONLY `owner:` payload key in `lib/` or `app/` outside this file, and
+ * MV-160 §D's sweep should allow-list exactly it, by that reason.
+ *
  * ## Why MV-160's source sweep allowlists this file
  *
  * `tests/architecture/no-actor-equals-student.test.ts` (MV-160 §D) flags any
- * `owner:` key in an insert or upsert payload. This module writes one on every
- * personal-case row, deliberately, and is the **single** allowlisted path. Every
- * other `owner:` payload site anywhere in `lib/`/`app/` fails that sweep. The
+ * `owner:` key in an insert or upsert payload. This module derives one on every
+ * personal-case row, deliberately, and is the **single** allowlisted DERIVING
+ * path (with the anonymous literal above as the single non-deriving one). The
  * `owner` column is retained as the provenance link that
  * `app/api/account/delete/route.ts` and MV-135's `owner is null` purge predicate
  * both still read, so removing the dual-write is a **Stage 6** item sequenced
@@ -75,6 +95,33 @@ export async function caseWriteColumns(
 ): Promise<{ case_id: string; owner: string | null } | null> {
   const ownership = await readCaseOwnership(db, caseId);
   if (ownership === null) return null;
+  return { case_id: ownership.caseId, owner: ownership.owner };
+}
+
+/**
+ * The ownership columns for a row being bound to a **student's** case, with
+ * `owner` narrowed to non-null. A case with no `student_user_id` is refused.
+ *
+ * This exists so `claimAssessment` can stop taking `userId` and `caseId` as two
+ * independent parameters. It took both, which made it the one repository
+ * signature that could write an `owner` disagreeing with its `case_id` — on the
+ * table where that corruption is worst, because `assessments.case_id` is the one
+ * column that stays nullable at MV-160 and `owner IS NULL` is what the purge
+ * keys on. Passing ONE value produced here makes the disagreement unrepresentable
+ * rather than merely untested.
+ *
+ * The narrowing is load-bearing, not cosmetic: writing `owner: null` onto a
+ * CLAIMED assessment would land it on the wrong side of the anonymous carve-out —
+ * invisible to the student and eligible for MV-135's purge. `caseWriteColumns`
+ * returns `owner: null` for a consultancy case quite legitimately; a claim must
+ * never accept that value, so it asks a function that cannot return it.
+ */
+export async function caseBindColumns(
+  db: CaseAuthorizationClient,
+  caseId: string,
+): Promise<{ case_id: string; owner: string } | null> {
+  const ownership = await readCaseOwnership(db, caseId);
+  if (ownership === null || ownership.owner === null) return null;
   return { case_id: ownership.caseId, owner: ownership.owner };
 }
 

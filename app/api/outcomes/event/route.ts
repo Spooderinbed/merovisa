@@ -36,10 +36,14 @@ export async function POST(request: Request): Promise<Response> {
   const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
   if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const attempt = await getAttemptById(supabase, parsed.data.attemptId);
+  // Both reads are scoped to the case authorized above. The attempt id is
+  // client-supplied, and `prior` is what the state machine treats as "this has
+  // not happened yet" — an unscoped empty answer re-files an event the student
+  // already filed.
+  const attempt = await getAttemptById(supabase, parsed.data.attemptId, caseId);
   if (!attempt) return NextResponse.json({ error: "unknown attempt" }, { status: 404 });
 
-  const prior = await listEventTypesForAttempt(supabase, parsed.data.attemptId);
+  const prior = await listEventTypesForAttempt(supabase, parsed.data.attemptId, caseId);
   const guard = canRecordEvent(prior, parsed.data.eventType);
   if (!guard.ok) return NextResponse.json({ error: guard.reason }, { status: 409 });
 

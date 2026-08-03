@@ -355,8 +355,9 @@ never widens.
 - **S2** = in Stage 2 · **S3** = deferred to Stage 3 · **—** = never
 - A cell marked **S3 (grant)** is blocked by the absent `authenticated` grant, not by policy. See §7.
 
-**Three rules added 2026-08-02 that apply across every table below, recorded once here so nine cells do
-not each state them differently.**
+**Four rules that apply across every table below, recorded once here so nine cells do not each state
+them differently.** Rules 1, 2 and 4 were added 2026-08-02; **rule 3 was added 2026-08-03** from the
+MV-157/MV-158 review, which found a residue class the cards had not named.
 
 1. **The case-keyed uniqueness indexes are FULL, not partial.** MV-155 §E originally created each of
    them with `where case_id is not null`. Postgres infers a **partial** unique index for `ON CONFLICT`
@@ -384,7 +385,37 @@ not each state them differently.**
    Stage 3 input: a consultancy row written through an **upsert** must supply `case_id`, so its
    `ON CONFLICT DO UPDATE SET` list needs `UPDATE(case_id)`, which Stage 2 does not grant — MV-160 §D
    drives plain statements, and MV-157 keeps `case_id` out of both upsert payloads.
-3. **The policy lifecycle is two slices, not one.** Every *Policy form* row below describes what
+3. **MV-155 RESIDUE IS A FAILURE MODE, NOT A DEGRADED ONE — added 2026-08-03 from the MV-157/MV-158
+   review.** Rule 2 explains why only **two** of the nine tables carry a derive trigger. The
+   consequence for the other **seven** was never written down, and it is not the consequence the cards
+   assume. Those seven received `case_id` from a **one-shot** backfill, so a row written to any of
+   them between the backfill and the MV-157 deploy carries `owner` and no `case_id`. Two populations,
+   behaving differently:
+   - A user with **no personal case** degrades gracefully. Every migrated read is `case_id`-scoped,
+     returns nothing, and renders the same empty state a brand-new account sees.
+   - A user who **has** a personal case but owns case-less rows **breaks**. Every new upsert
+     conflict-targets `case_id`; an existing row whose `case_id` is NULL is not a conflict on that
+     arbiter, so the write takes the INSERT branch — and the LEGACY owner-keyed uniques are still live
+     until MV-160 drops them (`profiles_owner_key`, `documents_owner_kind_key`,
+     `assessments_primary_idx`, `plan_items_kind_open_idx`). The write raises **23505**. Four paths
+     reach it: profile save, document upload, the assessment persist's `is_primary` computation (its
+     case-scoped lookup cannot see a legacy primary, so it computes `true` and collides), and
+     `invalidatePlan`'s batch insert — where PostgREST sends the array as ONE statement, so a single
+     colliding kind takes every other new item down with it.
+
+   **The two mitigations, and which is primary.** The *process* one: MV-157 §J and MV-158 §J now
+   require `private.mv155_backfill_personal_cases()` to be **re-run** against the hosted project as
+   the last pre-merge step, with zero non-anonymous `case_id IS NULL` asserted across all nine and the
+   output recorded — because counting at MV-155 apply time is not counting at merge time. The *code*
+   one is defence in depth: the four paths adopt the residue onto the case and retry once, and only on
+   a 23505, so a fully-backfilled user pays nothing (`lib/cases/residue.ts`). The two UPSERT-seam
+   tables are deliberately excluded from the adopt — their routes run on the AUTHENTICATED client,
+   which Stage 2 grants no `UPDATE (case_id)` (§4.4, §4.6), and they are the two tables whose derive
+   trigger prevents the residue in the first place.
+
+   Measured on `obfvrxixtautamflzxzq` on 2026-08-03: residue **zero on all nine tables**, and **zero**
+   users without a personal case. A window to close before merge, not an outage.
+4. **The policy lifecycle is two slices, not one.** Every *Policy form* row below describes what
    **MV-159** creates, including the transitional `owner = (select auth.uid()) OR …` disjunct.
    **MV-160 §D re-creates every one of those policies with the disjunct removed**, as step (d) of its
    migration — after its `SET NOT NULL`s, which are what make the disjunct redundant — and only then
@@ -1296,3 +1327,44 @@ D-A work item 1 is satisfied for the current schema.
   a rollback would have executed. Prose in §1 is read once at the start of a slice; an unticked
   acceptance criterion is read at the end, when the contradiction is actually known. MV-157, MV-158,
   MV-159 and MV-160 now each carry the criterion verbatim, and MV-154 carries it as a stage-level rule.
+- **2026-08-03** — **§4 rule 3 added: MV-155 residue BREAKS rather than degrades, for one population
+  neither MV-157 nor MV-158 named.** Found by the three-lens review of PR #119. The cards reason about
+  "a user with no personal case" (which degrades to an empty state, correctly) and never about "a user
+  who HAS a personal case but owns rows the one-shot backfill did not reach". For the second, the
+  `case_id` conflict target does not match the case-less row, the write takes the INSERT branch, and a
+  still-live legacy owner-keyed unique raises 23505 — a hard failure on profile save, document upload,
+  the assessment persist and `invalidatePlan`'s batch insert. The claim path reaches it directly:
+  STEP 3's `getProfileForCase` cannot see an owner-set / case-null profile, so it decides to bootstrap
+  one and collides on `profiles_owner_key`. The remedy is stated in rule 3 and is two-part — MV-157 §J
+  and MV-158 §J now **re-run** `private.mv155_backfill_personal_cases()` as the last pre-merge step
+  instead of counting at MV-155 apply time, and the four write paths adopt-and-retry on a 23505 as
+  defence in depth. Production measured the same day: **zero** residue on all nine tables, **zero**
+  users without a personal case — so the exposure is the window between that measurement and the
+  merge, which the re-run closes.
+- **2026-08-03** — **§3's "one defence" is now literally true; it was previously approximately true.**
+  The invariant section and `lib/cases/dual-write.ts` both assert that no repository signature accepts
+  both `owner` and `caseId`, and MV-160 §D is being designed around that assertion. Four `owner:`
+  write payloads lived outside the choke point, all on `assessments`, and `claimAssessment` took both
+  axes as independent parameters — on the one table whose `case_id` stays nullable at MV-160 and whose
+  `owner IS NULL` drives MV-135's purge. Three were routed through the choke point (`claimAssessment`
+  now takes one derived `ownership` value; `/api/assess` and the dev sign-in harness spread the same).
+  The fourth, `createAnonymousAssessment`'s literal `owner: null`, is **not** a counter-example and is
+  recorded here as the single named exception: it writes a row with no case at all, which is the
+  anonymous carve-out itself, so there is no pair that can diverge. MV-160 §D's payload sweep should
+  allow-list exactly that site, by that reason.
+- **2026-08-03** — **The four id-keyed reads on §4.7/§4.8/§4.9 now carry a `case_id` filter.**
+  `getPredictionById`, `getAttemptById`, `listAttemptsForPrediction` and `listEventTypesForAttempt`
+  selected by a CLIENT-SUPPLIED id with no case predicate, resting on "RLS scopes to the owner". That
+  is a description of a policy **MV-159 is about to replace** — the moment the owner disjunct leaves,
+  they become unscoped reads of an id the caller chose, in a card that is not looking at this file.
+  They now take the already-authorized `caseId`, which puts the read inside the boundary the route
+  established and does so while the legacy policy is still there to catch a mistake rather than after
+  it is gone. No grant or policy changes; MV-159 should not treat these as blocked paths.
+- **2026-08-03** — **A failed case-scoped read now THROWS (`CaseReadError`) instead of rendering as
+  no-data.** MV-133 shipped this idiom for the catalogue; MV-157 re-introduced the defect on the case
+  axis — `resolvePersonalCaseId` ended `if (error || !data) return null` with no log, and
+  `lib/documents/repo.ts`, `lib/documents/status-repo.ts` and `getOutcomesForCase` did not destructure
+  `error` at all. The failure that hid is precisely the one both cards gate the merge on: a hosted
+  database without MV-155's migration answers **42703** to every migrated read, and the product would
+  have rendered as "you have no data" rather than as an outage. `null` / `[]` is now reserved for the
+  query that answered with nothing.

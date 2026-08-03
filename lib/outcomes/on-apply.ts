@@ -33,7 +33,7 @@ export async function captureApplication(
   const frozen = await freezePredictionForProgram(db, caseId, programId);
   if (!frozen.ok) return { captured: false, reason: frozen.error };
 
-  const [existing] = await listAttemptsForPrediction(db, frozen.prediction.id);
+  const [existing] = await listAttemptsForPrediction(db, frozen.prediction.id, caseId);
   if (existing) {
     await ensureAppliedEvent(db, caseId, existing);
     return { captured: true, attempt: existing, created: false };
@@ -60,7 +60,7 @@ export async function captureApplication(
  * attempts opened by the earlier event-less path.
  */
 async function ensureAppliedEvent(db: DB, caseId: string, attempt: AttemptRow): Promise<void> {
-  const prior = await listEventTypesForAttempt(db, attempt.id);
+  const prior = await listEventTypesForAttempt(db, attempt.id, caseId);
   if (prior.includes("applied")) return;
   await insertEvent(db, {
     caseId,

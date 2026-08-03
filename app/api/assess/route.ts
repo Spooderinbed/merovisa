@@ -8,6 +8,9 @@ import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import type { Program, University } from "@/lib/programs/types";
 import { createAnonymousAssessment, getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { ensurePersonalCase } from "@/lib/cases/personal-case";
+import { caseBindColumns } from "@/lib/cases/dual-write";
+import { adoptOwnerKeyedResidue } from "@/lib/cases/residue";
+import { isUniqueViolation } from "@/lib/cases/errors";
 import { checkCasePermission } from "@/lib/cases/require-permission";
 import { assessmentExpiry } from "@/lib/assessments/expiry";
 import { getProfileForCase, upsertProfileForCase } from "@/lib/profiles/repo";
@@ -101,28 +104,60 @@ export async function POST(request: Request): Promise<Response> {
         caseId !== null &&
         (await checkCasePermission(user.id, caseId, "case.update", supabase)).decision.allowed;
 
-      if (caseId === null || !allowed) {
+      // `owner` is DERIVED from `cases.student_user_id`, not taken from
+      // `user.id`. It was a second, independent source for the same fact, on the
+      // one table where `owner`/`case_id` divergence is worst — and
+      // `lib/cases/dual-write.ts` claims no write site outside it supplies both.
+      // Routing this through the choke point makes that claim true here rather
+      // than nearly true. A case with no `student_user_id` is refused for the
+      // same reason a claim refuses one: `owner: null` on a saved assessment
+      // lands it on the anonymous side of the carve-out and MV-135 purges it.
+      //
+      // It is read AFTER the authorization check, not alongside it: the choke
+      // point issues a `cases` query, and "a denial costs zero reads" is the
+      // property `tests/api/case-denial.test.ts` pins for every migrated route.
+      const ownership = caseId === null || !allowed ? null : await caseBindColumns(adminDb, caseId);
+
+      if (caseId === null || !allowed || ownership === null) {
         console.error("[/api/assess] case resolution or authorization failed", {
           userId: user.id,
           resolved: caseId !== null,
+          authorized: allowed,
+          derivedOwner: ownership !== null,
         });
         persistFailed = true;
       } else {
+        // `is_primary` is computed from a CASE-scoped lookup, which cannot see a
+        // legacy primary that never received a `case_id` (MV-155 residue). For
+        // that student this computes `true`, and `assessments_primary_idx (owner)
+        // WHERE is_primary` — still live until MV-160 — raises 23505: the
+        // assessment does not save at all. On that collision the residue is
+        // adopted onto the case, `is_primary` is RE-computed against the now
+        // complete picture, and the insert retried once.
+        const insertAssessment = async (isPrimary: boolean) =>
+          adminDb
+            .from("assessments")
+            .insert({
+              ...ownership,
+              profile_snapshot: parsed.data as unknown as Json,
+              destination_id: parsed.data.destination,
+              result: payload as unknown as Json,
+              rule_version: payload.result.ruleVersion,
+              expires_at: FAR_FUTURE,
+              is_primary: isPrimary,
+            })
+            .select("id")
+            .single();
+
         const existingPrimary = await getPrimaryAssessmentForCase(supabase, caseId);
-        const { data, error } = await adminDb
-          .from("assessments")
-          .insert({
-            owner: user.id,
-            case_id: caseId,
-            profile_snapshot: parsed.data as unknown as Json,
-            destination_id: parsed.data.destination,
-            result: payload as unknown as Json,
-            rule_version: payload.result.ruleVersion,
-            expires_at: FAR_FUTURE,
-            is_primary: !existingPrimary,
-          })
-          .select("id")
-          .single();
+        let { data, error } = await insertAssessment(!existingPrimary);
+        if (isUniqueViolation(error)) {
+          const adopted = await adoptOwnerKeyedResidue(adminDb, "assessments", caseId);
+          if (adopted > 0) {
+            const primaryNow = await getPrimaryAssessmentForCase(supabase, caseId);
+            ({ data, error } = await insertAssessment(!primaryNow));
+          }
+        }
         if (error || !data) {
           // PostgREST reports a failed write as a value, not a throw — surface it
           // instead of returning 200 with id:null. Skip the dependent writes.

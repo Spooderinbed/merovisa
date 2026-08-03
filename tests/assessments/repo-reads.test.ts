@@ -4,6 +4,7 @@ import {
   getPrimaryAssessmentForCase,
   listAssessmentsForCase,
 } from "@/lib/assessments/repo";
+import { CaseReadError } from "@/lib/cases/errors";
 import { fakeSupabase } from "../helpers/fake-supabase";
 
 const CASE = "case-1";
@@ -47,8 +48,17 @@ describe("listAssessmentsForCase", () => {
     ).toBe(true);
   });
 
-  it("returns [] on error", async () => {
+  it("THROWS on a read error — `[]` means the case has no assessments", async () => {
+    // MV-133, recurring on the case axis. This used to return `[]`, which is the
+    // same value a case that genuinely has no assessments returns, so a failed
+    // read told a student who HAS assessed that they had not. `[]` is now
+    // reserved for the query that answered with nothing.
     const { client } = fakeSupabase({ data: null, error: { message: "boom" } });
+    await expect(listAssessmentsForCase(client, CASE)).rejects.toBeInstanceOf(CaseReadError);
+  });
+
+  it("still returns [] when the query answers with no rows", async () => {
+    const { client } = fakeSupabase({ data: [], error: null });
     expect(await listAssessmentsForCase(client, CASE)).toEqual([]);
   });
 });

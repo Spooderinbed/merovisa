@@ -1,6 +1,7 @@
 import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CaseAuthorizationClient } from "./context";
+import { CaseReadError } from "./errors";
 
 /**
  * The personal case — the ONE way a personal route turns an actor into a case id
@@ -89,11 +90,26 @@ function derivePersonalCaseIdentity(user: PersonalCaseSessionUser): {
 }
 
 /**
- * The actor's personal case id, or null when they have none (and on any lookup
- * failure — this fails closed, exactly like `getCaseContext`).
+ * The actor's personal case id, or null when they have none.
  *
  * `organization_id IS NULL` is part of the predicate, not a post-filter: a
  * student linked to a consultancy case must not have that case returned here.
+ *
+ * ## `null` means "no case", NOT "the read failed" — MV-133, recurring
+ *
+ * This used to end `if (error || !data) return null` with no log, and the review
+ * that caught it is right to call it a recurrence rather than a nitpick. Every
+ * caller treats `null` as *the actor has no personal case*, which is a real,
+ * benign state (a brand-new account) rendered as an empty dashboard. Folding a
+ * PostgREST error into the same value makes an outage — and specifically the
+ * `42703 undefined column` a hosted database without MV-155's migration returns
+ * on **every** migrated read, which is the exact failure both cards gate the
+ * merge on — render as "you have no data". That is the lie MV-133 exists to end,
+ * so a real error now THROWS `CaseReadError` and `null` is reserved for the query
+ * that answered with nothing.
+ *
+ * It does still fail closed on the security question: nothing about a thrown read
+ * grants access, and `requireCasePermission` is a separate call regardless.
  */
 export async function resolvePersonalCaseId(
   actorUserId: string,
@@ -101,19 +117,28 @@ export async function resolvePersonalCaseId(
 ): Promise<string | null> {
   if (!isPresent(actorUserId)) return null;
 
+  const client = db ?? (await createSupabaseServerClient());
+  let data: unknown;
+  let error: unknown;
   try {
-    const client = db ?? (await createSupabaseServerClient());
-    const { data, error } = await client
+    ({ data, error } = await client
       .from("cases")
       .select("id")
       .eq("student_user_id", actorUserId)
       .is("organization_id", null)
-      .maybeSingle();
-    if (error || !data) return null;
-    return (data as { id: string }).id;
-  } catch {
-    return null;
+      .maybeSingle());
+  } catch (err) {
+    // A dropped connection or an aborted request never answered either — same
+    // honesty rule, and it must not be flattened into "no personal case".
+    console.error("[cases] personal-case lookup threw", { err });
+    throw new CaseReadError("cases", err);
   }
+  if (error) {
+    console.error("[cases] personal-case lookup failed", { error });
+    throw new CaseReadError("cases", error);
+  }
+  if (!data) return null;
+  return (data as { id: string }).id;
 }
 
 /**
@@ -137,7 +162,11 @@ export async function resolvePersonalCaseId(
  *
  * Returns null on failure rather than throwing, so the claim seam can report a
  * retryable `error` (MV-158 F4) instead of telling a student their still-present
- * assessment is gone.
+ * assessment is gone. That includes the `CaseReadError` its own resolver now
+ * raises: at THIS seam a failed lookup and an absent case both mean "we could not
+ * give you a workspace, try again", and the claim already routes null to the
+ * retryable leg. The catch logs rather than swallowing, so the distinction
+ * survives in the server log even though the return value collapses it.
  */
 export async function ensurePersonalCase(
   sessionUser: PersonalCaseSessionUser,
@@ -170,8 +199,10 @@ export async function ensurePersonalCase(
     // and return theirs; any other error is a genuine failure the caller must be
     // able to see.
     if (error?.code === "23505") return await resolvePersonalCaseId(actorUserId, client);
+    console.error("[cases] personal-case create failed", { actorUserId, error });
     return null;
-  } catch {
+  } catch (err) {
+    console.error("[cases] personal-case create-or-resolve failed", { actorUserId, err });
     return null;
   }
 }

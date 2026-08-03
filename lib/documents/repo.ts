@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { caseWriteColumns } from "@/lib/cases/dual-write";
+import { adoptOwnerKeyedResidue } from "@/lib/cases/residue";
+import { CaseReadError, isUniqueViolation } from "@/lib/cases/errors";
 import type { DocumentKind } from "./types";
 
 type DB = SupabaseClient<Database>;
@@ -32,12 +34,19 @@ export interface DocumentRow {
  * `storage.objects.name` deliberately disagree about the authorization model for
  * the whole window.
  */
+// MV-133 on the case axis: these three did not destructure `error` AT ALL, so a
+// read that never answered was indistinguishable from a case with no documents —
+// and the vault renders the second as "no documents uploaded", next to a
+// checklist that then says the student still has to upload their passport. A
+// PostgREST error now throws; `[]` / `null` stays reserved for the query that
+// answered with nothing.
 export async function listDocumentsForCase(db: DB, caseId: string): Promise<DocumentRow[]> {
-  const { data } = await db
+  const { data, error } = await db
     .from("documents")
     .select("*")
     .eq("case_id", caseId)
     .order("created_at", { ascending: false });
+  if (error) throw new CaseReadError("documents", error);
   return (data ?? []) as DocumentRow[];
 }
 
@@ -46,12 +55,13 @@ export async function getDocumentByKindForCase(
   caseId: string,
   kind: DocumentKind,
 ): Promise<DocumentRow | null> {
-  const { data } = await db
+  const { data, error } = await db
     .from("documents")
     .select("*")
     .eq("case_id", caseId)
     .eq("kind", kind)
     .maybeSingle();
+  if (error) throw new CaseReadError("documents", error);
   return (data as DocumentRow) ?? null;
 }
 
@@ -60,11 +70,12 @@ export async function listDocumentsByKindsForCase(
   caseId: string,
   kinds: DocumentKind[],
 ): Promise<DocumentRow[]> {
-  const { data } = await db
+  const { data, error } = await db
     .from("documents")
     .select("*")
     .eq("case_id", caseId)
     .in("kind", kinds);
+  if (error) throw new CaseReadError("documents", error);
   return (data ?? []) as DocumentRow[];
 }
 
@@ -120,24 +131,33 @@ export async function upsertDocument(
   // is service-role (Stage 2 grants `authenticated` no INSERT on `documents` —
   // spec §4.5), so the ON CONFLICT DO UPDATE SET list runs under service_role's
   // table-level UPDATE.
+  //
+  // MV-155 RESIDUE: `documents_owner_kind_key` is still live. A student who has a
+  // personal case but whose passport row never received a `case_id` is not a
+  // conflict on the `(case_id, kind)` arbiter, so this takes the INSERT branch and
+  // 23505s on the legacy owner unique — the re-upload fails outright rather than
+  // degrading. On a 23505 the residue for THIS KIND is adopted onto the case and
+  // the upsert retried once (`lib/cases/residue.ts` explains why lazily).
   const ownership = await caseWriteColumns(db, doc.caseId);
   if (ownership === null) return null;
 
-  const { data } = await db
-    .from("documents")
-    .upsert(
-      {
-        ...ownership,
-        kind: doc.kind,
-        file_path: doc.filePath,
-        file_size: doc.fileSize,
-        original_name: doc.originalName,
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: "case_id,kind" },
-    )
-    .select("id")
-    .single();
+  const payload = {
+    ...ownership,
+    kind: doc.kind,
+    file_path: doc.filePath,
+    file_size: doc.fileSize,
+    original_name: doc.originalName,
+    created_at: new Date().toISOString(),
+  };
+  const write = async () =>
+    db.from("documents").upsert(payload, { onConflict: "case_id,kind" }).select("id").single();
+
+  let { data, error } = await write();
+  if (isUniqueViolation(error)) {
+    const adopted = await adoptOwnerKeyedResidue(db, "documents", doc.caseId, [["kind", doc.kind]]);
+    if (adopted > 0) ({ data, error } = await write());
+  }
+  if (error) return null;
   return (data as { id: string } | null)?.id ?? null;
 }
 

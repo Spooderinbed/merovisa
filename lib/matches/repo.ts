@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { caseUpsertColumns } from "@/lib/cases/dual-write";
+import { CaseReadError } from "@/lib/cases/errors";
 
 type DB = SupabaseClient<Database>;
 
@@ -76,8 +77,10 @@ export async function listShortlistForCase(db: DB, caseId: string): Promise<Shor
     .from("user_program_state")
     .select("program_id, status, notes")
     .eq("case_id", caseId);
-  if (error || !data) return [];
-  return data.map((r) => ({
+  // MV-133 on the case axis: an empty shortlist is a real state; a failed read
+  // wearing it silently un-saves every program the student saved.
+  if (error) throw new CaseReadError("user_program_state", error);
+  return (data ?? []).map((r) => ({
     programId: r.program_id,
     status: r.status as ShortlistStatus,
     notes: r.notes,

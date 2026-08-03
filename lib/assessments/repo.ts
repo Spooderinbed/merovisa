@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
+import { CaseReadError } from "@/lib/cases/errors";
 import { AssessmentClaimError } from "./errors";
 
 type DB = SupabaseClient<Database>;
@@ -13,6 +14,15 @@ export interface NewAssessment {
   expiresAt: string;
 }
 
+/**
+ * THE ONE `owner:` PAYLOAD KEY LEFT OUTSIDE `lib/cases/dual-write.ts`, and the
+ * reason it is not a falsifier of that module's structural guarantee: it writes
+ * the LITERAL `null` on a row that has no case at all. That is the anonymous
+ * carve-out — spec §3, `owner IS NULL ⇒ case_id IS NULL` — the state MV-135's
+ * purge keys on and the state a claim transitions a row out of. There is no case
+ * id in scope to derive an owner from and therefore no pair that could disagree.
+ * MV-160 §D's payload sweep should allow-list exactly this site, by this reason.
+ */
 export async function createAnonymousAssessment(db: DB, input: NewAssessment): Promise<string | null> {
   const { data, error } = await db
     .from("assessments")
@@ -61,16 +71,26 @@ export async function createLead(db: DB, input: { email: string; assessmentId: s
  * takes a caller-supplied id and verifies no token, so an already-claimed or
  * expired row matching nothing is what stops a caller stealing another account's
  * assessment.
+ *
+ * ## Why it takes `ownership` and no longer takes `userId` + `caseId`
+ *
+ * It used to take both, independently — which made it the ONE repository
+ * signature able to write an `owner` that disagreed with its `case_id`, on the
+ * table where that corruption is worst. `lib/cases/dual-write.ts` claims that "no
+ * repository signature accepts both `owner` and `caseId`", MV-160 §D is being
+ * designed around that claim, and this function falsified it. It now takes a
+ * SINGLE value produced by `caseBindColumns`, which derives `owner` from
+ * `cases.student_user_id`: the disagreement is unrepresentable rather than merely
+ * untested, and the payload is still one statement.
  */
 export async function claimAssessment(
   db: DB,
-  input: { id: string; userId: string; caseId: string; nowIso: string },
+  input: { id: string; ownership: { case_id: string; owner: string }; nowIso: string },
 ): Promise<boolean> {
   const { data, error } = await db
     .from("assessments")
     .update({
-      owner: input.userId,
-      case_id: input.caseId,
+      ...input.ownership,
       claimed_at: new Date().toISOString(),
     })
     .eq("id", input.id)
@@ -134,14 +154,32 @@ export async function getAssessmentClaimState(
  *
  * Scoped to `owner = caller AND case_id IS NULL`, so it can only ever repair a
  * row the caller already owns and can never re-point one that is already bound.
- * Returns false rather than throwing: a failed repair must not turn a successful
- * `already-mine` into an error the student sees.
+ * It never throws: a failed repair must not turn a successful `already-mine` into
+ * an error the student sees.
+ *
+ * ## Three outcomes, not two
+ *
+ * It used to return `true` whenever PostgREST did not error — including when the
+ * conditional update matched NO ROW, which is the case where nothing was
+ * repaired. "Reported success having done nothing" is the same defect class as
+ * the read errors above, and here it is worse than cosmetic: the caller decides
+ * whether to run the follow-up promote off this answer, so a `true` that repaired
+ * nothing suppresses the repair that would have fixed the row. The tri-state says
+ * which of the three actually happened.
  */
+export type CaseHealOutcome =
+  /** The row carried no case and now carries this one. */
+  | "repaired"
+  /** The predicate matched nothing: already bound, or not this caller's row. */
+  | "not-applicable"
+  /** The write never landed. */
+  | "failed";
+
 export async function healAssessmentCase(
   db: DB,
   input: { id: string; userId: string; caseId: string },
-): Promise<boolean> {
-  const { error } = await db
+): Promise<CaseHealOutcome> {
+  const { data, error } = await db
     .from("assessments")
     .update({ case_id: input.caseId })
     .eq("id", input.id)
@@ -150,9 +188,9 @@ export async function healAssessmentCase(
     .select("id");
   if (error) {
     console.error("[assessments] case heal failed", { id: input.id, error });
-    return false;
+    return "failed";
   }
-  return true;
+  return (data ?? []).length > 0 ? "repaired" : "not-applicable";
 }
 
 /**
@@ -221,7 +259,11 @@ export async function getPrimaryAssessmentForCase(db: DB, caseId: string): Promi
     .eq("case_id", caseId)
     .eq("is_primary", true)
     .maybeSingle();
-  if (error || !data) return null;
+  // MV-133 on the case axis. `null` here drives the whole "you have not assessed
+  // yet" surface; a failed read wearing that answer tells a student who HAS
+  // assessed to start over.
+  if (error) throw new CaseReadError("assessments", error);
+  if (!data) return null;
   return data as AssessmentRow;
 }
 
@@ -231,6 +273,6 @@ export async function listAssessmentsForCase(db: DB, caseId: string): Promise<As
     .select("*")
     .eq("case_id", caseId)
     .order("created_at", { ascending: false });
-  if (error || !data) return [];
-  return data as AssessmentRow[];
+  if (error) throw new CaseReadError("assessments", error);
+  return (data ?? []) as AssessmentRow[];
 }

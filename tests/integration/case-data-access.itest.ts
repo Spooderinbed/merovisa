@@ -720,4 +720,172 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-157 case-aware data access"
       reconcile();
     });
   });
+
+  // ------------------------------------------------------------------
+  // MV-155 residue — the class the cards never named, added 2026-08-03 from
+  // review. Spec §4 rule 3.
+  //
+  // MV-155's derive trigger is on TWO of the nine tables. The other seven got
+  // `case_id` from a one-shot backfill, so a row written in the gap carries
+  // `owner` and no `case_id`. For a user who HAS a personal case that does not
+  // degrade to an empty state — it 23505s, because the legacy owner-keyed
+  // uniques are still live while every new upsert conflict-targets `case_id`.
+  //
+  // Every test below is paired: the same call is made for a FULLY-BACKFILLED
+  // user first, asserting the adopt did not fire and nothing changed. The
+  // hardening must be invisible to a healthy account, and "invisible" is only a
+  // claim if something checks it.
+  // ------------------------------------------------------------------
+  describe("MV-155 residue is adopted, not collided with (spec §4 rule 3)", () => {
+    /** Strip a table's `case_id` for this actor — manufacture the residue. */
+    const orphan = (table: string, actor: Actor, extra = ""): void => {
+      sql(`update public.${table} set case_id = null where owner = '${actor.id}'${extra};`);
+    };
+
+    it("profile save adopts an owner-keyed, case-less profile instead of 23505ing on profiles_owner_key", async () => {
+      const actor = await mint("residue-profile");
+
+      // Healthy first: the adopt must not fire, and the write must behave exactly
+      // as it does today.
+      const first = await upsertProfileForCase(admin, {
+        caseId: actor.caseId,
+        sections: { personal: { name: "Before" } },
+        completeness: 5,
+      });
+      expect(first).not.toBeNull();
+      expect(sqlOne(`select count(*) from public.profiles where owner = '${actor.id}';`)).toBe("1");
+
+      // Now the residue: the row exists, is owned, and has lost its case. The
+      // case-scoped read cannot see it — which is exactly why the claim path's
+      // STEP 3 decides to bootstrap and collides.
+      orphan("profiles", actor);
+      expect(await getProfileForCase(admin, actor.caseId)).toBeNull();
+
+      const healed = await upsertProfileForCase(admin, {
+        caseId: actor.caseId,
+        sections: { personal: { name: "After" } },
+        completeness: 9,
+      });
+
+      // Not null — this is the assertion that goes red without the adopt, because
+      // the upsert takes the INSERT branch and trips `profiles_owner_key`.
+      expect(healed).not.toBeNull();
+      // ONE row: the residue was adopted and UPDATED, never duplicated.
+      expect(sqlOne(`select count(*) from public.profiles where owner = '${actor.id}';`)).toBe("1");
+      expect(sqlOne(`select case_id from public.profiles where owner = '${actor.id}';`)).toBe(actor.caseId);
+      expect((await getProfileForCase(admin, actor.caseId))?.completeness).toBe(9);
+      reconcile();
+    });
+
+    it("document upload adopts a case-less document of the SAME kind, and leaves other kinds alone", async () => {
+      const actor = await mint("residue-doc");
+      await upsertDocument(admin, {
+        caseId: actor.caseId,
+        kind: "passport",
+        filePath: `${actor.id}/passport/a.png`,
+        fileSize: 10,
+        originalName: "a.png",
+      });
+      await upsertDocument(admin, {
+        caseId: actor.caseId,
+        kind: "ielts",
+        filePath: `${actor.id}/ielts/b.png`,
+        fileSize: 10,
+        originalName: "b.png",
+      });
+
+      // Only the passport row loses its case.
+      orphan("documents", actor, " and kind = 'passport'");
+
+      const replaced = await upsertDocument(admin, {
+        caseId: actor.caseId,
+        kind: "passport",
+        filePath: `${actor.id}/passport/c.png`,
+        fileSize: 20,
+        originalName: "c.png",
+      });
+
+      expect(replaced).not.toBeNull();
+      // Still exactly two documents — the re-upload REPLACED the adopted row
+      // rather than inserting a second passport beside it.
+      const docs = await listDocumentsForCase(admin, actor.caseId);
+      expect(docs).toHaveLength(2);
+      expect(docs.find((d) => d.kind === "passport")?.original_name).toBe("c.png");
+      reconcile();
+    });
+
+    it("the assessment persist recomputes is_primary after adopting a legacy primary", async () => {
+      // The subtlest of the four: `is_primary` is computed from a CASE-scoped
+      // lookup, which cannot see a legacy primary. It computes `true`, and
+      // `assessments_primary_idx (owner) WHERE is_primary` — live until MV-160 —
+      // raises 23505. The route adopts, RE-computes, and inserts with
+      // `is_primary: false`, which is what the pre-card owner-keyed lookup did.
+      const actor = await mint("residue-primary");
+      const legacy = sqlOne(
+        `with ins as (insert into public.assessments ` +
+          `(owner, case_id, result, profile_snapshot, rule_version, expires_at, is_primary, destination_id, claimed_at) ` +
+          `values ('${actor.id}', null, '{}'::jsonb, '{}'::jsonb, 'v1', '9999-12-31', true, 'australia', now()) ` +
+          `returning id) select id from ins;`,
+      );
+      seededAssessmentIds.push(legacy);
+
+      // The case-scoped lookup is blind to it, which is the whole defect.
+      expect(await getPrimaryAssessmentForCase(admin, actor.caseId)).toBeNull();
+
+      // Drive the same adopt-then-recompute the route performs.
+      const { adoptOwnerKeyedResidue } = await import("@/lib/cases/residue");
+      const adopted = await adoptOwnerKeyedResidue(admin, "assessments", actor.caseId);
+      expect(adopted).toBe(1);
+      expect((await getPrimaryAssessmentForCase(admin, actor.caseId))?.id).toBe(legacy);
+
+      // Exactly one primary under BOTH keys — the adopt must not have created a
+      // second one, which is the failure MV-16 was.
+      expect(
+        sqlOne(`select count(*) from public.assessments where owner = '${actor.id}' and is_primary;`),
+      ).toBe("1");
+      expect(
+        sqlOne(`select count(*) from public.assessments where case_id = '${actor.caseId}' and is_primary;`),
+      ).toBe("1");
+      reconcile();
+    });
+
+    it("the adopt is a NO-OP for a fully-backfilled user — the hardening changes nothing", async () => {
+      // The property the review demands, asserted directly rather than inferred
+      // from the suites that stayed green.
+      const actor = await mint("residue-none");
+      await upsertProfileForCase(admin, {
+        caseId: actor.caseId,
+        sections: { personal: { name: "Healthy" } },
+        completeness: 5,
+      });
+      await setObtained(admin, actor.caseId, "passport", true);
+
+      const { adoptOwnerKeyedResidue } = await import("@/lib/cases/residue");
+      for (const table of ["profiles", "documents", "assessments", "plan_items"] as const) {
+        expect(adoptOwnerKeyedResidue(admin, table, actor.caseId)).resolves.toBe(0);
+      }
+
+      expect((await getProfileForCase(admin, actor.caseId))?.completeness).toBe(5);
+      expect([...(await listObtainedKinds(admin, actor.caseId))]).toEqual(["passport"]);
+      reconcile();
+    });
+
+    it("the adopt can never re-point a row already bound to ANOTHER case", async () => {
+      // Scoped `owner = <this case's student> AND case_id IS NULL`. Two students
+      // is the shape that would expose a missing owner predicate; one student
+      // with two cases is the shape that would expose a missing `IS NULL`.
+      const actor = await mint("residue-scope");
+      const other = await mint("residue-scope-other");
+      await upsertProfileForCase(admin, {
+        caseId: other.caseId,
+        sections: { personal: { name: "Theirs" } },
+        completeness: 3,
+      });
+
+      const { adoptOwnerKeyedResidue } = await import("@/lib/cases/residue");
+      expect(await adoptOwnerKeyedResidue(admin, "profiles", actor.caseId)).toBe(0);
+      expect(sqlOne(`select case_id from public.profiles where owner = '${other.id}';`)).toBe(other.caseId);
+      reconcile();
+    });
+  });
 });

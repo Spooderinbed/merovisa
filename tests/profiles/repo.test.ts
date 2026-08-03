@@ -5,6 +5,7 @@ import {
   upsertProfileForCase,
   patchProfileSectionForCase,
 } from "@/lib/profiles/repo";
+import { CaseReadError } from "@/lib/cases/errors";
 import { fakeSupabase } from "../helpers/fake-supabase";
 
 const CASE = "case-1";
@@ -26,6 +27,15 @@ describe("getProfileForCase", () => {
   it("returns null on not found", async () => {
     const { client } = fakeSupabase({ data: null, error: null });
     expect(await getProfileForCase(client, CASE)).toBeNull();
+  });
+
+  it("THROWS on a read error — `null` means the case has no profile", async () => {
+    // MV-133 on the case axis. `null` here drives the profile BOOTSTRAP decision
+    // in two places (the claim seam and /api/assess), so a failed read wearing it
+    // does not merely render an empty page: it makes the code decide to create a
+    // profile the student already has.
+    const { client } = fakeSupabase({ data: null, error: { message: "boom" } });
+    await expect(getProfileForCase(client, CASE)).rejects.toBeInstanceOf(CaseReadError);
   });
 });
 
@@ -91,10 +101,27 @@ describe("patchProfileSectionForCase", () => {
   });
 
   it("throws when the UPDATE returns an error", async () => {
-    const { client } = fakeSupabase({ data: null, error: { message: "db error" } });
+    // The current-profile READ answers cleanly (no row) and only the UPDATE
+    // fails, so the message pins the update leg specifically. A single shared
+    // error response would now be caught one step earlier by `getProfileForCase`,
+    // which throws `CaseReadError` since review minor 5.
+    const { client } = fakeSupabase([
+      { data: null, error: null },
+      { data: null, error: { message: "db error" } },
+    ]);
     await expect(
       patchProfileSectionForCase(client, CASE, "personal", { name: "New" }),
     ).rejects.toThrow("patchProfileSectionForCase update failed: db error");
+  });
+
+  it("propagates a CaseReadError from the current-profile read rather than saving over it", async () => {
+    // A failed read of the CURRENT sections must not be treated as "the profile
+    // is empty": the patch would be merged into `{}` and written back, silently
+    // erasing every section the student already filled.
+    const { client } = fakeSupabase({ data: null, error: { message: "boom" } });
+    await expect(
+      patchProfileSectionForCase(client, CASE, "personal", { name: "New" }),
+    ).rejects.toBeInstanceOf(CaseReadError);
   });
 
   it("throws when the new-profile upsert fallback fails to write", async () => {

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { CaseReadError } from "@/lib/cases/errors";
 import type { PlanItemRow, PlanStatus } from "./types";
 
 type DB = SupabaseClient<Database>;
@@ -14,6 +15,10 @@ type DB = SupabaseClient<Database>;
  * renamed reads above them.
  *
  * These take an already-resolved, already-AUTHORIZED case id.
+ *
+ * MV-133 on the case axis: `[]` means the case has no plan items, which is the
+ * normal state before the first assessment. A read that never answered wearing
+ * that same `[]` renders "you're all caught up" over an outage.
  */
 export async function listOpenPlanForCase(db: DB, caseId: string): Promise<PlanItemRow[]> {
   const { data, error } = await db
@@ -22,8 +27,8 @@ export async function listOpenPlanForCase(db: DB, caseId: string): Promise<PlanI
     .eq("case_id", caseId)
     .eq("status", "todo")
     .order("created_at", { ascending: false });
-  if (error || !data) return [];
-  return data.map(mapRow);
+  if (error) throw new CaseReadError("plan_items", error);
+  return (data ?? []).map(mapRow);
 }
 
 export async function listAllPlanForCase(db: DB, caseId: string): Promise<PlanItemRow[]> {
@@ -32,8 +37,8 @@ export async function listAllPlanForCase(db: DB, caseId: string): Promise<PlanIt
     .select("*")
     .eq("case_id", caseId)
     .order("created_at", { ascending: false });
-  if (error || !data) return [];
-  return data.map(mapRow);
+  if (error) throw new CaseReadError("plan_items", error);
+  return (data ?? []).map(mapRow);
 }
 
 export async function setPlanItemStatus(
@@ -72,12 +77,13 @@ export async function setPlanItemStarted(
 }
 
 export async function getPlanItemKind(db: DB, caseId: string, id: number): Promise<string | null> {
-  const { data } = await db
+  const { data, error } = await db
     .from("plan_items")
     .select("kind")
     .eq("case_id", caseId)
     .eq("id", id)
     .maybeSingle();
+  if (error) throw new CaseReadError("plan_items", error);
   return data?.kind ?? null;
 }
 

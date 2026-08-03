@@ -9,7 +9,17 @@ import { AssessmentClaimError } from "@/lib/assessments/errors";
 import { fakeSupabase } from "../helpers/fake-supabase";
 
 describe("claimAssessment", () => {
-  const CLAIM = { id: "aid", userId: "user-1", caseId: "case-1", nowIso: "2026-06-03T00:00:00.000Z" };
+  // ONE ownership value, produced by `caseBindColumns` in the real caller. The
+  // signature used to take `userId` and `caseId` independently, which made this
+  // the one repository able to write an `owner` disagreeing with its `case_id`
+  // and falsified the structural guarantee `lib/cases/dual-write.ts` states (and
+  // MV-160 §D is designed around). A test cannot express the disagreement any
+  // more, which is the point — the type is the proof.
+  const CLAIM = {
+    id: "aid",
+    ownership: { case_id: "case-1", owner: "user-1" },
+    nowIso: "2026-06-03T00:00:00.000Z",
+  };
 
   it("claims only an unowned, unexpired row and reports success", async () => {
     const { client, calls } = fakeSupabase({ data: [{ id: "aid" }], error: null });
@@ -72,18 +82,28 @@ describe("healAssessmentCase", () => {
     // stays MV-160 §B's reconciliation sweep.
     const { client, calls } = fakeSupabase({ data: [{ id: "aid" }], error: null });
 
-    expect(await healAssessmentCase(client, { id: "aid", userId: "u1", caseId: "case-1" })).toBe(true);
+    expect(await healAssessmentCase(client, { id: "aid", userId: "u1", caseId: "case-1" })).toBe("repaired");
     const payload = calls.find((c) => c.method === "update")?.args[0] as Record<string, unknown>;
     expect(payload).toEqual({ case_id: "case-1" });
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner" && c.args[1] === "u1")).toBe(true);
     expect(calls.some((c) => c.method === "is" && c.args[0] === "case_id" && c.args[1] === null)).toBe(true);
   });
 
-  it("returns false rather than throwing when the repair cannot be written", async () => {
+  it("does NOT report success when the predicate matched no row", async () => {
+    // It used to return `true` for this, which is "reported a repair it did not
+    // perform" — and the caller decides whether to run the follow-up primary
+    // repair off this answer, so the lie suppressed the second half of the fix.
+    const { client } = fakeSupabase({ data: [], error: null });
+    expect(await healAssessmentCase(client, { id: "aid", userId: "u1", caseId: "case-1" })).toBe(
+      "not-applicable",
+    );
+  });
+
+  it("reports failure rather than throwing when the repair cannot be written", async () => {
     // A failed heal must not turn a successful `already-mine` into an error: the
     // student owns the row either way, and landing them on it is still right.
     const { client } = fakeSupabase({ data: null, error: { message: "boom" } });
-    expect(await healAssessmentCase(client, { id: "aid", userId: "u1", caseId: "case-1" })).toBe(false);
+    expect(await healAssessmentCase(client, { id: "aid", userId: "u1", caseId: "case-1" })).toBe("failed");
   });
 });
 

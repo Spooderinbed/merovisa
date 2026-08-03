@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
-const { claimAssessment, createLead, getAssessmentClaimState, healAssessmentCase, upsertProfileForCase, getProfileForCase, from, update, updateCalls, updateResults } = vi.hoisted(() => {
+const { claimAssessment, createLead, getAssessmentClaimState, getPrimaryAssessmentForCase, healAssessmentCase, upsertProfileForCase, getProfileForCase, caseBindColumns, from, update, updateCalls, updateResults } = vi.hoisted(() => {
   const claimAssessment = vi.fn();
   const healAssessmentCase = vi.fn();
   const createLead = vi.fn();
   const getAssessmentClaimState = vi.fn();
+  const getPrimaryAssessmentForCase = vi.fn();
   const upsertProfileForCase = vi.fn();
   const getProfileForCase = vi.fn();
+  const caseBindColumns = vi.fn();
 
   // Records every .update(...) chain so tests can assert demote-then-promote order + filters.
   const updateCalls: Array<{ payload: Record<string, unknown>; filters: Array<[string, unknown]> }> = [];
@@ -34,12 +36,23 @@ const { claimAssessment, createLead, getAssessmentClaimState, healAssessmentCase
 
   const select = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: { profile_snapshot: { destination: "australia" } }, error: null }) }) });
   const from = vi.fn(() => ({ update, select }));
-  return { claimAssessment, createLead, getAssessmentClaimState, healAssessmentCase, upsertProfileForCase, getProfileForCase, from, update, updateCalls, updateResults };
+  return { claimAssessment, createLead, getAssessmentClaimState, getPrimaryAssessmentForCase, healAssessmentCase, upsertProfileForCase, getProfileForCase, caseBindColumns, from, update, updateCalls, updateResults };
 });
 const fakeAdmin = { from } as never;
 
-vi.mock("@/lib/assessments/repo", () => ({ claimAssessment, createLead, getAssessmentClaimState, healAssessmentCase }));
+vi.mock("@/lib/assessments/repo", () => ({
+  claimAssessment,
+  createLead,
+  getAssessmentClaimState,
+  getPrimaryAssessmentForCase,
+  healAssessmentCase,
+}));
 vi.mock("@/lib/profiles/repo", () => ({ upsertProfileForCase, getProfileForCase }));
+// The dual-write choke point. `claimAssessment` no longer takes `userId` and
+// `caseId` independently — it takes the single ownership value this derives from
+// `cases.student_user_id`, which is what makes the two structurally unable to
+// disagree (review MAJOR 3).
+vi.mock("@/lib/cases/dual-write", () => ({ caseBindColumns }));
 
 // MV-157: every migrated route and page resolves the actor's personal case and
 // authorizes it before its first query. Both are mocked to the happy path here;
@@ -55,6 +68,8 @@ beforeEach(() => {
   resolvePersonalCaseId.mockResolvedValue("case-1");
   ensurePersonalCase.mockResolvedValue("case-1");
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+  // `case-1` belongs to `u1`, which is the actor every case below claims as.
+  caseBindColumns.mockResolvedValue({ case_id: "case-1", owner: "u1" });
 });
 
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
@@ -68,7 +83,11 @@ describe("claimAndBootstrapProfile", () => {
     // Default: the row is gone (purged/deleted) unless a test says otherwise.
     getAssessmentClaimState.mockResolvedValue(null);
     healAssessmentCase.mockReset();
-    healAssessmentCase.mockResolvedValue(true);
+    healAssessmentCase.mockResolvedValue("repaired");
+    getPrimaryAssessmentForCase.mockReset();
+    // Default: the case already has a primary, so F2's second-half repair stays
+    // quiet unless a test explicitly asks for the "no primary" state.
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "existing-primary" });
     upsertProfileForCase.mockReset();
     getProfileForCase.mockReset();
     from.mockClear();
@@ -302,6 +321,41 @@ describe("claimAndBootstrapProfile", () => {
     });
   });
 
+  it("F2 SECOND HALF — a case left with NO primary is repaired on the re-claim", async () => {
+    // The `case_id` heal alone was not enough (review minor 3). The claim writes
+    // the case and the primary flag in two separate steps, so an interruption
+    // between them leaves a case that has rows and no primary — and every "your
+    // assessment" surface reads `getPrimaryAssessmentForCase`. The re-claim
+    // short-circuits on `already-mine` long before STEP 4, so there was no repair
+    // path at all: the student saw an empty dashboard forever.
+    claimAssessment.mockResolvedValue(false);
+    getAssessmentClaimState.mockResolvedValue({ owner: "u1", caseId: null, expired: false });
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
+
+    const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", user: { id: "u1" } });
+
+    expect(out).toEqual({ claimed: false, reason: "already-mine" });
+    // Demote-then-promote, the same pair the happy path uses — the demote must
+    // still satisfy BOTH live predicates, so it is the `.or(owner…,case_id…)` one.
+    expect(updateCalls.map((c) => c.payload)).toEqual([
+      { is_primary: false },
+      { is_primary: true },
+    ]);
+    expect(updateCalls[0]!.filters).toContainEqual(["or", "owner.eq.u1,case_id.eq.case-1"]);
+  });
+
+  it("F2 does NOT promote when the case already has a primary", async () => {
+    // Asked as a question about the CASE, not about this row, so the repair can
+    // never demote a legitimate primary in order to promote an older assessment.
+    claimAssessment.mockResolvedValue(false);
+    getAssessmentClaimState.mockResolvedValue({ owner: "u1", caseId: null, expired: false });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a-other" });
+
+    await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", user: { id: "u1" } });
+
+    expect(updateCalls).toHaveLength(0);
+  });
+
   it("F1 — an `already-mine` row that ALREADY has its case is not re-written", async () => {
     claimAssessment.mockResolvedValue(false);
     getAssessmentClaimState.mockResolvedValue({ owner: "u1", caseId: "case-1", expired: false });
@@ -328,10 +382,36 @@ describe("claimAndBootstrapProfile", () => {
 
     await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", user: { id: "u1" } });
 
+    // ONE ownership value, derived from `cases.student_user_id` by the dual-write
+    // choke point rather than assembled here from two independent parameters.
     expect(claimAssessment).toHaveBeenCalledWith(
       fakeAdmin,
-      expect.objectContaining({ id: "a1", userId: "u1", caseId: "case-1" }),
+      expect.objectContaining({ id: "a1", ownership: { case_id: "case-1", owner: "u1" } }),
     );
+    expect(caseBindColumns).toHaveBeenCalledWith(fakeAdmin, "case-1");
+  });
+
+  it("REFUSES to bind when the case's derived owner is not the claiming actor", async () => {
+    // The corruption Stage 2 has no live constraint against, caught at the one
+    // place that could still produce it. Nothing is written and the seam gets the
+    // retryable `error`, not a silent mis-bind.
+    caseBindColumns.mockResolvedValue({ case_id: "case-1", owner: "someone-else" });
+
+    const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", user: { id: "u1" } });
+
+    expect(out).toEqual({ claimed: false, reason: "error" });
+    expect(claimAssessment).not.toHaveBeenCalled();
+  });
+
+  it("REFUSES to bind when the case has no student_user_id", async () => {
+    // `owner: null` on a CLAIMED assessment lands it on the anonymous side of the
+    // carve-out: invisible to the student and eligible for MV-135's purge.
+    caseBindColumns.mockResolvedValue(null);
+
+    const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", user: { id: "u1" } });
+
+    expect(out).toEqual({ claimed: false, reason: "error" });
+    expect(claimAssessment).not.toHaveBeenCalled();
   });
 
   it("takes the profile name from the session, with no provider-named parameter", async () => {

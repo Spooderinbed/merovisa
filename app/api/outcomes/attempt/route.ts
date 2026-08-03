@@ -35,7 +35,10 @@ export async function POST(request: Request): Promise<Response> {
   const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
   if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const prediction = await getPredictionById(supabase, parsed.data.predictionId);
+  // Scoped to the case that was just authorized, not merely to whatever the
+  // legacy owner policy happens to admit: the prediction id is client-supplied,
+  // so the read must live inside the same boundary the check above established.
+  const prediction = await getPredictionById(supabase, parsed.data.predictionId, caseId);
   if (!prediction) return NextResponse.json({ error: "unknown prediction" }, { status: 404 });
 
   const attempt = await insertAttempt(supabase, {

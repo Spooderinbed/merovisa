@@ -36,8 +36,22 @@
  *
  * Skips cleanly (never fails) when those env vars are absent. LOCAL STACK ONLY —
  * never point this at prod; it writes and deletes rows.
+ *
+ * ## The detector runs at the end of every mutating case (added by review)
+ *
+ * MV-154 states, and MV-157 §E / Risk 2 repeat, that
+ * `private.mv155_assert_case_backfill()` is called at the end of EVERY mutating
+ * integration test — it is a detector rather than a lock, so frequency is the
+ * only compensating control there is until MV-160 makes `case_id` NOT NULL. This
+ * suite had thirteen mutating tests and called it zero times, which left the
+ * detector missing from the file that owns the hardest dual-write site in the
+ * codebase: the claim, the one write that moves a row ACROSS the anonymous
+ * carve-out by setting `owner` and `case_id` in the same statement.
+ * `tests/integration/case-data-access.itest.ts` already carries the idiom; this
+ * file now uses the same one.
  */
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 vi.mock("server-only", () => ({}));
 
@@ -57,6 +71,7 @@ const serviceKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
 
 describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres", () => {
   let admin: SupabaseClient<Database>;
+  let dbContainer: string;
   let userId: string;
   /** The verified session object the claim path takes. Minted, never fabricated. */
   let sessionUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null };
@@ -104,6 +119,60 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     return (data ?? []).map((r) => r.id);
   };
 
+  /**
+   * MV-155's cross-table invariant detector — a FUNCTION the tests call, NOT a
+   * constraint. A mismatched `owner`/`case_id` write is not rejected at write
+   * time and nothing will reject one until MV-160 makes `case_id` NOT NULL, so
+   * calling this at the end of every mutating case is the compensating control
+   * (MV-154; MV-157 §E and Risk 2).
+   *
+   * `private` is not PostgREST-exposed, so the question cannot be asked through
+   * supabase-js at all — it goes through psql in the stack's DB container, the
+   * same way `case-data-access.itest.ts` asks it.
+   */
+  const resolveDbContainer = (): string => {
+    if (process.env.SUPABASE_TEST_DB_CONTAINER) return process.env.SUPABASE_TEST_DB_CONTAINER;
+    const [first] = execFileSync("docker", ["ps", "--filter", "name=supabase_db_", "--format", "{{.Names}}"], {
+      encoding: "utf8",
+    })
+      .split("\n")
+      .map((n) => n.trim())
+      .filter(Boolean);
+    if (first === undefined) {
+      throw new Error(
+        "no running supabase_db_* container found. Start the stack with `npx supabase start`, " +
+          "or set SUPABASE_TEST_DB_CONTAINER.",
+      );
+    }
+    return first;
+  };
+
+  const ASSERT_BACKFILL = "select private.mv155_assert_case_backfill();";
+
+  const psql = (statement: string): string =>
+    execFileSync(
+      "docker",
+      [
+        "exec", "-i", dbContainer, "psql", "-U", "postgres", "-d", "postgres",
+        "-tAX", "-v", "ON_ERROR_STOP=1", "-c", statement,
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+
+  const reconcile = (): void => {
+    psql(ASSERT_BACKFILL);
+  };
+
+  /** The detector's message when it FIRES — used by the two tests that manufacture residue on purpose. */
+  const reconcileError = (): string => {
+    try {
+      psql(ASSERT_BACKFILL);
+    } catch (err) {
+      return String((err as { stderr?: Buffer | string }).stderr ?? "");
+    }
+    throw new Error("expected mv155_assert_case_backfill() to raise, but it reported clean");
+  };
+
   const mintUser = async (label: string) => {
     const addr = `mv158-${label}-${Date.now()}@example.test`;
     const { data, error } = await admin.auth.admin.createUser({
@@ -120,6 +189,7 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     admin = createClient<Database>(url!, serviceKey!, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+    dbContainer = resolveDbContainer();
     const { data, error } = await admin.auth.admin.createUser({
       email,
       email_confirm: true,
@@ -128,6 +198,19 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     if (error || !data.user) throw new Error(`failed to mint test user: ${error?.message}`);
     userId = data.user.id;
     sessionUser = data.user;
+  });
+
+  /**
+   * MV-154's rule, enforced structurally rather than remembered: the detector
+   * runs after EVERY test in this suite, so a mutating case added later cannot
+   * forget it. The two tests that manufacture residue on purpose assert the
+   * detector FIRES on it and then repair it, which is a stronger claim than
+   * skipping them would be — it proves the detector actually sees this shape
+   * rather than merely that it stays quiet.
+   */
+  afterEach(() => {
+    if (!dbContainer) return;
+    reconcile();
   });
 
   afterAll(async () => {
@@ -346,6 +429,15 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     const { data: primaries } = await admin
       .from("assessments").select("id").eq("owner", fresh.id).eq("is_primary", true);
     expect(primaries!.map((r2) => r2.id)).toEqual([fresher]);
+
+    // The `stale` row is STILL owned and case-less, deliberately — so the
+    // detector must fire on it. Asserting that is the strongest form of "the
+    // detector was called": it proves this suite's `afterEach` is watching a
+    // function that genuinely sees this shape, rather than one that has been
+    // quietly returning clean. Repair it so the `afterEach` finds a clean tree.
+    expect(reconcileError()).toContain("owned rows with case_id null");
+    const healed = await resolvePersonalCaseId(fresh.id, admin);
+    await admin.from("assessments").update({ case_id: healed }).eq("id", stale);
   });
 
   it("F2 — a re-claim HEALS an owned row whose case_id is null", async () => {
@@ -396,6 +488,14 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     await purgeUnclaimedAnonymousAssessments(admin);
 
     expect(await getAssessmentById(admin, a)).not.toBeNull();
+
+    // Same as the demote test above: the surviving row is owned and case-less by
+    // construction, so the detector must SEE it. Then repair, so the closing
+    // `afterEach` reconciliation is asserting a clean tree rather than tolerating
+    // a dirty one.
+    expect(reconcileError()).toContain("owned rows with case_id null");
+    const healed = await resolvePersonalCaseId(fresh.id, admin);
+    await admin.from("assessments").update({ case_id: healed }).eq("id", a);
   });
 
   it("THE MV-160 PRECONDITION — every successful claim leg leaves `owner` non-null wherever `claimed_at` is set", async () => {

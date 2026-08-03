@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 import { fakeCaseDb } from "@/tests/helpers/fake-case-db";
 import { ensurePersonalCase, resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { CaseReadError } from "@/lib/cases/errors";
 
 /**
  * The personal-case resolver — MV-157 §A.
@@ -57,8 +58,29 @@ describe("resolvePersonalCaseId", () => {
     expect(await resolvePersonalCaseId(ACTOR, client)).toBeNull();
   });
 
-  it("fails closed on a lookup error", async () => {
+  it("THROWS on a lookup error — `null` means the actor has no personal case", async () => {
+    // MV-133, recurring on the case axis (review minor 5). This used to return
+    // `null`, which every caller reads as "no personal case yet" and renders as
+    // the empty-but-fine state a brand-new account sees. The failure that hid is
+    // the one both cards gate the merge on: a hosted database without MV-155's
+    // migration answers `42703 undefined column` to every migrated read, and the
+    // whole product would have rendered as "you have no data" rather than as an
+    // outage anybody would page on.
     const { client } = fakeCaseDb({}, { errorOn: { cases: { message: "boom" } } });
+
+    await expect(resolvePersonalCaseId(ACTOR, client)).rejects.toBeInstanceOf(CaseReadError);
+  });
+
+  it("THROWS when the query itself throws (dropped connection)", async () => {
+    // Same rule on the other failure channel: a request that never completed is
+    // not "this actor has no case" either.
+    const { client } = fakeCaseDb({}, { throwOn: ["cases"] });
+
+    await expect(resolvePersonalCaseId(ACTOR, client)).rejects.toBeInstanceOf(CaseReadError);
+  });
+
+  it("still returns null when the query answers with no row", async () => {
+    const { client } = fakeCaseDb({ cases: [] });
 
     expect(await resolvePersonalCaseId(ACTOR, client)).toBeNull();
   });

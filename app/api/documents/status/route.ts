@@ -37,6 +37,13 @@ export async function POST(request: Request): Promise<Response> {
   const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
   if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  await setObtained(supabase, caseId, parsed.data.kind, parsed.data.obtained);
+  // `ok: true` must mean the tick was STORED. `setObtained` has two ways to
+  // decline — a case with no `student_user_id`, and a PostgREST error — and both
+  // used to return `void` into a 200, so the checklist rendered a tick that was
+  // gone on the next reload.
+  const stored = await setObtained(supabase, caseId, parsed.data.kind, parsed.data.obtained);
+  if (!stored) {
+    return NextResponse.json({ error: "Couldn't save your checklist" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true }, { status: 200 });
 }

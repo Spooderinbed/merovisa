@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
 import { caseWriteColumns } from "@/lib/cases/dual-write";
+import { adoptOwnerKeyedResidue } from "@/lib/cases/residue";
+import { CaseReadError, isUniqueViolation } from "@/lib/cases/errors";
 import type { SectionKey, ProfileSections } from "./sections";
 import { computeCompleteness } from "./completeness";
 
@@ -23,7 +25,11 @@ export async function getProfileForCase(db: DB, caseId: string): Promise<Profile
     .select("*")
     .eq("case_id", caseId)
     .maybeSingle();
-  if (error || !data) return null;
+  // MV-133, on the case axis: `null` means the case has no profile yet (the
+  // normal state of a new account). A PostgREST error means the read never
+  // answered, and collapsing the two renders an outage as "you have no profile".
+  if (error) throw new CaseReadError("profiles", error);
+  if (!data) return null;
   return data as ProfileRow;
 }
 
@@ -46,6 +52,19 @@ export interface UpsertProfileInput {
  * (Stage 2 grants `authenticated` no INSERT on `profiles` at all — spec §4.1), so
  * the `ON CONFLICT DO UPDATE SET` list is evaluated under service_role's
  * table-level UPDATE.
+ *
+ * ## The MV-155 residue leg
+ *
+ * `profiles_owner_key` (unique on `owner`) is still live. A student who has a
+ * personal case but whose profile row never received a `case_id` is not a
+ * conflict on the `case_id` arbiter, so this takes the INSERT branch and raises
+ * **23505** on the legacy owner unique — a hard failure, not the empty state the
+ * rest of Stage 2 degrades to. The claim path reaches it directly: STEP 3's
+ * `getProfileForCase` cannot see an owner-set / case-null profile, so it decides
+ * to bootstrap one. On a 23505 the residue is adopted onto the case and the
+ * upsert retried ONCE; if nothing was adopted the collision was something else
+ * and the original failure stands. See `lib/cases/residue.ts` for why this is
+ * lazy rather than pre-emptive.
  */
 export async function upsertProfileForCase(
   db: DB,
@@ -54,18 +73,23 @@ export async function upsertProfileForCase(
   const ownership = await caseWriteColumns(db, input.caseId);
   if (ownership === null) return null;
 
-  const { data, error } = await db
-    .from("profiles")
-    .upsert(
-      {
-        ...ownership,
-        sections: input.sections as unknown as Json,
-        completeness: input.completeness,
-      },
-      { onConflict: "case_id", ignoreDuplicates: false },
-    )
-    .select("id")
-    .single();
+  const payload = {
+    ...ownership,
+    sections: input.sections as unknown as Json,
+    completeness: input.completeness,
+  };
+  const write = async () =>
+    db
+      .from("profiles")
+      .upsert(payload, { onConflict: "case_id", ignoreDuplicates: false })
+      .select("id")
+      .single();
+
+  let { data, error } = await write();
+  if (isUniqueViolation(error)) {
+    const adopted = await adoptOwnerKeyedResidue(db, "profiles", input.caseId);
+    if (adopted > 0) ({ data, error } = await write());
+  }
   if (error || !data) return null;
   return data.id;
 }

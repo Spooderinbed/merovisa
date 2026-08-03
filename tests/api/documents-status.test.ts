@@ -42,7 +42,9 @@ const signedOut = () => getUser.mockResolvedValue({ data: { user: null } });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  setObtained.mockResolvedValue(undefined);
+  // `setObtained` now reports whether the write LANDED (review minor 7): it used
+  // to return `void`, so a refusal and a stored tick were the same value.
+  setObtained.mockResolvedValue(true);
 });
 
 describe("POST /api/documents/status", () => {
@@ -88,5 +90,17 @@ describe("POST /api/documents/status", () => {
     const res = await POST(post({ kind: "ielts", obtained: false }));
     expect(res.status).toBe(200);
     expect(setObtained).toHaveBeenCalledWith(expect.anything(), "case-1", "ielts", false);
+  });
+
+  it("500s — never ok:true — when the toggle was not stored", async () => {
+    // Review minor 7: MV-157 added a SECOND silent-success path here. A case with
+    // no `student_user_id` made `setObtained` return early and the route still
+    // answered 200 {ok:true}, so the checklist rendered a tick that was gone on
+    // the next reload. A PostgREST error did the same.
+    signedIn();
+    setObtained.mockResolvedValue(false);
+    const res = await POST(post({ kind: "passport", obtained: true }));
+    expect(res.status).toBe(500);
+    expect((await res.json()).ok).not.toBe(true);
   });
 });

@@ -4,6 +4,8 @@ import type { Database } from "@/lib/supabase/types";
 import { claimAssessment, createLead, getAssessmentClaimState, healAssessmentCase } from "./repo";
 import { isAssessmentClaimError } from "./errors";
 import { ensurePersonalCase, type PersonalCaseSessionUser } from "@/lib/cases/personal-case";
+import { caseBindColumns } from "@/lib/cases/dual-write";
+import { getPrimaryAssessmentForCase } from "./repo";
 import { getProfileForCase, upsertProfileForCase } from "@/lib/profiles/repo";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
@@ -80,9 +82,27 @@ export async function claimAndBootstrapProfile(
 
   // STEP 2 — the atomic bind. `owner`, `case_id` and `claimed_at` in ONE
   // statement (see `claimAssessment`).
+  //
+  // `owner` is DERIVED from `cases.student_user_id` rather than passed as
+  // `input.user.id`: `claimAssessment` no longer accepts both axes, so the pair
+  // cannot disagree (see `lib/cases/dual-write.ts`). `ensurePersonalCase` created
+  // or resolved this case for THIS actor a few lines up, so the derived owner is
+  // the actor — and if it somehow is not, that is the exact cross-table
+  // corruption Stage 2 has no live constraint against, so refuse rather than
+  // write it.
+  const ownership = await caseBindColumns(adminDb, caseId);
+  if (ownership === null || ownership.owner !== userId) {
+    console.error("[claim] case ownership does not resolve to the claiming actor", {
+      userId,
+      caseId,
+      derivedOwner: ownership?.owner ?? null,
+    });
+    return { claimed: false, reason: "error" };
+  }
+
   let ok: boolean;
   try {
-    ok = await claimAssessment(adminDb, { id: input.assessmentId, userId, caseId, nowIso });
+    ok = await claimAssessment(adminDb, { id: input.assessmentId, ownership, nowIso });
   } catch (err) {
     // A transient write failure, NOT "no row matched": the assessment is still
     // recoverable, so tell the seam this is retryable rather than gone.
@@ -106,9 +126,18 @@ export async function claimAndBootstrapProfile(
   // reporting failure would be a lie about what happened. It is logged, never
   // swallowed silently.
   //
-  // During the dual-key window `profiles.owner` is still UNIQUE, so this must not
-  // attempt a second profile row for the same Auth user — it stays a no-op when
-  // the row exists, exactly as before.
+  // CORRECTED. The previous comment read "during the dual-key window
+  // `profiles.owner` is still UNIQUE, so this must not attempt a second profile
+  // row for the same Auth user — it stays a no-op when the row exists, exactly as
+  // before", and that was FALSE for one shape: an owner-set / `case_id`-null
+  // profile (MV-155 residue on a table with no derive trigger). `getProfileForCase`
+  // is case-scoped and cannot see such a row, so `!existing` is true, the bootstrap
+  // runs, the `case_id` conflict target does not match it, the INSERT branch is
+  // taken, and `profiles_owner_key` raises 23505. It is not a no-op, and it is the
+  // ONE measured instance of the residue class that fails rather than degrades.
+  // `upsertProfileForCase` now adopts that row onto the case and retries once
+  // (`lib/cases/residue.ts`); the sentence above is corrected rather than deleted
+  // because a reader who trusted it would not look for the collision.
   const existing = await getProfileForCase(adminDb, caseId);
   if (!existing) {
     const sections = profileSectionsFromAssessment(
@@ -124,34 +153,7 @@ export async function claimAndBootstrapProfile(
   }
 
   // STEP 4 — make the just-claimed assessment the primary one (newest-wins).
-  //
-  // THE DEMOTE MUST SATISFY BOTH LIVE PREDICATES, and it does so in one
-  // statement. `assessments_primary_idx (owner) WHERE is_primary` and MV-155's
-  // `(case_id) WHERE is_primary` are both live until MV-160 drops the legacy one.
-  // Scoping the demote to `case_id` alone is the natural "case-model" rewrite and
-  // it re-creates the MV-16 regression EXACTLY: a same-owner primary survives in
-  // another case, the promote then trips the surviving owner-keyed index, the
-  // error is logged rather than thrown, and the student's dashboard silently
-  // keeps showing their first assessment forever.
-  //
-  // Demote-then-promote ordering is preserved: after the demote the key is free,
-  // so the promote cannot collide. Both errors are logged with enough context to
-  // say which one failed — a discarded error here is what MV-16 was.
-  const { error: demoteError } = await adminDb
-    .from("assessments")
-    .update({ is_primary: false })
-    .or(`owner.eq.${userId},case_id.eq.${caseId}`)
-    .eq("is_primary", true);
-  if (demoteError) {
-    console.error("[claim] demote existing primary failed", { userId, caseId, error: demoteError });
-  }
-  const { error: promoteError } = await adminDb
-    .from("assessments")
-    .update({ is_primary: true })
-    .eq("id", input.assessmentId);
-  if (promoteError) {
-    console.error("[claim] promote new primary failed", { assessmentId: input.assessmentId, error: promoteError });
-  }
+  await makePrimary(adminDb, { assessmentId: input.assessmentId, userId, caseId });
 
   // Record the conversion as a lead — the funnel-bottom signal that an anonymous
   // assessment became an account. Best-effort: the user is already converted, so a
@@ -167,6 +169,62 @@ export async function claimAndBootstrapProfile(
   }
 
   return { claimed: true };
+}
+
+/**
+ * Demote-then-promote, the ONE place this pair is written.
+ *
+ * THE DEMOTE MUST SATISFY BOTH LIVE PREDICATES, and it does so in one statement.
+ * `assessments_primary_idx (owner) WHERE is_primary` and MV-155's
+ * `(case_id) WHERE is_primary` are both live until MV-160 drops the legacy one.
+ * Scoping the demote to `case_id` alone is the natural "case-model" rewrite and it
+ * re-creates the MV-16 regression EXACTLY: a same-owner primary survives in
+ * another case, the promote then trips the surviving owner-keyed index, the error
+ * is logged rather than thrown, and the student's dashboard silently keeps showing
+ * their first assessment forever.
+ *
+ * NOTE the `.or("owner.eq.…,case_id.eq.…")` predicate below is INVISIBLE to the
+ * `.eq("owner", …)` sweep in `tests/architecture/no-actor-equals-student.test.ts`
+ * as that sweep was originally written — the scan is widened to the `.or` /
+ * `.match` / `.filter` / `.in` / indirect-identifier forms and this file is
+ * allow-listed with the reason, rather than the predicate being changed. It is
+ * correct; it was simply unguarded.
+ *
+ * Demote-then-promote ordering is preserved: after the demote the key is free, so
+ * the promote cannot collide. Both errors are logged with enough context to say
+ * which one failed — a discarded error here is what MV-16 was.
+ *
+ * Extracted so the F2 repair leg can use the SAME pair. It was inline in the
+ * happy path only, which is why an interrupted promote left a case with a healed
+ * `case_id`, no primary, and no path back: the re-claim short-circuits on
+ * `already-mine` long before STEP 4.
+ */
+async function makePrimary(
+  adminDb: DB,
+  args: { assessmentId: string; userId: string; caseId: string },
+): Promise<void> {
+  const { error: demoteError } = await adminDb
+    .from("assessments")
+    .update({ is_primary: false })
+    .or(`owner.eq.${args.userId},case_id.eq.${args.caseId}`)
+    .eq("is_primary", true);
+  if (demoteError) {
+    console.error("[claim] demote existing primary failed", {
+      userId: args.userId,
+      caseId: args.caseId,
+      error: demoteError,
+    });
+  }
+  const { error: promoteError } = await adminDb
+    .from("assessments")
+    .update({ is_primary: true })
+    .eq("id", args.assessmentId);
+  if (promoteError) {
+    console.error("[claim] promote new primary failed", {
+      assessmentId: args.assessmentId,
+      error: promoteError,
+    });
+  }
 }
 
 /**
@@ -195,7 +253,29 @@ async function classifyMiss(
     // bulk remedy for any such residue is MV-160 §B's reconciliation sweep; this
     // is the one that fires while the student is standing there.
     if (state.caseId === null) {
-      await healAssessmentCase(adminDb, { id: assessmentId, userId, caseId });
+      const outcome = await healAssessmentCase(adminDb, { id: assessmentId, userId, caseId });
+      if (outcome === "failed") {
+        console.error("[claim] F2 heal failed; the row stays case-less", { assessmentId, caseId });
+      }
+    }
+    // F2, SECOND HALF — heal `is_primary` too, which the `case_id`-only repair
+    // did not. The claim writes the case and the primary flag in two separate
+    // steps, so an interruption between them (or a promote whose error was
+    // logged rather than retried) leaves the case with rows and NO primary. Every
+    // "your assessment" surface reads `getPrimaryAssessmentForCase`, so the
+    // student sees an empty dashboard for a case that plainly has data — and the
+    // re-claim short-circuits here on `already-mine`, long before STEP 4, so
+    // there was no path back at all. Asked as a question about the CASE, not
+    // about this row, so it promotes only when the case genuinely has no primary
+    // and never demotes a legitimate one.
+    try {
+      if ((await getPrimaryAssessmentForCase(adminDb, caseId)) === null) {
+        console.warn("[claim] case had no primary at re-claim; promoting", { assessmentId, caseId });
+        await makePrimary(adminDb, { assessmentId, userId, caseId });
+      }
+    } catch (err) {
+      // A failed repair must never downgrade a correct `already-mine`.
+      console.error("[claim] primary repair check failed", { assessmentId, caseId, err });
     }
     return "already-mine";
   }

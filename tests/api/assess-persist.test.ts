@@ -37,17 +37,27 @@ vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
 // MV-157: every migrated route and page resolves the actor's personal case and
 // authorizes it before its first query. Both are mocked to the happy path here;
 // the denial branch is asserted where the route owns it.
-const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
-  resolvePersonalCaseId: vi.fn(),
-  ensurePersonalCase: vi.fn(),
-  checkCasePermission: vi.fn(),
-}));
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission, caseBindColumns, adoptOwnerKeyedResidue } =
+  vi.hoisted(() => ({
+    resolvePersonalCaseId: vi.fn(),
+    ensurePersonalCase: vi.fn(),
+    checkCasePermission: vi.fn(),
+    caseBindColumns: vi.fn(),
+    adoptOwnerKeyedResidue: vi.fn(),
+  }));
 vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
 vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+// The signed-in insert derives `owner` from `cases.student_user_id` through the
+// dual-write choke point instead of reading it off the session a second time
+// (review MAJOR 3), and adopts MV-155 residue on a 23505 (review MAJOR 1b).
+vi.mock("@/lib/cases/dual-write", () => ({ caseBindColumns }));
+vi.mock("@/lib/cases/residue", () => ({ adoptOwnerKeyedResidue }));
 beforeEach(() => {
   resolvePersonalCaseId.mockResolvedValue("case-1");
   ensurePersonalCase.mockResolvedValue("case-1");
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+  caseBindColumns.mockResolvedValue({ case_id: "case-1", owner: "u1" });
+  adoptOwnerKeyedResidue.mockResolvedValue(0);
 });
 vi.mock("@/lib/programs/repo", async () => {
   const { TEST_PROGRAMS, TEST_UNIVERSITIES } = await import("../fixtures/catalog");
