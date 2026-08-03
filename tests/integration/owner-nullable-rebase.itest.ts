@@ -985,15 +985,30 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
   // I — the predictions immutability trigger survived the DDL
   // =====================================================================
   describe("program_predictions immutability", () => {
-    it("still raises on an UPDATE, for service_role too", () => {
+    it("still raises on an UPDATE, as postgres AND as service_role", async () => {
       // DDL does not fire row-level triggers, so nothing in MV-156 should have touched this — but
-      // "should not have" and "did not" are different claims. `private.reject_prediction_update()`
-      // is SECURITY INVOKER precisely so `service_role` does not bypass it; psql runs as `postgres`,
-      // which is the strongest role available and therefore the strictest test of that property.
+      // "should not have" and "did not" are different claims.
       const predictionId = seedOf(userA.id).predictionId;
+
+      // As `postgres` — a superuser, the strongest role available.
       expect(sqlError(`update public.program_predictions set verdict='strong' where id='${predictionId}';`)).toMatch(
         /program_predictions is immutable/i,
       );
+
+      // And as `service_role` through PostgREST, which is the assertion that actually pins the
+      // property `20260620000000` exists to guarantee: the guard is SECURITY INVOKER, so
+      // service_role's BYPASSRLS buys it nothing here. A regression to SECURITY DEFINER, or a
+      // "fix" shaped as a policy, would be invisible to the postgres-only probe above.
+      const viaServiceRole = await admin
+        .from("program_predictions")
+        .update({ verdict: "strong" })
+        .eq("id", predictionId);
+      expect(viaServiceRole.error?.message, "service_role must NOT bypass the immutability trigger").toMatch(
+        /program_predictions is immutable/i,
+      );
+
+      // Untouched by either attempt.
+      expect(sqlOne(`select verdict from public.program_predictions where id='${predictionId}';`)).toBe("possible");
     });
   });
 
