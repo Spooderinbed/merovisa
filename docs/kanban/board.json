@@ -1946,7 +1946,7 @@
     },
     {
       "id": "MV-157",
-      "col": "ready",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-157-case-aware-data-access.md",
@@ -1957,25 +1957,25 @@
     },
     {
       "id": "MV-158",
-      "col": "backlog",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-158-anonymous-claim-case-model.md",
       "title": "Anonymous claim under the case model: create-or-resolve a personal case, dual-write owner + case_id atomically, every MV-130 / MV-135 leg preserved",
       "summary": "The plan's named \"hardest dual-write site\" (Known schema obstacles, line 329), carved as its own card because it is the one write path where a partial failure silently destroys a converting student's work — and shipped in ONE PULL REQUEST with MV-157, because master is production and Vercel auto-deploys from it, so merging MV-157 alone opens exactly the window this card closes. Moves the anonymous-assessment claim onto the case model across all four entry points — Google OAuth, the MV-147 emailed 6-digit code, the emailed link, and the signed-in recover-in-place POST /api/assess/claim — so a claim create-or-resolves the claimer's personal case (idempotent, before any write, through MV-157's `ensurePersonalCase(sessionUser)`, which takes the verified Auth User and derives display_name/email internally rather than accepting caller-supplied strings it could never prove came from a session), then binds owner + case_id + claimed_at in ONE conditional statement, because two sequential updates leave an owned-but-case-less row that case-scoped repositories cannot see and the student's assessment vanishes from their own dashboard. Preserves the shipped interactions exactly rather than re-deriving them: MV-130's five honest recovery reasons (already-mine / claimed / expired / error, plus a NEW retryable leg when personal-case resolution fails, which must never render as a false \"expired\"), MV-135's purge contract (owner is null stays the load-bearing predicate — a claimed-but-case-less row must survive, and anonymous rows stay case-less so the purge index still matches), and the assessments_primary_idx partial unique, which during the dual-key window must be satisfied under BOTH the legacy (owner) and the new (case_id) predicates or the promote fails and the dashboard re-pins to the first assessment ever claimed — the exact MV-16 regression. Also asserts the invariant MV-160's tighten relies on: every successful claim leg leaves owner non-null whenever claimed_at is set. Requires real-DB integration tests (extends tests/integration/claim-path.itest.ts) because a supabase-js mock cannot reject a write a partial unique index rejects; the gate is typecheck · lint · test · test:integration, all four now GATING under the no-bypass master ruleset, run on the combined branch.",
       "created": "2026-08-02",
-      "entered": "2026-08-02"
+      "entered": "2026-08-03"
     },
     {
       "id": "MV-159",
-      "col": "backlog",
+      "col": "ready",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-159-rls-migrated-tables.md",
       "title": "Case-aware RLS for the migrated student-owned tables (Stage 2 step 11)",
       "summary": "Extends MV-152's RLS discipline from the six tenancy tables to the nine migrated student-owned tables (profiles, assessments, plan_items, user_program_state, documents, document_status, program_predictions, application_attempts, outcome_events), so the database — not just MV-157's repositories — enforces case scoping: `private` SECURITY DEFINER STABLE helpers with pinned empty `search_path` (including a new uncorrelated `actor_case_ids()` for the measured InitPlan shape), USING + WITH CHECK on every mutating policy, `case_id`/`owner` kept out of the column-level UPDATE grant so re-pointing a row into another case is unexpressible, and a grant set unchanged from the POST-MV-155 baseline — captured column-granularly from the migrated stack, never transcribed from a dossier, because MV-155 §H already replaced six flat verbs with column lists and put case_id into the five INSERT lists. This card re-scopes rows; it hands `authenticated` no verb it lacked. That refusal was tested and UPHELD by the integrator against MV-160's original exit criterion, which required counsellor INSERTs on profiles/assessments/plan_items/documents — verbs `authenticated` simply does not hold, so no policy here could have granted them; those four move to Stage 3 with their exact grant list in specs/2026-08-02-stage2-migration-and-access-matrix.md §6, pinned by a 42501 negative in MV-160's suite. Replaces the three `pp/aa/oe` INSERT policies' inline `exists` subqueries (an anti-recursion violation and a silent-denial hazard once peer tables gain policies) with case-parentage helpers, ships the transitional `owner OR case_id` disjunct that keeps not-yet-backfilled rows visible to their real owners until MV-160 drops it, keeps anonymous assessments invisible to every authenticated client, preserves the program_predictions immutability trigger and outcome_events append-only shape, and adds the `to authenticated` clause `documents`' two legacy policies never had (they apply to PUBLIC including anon, and only the absent grant keeps anon out — note they are ALREADY in the `(select auth.uid())` InitPlan form since 20260618120000, so there is no bare-auth.uid() defect to find). Requires the tenant-isolation harness to be EXTENDED — the Stage 1 suite's 429 assertions prove nothing about profiles/assessments/plan today — with student-data fixtures in both orgs, the live-grant completeness guard widened to nine tables, mutation evidence that each new policy's revert turns a named test red, and a visibility rehearsal on a copy of live data proving all 7 real owners see byte-identical row sets. P1, agent-owned; hard-blocked by MV-155 (case_id + backfill + the §H grant baseline) and MV-156 (owner nullable + composite-FK rebase onto unique(id, case_id)); consumed by MV-160.",
       "created": "2026-08-02",
-      "entered": "2026-08-02"
+      "entered": "2026-08-03"
     },
     {
       "id": "MV-160",
