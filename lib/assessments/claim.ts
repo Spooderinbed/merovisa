@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { claimAssessment, createLead, getAssessmentClaimState } from "./repo";
 import { isAssessmentClaimError } from "./errors";
-import { getProfile, upsertProfile } from "@/lib/profiles/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { getProfileForCase, upsertProfileForCase } from "@/lib/profiles/repo";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
 
@@ -60,12 +61,23 @@ export async function claimAndBootstrapProfile(
     .maybeSingle();
   const snapshot = (data?.profile_snapshot ?? {}) as Record<string, unknown>;
 
-  // Skip if profile already exists
-  const existing = await getProfile(adminDb, input.userId);
-  if (!existing) {
-    const sections = profileSectionsFromAssessment(snapshot, { name: input.googleName }, { nowYear: new Date().getUTCFullYear() });
-    const { pct } = computeCompleteness(sections);
-    await upsertProfile(adminDb, { owner: input.userId, sections, completeness: pct });
+  // Skip if profile already exists. MV-157 touches this block ONLY to keep it
+  // compiling against the case-aware profile repo; the claim's own semantics —
+  // the atomic owner + case_id + claimed_at bind, the F1-F5 recovery legs, and
+  // the demote that must satisfy BOTH live primary-assessment predicates — are
+  // MV-158's commit on this same branch.
+  const caseId = await resolvePersonalCaseId(input.userId, adminDb);
+  if (caseId === null) {
+    console.error("[claim] no personal case for claimer; profile bootstrap skipped", {
+      userId: input.userId,
+    });
+  } else {
+    const existing = await getProfileForCase(adminDb, caseId);
+    if (!existing) {
+      const sections = profileSectionsFromAssessment(snapshot, { name: input.googleName }, { nowYear: new Date().getUTCFullYear() });
+      const { pct } = computeCompleteness(sections);
+      await upsertProfileForCase(adminDb, { caseId, sections, completeness: pct });
+    }
   }
 
   // Make the just-claimed assessment the primary one (newest-wins): demote any

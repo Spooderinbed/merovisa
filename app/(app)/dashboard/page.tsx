@@ -2,14 +2,16 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
-import { getProfile } from "@/lib/profiles/repo";
-import { listDocumentsForUser } from "@/lib/documents/repo";
-import { listAllPlanForUser } from "@/lib/plan/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
+import { getProfileForCase } from "@/lib/profiles/repo";
+import { listDocumentsForCase } from "@/lib/documents/repo";
+import { listAllPlanForCase } from "@/lib/plan/repo";
 import { selectNextStep } from "@/lib/plan/select";
 import type { PlanItemRow } from "@/lib/plan/types";
-import { getOutcomesForUser } from "@/lib/outcomes/repo";
-import { listShortlistForUser } from "@/lib/matches/repo";
+import { getOutcomesForCase } from "@/lib/outcomes/repo";
+import { listShortlistForCase } from "@/lib/matches/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { buildOutcomeFunnel, type OutcomeFunnelRow } from "@/lib/outcomes/funnel";
 import { Greeting } from "@/components/dashboard/greeting";
@@ -47,14 +49,28 @@ export default async function DashboardPage() {
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
   const user = userData.user;
-  const [primaryRow, profileRow, documents, allPlanItems, outcomes, shortlist] = await Promise.all([
-    getPrimaryAssessmentForUser(supabase, user.id),
-    getProfile(supabase, user.id),
-    listDocumentsForUser(supabase, user.id),
-    listAllPlanForUser(supabase, user.id),
-    getOutcomesForUser(supabase, user.id),
-    listShortlistForUser(supabase, user.id),
-  ]);
+  // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
+  // the first read — never per repo call. A signed-in actor with no personal case
+  // is the residue of the MV-155-apply-to-this-deploy window; they see the same
+  // empty state a brand-new account does, and `/api/assess` heals it by calling
+  // `ensurePersonalCase` on their next assessment (MV-160 §B's sweep is the bulk
+  // remedy).
+  const caseId = await resolvePersonalCaseId(user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) redirect("/auth?next=/dashboard");
+  }
+  const [primaryRow, profileRow, documents, allPlanItems, outcomes, shortlist] =
+    caseId === null
+      ? [null, null, [], [], { predictions: [], attempts: [], events: [] }, []]
+      : await Promise.all([
+          getPrimaryAssessmentForCase(supabase, caseId),
+          getProfileForCase(supabase, caseId),
+          listDocumentsForCase(supabase, caseId),
+          listAllPlanForCase(supabase, caseId),
+          getOutcomesForCase(supabase, caseId),
+          listShortlistForCase(supabase, caseId),
+        ]);
   const primary = (primaryRow?.result as unknown as AssessmentPayload | undefined) ?? null;
   const profileSections = (profileRow?.sections as ProfileSections | undefined) ?? null;
   const name = profileSections?.personal?.name ?? null;

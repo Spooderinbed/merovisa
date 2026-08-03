@@ -34,8 +34,8 @@ import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
 import {
   createAnonymousAssessment,
   createLead,
-  getPrimaryAssessmentForUser,
-  getOwnedAssessment,
+  getPrimaryAssessmentForCase,
+  getAssessmentById,
 } from "@/lib/assessments/repo";
 import type { Database } from "@/lib/supabase/types";
 
@@ -102,7 +102,7 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
       email,
     });
     expect(r1.claimed).toBe(true);
-    expect((await getPrimaryAssessmentForUser(admin, userId))?.id).toBe(a1);
+    expect((await getPrimaryAssessmentForCase(admin, userId))?.id).toBe(a1);
 
     const r2 = await claimAndBootstrapProfile(admin, { assessmentId: a2, userId, email });
     expect(r2.claimed).toBe(true);
@@ -111,7 +111,7 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     // goes RED against the pre-MV-16 single-promote code: the second promote trips
     // assessments_primary_idx, the error is swallowed, and a1 stays primary.
     expect(await primaryIdsForOwner()).toEqual([a2]);
-    expect((await getOwnedAssessment(admin, a1))?.is_primary).toBe(false);
+    expect((await getAssessmentById(admin, a1))?.is_primary).toBe(false);
   });
 
   it("a successful claim records a lead and bootstraps a profile; a re-claim does not duplicate", async () => {

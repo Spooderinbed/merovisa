@@ -3,115 +3,157 @@ import { describe, test, expect, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import {
-  listDocumentsForUser,
-  getDocumentByKind,
+  listDocumentsForCase,
+  getDocumentByKindForCase,
+  listDocumentsByKindsForCase,
   insertDocument,
   upsertDocument,
   deleteDocument,
 } from "@/lib/documents/repo";
 import { fakeSupabase } from "@/tests/helpers/fake-supabase";
 
+const CASE = "case-1";
+const STUDENT = "u1";
+/** What the dual-write helper's `cases` lookup answers with. */
+const CASE_ROW = { data: { id: CASE, student_user_id: STUDENT }, error: null };
+
 describe("documents repo", () => {
-  test("listDocumentsForUser returns docs", async () => {
+  test("listDocumentsForCase returns docs, keyed on case_id", async () => {
     const row = {
       id: "d1",
       kind: "ielts",
-      owner: "u1",
+      owner: STUDENT,
+      case_id: CASE,
       file_path: "u1/ielts/f.png",
       file_size: 1000,
       original_name: "f.png",
       created_at: "2026-01-01",
     };
     const { client, calls } = fakeSupabase({ data: [row], error: null });
-    const docs = await listDocumentsForUser(client, "u1");
+
+    const docs = await listDocumentsForCase(client, CASE);
+
     expect(docs).toHaveLength(1);
     expect(docs[0]?.kind).toBe("ielts");
     expect(calls.some((c) => c.method === "from" && c.args[0] === "documents")).toBe(true);
-    expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner" && c.args[1] === "u1")).toBe(true);
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "case_id" && c.args[1] === CASE)).toBe(true);
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner")).toBe(false);
   });
 
-  test("listDocumentsForUser returns empty array when no docs", async () => {
+  test("listDocumentsForCase returns empty array when no docs", async () => {
     const { client } = fakeSupabase({ data: null, error: null });
-    const docs = await listDocumentsForUser(client, "u1");
-    expect(docs).toEqual([]);
+    expect(await listDocumentsForCase(client, CASE)).toEqual([]);
   });
 
-  test("getDocumentByKind returns matching doc", async () => {
-    const row = { id: "d1", kind: "ielts", owner: "u1" };
-    const { client, calls } = fakeSupabase({ data: row, error: null });
-    const doc = await getDocumentByKind(client, "u1", "ielts");
-    expect(doc).not.toBeNull();
+  test("getDocumentByKindForCase returns matching doc", async () => {
+    const { client, calls } = fakeSupabase({ data: { id: "d1", kind: "ielts" }, error: null });
+
+    const doc = await getDocumentByKindForCase(client, CASE, "ielts");
+
     expect(doc?.kind).toBe("ielts");
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "case_id" && c.args[1] === CASE)).toBe(true);
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "kind" && c.args[1] === "ielts")).toBe(true);
   });
 
-  test("getDocumentByKind returns null when not found", async () => {
+  test("getDocumentByKindForCase returns null when not found", async () => {
     const { client } = fakeSupabase({ data: null, error: null });
-    const doc = await getDocumentByKind(client, "u1", "passport");
-    expect(doc).toBeNull();
+    expect(await getDocumentByKindForCase(client, CASE, "passport")).toBeNull();
   });
 
-  test("insertDocument inserts and returns id", async () => {
-    const { client, calls } = fakeSupabase({ data: { id: "d2" }, error: null });
+  test("listDocumentsByKindsForCase filters by case_id and the kind set", async () => {
+    const { client, calls } = fakeSupabase({ data: [], error: null });
+
+    await listDocumentsByKindsForCase(client, CASE, ["ielts", "passport"]);
+
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "case_id" && c.args[1] === CASE)).toBe(true);
+    expect(calls.some((c) => c.method === "in" && c.args[0] === "kind")).toBe(true);
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner")).toBe(false);
+  });
+
+  test("insertDocument dual-writes case_id and the derived owner", async () => {
+    const { client, calls } = fakeSupabase([CASE_ROW, { data: { id: "d2" }, error: null }]);
+
     const id = await insertDocument(client, {
-      owner: "u1",
+      caseId: CASE,
       kind: "ielts",
       filePath: "u1/ielts/score.pdf",
       fileSize: 2048,
       originalName: "score.pdf",
     });
+
     expect(id).toBe("d2");
-    expect(calls.some((c) => c.method === "insert")).toBe(true);
-    expect(calls.some((c) => c.method === "single")).toBe(true);
+    const payload = calls.find((c) => c.method === "insert")?.args[0] as Record<string, unknown>;
+    expect(payload).toMatchObject({ case_id: CASE, owner: STUDENT });
   });
 
   test("insertDocument returns null when insert errors", async () => {
-    const { client } = fakeSupabase({ data: null, error: { message: "insert failed" } });
-    const id = await insertDocument(client, {
-      owner: "u1",
-      kind: "passport",
-      filePath: "u1/passport/p.jpg",
-      fileSize: 512,
-      originalName: "p.jpg",
-    });
-    expect(id).toBeNull();
+    const { client } = fakeSupabase([CASE_ROW, { data: null, error: { message: "insert failed" } }]);
+    expect(
+      await insertDocument(client, {
+        caseId: CASE,
+        kind: "passport",
+        filePath: "u1/passport/p.jpg",
+        fileSize: 512,
+        originalName: "p.jpg",
+      }),
+    ).toBeNull();
   });
 
-  test("deleteDocument calls delete chain with id and owner", async () => {
+  test("insertDocument refuses when the case cannot be resolved", async () => {
+    const { client, calls } = fakeSupabase([{ data: null, error: null }]);
+
+    expect(
+      await insertDocument(client, {
+        caseId: CASE,
+        kind: "passport",
+        filePath: "u1/passport/p.jpg",
+        fileSize: 512,
+        originalName: "p.jpg",
+      }),
+    ).toBeNull();
+    expect(calls.some((c) => c.method === "insert")).toBe(false);
+  });
+
+  test("deleteDocument calls delete chain with id and case_id", async () => {
     const { client, calls } = fakeSupabase({ data: null, error: null });
-    await deleteDocument(client, "d1", "u1");
+
+    await deleteDocument(client, "d1", CASE);
+
     expect(calls.some((c) => c.method === "delete")).toBe(true);
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "id" && c.args[1] === "d1")).toBe(true);
-    expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner" && c.args[1] === "u1")).toBe(true);
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "case_id" && c.args[1] === CASE)).toBe(true);
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "owner")).toBe(false);
   });
 
-  test("upsertDocument replaces on the (owner,kind) index and returns id", async () => {
-    const { client, calls } = fakeSupabase({ data: { id: "d3" }, error: null });
+  test("upsertDocument replaces on the (case_id,kind) index and returns id", async () => {
+    const { client, calls } = fakeSupabase([CASE_ROW, { data: { id: "d3" }, error: null }]);
+
     const id = await upsertDocument(client, {
-      owner: "u1",
+      caseId: CASE,
       kind: "passport",
       filePath: "u1/passport/new.png",
       fileSize: 4096,
       originalName: "new.png",
     });
+
     expect(id).toBe("d3");
-    const upsert = calls.find((c) => c.method === "upsert");
-    expect(upsert).toBeDefined();
-    // The crux of the C-8 fix: an atomic replace on the unique (owner,kind)
-    // index — never a delete-then-insert window that can leave the owner
-    // with no document row at all.
-    expect(upsert?.args[1]).toEqual({ onConflict: "owner,kind" });
+    // The crux of the C-8 fix, now case-keyed: an atomic replace on the unique
+    // (case_id,kind) index — never a delete-then-insert window that can leave the
+    // case with no document row at all. MV-155 shipped that index FULL so
+    // PostgREST's bare `on_conflict=` can infer it.
+    expect(calls.find((c) => c.method === "upsert")?.args[1]).toEqual({ onConflict: "case_id,kind" });
   });
 
   test("upsertDocument returns null when the write errors", async () => {
-    const { client } = fakeSupabase({ data: null, error: { message: "upsert failed" } });
-    const id = await upsertDocument(client, {
-      owner: "u1",
-      kind: "passport",
-      filePath: "u1/passport/p.jpg",
-      fileSize: 512,
-      originalName: "p.jpg",
-    });
-    expect(id).toBeNull();
+    const { client } = fakeSupabase([CASE_ROW, { data: null, error: { message: "upsert failed" } }]);
+    expect(
+      await upsertDocument(client, {
+        caseId: CASE,
+        kind: "passport",
+        filePath: "u1/passport/p.jpg",
+        fileSize: 512,
+        originalName: "p.jpg",
+      }),
+    ).toBeNull();
   });
 });

@@ -1,9 +1,24 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
 import { upsertProgramState, deleteProgramState } from "@/lib/matches/repo";
 import { captureApplication } from "@/lib/outcomes/on-apply";
+
+/**
+ * MV-157 §G: this route FLIPPED off the service-role client and left the
+ * exception list. `user_program_state` already grants `authenticated` full CRUD
+ * (`20260604002139` line 84, narrowed to a column list by MV-155 §H), so the
+ * admin client here was never load-bearing — the authenticated client on the line
+ * below was already doing the auth check while the write went out as service_role.
+ *
+ * It is the ONLY flip in this card. Every other `legacy-owner-scoped` path needs
+ * a grant `authenticated` does not hold (`assessments` SELECT-only;
+ * `profiles`/`plan_items`/`documents` no INSERT), and grants are reviewed once,
+ * with the policies, in MV-159 — shipping a grant ahead of its policy is how a
+ * table ends up briefly open.
+ */
 
 const BodySchema = z.object({
   programId: z.string().min(1),
@@ -28,21 +43,27 @@ export async function POST(request: Request): Promise<Response> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const admin = createSupabaseAdminClient();
+  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
+  if (caseId === null) {
+    return NextResponse.json({ error: "no workspace for this account" }, { status: 500 });
+  }
+  const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
+  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   if (parsed.data.status === null) {
-    const ok = await deleteProgramState(admin, data.user.id, parsed.data.programId);
+    const ok = await deleteProgramState(supabase, caseId, parsed.data.programId);
     return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
   }
-  const ok = await upsertProgramState(admin, {
-    owner: data.user.id,
+  const ok = await upsertProgramState(supabase, {
+    caseId,
     programId: parsed.data.programId,
     status: parsed.data.status,
   });
   // MV-08: marking a program 'applied' freezes the prediction-of-record + opens an
   // attempt (the moat capture). Best-effort and idempotent — it must not fail the
-  // shortlist write, and it runs through the RLS-scoped client (S4), not admin.
+  // shortlist write, and it already ran through the RLS-scoped client (S4).
   if (ok && parsed.data.status === "applied") {
-    await captureApplication(supabase, data.user.id, parsed.data.programId);
+    await captureApplication(supabase, caseId, parsed.data.programId);
   }
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }

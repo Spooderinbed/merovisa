@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
-import { listDocumentsForUser } from "@/lib/documents/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { listDocumentsForCase } from "@/lib/documents/repo";
 import { DOCUMENT_META, GROUPS, GROUP_LABELS } from "@/lib/documents/types";
 import { DocumentGroup } from "@/components/documents/document-group";
 
@@ -17,7 +19,18 @@ export default async function DocumentsPage() {
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
 
-  const documents = await listDocumentsForUser(supabase, user.id);
+  // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
+  // the first read — never per repo call. A signed-in actor with no personal case
+  // is the residue of the MV-155-apply-to-this-deploy window; they see the same
+  // empty state a brand-new account does, and `/api/assess` heals it by calling
+  // `ensurePersonalCase` on their next assessment (MV-160 §B's sweep is the bulk
+  // remedy).
+  const caseId = await resolvePersonalCaseId(user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) redirect("/auth?next=/documents");
+  }
+  const documents = caseId === null ? [] : await listDocumentsForCase(supabase, caseId);
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 px-5 py-10">

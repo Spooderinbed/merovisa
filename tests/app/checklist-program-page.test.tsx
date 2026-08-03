@@ -4,24 +4,24 @@ import type { PlanItemRow } from "@/lib/plan/types";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getProgram, listAllUniversities, getProfile, listDocumentsForUser, listAllPlanForUser, listObtainedKinds } =
+const { getUser, getProgram, listAllUniversities, getProfileForCase, listDocumentsForCase, listAllPlanForCase, listObtainedKinds } =
   vi.hoisted(() => ({
     getUser: vi.fn(),
     getProgram: vi.fn(),
     listAllUniversities: vi.fn(),
-    getProfile: vi.fn(),
-    listDocumentsForUser: vi.fn(),
-    listAllPlanForUser: vi.fn(),
+    getProfileForCase: vi.fn(),
+    listDocumentsForCase: vi.fn(),
+    listAllPlanForCase: vi.fn(),
     listObtainedKinds: vi.fn(),
   }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
 vi.mock("@/lib/programs/repo", () => ({ getProgram, listAllUniversities }));
-vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
-vi.mock("@/lib/documents/repo", () => ({ listDocumentsForUser }));
+vi.mock("@/lib/profiles/repo", () => ({ getProfileForCase }));
+vi.mock("@/lib/documents/repo", () => ({ listDocumentsForCase }));
 vi.mock("@/lib/documents/status-repo", () => ({ listObtainedKinds }));
-vi.mock("@/lib/plan/repo", () => ({ listAllPlanForUser }));
+vi.mock("@/lib/plan/repo", () => ({ listAllPlanForCase }));
 vi.mock("next/headers", () => ({ headers: async () => new Map() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn(), notFound: vi.fn() }));
 vi.mock("@/components/checklist/checklist-view", () => ({
@@ -32,6 +32,22 @@ vi.mock("@/components/checklist/checklist-view", () => ({
     </div>
   ),
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import ProgramChecklistPage from "@/app/(app)/checklist/[programId]/page";
 import { notFound } from "next/navigation";
@@ -56,9 +72,9 @@ describe("/checklist/[programId] page", () => {
     getUser.mockReset().mockResolvedValue({ data: { user: { id: "u1" } } });
     getProgram.mockReset().mockResolvedValue(program);
     listAllUniversities.mockReset().mockResolvedValue([]);
-    getProfile.mockReset().mockResolvedValue(null);
-    listDocumentsForUser.mockReset().mockResolvedValue([]);
-    listAllPlanForUser.mockReset().mockResolvedValue([]);
+    getProfileForCase.mockReset().mockResolvedValue(null);
+    listDocumentsForCase.mockReset().mockResolvedValue([]);
+    listAllPlanForCase.mockReset().mockResolvedValue([]);
     listObtainedKinds.mockReset().mockResolvedValue(new Set());
   });
 
@@ -66,14 +82,14 @@ describe("/checklist/[programId] page", () => {
     listObtainedKinds.mockResolvedValue(new Set(["national-id"]));
     const ui = await ProgramChecklistPage({ params: Promise.resolve({ programId: "p1" }) });
     render(ui);
-    expect(listObtainedKinds).toHaveBeenCalledWith(expect.anything(), "u1");
+    expect(listObtainedKinds).toHaveBeenCalledWith(expect.anything(), "case-1");
     const items = JSON.parse(screen.getByTestId("items").textContent || "[]") as { key: string; status: string }[];
     expect(items.find((i) => i.key === "national-id")?.status).toBe("obtained");
     expect(items.find((i) => i.key === "passport")?.status).toBe("missing"); // not obtained, not uploaded
   });
 
   it("fetches the plan and passes derived per-key state to the view", async () => {
-    listAllPlanForUser.mockResolvedValue([
+    listAllPlanForCase.mockResolvedValue([
       planRow("apply-for-noc", "todo"),
       planRow("prepare-biometrics", "todo", "2026-06-09T00:00:00Z"),
       planRow("prepare-police-certificate", "done"),
@@ -81,7 +97,7 @@ describe("/checklist/[programId] page", () => {
     ]);
     const ui = await ProgramChecklistPage({ params: Promise.resolve({ programId: "p1" }) });
     render(ui);
-    expect(listAllPlanForUser).toHaveBeenCalledWith(expect.anything(), "u1");
+    expect(listAllPlanForCase).toHaveBeenCalledWith(expect.anything(), "case-1");
     expect(screen.getByTestId("view")).toHaveTextContent(
       JSON.stringify({
         "noc-application": "open",

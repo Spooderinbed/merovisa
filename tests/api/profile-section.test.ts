@@ -2,17 +2,33 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, patchProfileSection, invalidatePlan } = vi.hoisted(() => ({
+const { getUser, patchProfileSectionForCase, invalidatePlan } = vi.hoisted(() => ({
   getUser: vi.fn(),
-  patchProfileSection: vi.fn(),
+  patchProfileSectionForCase: vi.fn(),
   invalidatePlan: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
-vi.mock("@/lib/profiles/repo", () => ({ patchProfileSection }));
+vi.mock("@/lib/profiles/repo", () => ({ patchProfileSectionForCase }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { PATCH } from "@/app/api/profile/section/route";
 
@@ -26,7 +42,7 @@ const req = (body: unknown) =>
 describe("PATCH /api/profile/section", () => {
   beforeEach(() => {
     getUser.mockReset();
-    patchProfileSection.mockReset();
+    patchProfileSectionForCase.mockReset();
     invalidatePlan.mockReset();
   });
 
@@ -46,7 +62,7 @@ describe("PATCH /api/profile/section", () => {
 
   it("patches the section and returns the new completeness", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    patchProfileSection.mockResolvedValue({ completeness: 12, sections: { personal: { name: "X" } } });
+    patchProfileSectionForCase.mockResolvedValue({ completeness: 12, sections: { personal: { name: "X" } } });
     invalidatePlan.mockResolvedValue(undefined);
     const res = await PATCH(req({ section: "personal", patch: { name: "X" } }));
     expect(res.status).toBe(200);
@@ -57,7 +73,7 @@ describe("PATCH /api/profile/section", () => {
 
   it("returns 500 (never ok:true) when the profile write fails", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    patchProfileSection.mockRejectedValue(new Error("write failed"));
+    patchProfileSectionForCase.mockRejectedValue(new Error("write failed"));
     const res = await PATCH(req({ section: "personal", patch: { name: "X" } }));
     expect(res.status).toBe(500);
     const json = await res.json();

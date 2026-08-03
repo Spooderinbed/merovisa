@@ -12,6 +12,22 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/documents/status-repo", () => ({ setObtained }));
 
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
+
 import { POST } from "@/app/api/documents/status/route";
 
 const post = (body: unknown) =>
@@ -64,13 +80,13 @@ describe("POST /api/documents/status", () => {
     signedIn();
     const res = await POST(post({ kind: "passport", obtained: true }));
     expect(res.status).toBe(200);
-    expect(setObtained).toHaveBeenCalledWith(expect.anything(), "owner1", "passport", true);
+    expect(setObtained).toHaveBeenCalledWith(expect.anything(), "case-1", "passport", true);
   });
 
   it("passes obtained=false through to the repo", async () => {
     signedIn();
     const res = await POST(post({ kind: "ielts", obtained: false }));
     expect(res.status).toBe(200);
-    expect(setObtained).toHaveBeenCalledWith(expect.anything(), "owner1", "ielts", false);
+    expect(setObtained).toHaveBeenCalledWith(expect.anything(), "case-1", "ielts", false);
   });
 });

@@ -5,8 +5,8 @@ vi.mock("server-only", () => ({}));
 const {
   getUser,
   serverSingle,
-  listDocumentsByKinds,
-  patchProfileSection,
+  listDocumentsByKindsForCase,
+  patchProfileSectionForCase,
   invalidatePlan,
   reScoreAssessment,
   adminRemove,
@@ -14,8 +14,8 @@ const {
 } = vi.hoisted(() => ({
   getUser: vi.fn(),
   serverSingle: vi.fn(),
-  listDocumentsByKinds: vi.fn(),
-  patchProfileSection: vi.fn(),
+  listDocumentsByKindsForCase: vi.fn(),
+  patchProfileSectionForCase: vi.fn(),
   invalidatePlan: vi.fn(),
   reScoreAssessment: vi.fn(),
   adminRemove: vi.fn(),
@@ -52,10 +52,26 @@ vi.mock("@/lib/supabase/admin", () => ({
     from: () => adminDeleteChain(),
   }),
 }));
-vi.mock("@/lib/documents/repo", () => ({ listDocumentsByKinds }));
-vi.mock("@/lib/profiles/repo", () => ({ patchProfileSection }));
+vi.mock("@/lib/documents/repo", () => ({ listDocumentsByKindsForCase }));
+vi.mock("@/lib/profiles/repo", () => ({ patchProfileSectionForCase }));
 vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
 vi.mock("@/lib/assessments/re-score", () => ({ reScoreAssessment }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { DELETE } from "@/app/api/documents/[id]/route";
 
@@ -72,8 +88,8 @@ describe("DELETE /api/documents/[id]", () => {
     serverSingle.mockResolvedValue({
       data: { id: "d1", owner: "u1", kind: "bank-statement", file_path: "u1/bank-statement/x.png" },
     });
-    listDocumentsByKinds.mockResolvedValue([]); // no remaining docs -> flag flips off
-    patchProfileSection.mockResolvedValue(undefined);
+    listDocumentsByKindsForCase.mockResolvedValue([]); // no remaining docs -> flag flips off
+    patchProfileSectionForCase.mockResolvedValue(undefined);
     invalidatePlan.mockResolvedValue(undefined);
     reScoreAssessment.mockResolvedValue(undefined);
     adminRemove.mockResolvedValue({ error: null });
@@ -84,9 +100,9 @@ describe("DELETE /api/documents/[id]", () => {
     const res = await DELETE(deleteReq(), { params });
     expect(res.status).toBe(200);
 
-    expect(patchProfileSection).toHaveBeenCalledWith(
+    expect(patchProfileSectionForCase).toHaveBeenCalledWith(
       expect.anything(),
-      "u1",
+      "case-1",
       "finance",
       { proofUploaded: false },
     );
@@ -95,12 +111,12 @@ describe("DELETE /api/documents/[id]", () => {
   });
 
   it("leaves flags and plan alone (and never re-scores) when other docs of the group remain", async () => {
-    listDocumentsByKinds.mockResolvedValue([
+    listDocumentsByKindsForCase.mockResolvedValue([
       { id: "d2", owner: "u1", kind: "loan-sanction", file_path: "x" },
     ]);
     const res = await DELETE(deleteReq(), { params });
     expect(res.status).toBe(200);
-    expect(patchProfileSection).not.toHaveBeenCalled();
+    expect(patchProfileSectionForCase).not.toHaveBeenCalled();
     expect(invalidatePlan).not.toHaveBeenCalled();
     expect(reScoreAssessment).not.toHaveBeenCalled();
   });
@@ -112,7 +128,7 @@ describe("DELETE /api/documents/[id]", () => {
     const json = await res.json();
     expect(json.ok).not.toBe(true);
     // No false flag-flip / plan work after a failed primary delete.
-    expect(patchProfileSection).not.toHaveBeenCalled();
+    expect(patchProfileSectionForCase).not.toHaveBeenCalled();
   });
 
   it("returns 500 when removing the stored file fails", async () => {

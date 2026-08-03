@@ -1,10 +1,10 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
-import { getProfile } from "@/lib/profiles/repo";
-import { listDocumentsForUser } from "@/lib/documents/repo";
-import { listAllPlanForUser } from "@/lib/plan/repo";
-import { getOutcomesForUser } from "@/lib/outcomes/repo";
-import { listShortlistForUser } from "@/lib/matches/repo";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
+import { getProfileForCase } from "@/lib/profiles/repo";
+import { listDocumentsForCase } from "@/lib/documents/repo";
+import { listAllPlanForCase } from "@/lib/plan/repo";
+import { getOutcomesForCase } from "@/lib/outcomes/repo";
+import { listShortlistForCase } from "@/lib/matches/repo";
 import { deriveJourneySignals, type JourneySignals } from "@/lib/journey/journey";
 
 type ServerSupabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -22,15 +22,15 @@ type ServerSupabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
  */
 export async function getJourneySignals(
   supabase: ServerSupabase,
-  userId: string,
+  caseId: string,
 ): Promise<JourneySignals> {
   const [primaryRow, profileRow, documents, planItems, outcomes, shortlist] = await Promise.all([
-    getPrimaryAssessmentForUser(supabase, userId),
-    getProfile(supabase, userId),
-    listDocumentsForUser(supabase, userId),
-    listAllPlanForUser(supabase, userId),
-    getOutcomesForUser(supabase, userId),
-    listShortlistForUser(supabase, userId),
+    getPrimaryAssessmentForCase(supabase, caseId),
+    getProfileForCase(supabase, caseId),
+    listDocumentsForCase(supabase, caseId),
+    listAllPlanForCase(supabase, caseId),
+    getOutcomesForCase(supabase, caseId),
+    listShortlistForCase(supabase, caseId),
   ]);
 
   return deriveJourneySignals({

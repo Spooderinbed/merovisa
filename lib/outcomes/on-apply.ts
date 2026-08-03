@@ -27,25 +27,25 @@ export type CaptureResult =
  */
 export async function captureApplication(
   db: DB,
-  owner: string,
+  caseId: string,
   programId: string,
 ): Promise<CaptureResult> {
-  const frozen = await freezePredictionForProgram(db, owner, programId);
+  const frozen = await freezePredictionForProgram(db, caseId, programId);
   if (!frozen.ok) return { captured: false, reason: frozen.error };
 
   const [existing] = await listAttemptsForPrediction(db, frozen.prediction.id);
   if (existing) {
-    await ensureAppliedEvent(db, owner, existing);
+    await ensureAppliedEvent(db, caseId, existing);
     return { captured: true, attempt: existing, created: false };
   }
 
   const attempt = await insertAttempt(db, {
-    owner,
+    caseId,
     predictionId: frozen.prediction.id,
     programId: frozen.prediction.programId,
   });
   if (!attempt) return { captured: false, reason: "could not open the attempt" };
-  await ensureAppliedEvent(db, owner, attempt);
+  await ensureAppliedEvent(db, caseId, attempt);
   return { captured: true, attempt, created: true };
 }
 
@@ -59,11 +59,11 @@ export async function captureApplication(
  * Skips the write if an 'applied' event is already present, which also repairs
  * attempts opened by the earlier event-less path.
  */
-async function ensureAppliedEvent(db: DB, owner: string, attempt: AttemptRow): Promise<void> {
+async function ensureAppliedEvent(db: DB, caseId: string, attempt: AttemptRow): Promise<void> {
   const prior = await listEventTypesForAttempt(db, attempt.id);
   if (prior.includes("applied")) return;
   await insertEvent(db, {
-    owner,
+    caseId,
     attemptId: attempt.id,
     eventType: "applied",
     gate: eventGate("applied"),

@@ -3,15 +3,15 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getProfile } = vi.hoisted(() => ({
+const { getUser, getProfileForCase } = vi.hoisted(() => ({
   getUser: vi.fn(),
-  getProfile: vi.fn(),
+  getProfileForCase: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
-vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
+vi.mock("@/lib/profiles/repo", () => ({ getProfileForCase }));
 vi.mock("@/components/profile/completeness-ring", () => ({
   CompletenessRing: ({ pct }: { pct: number }) => <div data-testid="ring">{pct}%</div>,
 }));
@@ -20,6 +20,22 @@ vi.mock("@/components/profile/section-accordion", () => ({
     <div data-testid={`section-${title}`}>{title}:{status}:{summary}</div>
   ),
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import ProfilePage from "@/app/(app)/profile/page";
 
@@ -37,12 +53,12 @@ const GROUP_TITLES = [
 describe("/profile page", () => {
   beforeEach(() => {
     getUser.mockReset();
-    getProfile.mockReset();
+    getProfileForCase.mockReset();
   });
 
   it("renders name + email at top and exactly the 8 approved group rows", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: { personal: { name: "Aarav Sharma" } },
       completeness: 8,
     });
@@ -60,7 +76,7 @@ describe("/profile page", () => {
   it("derives a partial group row from a complete + not-started member mix", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
     // personal complete (name present), family not started -> About you partial
-    getProfile.mockResolvedValue({ sections: { personal: { name: "Aarav Sharma" } } });
+    getProfileForCase.mockResolvedValue({ sections: { personal: { name: "Aarav Sharma" } } });
     render(await ProfilePage());
     expect(screen.getByTestId("section-About you")).toHaveTextContent("About you:partial");
     // both members complete -> complete
@@ -69,14 +85,14 @@ describe("/profile page", () => {
 
   it("derives row summaries and ring from current profile data on each server render (refresh contract)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getProfile.mockResolvedValueOnce({ sections: { personal: { name: "Aarav Sharma" } } });
+    getProfileForCase.mockResolvedValueOnce({ sections: { personal: { name: "Aarav Sharma" } } });
     const first = render(await ProfilePage());
     expect(screen.getByTestId("section-About you")).toHaveTextContent("Aarav Sharma");
     expect(screen.getByTestId("ring")).toHaveTextContent("8%");
     first.unmount();
 
     // After a section save, router.refresh() re-runs the page with fresh data:
-    getProfile.mockResolvedValueOnce({
+    getProfileForCase.mockResolvedValueOnce({
       sections: {
         personal: { name: "Aarav Sharma", age: 23 },
         career: { goal: "research" },
@@ -90,7 +106,7 @@ describe("/profile page", () => {
 
   it("shows the intake date on the Destination & intake row, not About you", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         personal: { name: "Aarav", intakeIso: "2027-07-01" },
         destination: { primary: "australia" },

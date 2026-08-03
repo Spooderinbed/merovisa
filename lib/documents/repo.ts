@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { caseWriteColumns } from "@/lib/cases/dual-write";
 import type { DocumentKind } from "./types";
 
 type DB = SupabaseClient<Database>;
@@ -10,17 +11,10 @@ type DB = SupabaseClient<Database>;
 //
 // This interface is NOT derived from `Database["public"]["Tables"]["documents"]["Row"]` — every read
 // below launders its result through an `as DocumentRow` cast, so `owner: string` was a claim
-// TypeScript had no way to check and the MV-156 types regen could not surface. That is exactly the
-// shape of hidden non-null assertion this card's criterion bans, and `lib/documents/repo.ts:10` is
-// named in it; widening the field is that criterion discharged. No caller reads `row.owner` today
-// (the reads all filter `.eq("owner", userId)` server-side), so nothing downstream moves — which is
-// the point: a cast was holding a nullable column behind a non-null type with no consumer pressure
-// to notice. Re-keying these reads onto `case_id` is MV-157.
+// TypeScript had no way to check and the MV-156 types regen could not surface.
 //
-// The WRITE-side `owner: string` parameters below (`insertDocument`, `upsertDocument`) stay non-null
-// deliberately: both are called only from the authenticated upload path, where an owner always
-// exists, and widening them would invite a NULL-owner insert that no Stage 2 policy authorizes.
-// A consultancy upload path is Stage 4 (spec §8), not this card.
+// MV-157 re-keyed every read and write below onto `case_id`. `owner` survives on the WRITE side as a
+// derived column only (see `lib/cases/dual-write.ts`) — it is never a parameter.
 export interface DocumentRow {
   id: string;
   owner: string | null;
@@ -31,38 +25,45 @@ export interface DocumentRow {
   created_at: string;
 }
 
-export async function listDocumentsForUser(db: DB, userId: string): Promise<DocumentRow[]> {
+/**
+ * MV-157: row-level `case_id` only. The document header/versions replacement and
+ * case-aware Storage object paths are Stage 4 — object paths stay owner-keyed
+ * through Stages 2 and 3 (spec §8), so `documents.file_path` and
+ * `storage.objects.name` deliberately disagree about the authorization model for
+ * the whole window.
+ */
+export async function listDocumentsForCase(db: DB, caseId: string): Promise<DocumentRow[]> {
   const { data } = await db
     .from("documents")
     .select("*")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .order("created_at", { ascending: false });
   return (data ?? []) as DocumentRow[];
 }
 
-export async function getDocumentByKind(
+export async function getDocumentByKindForCase(
   db: DB,
-  userId: string,
+  caseId: string,
   kind: DocumentKind,
 ): Promise<DocumentRow | null> {
   const { data } = await db
     .from("documents")
     .select("*")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .eq("kind", kind)
     .maybeSingle();
   return (data as DocumentRow) ?? null;
 }
 
-export async function listDocumentsByKinds(
+export async function listDocumentsByKindsForCase(
   db: DB,
-  userId: string,
+  caseId: string,
   kinds: DocumentKind[],
 ): Promise<DocumentRow[]> {
   const { data } = await db
     .from("documents")
     .select("*")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .in("kind", kinds);
   return (data ?? []) as DocumentRow[];
 }
@@ -70,17 +71,20 @@ export async function listDocumentsByKinds(
 export async function insertDocument(
   db: DB,
   doc: {
-    owner: string;
+    caseId: string;
     kind: DocumentKind;
     filePath: string;
     fileSize: number;
     originalName: string;
   },
 ): Promise<string | null> {
+  const ownership = await caseWriteColumns(db, doc.caseId);
+  if (ownership === null) return null;
+
   const { data } = await db
     .from("documents")
     .insert({
-      owner: doc.owner,
+      ...ownership,
       kind: doc.kind,
       file_path: doc.filePath,
       file_size: doc.fileSize,
@@ -94,37 +98,51 @@ export async function insertDocument(
 export async function upsertDocument(
   db: DB,
   doc: {
-    owner: string;
+    caseId: string;
     kind: DocumentKind;
     filePath: string;
     fileSize: number;
     originalName: string;
   },
 ): Promise<string | null> {
-  // Atomic replace on the unique (owner, kind) index — no delete-then-insert
-  // window, so a failed replacement can never leave the owner with no row
-  // (audit C-8). created_at is refreshed so a re-uploaded document reads as
-  // freshly stored, matching the vault ordering the old delete+insert produced.
+  // Atomic replace on the unique (case_id, kind) index — no delete-then-insert
+  // window, so a failed replacement can never leave the case with no row (audit
+  // C-8). created_at is refreshed so a re-uploaded document reads as freshly
+  // stored, matching the vault ordering the old delete+insert produced.
+  //
+  // MV-155 shipped `documents_case_kind_idx` FULL rather than partial because
+  // PostgREST emits a bare `on_conflict=` column list and Postgres infers a
+  // partial unique index as an arbiter only when the statement supplies the
+  // predicate — a partial one raises 42P10 (spec §4 rule 1).
+  //
+  // Unlike user_program_state / document_status, `case_id` DOES belong in this
+  // payload: `documents` carries no definer trigger to derive it, and this path
+  // is service-role (Stage 2 grants `authenticated` no INSERT on `documents` —
+  // spec §4.5), so the ON CONFLICT DO UPDATE SET list runs under service_role's
+  // table-level UPDATE.
+  const ownership = await caseWriteColumns(db, doc.caseId);
+  if (ownership === null) return null;
+
   const { data } = await db
     .from("documents")
     .upsert(
       {
-        owner: doc.owner,
+        ...ownership,
         kind: doc.kind,
         file_path: doc.filePath,
         file_size: doc.fileSize,
         original_name: doc.originalName,
         created_at: new Date().toISOString(),
       },
-      { onConflict: "owner,kind" },
+      { onConflict: "case_id,kind" },
     )
     .select("id")
     .single();
   return (data as { id: string } | null)?.id ?? null;
 }
 
-export async function deleteDocument(db: DB, docId: string, userId: string): Promise<void> {
-  await db.from("documents").delete().eq("id", docId).eq("owner", userId);
+export async function deleteDocument(db: DB, docId: string, caseId: string): Promise<void> {
+  await db.from("documents").delete().eq("id", docId).eq("case_id", caseId);
 }
 
 export async function getSignedDocumentUrl(

@@ -3,13 +3,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const {
-  createAnonymousAssessment, getPrimaryAssessmentForUser, getProfile, upsertProfile, getUser,
+  createAnonymousAssessment, getPrimaryAssessmentForCase, getProfileForCase, upsertProfileForCase, getUser,
   adminInsertSingle, invalidatePlan,
 } = vi.hoisted(() => ({
   createAnonymousAssessment: vi.fn(),
-  getPrimaryAssessmentForUser: vi.fn(),
-  getProfile: vi.fn(),
-  upsertProfile: vi.fn(),
+  getPrimaryAssessmentForCase: vi.fn(),
+  getProfileForCase: vi.fn(),
+  upsertProfileForCase: vi.fn(),
   getUser: vi.fn(),
   adminInsertSingle: vi.fn(),
   invalidatePlan: vi.fn(),
@@ -29,10 +29,26 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/assessments/repo", () => ({
   createAnonymousAssessment,
-  getPrimaryAssessmentForUser,
+  getPrimaryAssessmentForCase,
 }));
-vi.mock("@/lib/profiles/repo", () => ({ getProfile, upsertProfile }));
+vi.mock("@/lib/profiles/repo", () => ({ getProfileForCase, upsertProfileForCase }));
 vi.mock("@/lib/plan/invalidate", () => ({ invalidatePlan }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 vi.mock("@/lib/programs/repo", async () => {
   const { TEST_PROGRAMS, TEST_UNIVERSITIES } = await import("../fixtures/catalog");
   return {
@@ -71,9 +87,9 @@ const req = (body: unknown) =>
 describe("POST /api/assess", () => {
   beforeEach(() => {
     createAnonymousAssessment.mockReset();
-    getPrimaryAssessmentForUser.mockReset();
-    getProfile.mockReset();
-    upsertProfile.mockReset();
+    getPrimaryAssessmentForCase.mockReset();
+    getProfileForCase.mockReset();
+    upsertProfileForCase.mockReset();
     getUser.mockReset();
     adminInsertSingle.mockReset();
     invalidatePlan.mockReset();
@@ -114,9 +130,9 @@ describe("POST /api/assess", () => {
   describe("signed-in flow", () => {
     it("persists with owner + is_primary when user has no prior primary", async () => {
       getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: { full_name: "Aarav" } } } });
-      getPrimaryAssessmentForUser.mockResolvedValue(null);
-      getProfile.mockResolvedValue(null);
-      upsertProfile.mockResolvedValue("p1");
+      getPrimaryAssessmentForCase.mockResolvedValue(null);
+      getProfileForCase.mockResolvedValue(null);
+      upsertProfileForCase.mockResolvedValue("p1");
       adminInsertSingle.mockResolvedValue({ data: { id: "as-1" }, error: null });
 
       const res = await POST(req(validProfile));
@@ -124,21 +140,21 @@ describe("POST /api/assess", () => {
       const json = await res.json();
       expect(json.id).toBe("as-1");
       expect(createAnonymousAssessment).not.toHaveBeenCalled();
-      expect(upsertProfile).toHaveBeenCalled();
+      expect(upsertProfileForCase).toHaveBeenCalled();
       expect(invalidatePlan).toHaveBeenCalled();
     });
 
     it("does not bootstrap profile when user already has one", async () => {
       getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
-      getPrimaryAssessmentForUser.mockResolvedValue({ id: "old", owner: "u1" });
-      getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 0 });
+      getPrimaryAssessmentForCase.mockResolvedValue({ id: "old", owner: "u1" });
+      getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 0 });
       adminInsertSingle.mockResolvedValue({ data: { id: "as-2" }, error: null });
 
       const res = await POST(req(validProfile));
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.id).toBe("as-2");
-      expect(upsertProfile).not.toHaveBeenCalled();
+      expect(upsertProfileForCase).not.toHaveBeenCalled();
       expect(invalidatePlan).toHaveBeenCalled();
     });
 
@@ -148,8 +164,8 @@ describe("POST /api/assess", () => {
     // invalidatePlan already gets at every other call site).
     it("still reports the saved assessment when the derived plan rebuild fails", async () => {
       getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
-      getPrimaryAssessmentForUser.mockResolvedValue({ id: "old", owner: "u1" });
-      getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 0 });
+      getPrimaryAssessmentForCase.mockResolvedValue({ id: "old", owner: "u1" });
+      getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 0 });
       adminInsertSingle.mockResolvedValue({ data: { id: "as-3" }, error: null });
       invalidatePlan.mockRejectedValue(new CatalogReadError("programs"));
 
@@ -161,7 +177,7 @@ describe("POST /api/assess", () => {
 
     it("returns 500 (not 200) when persistence throws for an authenticated user", async () => {
       getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
-      getPrimaryAssessmentForUser.mockRejectedValue(new Error("db down"));
+      getPrimaryAssessmentForCase.mockRejectedValue(new Error("db down"));
 
       const res = await POST(req(validProfile));
       expect(res.status).toBe(500);
@@ -175,8 +191,8 @@ describe("POST /api/assess", () => {
       // PostgREST reports a failed write as `error`, not a throw — the route must
       // still surface it instead of returning 200 with id:null (MV-02).
       getUser.mockResolvedValue({ data: { user: { id: "u1", user_metadata: {} } } });
-      getPrimaryAssessmentForUser.mockResolvedValue(null);
-      getProfile.mockResolvedValue(null);
+      getPrimaryAssessmentForCase.mockResolvedValue(null);
+      getProfileForCase.mockResolvedValue(null);
       adminInsertSingle.mockResolvedValue({ data: null, error: { message: "insert failed" } });
 
       const res = await POST(req(validProfile));
@@ -185,7 +201,7 @@ describe("POST /api/assess", () => {
       expect(json.error).toBe("Failed to save assessment");
       expect(json.payload.result.verdict).toBeDefined();
       // Dependent writes are skipped once the primary insert failed.
-      expect(upsertProfile).not.toHaveBeenCalled();
+      expect(upsertProfileForCase).not.toHaveBeenCalled();
       expect(invalidatePlan).not.toHaveBeenCalled();
     });
   });

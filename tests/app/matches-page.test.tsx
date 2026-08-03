@@ -4,20 +4,20 @@ import userEvent from "@testing-library/user-event";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getProfile, listAllPrograms, listAllUniversities, listShortlistForUser } =
+const { getUser, getProfileForCase, listAllPrograms, listAllUniversities, listShortlistForCase } =
   vi.hoisted(() => ({
     getUser: vi.fn(),
-    getProfile: vi.fn(),
+    getProfileForCase: vi.fn(),
     listAllPrograms: vi.fn(),
     listAllUniversities: vi.fn(),
-    listShortlistForUser: vi.fn(),
+    listShortlistForCase: vi.fn(),
   }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
-vi.mock("@/lib/profiles/repo", () => ({ getProfile }));
+vi.mock("@/lib/profiles/repo", () => ({ getProfileForCase }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
-vi.mock("@/lib/matches/repo", () => ({ listShortlistForUser }));
+vi.mock("@/lib/matches/repo", () => ({ listShortlistForCase }));
 // Surface the gate PromptCard's `kind` so we can assert /matches renders the
 // matches-specific "matches-need-inputs" abstain gate (audit C-4), not the vague
 // dashboard "profile-incomplete" copy.
@@ -26,6 +26,22 @@ vi.mock("@/components/dashboard/prompt-card", () => ({
     <div data-testid="prompt">{prompt.kind}</div>
   ),
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import MatchesPage from "@/app/(app)/matches/page";
 import { CatalogReadError } from "@/lib/programs/errors";
@@ -43,7 +59,7 @@ const FILLED_PROFILE = {
 
 describe("/matches page", () => {
   beforeEach(() => {
-    [getUser, getProfile, listAllPrograms, listAllUniversities, listShortlistForUser].forEach(
+    [getUser, getProfileForCase, listAllPrograms, listAllUniversities, listShortlistForCase].forEach(
       (m) => m.mockReset(),
     );
   });
@@ -52,7 +68,7 @@ describe("/matches page", () => {
     // A signed-in user who never filled their profile must NOT see verdicts
     // computed off fields they never entered (audit fix #3 — /matches empty-profile gate).
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue(null);
+    getProfileForCase.mockResolvedValue(null);
     // Programs exist — so without the gate the matcher would fabricate verdicts.
     listAllPrograms.mockResolvedValue([
       {
@@ -86,7 +102,7 @@ describe("/matches page", () => {
         dataQuality: "primary",
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
     // The matches-specific abstain gate — names the missing inputs, never a verdict.
@@ -104,7 +120,7 @@ describe("/matches page", () => {
     // them fall through to the matcher, which floors every unknown to 0 and fabricated
     // "Reach · Grade short by 65%" cards. hasSufficientInputs closes that hole.
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         personal: { name: "Asha" },
         "intended-study": { field: "computer-science", level: "masters" },
@@ -142,7 +158,7 @@ describe("/matches page", () => {
         dataQuality: "primary",
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
     // Same matches-need-inputs gate the empty profile renders — never fabricated bands.
@@ -156,7 +172,7 @@ describe("/matches page", () => {
     // sufficient — it produced partial verdicts before and must keep doing so. Gating
     // it would wall a student who gave us something to score, which is its own bounce.
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         academic: { gradePercent: 72 },
         "intended-study": { field: "computer-science", level: "masters" },
@@ -194,7 +210,7 @@ describe("/matches page", () => {
         notes: null,
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
     // Not gated: the match card is on the page.
@@ -204,10 +220,10 @@ describe("/matches page", () => {
 
   it("renders headline + policy banner + empty-state when no programs", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue(FILLED_PROFILE);
+    getProfileForCase.mockResolvedValue(FILLED_PROFILE);
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockResolvedValue([]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
     expect(screen.getByText(/Where your profile fits today/i)).toBeInTheDocument();
@@ -223,10 +239,10 @@ describe("/matches page", () => {
   // never tell a student with a filled profile that nothing matched them.
   it("propagates a catalogue read failure instead of rendering the no-programs empty state", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue(FILLED_PROFILE);
+    getProfileForCase.mockResolvedValue(FILLED_PROFILE);
     listAllPrograms.mockRejectedValue(new CatalogReadError("programs"));
     listAllUniversities.mockResolvedValue([]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
 
     await expect(MatchesPage()).rejects.toThrow(CatalogReadError);
     expect(screen.queryByText(/No programs found yet/i)).not.toBeInTheDocument();
@@ -234,10 +250,10 @@ describe("/matches page", () => {
 
   it("scholarships tab shows real sourced scholarships; cost tab shows the sourced first-year estimate", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue(FILLED_PROFILE);
+    getProfileForCase.mockResolvedValue(FILLED_PROFILE);
     listAllPrograms.mockResolvedValue([]);
     listAllUniversities.mockResolvedValue([]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
     const ui = await MatchesPage();
     render(ui);
     await userEvent.click(screen.getByRole("tab", { name: /Scholarships/i }));
@@ -255,7 +271,7 @@ describe("/matches page", () => {
 
   it("renders match groups when programs + profile present", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         academic: { gradePercent: 72 },
         english: { overall: 7 },
@@ -298,7 +314,7 @@ describe("/matches page", () => {
         notes: null,
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
 
     const ui = await MatchesPage();
     render(ui);
@@ -315,7 +331,7 @@ describe("/matches page", () => {
    */
   it("does not call a budget that covers tuition but not living costs a strong match (C-3)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         academic: { gradePercent: 72 },
         english: { overall: 7 },
@@ -355,7 +371,7 @@ describe("/matches page", () => {
         notes: null,
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
 
     const ui = await MatchesPage();
     render(ui);
@@ -374,7 +390,7 @@ describe("/matches page", () => {
    */
   it("renders the reach cards (not just a heading + Show button) when every match is a Reach (MV-121)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         academic: { gradePercent: 72 },
         english: { overall: 7 },
@@ -414,7 +430,7 @@ describe("/matches page", () => {
         notes: null,
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
 
     const ui = await MatchesPage();
     render(ui);
@@ -434,7 +450,7 @@ describe("/matches page", () => {
    */
   it("keeps the reach group collapsed when the student has a stronger band (MV-121)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         academic: { gradePercent: 72 },
         english: { overall: 7 },
@@ -495,7 +511,7 @@ describe("/matches page", () => {
         notes: null,
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
 
     const ui = await MatchesPage();
     render(ui);
@@ -518,7 +534,7 @@ describe("/matches page", () => {
    */
   it("discloses when the student's intended field is not in the catalogue (audit C-10)", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getProfile.mockResolvedValue({
+    getProfileForCase.mockResolvedValue({
       sections: {
         academic: { gradePercent: 72 },
         english: { overall: 7 },
@@ -558,7 +574,7 @@ describe("/matches page", () => {
         notes: null,
       },
     ]);
-    listShortlistForUser.mockResolvedValue([]);
+    listShortlistForCase.mockResolvedValue([]);
 
     const { container } = render(await MatchesPage());
     const text = container.textContent ?? "";

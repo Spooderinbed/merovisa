@@ -2,8 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type { ProfileSections } from "@/lib/profiles/sections";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
-import { getProfile } from "@/lib/profiles/repo";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
+import { getProfileForCase } from "@/lib/profiles/repo";
 import { getProgram, listAllUniversities } from "@/lib/programs/repo";
 import { isCatalogReadError } from "@/lib/programs/errors";
 import type { Program, University } from "@/lib/programs/types";
@@ -47,17 +47,19 @@ function catalogueOutage(err: unknown, context: Record<string, unknown>): Freeze
  * user saw (not the anonymous `profileToMatchInputs` baseline). Decision C: the
  * assessment anchor is server-derived from the user's PRIMARY assessment, never
  * the request body (409 if they have none). All reads/writes go through the
- * RLS-scoped client passed in (S4) — the caller derives `owner` from the session.
+ * RLS-scoped client passed in (S4). MV-157: the caller resolves AND authorizes the
+ * case before calling; this function does neither, and `owner` is derived from
+ * `cases.student_user_id` inside the dual-write helper, never passed in.
  *
  * Idempotent: a re-freeze under the same rule_version returns the existing
  * prediction-of-record (created: false) — the first commit is what we predicted.
  */
 export async function freezePredictionForProgram(
   db: DB,
-  owner: string,
+  caseId: string,
   programId: string,
 ): Promise<FreezeResult> {
-  const primary = await getPrimaryAssessmentForUser(db, owner);
+  const primary = await getPrimaryAssessmentForCase(db, caseId);
   if (!primary) {
     return { ok: false, status: 409, error: "no primary assessment to anchor the prediction" };
   }
@@ -66,7 +68,7 @@ export async function freezePredictionForProgram(
   try {
     program = await getProgram(db, programId);
   } catch (err) {
-    return catalogueOutage(err, { owner, programId });
+    return catalogueOutage(err, { caseId, programId });
   }
   if (!program) {
     return { ok: false, status: 404, error: "unknown program" };
@@ -76,14 +78,14 @@ export async function freezePredictionForProgram(
   try {
     universities = await listAllUniversities(db);
   } catch (err) {
-    return catalogueOutage(err, { owner, programId });
+    return catalogueOutage(err, { caseId, programId });
   }
   const university = universities.find((u) => u.id === program.universityId);
   if (!university) {
     return { ok: false, status: 409, error: "program is missing its university" };
   }
 
-  const profile = await getProfile(db, owner);
+  const profile = await getProfileForCase(db, caseId);
   const sections = (profile?.sections as ProfileSections | undefined) ?? {};
   const inputs = sectionsToMatchInputs(sections, { nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
 
@@ -102,7 +104,7 @@ export async function freezePredictionForProgram(
   const frozen = buildPrediction(inputs, program, university);
 
   const result = await insertPrediction(db, {
-    owner,
+    caseId,
     assessmentId: primary.id,
     programId,
     verdict: frozen.verdict,

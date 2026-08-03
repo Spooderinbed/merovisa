@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
-import { listOpenPlanForUser } from "@/lib/plan/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
+import { listOpenPlanForCase } from "@/lib/plan/repo";
 import { buildGuideContext } from "@/lib/guide/context";
 import { buildSafeHistoryMessages } from "@/lib/guide/history";
 import { GUIDE_SYSTEM_PROMPT } from "@/lib/guide/system-prompt";
@@ -47,10 +49,20 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  const [primaryRow, planItems] = await Promise.all([
-    getPrimaryAssessmentForUser(supabase, data.user.id),
-    listOpenPlanForUser(supabase, data.user.id),
-  ]);
+  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(data.user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // No personal case means no grounding data — the guide still answers, on an
+  // empty context, exactly as it does for a signed-in user who has not assessed.
+  const [primaryRow, planItems] = caseId === null
+    ? [null, []]
+    : await Promise.all([
+        getPrimaryAssessmentForCase(supabase, caseId),
+        listOpenPlanForCase(supabase, caseId),
+      ]);
   const payload = (primaryRow?.result as unknown as AssessmentPayload | undefined) ?? null;
   const context = buildGuideContext({ payload, planItems });
 

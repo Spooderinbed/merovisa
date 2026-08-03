@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
-import { listAllPlanForUser } from "@/lib/plan/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { listAllPlanForCase } from "@/lib/plan/repo";
 import { PlanListLive } from "@/components/plan/plan-list-live";
 import { VerdictDisclaimer } from "@/components/ui/verdict-disclaimer";
 
@@ -16,7 +18,18 @@ export default async function PlanPage() {
     const next = safeNext(h.get("x-pathname")) ?? "/dashboard";
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
-  const items = await listAllPlanForUser(supabase, user.id);
+  // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
+  // the first read — never per repo call. A signed-in actor with no personal case
+  // is the residue of the MV-155-apply-to-this-deploy window; they see the same
+  // empty state a brand-new account does, and `/api/assess` heals it by calling
+  // `ensurePersonalCase` on their next assessment (MV-160 §B's sweep is the bulk
+  // remedy).
+  const caseId = await resolvePersonalCaseId(user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) redirect("/auth?next=/plan");
+  }
+  const items = caseId === null ? [] : await listAllPlanForCase(supabase, caseId);
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
       <header className="flex flex-col gap-2">

@@ -3,10 +3,12 @@ import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
 import { getProgram, listAllUniversities } from "@/lib/programs/repo";
-import { getProfile } from "@/lib/profiles/repo";
-import { listDocumentsForUser } from "@/lib/documents/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { getProfileForCase } from "@/lib/profiles/repo";
+import { listDocumentsForCase } from "@/lib/documents/repo";
 import { listObtainedKinds } from "@/lib/documents/status-repo";
-import { listAllPlanForUser } from "@/lib/plan/repo";
+import { listAllPlanForCase } from "@/lib/plan/repo";
 import { generateChecklist } from "@/lib/checklist/generator";
 import { planStatesForChecklist } from "@/lib/checklist/plan-links";
 import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
@@ -29,12 +31,20 @@ export default async function ProgramChecklistPage({ params }: { params: Promise
   const program = await getProgram(supabase, programId);
   if (!program) notFound();
 
+  // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
+  // the first read. A signed-in actor with no personal case sees the same empty
+  // state a brand-new account does (see the dashboard for the full note).
+  const caseId = await resolvePersonalCaseId(user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) redirect(`/auth?next=/checklist/${programId}`);
+  }
   const [universities, profile, docs, planRows, obtainedKinds] = await Promise.all([
     listAllUniversities(supabase),
-    getProfile(supabase, user.id),
-    listDocumentsForUser(supabase, user.id),
-    listAllPlanForUser(supabase, user.id),
-    listObtainedKinds(supabase, user.id),
+    caseId === null ? null : getProfileForCase(supabase, caseId),
+    caseId === null ? [] : listDocumentsForCase(supabase, caseId),
+    caseId === null ? [] : listAllPlanForCase(supabase, caseId),
+    caseId === null ? new Set<DocumentKind>() : listObtainedKinds(supabase, caseId),
   ]);
   const university = universities.find((u) => u.id === program.universityId) ?? null;
   const sections = (profile?.sections ?? {}) as ProfileSections;

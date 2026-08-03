@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { claimAssessment, getOwnedAssessment, getAssessmentClaimState } from "@/lib/assessments/repo";
+import { claimAssessment, getAssessmentById, getAssessmentClaimState } from "@/lib/assessments/repo";
 import { AssessmentClaimError } from "@/lib/assessments/errors";
 import { fakeSupabase } from "../helpers/fake-supabase";
 
@@ -57,16 +57,16 @@ describe("getAssessmentClaimState", () => {
   });
 });
 
-describe("getOwnedAssessment", () => {
+describe("getAssessmentById", () => {
   it("returns the row when RLS allows it", async () => {
     const row = { id: "aid", owner: "user-1", result: { result: { verdict: "possible" } } };
     const { client } = fakeSupabase({ data: row, error: null });
-    const got = await getOwnedAssessment(client, "aid");
+    const got = await getAssessmentById(client, "aid");
     expect(got).toEqual(row);
   });
 
   it("returns null when not found / not owner", async () => {
     const { client } = fakeSupabase({ data: null, error: null });
-    expect(await getOwnedAssessment(client, "aid")).toBeNull();
+    expect(await getAssessmentById(client, "aid")).toBeNull();
   });
 });

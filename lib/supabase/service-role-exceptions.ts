@@ -33,14 +33,23 @@
  * touching case-scoped data is the AUTHENTICATED client plus
  * `requireCasePermission`, not an entry in this file.
  *
- * STAGE 1 STATUS. Every path below predates the tenancy work. They are
- * owner-column-scoped paths from the pre-tenancy model: each authenticates with
- * `supabase.auth.getUser()` and then filters by `.eq("owner", userId)` against
- * the service-role client. That is precisely the default the plan inverts, and
- * migrating them onto the authenticated client is Stage 2 work — explicitly out
- * of MV-151's scope. None of them touches `cases`, `organizations`,
- * `organization_memberships`, `case_assignments`, `invitations`, or
- * `audit_events`; those six tables are RLS-forced deny-all until MV-152.
+ * STAGE 2 STATUS (MV-157). The Stage 1 note that every path here "filters by
+ * `.eq("owner", userId)` against the service-role client" is no longer true and
+ * has been replaced entry by entry. Each remaining `legacy-owner-scoped` path now
+ * resolves the actor's personal case and calls `requireCasePermission` /
+ * `checkCasePermission` through the AUTHENTICATED client BEFORE it reaches for
+ * service-role, and every query it then issues is keyed on `case_id`.
+ *
+ * WHAT STILL KEEPS THEM HERE is the GRANT, not the check. `authenticated` holds
+ * SELECT-only on `assessments`, and no INSERT on `profiles`, `plan_items` or
+ * `documents` (2026-08-02-stage2-migration-and-access-matrix.md §4). Flipping one
+ * without its grant is a silent empty result or a 42501 in production, and grants
+ * are reviewed exactly once — with the policies, in MV-159 (§7.3). Each entry
+ * below names the grant it is waiting on.
+ *
+ * The list SHRANK by one in MV-157: `app/api/shortlist/route.ts` left, because
+ * `user_program_state` already grants `authenticated` full CRUD, so its admin
+ * client was never load-bearing. It is the only flip Stage 2 makes.
  *
  * AUDIT WIRING IS NOT YET POSSIBLE. `auditEvent` names the `audit_events.action`
  * a path must emit once it touches case-scoped data. Nothing emits one today:
@@ -102,7 +111,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Account linking (plan line 342). Claims an anonymous assessment into a freshly created account and bootstraps the profile. The row has no owner until this runs, so an authenticated client under RLS could not see the row it is about to claim.",
     requiredCaseCheck:
-      "Verifies an HMAC claim token — verifyClaim(params.claim), finish-sign-in.ts:39 — before reaching for service-role. Once cases are claimable this path must additionally bind case → Auth user.",
+      "Verifies an HMAC claim token — verifyClaim(params.claim) — before reaching for service-role on the CLAIM branch, and the conditional-update predicate inside claimAssessment is the gate on which row it may bind. MV-157 added the NO-CLAIM branch: it calls ensurePersonalCase(user, admin) to create the signed-in student's personal case go-forward, which needs service-role because cases_insert_admin's WITH CHECK requires organization_id IS NOT NULL and therefore refuses a personal case from the authenticated client. Both branches derive the actor from the verified session object, never from a parameter.",
     auditEvent: null,
   },
   {
@@ -144,9 +153,9 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     path: "app/(focused)/assessment/[id]/page.tsx",
     status: "legacy-owner-scoped",
     justification:
-      "Renders an anonymous assessment by id for a visitor who is not signed in; falls back to the authenticated client as soon as there is a session. Pre-tenancy 'knowing the id is the credential' model.",
+      "Renders an UNCLAIMED, case-less anonymous assessment by id for a visitor who is not signed in; anon holds no grant on `assessments`, so service-role is the only possible reader. A signed-in visitor is served by the authenticated client instead.",
     requiredCaseCheck:
-      "None — this is exactly the shape the tenancy work removes ('knowing a case ID grants no access', plan line 354). Stage 2 must re-scope it.",
+      "MV-157 re-scoped this. A CLAIMED row (case_id set) is now gated by checkCasePermission(actor, row.case_id, 'case.read') and 404s for anyone else. An UNCLAIMED, case-less row deliberately keeps id-as-credential: plan line 354 ('knowing a case ID grants no access') governs CASES, and a pre-claim anonymous row has none, is unguessable, and is purged in 3 days by MV-135. The service-role read is bounded by getRecoverableAssessment's own predicate (owner IS NULL AND expires_at > now), re-verified after the fetch.",
     auditEvent: null,
   },
   {
@@ -154,22 +163,26 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     status: "legacy-owner-scoped",
     justification:
       "Account self-deletion: removes Storage objects and every owned row, then the Auth user. Authenticates first, then deletes scoped by `owner`.",
-    requiredCaseCheck: "Authenticates via supabase.auth.getUser() and scopes every delete to that user's `owner` column.",
+    requiredCaseCheck:
+      "Authenticates via supabase.auth.getUser() and scopes every delete to that user's `owner` column — DELIBERATELY still owner-keyed, and one of only three sanctioned `.eq(\"owner\")` sites left after MV-157 (with the claim path and MV-135's purge). This is Auth-account teardown, not case-scoped access: it must remove everything belonging to the departing AUTH USER and must NOT touch a consultancy case that also holds their data (plan line 514). It additionally deletes their personal `cases` row, ordered between the owned-row deletes (ON DELETE RESTRICT) and the Auth-user delete (student_user_id ON DELETE SET NULL).",
     auditEvent: null,
   },
   {
     path: "app/api/assess/refresh/route.ts",
     status: "legacy-owner-scoped",
-    justification: "Re-scores the signed-in user's own primary assessment in place.",
-    requiredCaseCheck: "Authenticates via supabase.auth.getUser(); the repo lookup is scoped to that user.",
+    justification:
+      "Re-scores the case's own primary assessment in place. Deferred flip: `assessments` grants `authenticated` SELECT only — no UPDATE — so the write cannot move to the authenticated client until MV-159's grant review (spec §6).",
+    requiredCaseCheck:
+      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before the service-role re-score; the read and the write are both keyed on case_id.",
     auditEvent: null,
   },
   {
     path: "app/api/assess/route.ts",
     status: "legacy-owner-scoped",
     justification:
-      "Two distinct uses: reading the non-tenant programs/universities catalogue, and inserting the caller's own assessment plus bootstrapped profile.",
-    requiredCaseCheck: "Authenticates via supabase.auth.getUser() before any owner-scoped write; the catalogue read is not tenant data.",
+      "Three distinct uses: reading the non-tenant programs/universities catalogue; inserting the caller's own assessment plus bootstrapped profile; and creating their personal case. Deferred flip: `assessments` is SELECT-only and `profiles` has no INSERT grant (spec §6). The case creation is structurally service-role — cases_insert_admin refuses a personal case from the authenticated client.",
+    requiredCaseCheck:
+      "MV-157: ensurePersonalCase(user, admin) then checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before the insert. ensurePersonalCase (not the read-only resolver) is deliberate — this is the first student-owned row a converting account writes, and an assessment persisted with a null case_id is invisible to the case-scoped dashboard the student lands on.",
     auditEvent: null,
   },
   {
@@ -178,7 +191,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Storage administration (plan line 342): deletes a private Storage object and its row. The authenticated client cannot remove Storage objects under the current bucket policy.",
     requiredCaseCheck:
-      "Re-reads the document with `.eq(\"owner\", userId)` and 404s before touching Storage. Stage 2 must replace the owner check with requireCasePermission.",
+      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client, THEN a `.eq(\"case_id\", caseId)` re-read that 404s, before Storage is touched. Deferred flip: removing the Storage object needs service-role under the current bucket policy; the row delete alone could move (documents grants authenticated DELETE), but splitting the two across clients buys nothing.",
     auditEvent: null,
   },
   {
@@ -187,36 +200,34 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Storage administration (plan line 342): mints a short-lived signed URL for a private object.",
     requiredCaseCheck:
-      "Re-reads the document with `.eq(\"owner\", userId)` before minting. Stage 3 must additionally authorize case + document metadata and record the view at mint time (plan §\"Storage authorization\").",
+      "MV-157: checkCasePermission(actor, caseId, 'case.read') BEFORE the signed URL is minted, then a `.eq(\"case_id\", caseId)` read of the path. Stage 4 owns the remaining half — per-document metadata authorization and the at-mint audit event (plan §\"Storage authorization\"). Object paths stay owner-keyed through Stages 2-3 by decision (spec §8).",
     auditEvent: null,
   },
   {
     path: "app/api/documents/upload/route.ts",
     status: "legacy-owner-scoped",
     justification:
-      "Storage administration (plan line 342): uploads to the private bucket and cleans up the replaced object on the unique (owner, kind) index.",
-    requiredCaseCheck: "Authenticates via supabase.auth.getUser(); the row and the object path are scoped to that user.",
+      "Storage administration (plan line 342): uploads to the private bucket and cleans up the replaced object on the unique (case_id, kind) index. Deferred flip: `documents` grants `authenticated` no INSERT and its only INSERT policy is service_role-scoped (spec §4.5), so the row write cannot move either.",
+    requiredCaseCheck:
+      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before any Storage call. The document ROW is case-keyed; the Storage OBJECT PATH stays owner-keyed until Stage 4 (spec §8) — a `<case_id>/…` object matches the live storage policy for nobody.",
     auditEvent: null,
   },
   {
     path: "app/api/plan/action/route.ts",
     status: "legacy-owner-scoped",
-    justification: "Mutates the signed-in user's own plan items.",
-    requiredCaseCheck: "Authenticates via supabase.auth.getUser(); writes are scoped to that user's `owner` column.",
+    justification:
+      "Mutates the case's own plan items. Deferred flip: `plan_items` grants `authenticated` UPDATE (status, completed_at, started_at) but NO INSERT, and plan generation through invalidatePlan inserts rows on the same client (spec §4.3, §6).",
+    requiredCaseCheck:
+      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before the service-role read/write; every plan query is keyed on case_id.",
     auditEvent: null,
   },
   {
     path: "app/api/profile/section/route.ts",
     status: "legacy-owner-scoped",
-    justification: "Writes one section of the signed-in user's own profile.",
-    requiredCaseCheck: "Authenticates via supabase.auth.getUser(); the upsert is scoped to that user's `owner` column.",
-    auditEvent: null,
-  },
-  {
-    path: "app/api/shortlist/route.ts",
-    status: "legacy-owner-scoped",
-    justification: "Writes the signed-in user's own program shortlist state.",
-    requiredCaseCheck: "Authenticates via supabase.auth.getUser(); the upsert is scoped to that user's `owner` column.",
+    justification:
+      "Writes one section of the case's profile. Deferred flip: `profiles` grants `authenticated` UPDATE (sections, completeness) but NO INSERT (spec §4.1), and this path must be able to create a first-ever profile row.",
+    requiredCaseCheck:
+      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before the service-role write. NOTE requireCasePermission is not a field allowlist (MV-153 Finding 1): the Zod payload validation is what bounds WHICH fields move, and Stage 3's consultancy mutations inherit that question unsolved.",
     auditEvent: null,
   },
 ];

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getOwnedAssessment, getRecoverableAssessment } from "@/lib/assessments/repo";
+import { getAssessmentById, getRecoverableAssessment } from "@/lib/assessments/repo";
+import { checkCasePermission } from "@/lib/cases/require-permission";
 import { formatExpiryLabel } from "@/lib/assessments/expiry";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { assembleAssessment } from "@/lib/results/assemble";
@@ -21,16 +22,30 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
   const { data } = await supabase.auth.getUser();
   const signedIn = Boolean(data.user);
 
-  // Signed-in users read their own assessment under RLS. An anonymous visitor recovers
-  // THIS assessment by its unguessable id — but only while it is unclaimed and unexpired
-  // — via the server-only admin client (anon has no table grant; see getRecoverableAssessment).
-  // The same client serves any legacy-shape catalogue recompute below, since the
-  // catalogue is also closed to anon.
+  // THIS PAGE IS DELIBERATELY TWO REGIMES, and the branch is explicit because two
+  // regimes in one file is how "knowing the id grants access" survives a refactor
+  // by accident (MV-157 §D, Risk 9):
+  //
+  //   CLAIMED row (case_id set) — case-authorized. Reading it is not enough; the
+  //     actor must hold `case.read` on the row's OWN case, so knowing the id gets
+  //     a stranger a 404. This is the half MV-151's registry flagged as "Stage 2
+  //     must re-scope it".
+  //
+  //   UNCLAIMED, case-less row — id-as-credential SURVIVES, on purpose. Plan line
+  //     354 ("knowing a case ID grants no access") governs CASES; a pre-claim
+  //     anonymous assessment has no case, is unguessable, and MV-135's purge takes
+  //     it in 3 days. Removing this would break anonymous refresh/back/tab-restore
+  //     before sign-in (MV-28) — the single most motivated moment in the funnel.
   const db: SupabaseClient<Database> = signedIn ? supabase : createSupabaseAdminClient();
   const row = signedIn
-    ? await getOwnedAssessment(supabase, id)
+    ? await getAssessmentById(supabase, id)
     : await getRecoverableAssessment(db, id, new Date().toISOString());
   if (!row) notFound();
+
+  if (signedIn && row.case_id !== null) {
+    const { decision } = await checkCasePermission(data.user!.id, row.case_id, "case.read", supabase);
+    if (!decision.allowed) notFound();
+  }
 
   // result holds the full AssessmentPayload snapshot (see /api/assess).
   let payload = row.result as unknown as AssessmentPayload;

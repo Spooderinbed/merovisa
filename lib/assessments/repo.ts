@@ -96,7 +96,18 @@ export async function getAssessmentClaimState(
   };
 }
 
-export async function getOwnedAssessment(db: DB, id: string): Promise<AssessmentRow | null> {
+/**
+ * Read one assessment by its id. It asserts NOTHING about ownership — it never
+ * did, which is why MV-157 renamed it off `getOwnedAssessment`: the old name
+ * claimed a check the query does not perform, and a reader auditing the callers
+ * would have taken it for the gate.
+ *
+ * The gate lives above it. `app/(focused)/assessment/[id]/page.tsx` reads the row
+ * and then authorizes `case.read` against its `case_id` when the row is CLAIMED;
+ * an unclaimed, case-less row keeps id-as-credential until MV-135's purge takes
+ * it (MV-157 §D).
+ */
+export async function getAssessmentById(db: DB, id: string): Promise<AssessmentRow | null> {
   const { data, error } = await db.from("assessments").select("*").eq("id", id).maybeSingle();
   if (error || !data) return null;
   return data as AssessmentRow;
@@ -137,22 +148,29 @@ export async function getRecoverableAssessment(
   return row;
 }
 
-export async function getPrimaryAssessmentForUser(db: DB, userId: string): Promise<AssessmentRow | null> {
+/**
+ * MV-157: the assessment READ side is keyed on `case_id`. The write side —
+ * `createAnonymousAssessment` and `claimAssessment` above — is MV-158's, and its
+ * `.is("owner", null)` predicates are the anonymous carve-out, not the
+ * actor-equals-student predicate this card removes: an anonymous assessment is
+ * DEFINED by `owner IS NULL` (spec §3), and MV-135's purge keys on exactly that.
+ */
+export async function getPrimaryAssessmentForCase(db: DB, caseId: string): Promise<AssessmentRow | null> {
   const { data, error } = await db
     .from("assessments")
     .select("*")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .eq("is_primary", true)
     .maybeSingle();
   if (error || !data) return null;
   return data as AssessmentRow;
 }
 
-export async function listAssessmentsForUser(db: DB, userId: string): Promise<AssessmentRow[]> {
+export async function listAssessmentsForCase(db: DB, caseId: string): Promise<AssessmentRow[]> {
   const { data, error } = await db
     .from("assessments")
     .select("*")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .order("created_at", { ascending: false });
   if (error || !data) return [];
   return data as AssessmentRow[];

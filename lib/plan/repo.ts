@@ -5,22 +5,32 @@ import type { PlanItemRow, PlanStatus } from "./types";
 
 type DB = SupabaseClient<Database>;
 
-export async function listOpenPlanForUser(db: DB, userId: string): Promise<PlanItemRow[]> {
+/**
+ * MV-157: every plan read and write is keyed on `case_id` alone. The list
+ * functions are RENAMED (`…ForUser` → `…ForCase`) so a stale call site fails to
+ * compile instead of silently reading by owner; the three mutators keep their
+ * names because their second parameter changes from `owner` to `caseId` in the
+ * same commit and every call site is enumerated by the compiler through the
+ * renamed reads above them.
+ *
+ * These take an already-resolved, already-AUTHORIZED case id.
+ */
+export async function listOpenPlanForCase(db: DB, caseId: string): Promise<PlanItemRow[]> {
   const { data, error } = await db
     .from("plan_items")
     .select("*")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .eq("status", "todo")
     .order("created_at", { ascending: false });
   if (error || !data) return [];
   return data.map(mapRow);
 }
 
-export async function listAllPlanForUser(db: DB, userId: string): Promise<PlanItemRow[]> {
+export async function listAllPlanForCase(db: DB, caseId: string): Promise<PlanItemRow[]> {
   const { data, error } = await db
     .from("plan_items")
     .select("*")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .order("created_at", { ascending: false });
   if (error || !data) return [];
   return data.map(mapRow);
@@ -28,7 +38,7 @@ export async function listAllPlanForUser(db: DB, userId: string): Promise<PlanIt
 
 export async function setPlanItemStatus(
   db: DB,
-  owner: string,
+  caseId: string,
   id: number,
   status: PlanStatus,
 ): Promise<boolean> {
@@ -40,7 +50,7 @@ export async function setPlanItemStatus(
       // Any explicit status change resets the in-progress marker.
       started_at: null,
     })
-    .eq("owner", owner)
+    .eq("case_id", caseId)
     .eq("id", id);
   return !error;
 }
@@ -48,24 +58,24 @@ export async function setPlanItemStatus(
 /** Toggle the in-progress marker. Only open items can be (un)started. */
 export async function setPlanItemStarted(
   db: DB,
-  owner: string,
+  caseId: string,
   id: number,
   started: boolean,
 ): Promise<boolean> {
   const { error } = await db
     .from("plan_items")
     .update({ started_at: started ? new Date().toISOString() : null })
-    .eq("owner", owner)
+    .eq("case_id", caseId)
     .eq("id", id)
     .eq("status", "todo");
   return !error;
 }
 
-export async function getPlanItemKind(db: DB, owner: string, id: number): Promise<string | null> {
+export async function getPlanItemKind(db: DB, caseId: string, id: number): Promise<string | null> {
   const { data } = await db
     .from("plan_items")
     .select("kind")
-    .eq("owner", owner)
+    .eq("case_id", caseId)
     .eq("id", id)
     .maybeSingle();
   return data?.kind ?? null;

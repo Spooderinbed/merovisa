@@ -3,15 +3,15 @@ import { render, screen } from "@testing-library/react";
 
 vi.mock("server-only", () => ({}));
 
-const { getUser, getPrimaryAssessmentForUser } = vi.hoisted(() => ({
+const { getUser, getPrimaryAssessmentForCase } = vi.hoisted(() => ({
   getUser: vi.fn(),
-  getPrimaryAssessmentForUser: vi.fn(),
+  getPrimaryAssessmentForCase: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
-vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser }));
+vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForCase }));
 vi.mock("@/components/assess/assess-flow", () => ({
   AssessFlow: ({ signedIn }: { signedIn?: boolean }) => (
     <div data-testid="flow" data-signed-in={!!signedIn}>
@@ -30,12 +30,28 @@ vi.mock("@/components/assess/claim-failure", () => ({
   ),
 }));
 
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
+
 import AssessPage from "@/app/(focused)/assess/page";
 
 describe("/assess server-side fork", () => {
   beforeEach(() => {
     getUser.mockReset();
-    getPrimaryAssessmentForUser.mockReset();
+    getPrimaryAssessmentForCase.mockReset();
   });
 
   it("renders AssessFlow when signed out", async () => {
@@ -48,7 +64,7 @@ describe("/assess server-side fork", () => {
 
   it("renders AssessFlow when signed in but no primary", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue(null);
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
     const ui = await AssessPage({ searchParams: Promise.resolve({}) });
     render(ui);
     expect(screen.getByTestId("flow")).toBeInTheDocument();
@@ -57,7 +73,7 @@ describe("/assess server-side fork", () => {
 
   it("renders interstitial when signed in with primary and no new=1", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1", destination_id: "australia", created_at: "2026-05-15T00:00:00Z" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1", destination_id: "australia", created_at: "2026-05-15T00:00:00Z" });
     const ui = await AssessPage({ searchParams: Promise.resolve({}) });
     render(ui);
     expect(screen.getByTestId("interstitial")).toBeInTheDocument();
@@ -65,7 +81,7 @@ describe("/assess server-side fork", () => {
 
   it("renders AssessFlow when new=1 even if primary exists", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getPrimaryAssessmentForUser.mockResolvedValue({ id: "a1", destination_id: "australia", created_at: "2026-05-15T00:00:00Z" });
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "a1", destination_id: "australia", created_at: "2026-05-15T00:00:00Z" });
     const ui = await AssessPage({ searchParams: Promise.resolve({ new: "1" }) });
     render(ui);
     expect(screen.getByTestId("flow")).toBeInTheDocument();

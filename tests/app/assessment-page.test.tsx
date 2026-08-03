@@ -5,7 +5,7 @@ vi.mock("server-only", () => ({}));
 
 const {
   getUser,
-  getOwnedAssessment,
+  getAssessmentById,
   getRecoverableAssessment,
   notFound,
   listAllPrograms,
@@ -15,7 +15,7 @@ const {
   scoringRulesStale,
 } = vi.hoisted(() => ({
   getUser: vi.fn(),
-  getOwnedAssessment: vi.fn(),
+  getAssessmentById: vi.fn(),
   getRecoverableAssessment: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NOT_FOUND");
@@ -31,7 +31,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { getUser } }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({}) }));
-vi.mock("@/lib/assessments/repo", () => ({ getOwnedAssessment, getRecoverableAssessment }));
+vi.mock("@/lib/assessments/repo", () => ({ getAssessmentById, getRecoverableAssessment }));
 vi.mock("@/lib/programs/repo", () => ({ listAllPrograms, listAllUniversities }));
 vi.mock("@/lib/results/assemble", () => ({ assembleAssessment }));
 vi.mock("@/lib/data/scoring-freshness", () => ({ scoringRulesStale }));
@@ -42,6 +42,22 @@ vi.mock("@/components/results/results", () => ({
     return <div>results:{props.mode}:{props.assessmentId ?? "none"}</div>;
   },
 }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import AssessmentPage from "@/app/(focused)/assessment/[id]/page";
 
@@ -54,7 +70,7 @@ const INTAKE = {
 describe("/assessment/[id]", () => {
   beforeEach(() => {
     getUser.mockReset();
-    getOwnedAssessment.mockReset();
+    getAssessmentById.mockReset();
     getRecoverableAssessment.mockReset();
     notFound.mockClear();
     listAllPrograms.mockClear();
@@ -81,7 +97,7 @@ describe("/assessment/[id]", () => {
 
     it("degrades a verdict stored as current once a rule has since aged out", async () => {
       getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-      getOwnedAssessment.mockResolvedValue(storedWith(false));
+      getAssessmentById.mockResolvedValue(storedWith(false));
       scoringRulesStale.mockReturnValue(true); // the clock has crossed a reverifyBy
 
       render(await AssessmentPage({ params: Promise.resolve({ id: "aid" }) }));
@@ -90,7 +106,7 @@ describe("/assessment/[id]", () => {
 
     it("leaves a verdict alone while every rule is still current", async () => {
       getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-      getOwnedAssessment.mockResolvedValue(storedWith(false));
+      getAssessmentById.mockResolvedValue(storedWith(false));
 
       render(await AssessmentPage({ params: Promise.resolve({ id: "aid" }) }));
       expect(renderedPayload().rulesStale).toBe(false);
@@ -100,7 +116,7 @@ describe("/assessment/[id]", () => {
       // OR, not overwrite: the stored verdict really was computed off overdue inputs,
       // and a later re-verification of the config does not retroactively fix it.
       getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-      getOwnedAssessment.mockResolvedValue(storedWith(true));
+      getAssessmentById.mockResolvedValue(storedWith(true));
       scoringRulesStale.mockReturnValue(false);
 
       render(await AssessmentPage({ params: Promise.resolve({ id: "aid" }) }));
@@ -115,7 +131,7 @@ describe("/assessment/[id]", () => {
     render(ui);
     // Anonymous recovery shows the conversion/claim path keyed by the assessment id.
     expect(screen.getByText("results:anonymous:aid")).toBeInTheDocument();
-    expect(getOwnedAssessment).not.toHaveBeenCalled();
+    expect(getAssessmentById).not.toHaveBeenCalled();
   });
 
   it("404s when signed out and the assessment is not recoverable (claimed / expired / missing)", async () => {
@@ -127,7 +143,7 @@ describe("/assessment/[id]", () => {
 
   it("404s when signed in and the assessment is not owned / missing", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getOwnedAssessment.mockResolvedValue(null);
+    getAssessmentById.mockResolvedValue(null);
     await expect(AssessmentPage({ params: Promise.resolve({ id: "aid" }) })).rejects.toThrow("NOT_FOUND");
     expect(notFound).toHaveBeenCalled();
     expect(getRecoverableAssessment).not.toHaveBeenCalled();
@@ -135,7 +151,7 @@ describe("/assessment/[id]", () => {
 
   it("renders owned results from the stored payload", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getOwnedAssessment.mockResolvedValue({ id: "aid", owner: "u1", result: { result: { verdict: "possible" }, intake: INTAKE } });
+    getAssessmentById.mockResolvedValue({ id: "aid", owner: "u1", result: { result: { verdict: "possible" }, intake: INTAKE } });
     const ui = await AssessmentPage({ params: Promise.resolve({ id: "aid" }) });
     render(ui);
     expect(screen.getByText("results:owned:none")).toBeInTheDocument();
@@ -145,7 +161,7 @@ describe("/assessment/[id]", () => {
 
   it("recomputes a legacy accuracy meter from the stored profile snapshot", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    getOwnedAssessment.mockResolvedValue({
+    getAssessmentById.mockResolvedValue({
       id: "aid",
       owner: "u1",
       destination_id: "australia",
@@ -195,7 +211,7 @@ describe("/assessment/[id]", () => {
         { id: "refusals", label: "Add your visa history", gain: "so your visa risk reflects your real record" },
       ],
     };
-    getOwnedAssessment.mockResolvedValue({
+    getAssessmentById.mockResolvedValue({
       id: "aid",
       owner: "u1",
       destination_id: "australia",
@@ -228,7 +244,7 @@ describe("/assessment/[id]", () => {
   it("recomputes matches for a legacy payload from the stored profile snapshot", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
     // Legacy payload: university-level matches (no .program) the current UI can't render.
-    getOwnedAssessment.mockResolvedValue({
+    getAssessmentById.mockResolvedValue({
       id: "aid",
       owner: "u1",
       result: { result: { verdict: "possible" }, intake: INTAKE, matches: [{ university: { id: "u0" }, matchLevel: "possible" }] },

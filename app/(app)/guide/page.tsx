@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { Eyebrow } from "@/components/marketing/eyebrow";
 import { GuideChat } from "@/components/guide/guide-chat";
 import { Card } from "@/components/ui/card";
@@ -11,7 +13,18 @@ export default async function GuidePage() {
   const { data } = await supabase.auth.getUser();
   if (!data.user) redirect("/auth?next=/guide");
 
-  const primary = await getPrimaryAssessmentForUser(supabase, data.user.id);
+  // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
+  // the first read — never per repo call. A signed-in actor with no personal case
+  // is the residue of the MV-155-apply-to-this-deploy window; they see the same
+  // empty state a brand-new account does, and `/api/assess` heals it by calling
+  // `ensurePersonalCase` on their next assessment (MV-160 §B's sweep is the bulk
+  // remedy).
+  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
+  if (caseId !== null) {
+    const { decision } = await checkCasePermission(data.user.id, caseId, "case.read", supabase);
+    if (!decision.allowed) redirect("/auth?next=/guide");
+  }
+  const primary = caseId === null ? null : await getPrimaryAssessmentForCase(supabase, caseId);
   const hasAssessment = primary !== null;
 
   return (

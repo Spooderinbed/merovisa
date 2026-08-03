@@ -24,6 +24,22 @@ vi.mock("@/lib/outcomes/repo", () => ({
   insertEvent,
 }));
 
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
+
 import { captureApplication } from "@/lib/outcomes/on-apply";
 
 const db = {} as never;
@@ -57,7 +73,7 @@ describe("captureApplication — root applied event (MV-08 funnel unblock)", () 
     expect(insertEvent).toHaveBeenCalledWith(
       db,
       expect.objectContaining({
-        owner: "u1",
+        caseId: "u1",
         attemptId: "att1",
         eventType: "applied",
         gate: null,

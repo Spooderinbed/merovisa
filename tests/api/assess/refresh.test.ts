@@ -17,8 +17,24 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => ({ from: () => ({ insert }) }),
 }));
-vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForUser: getPrimary }));
+vi.mock("@/lib/assessments/repo", () => ({ getPrimaryAssessmentForCase: getPrimary }));
 vi.mock("@/lib/assessments/re-score", () => ({ reScoreAssessment }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { POST } from "@/app/api/assess/refresh/route";
 
@@ -37,7 +53,7 @@ describe("POST /api/assess/refresh", () => {
     const json = await res.json();
     expect(json).toEqual({ id: "primary-1" });
 
-    expect(reScoreAssessment).toHaveBeenCalledWith(expect.anything(), "u1");
+    expect(reScoreAssessment).toHaveBeenCalledWith(expect.anything(), "case-1");
     // The whole point of MV-17: the re-assess path must NOT mint a new assessments row.
     expect(insert).not.toHaveBeenCalled();
   });

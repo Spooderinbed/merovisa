@@ -36,7 +36,7 @@ vi.mock("server-only", () => ({}));
 import { purgeUnclaimedAnonymousAssessments, ANON_RETENTION_DAYS } from "@/lib/assessments/purge";
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
 import { createAnonymousAssessment, createLead } from "@/lib/assessments/repo";
-import { getProfile } from "@/lib/profiles/repo";
+import { getProfileForCase } from "@/lib/profiles/repo";
 import type { Database } from "@/lib/supabase/types";
 
 const url = process.env.SUPABASE_TEST_URL;
@@ -189,7 +189,7 @@ describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postg
       // as expired — the honest "deleted, not recoverable" signal, never a retry.
       expect(result).toEqual({ claimed: false, reason: "expired" });
       // A failed claim must not leave a half-bootstrapped account behind.
-      expect(await getProfile(admin, freshUserId)).toBeNull();
+      expect(await getProfileForCase(admin, freshUserId)).toBeNull();
       expect(await exists(doomed)).toBe(false);
     } finally {
       await admin.auth.admin.deleteUser(freshUserId);

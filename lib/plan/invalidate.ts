@@ -1,10 +1,11 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { getProfile } from "@/lib/profiles/repo";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
+import { getProfileForCase } from "@/lib/profiles/repo";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
-import { listDocumentsForUser } from "@/lib/documents/repo";
+import { listDocumentsForCase } from "@/lib/documents/repo";
+import { caseWriteColumns } from "@/lib/cases/dual-write";
 import { computeMatches } from "@/lib/matches/compute";
 import { hasSufficientInputs } from "@/lib/matches/sufficiency";
 import { sectionsToMatchInputs } from "@/lib/matches/from-sections";
@@ -20,15 +21,18 @@ type DB = SupabaseClient<Database>;
  *    longer emits that kind) are auto-closed to 'done';
  *  - newly-relevant kinds not already open are inserted as todos.
  * done/dismissed items are never touched — those are the user's decisions, and
- * the partial unique index (owner, kind) WHERE status='todo' keeps inserts deduped.
+ * the partial unique index keeps inserts deduped. MV-155 shipped the case-keyed
+ * form `(case_id, kind) WHERE status = 'todo'` alongside the legacy
+ * `(owner, kind)` one; both are live through Stage 2 and, for a personal case,
+ * a violation of either is the same write.
  */
-export async function invalidatePlan(adminDb: DB, userId: string): Promise<void> {
+export async function invalidatePlan(adminDb: DB, caseId: string): Promise<void> {
   const [profileRow, primaryRow, programs, universities, docs] = await Promise.all([
-    getProfile(adminDb, userId),
-    getPrimaryAssessmentForUser(adminDb, userId),
+    getProfileForCase(adminDb, caseId),
+    getPrimaryAssessmentForCase(adminDb, caseId),
     listAllPrograms(adminDb),
     listAllUniversities(adminDb),
-    listDocumentsForUser(adminDb, userId),
+    listDocumentsForCase(adminDb, caseId),
   ]);
   const hasPassport = docs.some((d) => d.kind === "passport");
 
@@ -52,12 +56,12 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
   });
   const generatedKinds = new Set(items.map((it) => it.kind));
 
-  // Read the user's open todos once — used to detect satisfied items, to skip
+  // Read the case's open todos once — used to detect satisfied items, to skip
   // re-inserting kinds that are already open, and to refresh drifted copy.
   const { data: existing } = await adminDb
     .from("plan_items")
     .select("id, kind, impact, title, body, lift_estimate, time_estimate")
-    .eq("owner", userId)
+    .eq("case_id", caseId)
     .eq("status", "todo");
   const open = existing ?? [];
 
@@ -75,16 +79,19 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
     await adminDb
       .from("plan_items")
       .update({ status: "done", completed_at: new Date().toISOString() })
-      .eq("owner", userId)
+      .eq("case_id", caseId)
       .in("id", satisfiedIds);
   }
 
-  // Insert newly-relevant kinds that aren't already open.
+  // Insert newly-relevant kinds that aren't already open. `owner` is derived
+  // from the case inside the dual-write helper, never threaded through from the
+  // caller — see lib/cases/dual-write.ts.
+  const ownership = await caseWriteColumns(adminDb, caseId);
   const seenKinds = new Set(open.map((r) => r.kind));
-  const toInsert = items
+  const toInsert = ownership === null ? [] : items
     .filter((it) => !seenKinds.has(it.kind))
     .map((it) => ({
-      owner: userId,
+      ...ownership,
       kind: it.kind,
       impact: it.impact,
       title: it.title,
@@ -120,7 +127,7 @@ export async function invalidatePlan(adminDb: DB, userId: string): Promise<void>
       row.lift_estimate !== next.lift_estimate ||
       row.time_estimate !== next.time_estimate;
     if (stale) {
-      await adminDb.from("plan_items").update(next).eq("owner", userId).eq("id", row.id);
+      await adminDb.from("plan_items").update(next).eq("case_id", caseId).eq("id", row.id);
     }
   }
 }

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { checkCasePermission } from "@/lib/cases/require-permission";
 import { getPlanItemKind, setPlanItemStarted, setPlanItemStatus } from "@/lib/plan/repo";
 import { completionFor } from "@/lib/plan/completion";
 
@@ -29,9 +31,19 @@ export async function POST(request: Request): Promise<Response> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Authorize through the AUTHENTICATED client before the service-role read
+  // below. `plan_items` grants `authenticated` no INSERT, so this path stays
+  // service-role until MV-159's grant review (spec §4.3).
+  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
+  if (caseId === null) {
+    return NextResponse.json({ error: "no workspace for this account" }, { status: 500 });
+  }
+  const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
+  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   const adminDb = createSupabaseAdminClient();
   // Verified items complete from observed account state (invalidatePlan), never by hand.
-  const kind = await getPlanItemKind(adminDb, data.user.id, parsed.data.id);
+  const kind = await getPlanItemKind(adminDb, caseId, parsed.data.id);
   const isVerified = kind !== null && completionFor(kind).completion === "verified";
   if (isVerified && ("started" in parsed.data || parsed.data.status === "done")) {
     return NextResponse.json(
@@ -42,7 +54,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const ok =
     "started" in parsed.data
-      ? await setPlanItemStarted(adminDb, data.user.id, parsed.data.id, parsed.data.started)
-      : await setPlanItemStatus(adminDb, data.user.id, parsed.data.id, parsed.data.status);
+      ? await setPlanItemStarted(adminDb, caseId, parsed.data.id, parsed.data.started)
+      : await setPlanItemStatus(adminDb, caseId, parsed.data.id, parsed.data.status);
   return NextResponse.json({ ok }, { status: ok ? 200 : 500 });
 }

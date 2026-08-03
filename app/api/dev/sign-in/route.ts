@@ -6,9 +6,10 @@ import { safeNext } from "@/lib/auth/safe-next";
 import { assembleAssessment } from "@/lib/results/assemble";
 import { profileSectionsFromAssessment } from "@/lib/profiles/from-assessment";
 import { computeCompleteness } from "@/lib/profiles/completeness";
-import { upsertProfile } from "@/lib/profiles/repo";
+import { upsertProfileForCase } from "@/lib/profiles/repo";
+import { ensurePersonalCase } from "@/lib/cases/personal-case";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
-import { getPrimaryAssessmentForUser } from "@/lib/assessments/repo";
+import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import type { StudentProfile } from "@/lib/scoring/types";
 import type { Json } from "@/lib/supabase/types";
@@ -118,7 +119,7 @@ export async function GET(request: Request): Promise<Response> {
 
   // Seed sample assessment + profile on first sign-in.
   try {
-    await seedDevUserIfNeeded(admin, userId);
+    await seedDevUserIfNeeded(admin, { id: userId, email: DEV_EMAIL, user_metadata: { full_name: "Dev User" } });
   } catch (e) {
     console.error("[dev sign-in] seed error (non-fatal):", e);
   }
@@ -151,9 +152,14 @@ function generateRandomPassword(): string {
 
 async function seedDevUserIfNeeded(
   admin: ReturnType<typeof createSupabaseAdminClient>,
-  userId: string,
+  user: { id: string; email?: string | null; user_metadata?: { full_name?: string | null; name?: string | null } | null },
 ): Promise<void> {
-  const existing = await getPrimaryAssessmentForUser(admin, userId);
+  // The harness must produce the same shape production does, so it goes through
+  // the SAME resolver the sign-in seam uses rather than minting a case by hand.
+  const caseId = await ensurePersonalCase(user, admin);
+  if (caseId === null) throw new Error("Dev seed: could not resolve a personal case");
+
+  const existing = await getPrimaryAssessmentForCase(admin, caseId);
   if (existing) return;
 
   const [programs, universities] = await Promise.all([
@@ -163,7 +169,8 @@ async function seedDevUserIfNeeded(
   const payload = assembleAssessment(SAMPLE_PROFILE, programs, universities, new Date());
 
   const { error: insertError } = await admin.from("assessments").insert({
-    owner: userId,
+    owner: user.id,
+    case_id: caseId,
     profile_snapshot: SAMPLE_PROFILE as unknown as Json,
     destination_id: SAMPLE_PROFILE.destination,
     result: payload as unknown as Json,
@@ -189,7 +196,7 @@ async function seedDevUserIfNeeded(
   };
 
   const { pct } = computeCompleteness(sections);
-  await upsertProfile(admin, { owner: userId, sections, completeness: pct });
+  await upsertProfileForCase(admin, { caseId, sections, completeness: pct });
 
-  await invalidatePlan(admin, userId);
+  await invalidatePlan(admin, caseId);
 }

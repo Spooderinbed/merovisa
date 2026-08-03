@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
-const { claimAssessment, createLead, getAssessmentClaimState, upsertProfile, getProfile, from, update, updateCalls, updateResults } = vi.hoisted(() => {
+const { claimAssessment, createLead, getAssessmentClaimState, upsertProfileForCase, getProfileForCase, from, update, updateCalls, updateResults } = vi.hoisted(() => {
   const claimAssessment = vi.fn();
   const createLead = vi.fn();
   const getAssessmentClaimState = vi.fn();
-  const upsertProfile = vi.fn();
-  const getProfile = vi.fn();
+  const upsertProfileForCase = vi.fn();
+  const getProfileForCase = vi.fn();
 
   // Records every .update(...) chain so tests can assert demote-then-promote order + filters.
   const updateCalls: Array<{ payload: Record<string, unknown>; filters: Array<[string, unknown]> }> = [];
@@ -32,12 +32,28 @@ const { claimAssessment, createLead, getAssessmentClaimState, upsertProfile, get
 
   const select = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: { profile_snapshot: { destination: "australia" } }, error: null }) }) });
   const from = vi.fn(() => ({ update, select }));
-  return { claimAssessment, createLead, getAssessmentClaimState, upsertProfile, getProfile, from, update, updateCalls, updateResults };
+  return { claimAssessment, createLead, getAssessmentClaimState, upsertProfileForCase, getProfileForCase, from, update, updateCalls, updateResults };
 });
 const fakeAdmin = { from } as never;
 
 vi.mock("@/lib/assessments/repo", () => ({ claimAssessment, createLead, getAssessmentClaimState }));
-vi.mock("@/lib/profiles/repo", () => ({ upsertProfile, getProfile }));
+vi.mock("@/lib/profiles/repo", () => ({ upsertProfileForCase, getProfileForCase }));
+
+// MV-157: every migrated route and page resolves the actor's personal case and
+// authorizes it before its first query. Both are mocked to the happy path here;
+// the denial branch is asserted where the route owns it.
+const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.hoisted(() => ({
+  resolvePersonalCaseId: vi.fn(),
+  ensurePersonalCase: vi.fn(),
+  checkCasePermission: vi.fn(),
+}));
+vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
+vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+beforeEach(() => {
+  resolvePersonalCaseId.mockResolvedValue("case-1");
+  ensurePersonalCase.mockResolvedValue("case-1");
+  checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+});
 
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
 import { AssessmentClaimError } from "@/lib/assessments/errors";
@@ -49,8 +65,8 @@ describe("claimAndBootstrapProfile", () => {
     getAssessmentClaimState.mockReset();
     // Default: the row is gone (purged/deleted) unless a test says otherwise.
     getAssessmentClaimState.mockResolvedValue(null);
-    upsertProfile.mockReset();
-    getProfile.mockReset();
+    upsertProfileForCase.mockReset();
+    getProfileForCase.mockReset();
     from.mockClear();
     update.mockClear();
     updateCalls.length = 0;
@@ -64,7 +80,7 @@ describe("claimAndBootstrapProfile", () => {
       assessmentId: "a1", userId: "u1", googleName: "Aarav Sharma",
     });
     expect(out.claimed).toBe(false);
-    expect(upsertProfile).not.toHaveBeenCalled();
+    expect(upsertProfileForCase).not.toHaveBeenCalled();
   });
 
   // MV-130: a failed claim is not one dead end — each cause is read back and reported
@@ -83,7 +99,7 @@ describe("claimAndBootstrapProfile", () => {
       const out = await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
       expect(out).toEqual({ claimed: false, reason: "already-mine" });
       // A re-claim must never re-bootstrap or re-record a lead.
-      expect(upsertProfile).not.toHaveBeenCalled();
+      expect(upsertProfileForCase).not.toHaveBeenCalled();
       expect(createLead).not.toHaveBeenCalled();
     });
 
@@ -125,31 +141,36 @@ describe("claimAndBootstrapProfile", () => {
 
   it("bootstraps profile when claim succeeds and user has no profile", async () => {
     claimAssessment.mockResolvedValue(true);
-    getProfile.mockResolvedValue(null);
-    upsertProfile.mockResolvedValue("p1");
+    getProfileForCase.mockResolvedValue(null);
+    upsertProfileForCase.mockResolvedValue("p1");
     const out = await claimAndBootstrapProfile(fakeAdmin, {
       assessmentId: "a1", userId: "u1", googleName: "Aarav Sharma",
     });
     expect(out.claimed).toBe(true);
-    expect(upsertProfile).toHaveBeenCalled();
-    const call = upsertProfile.mock.calls[0]![1];
-    expect(call.owner).toBe("u1");
+    expect(upsertProfileForCase).toHaveBeenCalled();
+    const call = upsertProfileForCase.mock.calls[0]![1];
+    // MV-157: the bootstrap is keyed on the CASE. `owner` is no longer a caller
+    // parameter anywhere — it is derived from `cases.student_user_id` inside the
+    // dual-write helper, which is what makes owner/case_id disagreement
+    // structurally unreachable.
+    expect(call.caseId).toBe("case-1");
+    expect(call).not.toHaveProperty("owner");
     expect(call.sections.personal?.name).toBe("Aarav Sharma");
   });
 
   it("does not overwrite existing profile when claim succeeds", async () => {
     claimAssessment.mockResolvedValue(true);
-    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: { personal: { name: "Old" } }, completeness: 8 });
+    getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: { personal: { name: "Old" } }, completeness: 8 });
     const out = await claimAndBootstrapProfile(fakeAdmin, {
       assessmentId: "a1", userId: "u1", googleName: "Aarav Sharma",
     });
     expect(out.claimed).toBe(true);
-    expect(upsertProfile).not.toHaveBeenCalled();
+    expect(upsertProfileForCase).not.toHaveBeenCalled();
   });
 
   it("records a lead (email + assessmentId) when the claim succeeds", async () => {
     claimAssessment.mockResolvedValue(true);
-    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
     await claimAndBootstrapProfile(fakeAdmin, {
       assessmentId: "a1", userId: "u1", googleName: "Aarav", email: "aarav@example.com",
     });
@@ -169,14 +190,14 @@ describe("claimAndBootstrapProfile", () => {
 
   it("does not record a lead when no email is present", async () => {
     claimAssessment.mockResolvedValue(true);
-    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
     await claimAndBootstrapProfile(fakeAdmin, { assessmentId: "a1", userId: "u1" });
     expect(createLead).not.toHaveBeenCalled();
   });
 
   it("still returns claimed:true when the lead insert fails (best-effort)", async () => {
     claimAssessment.mockResolvedValue(true);
-    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
     createLead.mockRejectedValue(new Error("fk violation"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const out = await claimAndBootstrapProfile(fakeAdmin, {
@@ -188,7 +209,7 @@ describe("claimAndBootstrapProfile", () => {
 
   it("on a re-claim, demotes the existing primary then promotes the new assessment (newest-wins)", async () => {
     claimAssessment.mockResolvedValue(true);
-    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
 
     await claimAndBootstrapProfile(fakeAdmin, {
       assessmentId: "a-new", userId: "u1", email: "aarav@example.com",
@@ -207,7 +228,7 @@ describe("claimAndBootstrapProfile", () => {
 
   it("surfaces a failed promote instead of swallowing it (claim still succeeds)", async () => {
     claimAssessment.mockResolvedValue(true);
-    getProfile.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
+    getProfileForCase.mockResolvedValue({ id: "p1", owner: "u1", sections: {}, completeness: 8 });
     updateResults.promote = { error: { message: "primary index conflict" } };
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
