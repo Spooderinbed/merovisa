@@ -265,3 +265,63 @@ Everything up to that point is reversible, and the rehearsal executed the revers
 | `✓ case-rls.itest.ts` anchor | OK — 67 |
 | `✓ case-backfill.itest.ts` anchor | OK — **37** (floor 30) |
 | `✓ owner-nullable-rebase.itest.ts` anchor **(NEW)** | OK — **45** (floor 38) |
+
+## Production apply — 2026-08-03 (integrator)
+
+Applied to `obfvrxixtautamflzxzq` via `npx supabase db push`, piped through `tee`, after the code merge
+and Vercel deploy had landed. Migration `20260803120000_stage2_owner_nullable_case_fk_rebase.sql`.
+
+**Post-apply verification against production — every assertion passed:**
+
+| check | expected | actual |
+|---|---|---|
+| `owner` still NOT NULL on any of the eight | 0 | **0** |
+| validated `_ownership_axis_present` checks | 8 | **8** |
+| `owner` still a PK column on the two re-keyed tables | 0 | **0** |
+| FULL (non-partial) arbiter uniques | 2 | **2** |
+| composite FKs mentioning `case_id` on attempts + events | — | **4** (each child table carries its MV-155 single-column `case_id` FK *and* its new composite — 4 is correct) |
+
+Row counts unchanged across the apply: profiles 7 · assessments 36 · plan_items 74 ·
+user_program_state 12 · documents 6 · program_predictions 10 · application_attempts 10 ·
+outcome_events 19 · cases 9.
+
+Supabase security and performance advisors re-run: **no new findings** (the two standing items are
+`public.leads` RLS-enabled-no-policy, which is deliberate deny-all, and leaked-password protection,
+which is not applicable — this product has no passwords).
+
+**Review outcome.** A three-lens panel verified the dangerous parts sound: both primary-key
+replacements admit no duplicate window, the composite-FK swap leaves no instant where the ownership
+invariant is unenforced, the migration is pure DDL with zero row rewrites, and the rollback restores
+the original PKs *and* removes the surrogate columns. Scope was clean — `ci.yml` purely additive
+(+9/-0, and it added an anchor plus a floor for its own suite), the two `lib/` changes are forced type
+widenings rather than MV-157 creep, and MV-155's deliberately pinned NOT NULL / PK assertions were
+**inverted rather than deleted**, which is the designed handoff working.
+
+One major was raised and fixed: the measured partial→FULL arbiter correction had reached only the
+migration comment, the decision log and the PR body — not the authoritative spec. Five places still
+prescribed the broken shape, and **spec §10.1 R1 was the one with teeth**: a stage rollback would have
+re-created the 42P10 index. All corrected, plus MV-160's drop list which named the partial form.
+
+**The fix round changed no executable SQL** — verified mechanically; the migration and rollback diffs
+are comments only, so the SQL the panel verified is byte-identical to what shipped.
+
+### Systemic change made here, not just a fix
+
+This was the second consecutive slice where a builder correctly discovered the spec was wrong, shipped
+the right thing, reported it honestly — and filed the correction where the next reader would not look.
+Spec §1 rule 3 already required the amendment; nothing enforced it. An explicit acceptance criterion is
+now on **MV-157, MV-158, MV-159, MV-160** and as a stage-level rule on MV-154:
+
+> If this slice's implementation contradicts the Stage 2 spec in any cell, the spec is amended IN THIS
+> PR — recording it only in a decision log or PR body does not satisfy §1 rule 3, because the next
+> slice reads the spec, not your log.
+
+### Operational notes
+
+- MV-155's rollback **expired the moment this applied**; `MV-156-rollback.sql` is now what restores the
+  prior state, and it states its own predecessor.
+- The rollback leaves the `supabase_migrations.schema_migrations` row behind (the same fail-open gap
+  MV-155 surfaced) — now documented at the point of use with the manual `delete` step.
+- MV-156 ships a production runbook with an assertive post-apply `do $$ … $$` block, **exercised both
+  ways** on a local stack: clean → `COMPLETE`, and with a check dropped in a rolled-back transaction →
+  `FAILED: 7 of 8 validated _ownership_axis_present checks`. It is a real gate, not a claim.
