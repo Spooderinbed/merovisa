@@ -11,8 +11,11 @@ rehearsal rather than merely written: a written rollback that was never run is a
 | File | What it is |
 |---|---|
 | `MV-155-rollback.sql` | The MV-155 unwind, ordered per the Stage 2 matrix spec §10.1 **R6**. Fail-closed: refuses to run once MV-156 has applied, and refuses to blanket-delete personal cases without an explicit `-v mv157_merged=no`. |
-| `MV-155-rehearsal-corpus.sql` | A **production-shaped** corpus reproducing the live inventory captured 2026-08-02 (spec §2.9). A stand-in for the founder-gated dump, not a substitute for it — see below. |
+| `MV-155-rehearsal-corpus.sql` | A **production-shaped** corpus reproducing the live inventory captured 2026-08-02 (spec §2.9). A stand-in for the founder-gated dump, not a substitute for it — see below. Shared by both slices' rehearsals. |
 | `MV-155-counts.sql` | The before/after snapshot: per-table row counts, `case_id` fill, the reconciliation call, and the column-grant surface. Runs unchanged against the pre-migration, post-migration and post-rollback states. |
+| `MV-156-rollback.sql` | The MV-156 unwind, ordered per spec §10.1 **R5**. Fail-closed with four guards; needs **no** `-v` flag, because every one of its expiries is a fact about the database rather than about the codebase. |
+| `MV-156-counts.sql` | MV-156's DATA fingerprint — row counts, both ownership axes, whole-row and `updated_at` md5s, and row identity. Must be **byte-identical at every capture point**, because MV-156 writes no row data. |
+| `MV-156-catalog.sql` | MV-156's SCHEMA capture — columns (with ordinals), constraints, indexes, triggers, column grants and policies for the eight. The pre-apply capture vs the post-rollback capture is what turns "the rollback ran" into "the rollback restored". |
 
 ## Running the MV-155 rehearsal
 
@@ -60,6 +63,58 @@ PSQL="docker exec -i supabase_db_merovisa psql -U postgres -d postgres -v ON_ERR
    `case_id` reads `no column` on all nine and the row counts still match step 3.
 8. **Re-apply** step 4. The report must be identical to the first apply. Roll forward, roll back,
    roll forward again — a rollback tested in only one direction has not been tested.
+
+## Running the MV-156 rehearsal
+
+Same shape, same local-only rule, and it **builds on MV-155's state** rather than replacing it. The
+whole point of MV-156's rehearsal is a schema round trip, so the catalog capture is what matters and
+the data capture exists to prove the migration does not touch rows.
+
+```bash
+PSQL="docker exec -i supabase_db_merovisa psql -U postgres -d postgres -tAX -v ON_ERROR_STOP=1"
+```
+
+1. **Pin the stack at MV-156's predecessor.** Move
+   `supabase/migrations/20260803120000_stage2_owner_nullable_case_fk_rebase.sql` aside, run
+   `npx supabase db reset --local`, and confirm `max(version) = 20260802120000`.
+2. **Restore the data**, then run MV-155's backfill (the corpus loads *after* the migration applied,
+   so the backfill has not seen it): `$PSQL -q < supabase/rehearsal/MV-155-rehearsal-corpus.sql`,
+   then `select private.mv155_backfill_personal_cases();`. Substitute the founder's real dump here
+   when one exists; every later step is identical.
+3. **BASELINE — both captures, and keep them.**
+   `$PSQL < supabase/rehearsal/MV-156-counts.sql  > data.before.txt`
+   `$PSQL < supabase/rehearsal/MV-156-catalog.sql > catalog.before.txt`
+   **`catalog.before.txt` is the artifact the whole rehearsal turns on.** Without it, step 7 cannot
+   be performed at all — only guessed at.
+4. **Apply MV-156 alone**, in one transaction, and time it:
+   `$PSQL --single-transaction < supabase/migrations/20260803120000_*.sql`.
+5. **AFTER:** re-run both captures. `diff data.before.txt data.after.txt` **must be empty** — MV-156
+   is pure DDL, and the only rows it rewrites are the two tables gaining a surrogate `id`, whose
+   fingerprints exclude that column precisely so the comparison stays meaningful. A non-empty data
+   diff means the `ADD COLUMN` rewrite fired a row trigger (`set_updated_at` or MV-155's
+   `_derive_case_id`), which is a defect, not a detail.
+6. **Run the integration lane against the restored copy**: `npm run test:integration`.
+7. **Execute the rollback, both paths.** First the refusal: seed one NULL-owner row
+   (`insert into public.plan_items (owner, case_id, kind, impact, title) values (null, '<a case>', 'visa', 'low', 'x');`)
+   and run `$PSQL < supabase/rehearsal/MV-156-rollback.sql` — it must **REFUSE** naming the table and
+   count, and the schema must be **intact** afterwards, not half-unwound. Then delete that row and
+   run it for real; it must end `MV-156 rollback verification: COMPLETE`.
+   **Then the assertion that matters:** re-capture the catalog and
+   `diff catalog.before.txt catalog.postrollback.txt` — **it must be empty.** That is what catches a
+   rollback which restores the composite primary keys but forgets to drop the surrogate `id`
+   columns: that unwind exits without error and leaves a *third* schema shape.
+8. **Re-apply** step 4. Roll forward, roll back, roll forward again — a rollback tested in only one
+   direction has not been tested. Expect **one** benign difference against the first apply: the
+   re-added surrogate `id` lands at the next attnum (`user_program_state` 8 → 9, `document_status`
+   6 → 7), because the dropped column left a gap. Four tables in this schema already carry such
+   gaps; see the note at the foot of `MV-156-rollback.sql`.
+
+**If you rollback and then want `supabase db push` to re-apply**, delete the bookkeeping row first —
+the same gap MV-155 recorded:
+
+```sql
+delete from supabase_migrations.schema_migrations where version = '20260803120000';
+```
 
 ## Applying MV-155 to production
 

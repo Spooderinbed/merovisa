@@ -6,9 +6,15 @@ import type { DecisionAuthority, EventType, Gate, Source } from "./types";
 type DB = SupabaseClient<Database>;
 
 // Row shapes returned to callers (camelCase). The DB columns are snake_case.
+//
+// `owner` is nullable from MV-156 on: a consultancy case has no Auth user, so a row can legitimately
+// carry `case_id` and no `owner`. Admitted in the type rather than asserted away with `!` — a
+// non-null assertion here would re-state "actor equals student" in the one place typecheck would
+// never complain about again, which is exactly what Stage 2 exists to remove. Re-keying these
+// repositories onto `case_id` is MV-157; this is the minimum honest change.
 export interface PredictionRow {
   id: string;
-  owner: string;
+  owner: string | null;
   assessmentId: string;
   programId: string;
   verdict: string;
@@ -19,7 +25,7 @@ export interface PredictionRow {
 
 export interface AttemptRow {
   id: string;
-  owner: string;
+  owner: string | null;
   predictionId: string;
   programId: string;
   institutionId: string | null;
@@ -30,7 +36,7 @@ export interface AttemptRow {
 
 export interface EventRow {
   id: string;
-  owner: string;
+  owner: string | null;
   attemptId: string;
   eventType: EventType;
   gate: Gate | null;

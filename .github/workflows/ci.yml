@@ -162,6 +162,15 @@ jobs:
           # 36 tests today. Floor set below that so an incidental removal does not trip it,
           # high enough that a gutted suite does. Raise it when the suite grows.
           test "$(grep -c '✓ tests/integration/case-backfill.itest.ts' vitest-integration.log)" -ge 30
+          # MV-156: the suite that proves `owner` is genuinely nullable on the eight, that the
+          # predictions→attempts→outcome_events chain is re-based onto `case_id`, and — the two
+          # that would otherwise fail silently in production — that the compensating check is the
+          # DISJUNCT rather than `case_id is not null`, and that the replacement uniques are FULL
+          # so the live pre-MV-157 upserts still infer an `ON CONFLICT` arbiter. Anchored for the
+          # same reason as the four above.
+          grep -q '✓ tests/integration/owner-nullable-rebase.itest.ts' vitest-integration.log
+          # 45 tests today. Same floor rationale as MV-155's.
+          test "$(grep -c '✓ tests/integration/owner-nullable-rebase.itest.ts' vitest-integration.log)" -ge 38
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup

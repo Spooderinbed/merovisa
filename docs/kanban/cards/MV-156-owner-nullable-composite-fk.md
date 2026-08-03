@@ -140,6 +140,105 @@
 - 2026-08-02 — **`drop not null` is the last statement group, inside one transactional migration.** Ordering the case chain and every check before it means there is no instant — not even mid-apply on a failed run — where `owner` is nullable and the case chain is absent. The plan's "keep the nullable window short" is therefore satisfied twice over: the intra-migration window is zero, and the stage-level window (`case_id` nullable in the column definition, MV-155→MV-160) is covered for the three chain tables on day one by the retained owner chain plus the validated `_ownership_axis_present` disjunct, leaving no row uncovered by *some* chain and only the declared type loose.
 - 2026-08-02 — **The MATCH SIMPLE hole is proven by a test, not described in a comment.** Following MV-153's precedent that a claim about a safeguard must be backed by a mechanism that fails when the claim stops being true, the itest drops the compensating check in a scratch transaction and asserts the database *accepts* a cross-case attempt. A comment saying "do not remove this check" is advisory; a test that goes red is not.
 - 2026-08-02 — **Type honesty is an acceptance criterion, not a cleanup.** `owner: string | null` is the whole point of the card surfacing in TypeScript. Banning `!` and `as string` at the ~14 named sites is what stops the eight-table relaxation from being cosmetically undone in the layer MV-157 has to change next.
+- 2026-08-03 — **BUILDER, BY MEASUREMENT: the two replacement uniques are FULL, not `where owner is not null`. This corrects this card AND spec §4.4/§4.6, and the partial form would have taken a live production path down.** Postgres infers a PARTIAL unique index as an `ON CONFLICT` arbiter only when the statement supplies the index predicate, and PostgREST's `on_conflict=` emits a bare column list. Both replaced primary keys are the arbiters of upserts that are live **today** and that MV-157 has not yet re-pointed: `lib/documents/status-repo.ts:36` `setObtained` (`onConflict: "owner,kind"`, driven by `app/api/documents/status/route.ts` on the **authenticated** client) and `lib/matches/repo.ts:28` `upsertProgramState` (`onConflict: "owner,program_id"`). Probed against this project's own Postgres in a rolled-back transaction, both directions: **partial → 42P10** ("there is no unique or exclusion constraint matching the ON CONFLICT specification"), **full → both the INSERT and the DO UPDATE branch succeed**. This is spec §4 rule 1 exactly, arriving on the **owner** axis instead of the case axis — same mechanism, same remedy, one slice later. **The predicate was never load-bearing:** NULLs are distinct in a unique index, so the full form already permits unlimited NULL-owner rows, which is the only thing the predicate was there to allow. Both of this card's stated verifications hold unchanged and are pinned in the itest — a duplicate for a non-null owner still raises 23505, and NULL-owner rows sharing the other key column are still accepted. MV-160 drops both indexes either way (§9.4), so the correction costs the downstream nothing.
+- 2026-08-03 — **Builder: `unique (id, case_id)` ships on THREE tables, not two — a card-internal contradiction resolved toward the spec.** Acceptance criterion 1 of "The composite-FK rebase" names only `program_predictions` and `application_attempts` (the two that are actually *pointed at*), but this card's own rollback step (2) says "the three `unique (id, case_id)` targets", spec §4.9 lists `+ UNIQUE (id, case_id)` in `outcome_events`' Stage 2 target shape, and spec §10.1 R5 unwinds three. Three is correct and consistent: it mirrors `outcome_events_id_owner_key`, which is likewise the target of nothing today and exists for the same symmetry. Reported rather than silently reconciled.
+- 2026-08-03 — **Builder: MV-155's pinned NOT NULL / PK-column assertions behaved exactly as the designed handoff, and were INVERTED rather than deleted.** `tests/integration/case-backfill.itest.ts` pinned `owner` as NOT NULL and a PK column on both tables specifically so this card would go red. It did. The assertions now pin the **post-MV-156** shape (`is_nullable = 'YES'`, zero PK key columns named `owner`), so a rollback or a quiet re-tightening also goes red, and the block's comment records what the pin was for: the WITH CHECK above it is now the *only* barrier refusing `owner → NULL` for an authenticated client, and it was re-read against that fact rather than assumed to survive. It does — Postgres admits a row only when a WITH CHECK evaluates to TRUE, and NULL is refused exactly like FALSE, which is a property of the policy and not of the dropped NOT NULL.
+- 2026-08-03 — **Builder: two FURTHER MV-155 tests were invalidated by this card's constraints, both legitimately, and both are recorded because "the sibling suite went red" is otherwise indistinguishable from a regression.** (a) MV-155's `case_id` FK assertion counted 13 rows where it expected 9: `kcu.column_name = 'case_id'` now also matches this card's two **composite** FKs, and `constraint_column_usage` returns one row per referenced column, so the join fans out. Narrowed to keys that actually reference `public.cases`. (b) MV-155's "break the invariant" fixture re-pointed an `application_attempts.case_id` — which this card's `(prediction_id, case_id)` FK now refuses with 23503, i.e. the new constraint working as designed. Every other seeded table is blocked too (per-case uniques, the immutability trigger, the other composite FK, or the seam trigger re-deriving `case_id`), so the fixture moved to a `documents` INSERT with `kind='other'`: no case-side composite FK, no collision, and no trigger in the path. Neither change weakens what MV-155 asserts.
+- 2026-08-03 — **Builder: the rollback's one irreducible residue is a dropped-column attnum gap, and it is recorded rather than papered over.** The post-rollback catalog matched the pre-MV-156 baseline **exactly** (the binding assertion — a dropped column leaves no `information_schema.columns` row and every surviving column keeps its ordinal). But on a subsequent RE-APPLY the surrogate `id` returns at the next attnum (`user_program_state` 8 → 9, `document_status` 6 → 7). The forward/back/forward sweep diffed to exactly those two lines and nothing else. Harmless and not novel — `assessments`, `documents`, `user_program_state` and `document_status` already carry such gaps from earlier migrations, and PostgREST, supabase-js and the generated types are all name-keyed. **Handed to MV-160: key the identity-parity comparison on column NAME, not `ordinal_position`**, or it goes red on any database that was ever rolled back and re-applied.
+- 2026-08-03 — **Builder: the spec's §2.3/§2.4 capture was re-verified against the live schema before any DDL was written, and it is accurate in every particular this card touches.** Checked: `owner` NOT NULL on exactly the eight with `assessments` nullable; `user_program_state` PK `(owner, program_id)` and `document_status` PK `(owner, kind)`; the three `unique (id, owner)` targets and both composite FKs with `confmatchtype = 's'`; **no FK anywhere targets either replaced primary key**; no `_ownership_axis_present` family exists yet; `case_id` populated with zero nulls on all three chain tables. **No disagreement to report between the spec and the live schema.** The two corrections above are the spec disagreeing with *PostgREST/Postgres behaviour* and with *itself*, not with the database.
 
 ## Done evidence
-(pending)
+
+**Branch** `mv-156-owner-nullable` off `origin/master` `996353c`. **Nothing applied to the hosted project.**
+
+### Artifacts
+
+| Path | What |
+|---|---|
+| `supabase/migrations/20260803120000_stage2_owner_nullable_case_fk_rebase.sql` | The migration. Seven statement groups in the card's prescribed order, `drop not null` last. |
+| `supabase/rehearsal/MV-156-rollback.sql` | The rollback, ordered per spec §10.1 **R5** — executed in the rehearsal, both the refusal path and the real one. |
+| `supabase/rehearsal/MV-156-counts.sql` | The DATA fingerprint. Byte-identical at all four capture points, which is the proof the migration is inert for row data. |
+| `supabase/rehearsal/MV-156-catalog.sql` | The SCHEMA capture (columns **with ordinals**, constraints, indexes, triggers, column grants, policies). The pre-apply vs post-rollback diff is what makes "the rollback restored" checkable. |
+| `tests/integration/owner-nullable-rebase.itest.ts` | 45 real-DB tests. |
+| `tests/integration/case-backfill.itest.ts` | MV-155's suite: the pinned handoff assertions inverted, plus the two legitimate invalidations above. Still 37 tests. |
+| `lib/supabase/types.ts` | Regenerated; `PostgrestVersion: "14.5"` restored by hand. |
+| `lib/outcomes/repo.ts`, `lib/plan/types.ts` | `owner: string \| null` on `PredictionRow` / `AttemptRow` / `EventRow` / `PlanItemRow`. |
+| `.github/workflows/ci.yml` | `owner-nullable-rebase.itest.ts` anchored by name with a count floor of 38. |
+| `supabase/rehearsal/README.md` | The 8-step MV-156 rehearsal sequence, re-runnable verbatim against the real dump. |
+
+### Named objects MV-157 and MV-160 build on
+
+- **Created — uniques:** `program_predictions_id_case_id_key` · `application_attempts_id_case_id_key` · `outcome_events_id_case_id_key` (all `UNIQUE (id, case_id)`) · `user_program_state_owner_program_idx` `UNIQUE (owner, program_id)` **FULL** · `document_status_owner_kind_idx` `UNIQUE (owner, kind)` **FULL**
+- **Created — foreign keys:** `application_attempts_prediction_id_case_id_fkey` `(prediction_id, case_id) → program_predictions (id, case_id)` · `outcome_events_attempt_id_case_id_fkey` `(attempt_id, case_id) → application_attempts (id, case_id)`. Both MATCH SIMPLE, no `ON DELETE` action.
+- **Created — covering indexes:** `application_attempts_prediction_id_case_id_idx` · `outcome_events_attempt_id_case_id_idx`
+- **Created — checks (all eight, all `convalidated = true`):** `profiles_` · `plan_items_` · `user_program_state_` · `documents_` · `document_status_` · `program_predictions_` · `application_attempts_` · `outcome_events_ownership_axis_present`, each `CHECK (owner is not null or case_id is not null)`
+- **Replaced:** `user_program_state_pkey` `(owner, program_id)` → `PRIMARY KEY (id)`; `document_status_pkey` `(owner, kind)` → `PRIMARY KEY (id)`. Both tables gained `id uuid not null default gen_random_uuid()`.
+- **Dropped:** nothing. **Retained deliberately:** the whole legacy owner chain (`program_predictions_id_owner_key`, `application_attempts_id_owner_key`, `outcome_events_id_owner_key`, `application_attempts_prediction_id_owner_fkey`, `outcome_events_attempt_id_owner_fkey`) and both single-column `ON DELETE CASCADE` FKs.
+- **MV-160's drop list, in drop order,** is footer-commented in the migration itself — including the two §9.4 additions and the §9.3 omission.
+
+### Rehearsal — 2026-08-03, against the production-shaped corpus
+
+Pinned at `20260802120000` → restored `MV-155-rehearsal-corpus.sql` → ran MV-155's backfill → BASELINE → applied MV-156 alone in one transaction → AFTER → full integration lane → rollback (refusal path **and** real path) → catalog diff → re-apply.
+
+The corpus reproduces the live inventory exactly, and the backfill report matched MV-155's **production** apply figure for figure: `cases_created 9 · profiles 7 · assessments 36 · plan_items 74 · user_program_state 12 · documents 6 · document_status 0 · program_predictions 10 · application_attempts 10 · outcome_events 19`.
+
+**Row counts, before → after (MV-156 inserts and deletes nothing):**
+
+| table | rows before | rows after | owner null | case_id null |
+|---|---:|---:|---:|---:|
+| `profiles` | 7 | 7 | 0 | 0 |
+| `assessments` | 37 | 37 | 1 | 1 |
+| `plan_items` | 74 | 74 | 0 | 0 |
+| `user_program_state` | 12 | 12 | 0 | 0 |
+| `documents` | 6 | 6 | 0 | 0 |
+| `document_status` | 0 | 0 | 0 | 0 |
+| `program_predictions` | 10 | 10 | 0 | 0 |
+| `application_attempts` | 10 | 10 | 0 | 0 |
+| `outcome_events` | 19 | 19 | 0 | 0 |
+| `cases` (personal) | 9 | 9 | — | — |
+
+`assessments` is 37 = the live 36 owned + 1 synthetic anonymous (the population production has **zero** of, spec §9.6). `document_status: 0` is the expected live value, not a capture bug.
+
+**The four comparisons, all as required:**
+
+| Comparison | Result |
+|---|---|
+| DATA: pre-apply vs post-apply | **EMPTY** — including both `updated_at` fingerprints and every `case_id` fill, so the two `ADD COLUMN` table rewrites fired **neither** `set_updated_at` nor MV-155's `_derive_case_id` seam trigger |
+| CATALOG: pre-apply vs post-apply | 48 lines, **all intended** — 8 `owner` `NO → YES` flips, the 8 checks, the 5 new uniques, 2 new composite FKs, 2 covering indexes, 2 surrogate columns, 2 PK swaps |
+| CATALOG: **pre-MV-156 baseline vs post-rollback** | **EMPTY** — column for column, ordinal for ordinal. The surrogate `id` columns are gone. |
+| DATA: pre-rollback vs post-rollback | **EMPTY** — the rollback moves no row data |
+
+- **Zero grant movement and zero policy movement.** No INSERT/UPDATE/DELETE column grant changed; `SELECT` gained exactly the two new surrogate `id` columns (it is a table-level grant, which is what spec §4's "SELECT(all)" means). The 31-line RLS policy section diffed **empty** — MV-159's baseline is untouched. No trigger changed.
+- **Wall clock:** apply **340 ms**; re-apply **325 ms**.
+- **Integration lane against the restored copy: 610 passed / 7 files.**
+- **Rollback, both paths executed.** With one NULL-owner row present it **REFUSED** — naming the table and the count, quoting the founder decision, and leaving the schema fully intact (8 checks and 2 surrogate columns still present; not a half-run). With that row removed it ran to `MV-156 rollback verification: COMPLETE`.
+- **MV-155's rollback is genuinely unblocked, verified rather than claimed.** After this rollback ran, `MV-155-rollback.sql` refused only for its missing `-v mv157_merged` flag — no longer for "MV-156 has applied". The R5 → R6 sequence works as spec §10.1 describes.
+
+**Point of no return, and MV-155's expiry.**
+
+1. **MV-155's rollback expired the moment this migration applied** — its own Guard 0 detects `owner` nullable or any `_ownership_axis_present` check and refuses, because `drop column case_id` would raise 2BP01 and the personal-case delete 23503. `MV-156-rollback.sql` is what restores MV-155's predecessor state; the two run as R5 → R6.
+2. **This card's own point of no return is the first NULL-owner row** — i.e. Stage 3, not Stage 2. Step 6's `alter column owner set not null` succeeds only while none exists. It is a **refusal guard in the script**, not only a sentence on this card, and it was exercised. After it fires, the only way forward is deleting consultancy data, which is a founder decision; spec §10.2 makes the recovery path a restore from backup.
+
+Everything up to that point is reversible, and the rehearsal executed the reversal end to end and re-applied afterwards.
+
+### Gate — all green, 2026-08-03, from a clean `supabase db reset --local`
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | clean — **no `!` and no `as string` added at any `owner` site** (`git diff` verified) |
+| `npm run lint` | clean (0 errors, 0 warnings) |
+| `npm test` | **2472 passed / 323 files** — identical to MV-155's baseline, green **unchanged** |
+| `npm run test:integration` | **610 passed / 7 files**, 0 skipped |
+| `git diff --stat origin/master -- tests/integration/tenant-isolation.itest.ts tests/integration/case-rls.itest.ts` | **empty — both gated suites unedited** |
+| `git diff --stat origin/master -- docs/kanban/board.*` | **empty — board files untouched** |
+| `npx supabase gen types typescript --local` vs `lib/supabase/types.ts` | **no drift** apart from the hand-restored `PostgrestVersion` pin |
+
+**CI guard simulation against the real verbose log** (every assertion in the `integration` job, run locally):
+
+| Guard | Result |
+|---|---|
+| `Tests N passed (N)` shape | OK |
+| `✓ tenant-isolation.itest.ts` anchor | OK — **429** (floor 400) |
+| `✓ case-rls.itest.ts` anchor | OK — 67 |
+| `✓ case-backfill.itest.ts` anchor | OK — **37** (floor 30) |
+| `✓ owner-nullable-rebase.itest.ts` anchor **(NEW)** | OK — **45** (floor 38) |

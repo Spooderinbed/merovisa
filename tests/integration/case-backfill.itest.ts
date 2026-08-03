@@ -491,6 +491,14 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       `);
       expect(rows).toEqual([...NINE].sort().map((t) => `${t}|YES|uuid`));
 
+      // THE `ccu.table_name = 'cases'` FILTER IS REQUIRED FROM MV-156 ON, and it is not cosmetic.
+      // MV-156 adds two COMPOSITE foreign keys that also carry `case_id` as a key column —
+      // `application_attempts (prediction_id, case_id)` and `outcome_events (attempt_id, case_id)`
+      // — so `kcu.column_name = 'case_id'` alone now matches them too, and because
+      // `constraint_column_usage` returns one row per REFERENCED column the join fans out: this
+      // assertion went from 9 rows to 13. Narrowing to the keys that actually point at
+      // `public.cases` restores what the test was always asking — "the case_id column on each of
+      // the nine references cases(id) ON DELETE RESTRICT" — without weakening it.
       const fks = sql(`
         select tc.table_name || '|' || ccu.table_name || '.' || ccu.column_name || '|' || rc.delete_rule
           from information_schema.table_constraints tc
@@ -498,6 +506,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
           join information_schema.constraint_column_usage ccu on ccu.constraint_name = tc.constraint_name
           join information_schema.referential_constraints rc on rc.constraint_name = tc.constraint_name
          where tc.constraint_type = 'FOREIGN KEY' and kcu.column_name = 'case_id'
+           and ccu.table_name = 'cases' and ccu.column_name = 'id'
            and tc.table_name in (${NINE.map((t) => `'${t}'`).join(",")})
          order by 1;
       `);
@@ -566,11 +575,27 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         "assessments_primary_idx",
         "plan_items_kind_open_idx",
         "documents_owner_kind_key",
-        "user_program_state_pkey",
-        "document_status_pkey",
         "program_predictions_owner_assessment_id_program_id_rule_ver_key",
       ]) {
         expect(sql(`select 1 from pg_indexes where schemaname='public' and indexname='${legacy}';`)).toEqual(["1"]);
+      }
+
+      // `user_program_state` and `document_status` USED to appear in that list as `*_pkey`. They
+      // were moved out at MV-156, and naming them here would now be WORSE than omitting them: the
+      // `*_pkey` names still exist, but on the surrogate `id`, so the old assertion stayed green
+      // while the rule it was checking had moved to a different index entirely. The owner-keyed
+      // rule on these two now lives in MV-156's replacement uniques, which MV-160 must also drop
+      // (spec §9.4). Asserted on the DEFINITION, not the name, for exactly that reason.
+      for (const [name, cols] of [
+        ["user_program_state_owner_program_idx", "(owner, program_id)"],
+        ["document_status_owner_kind_idx", "(owner, kind)"],
+      ] as const) {
+        const def = definition(name);
+        expect(def, `${name} must be UNIQUE`).toContain("CREATE UNIQUE INDEX");
+        expect(def).toContain(`USING btree ${cols}`);
+        // FULL, never partial: both are `ON CONFLICT` arbiters for pre-MV-157 code that is live
+        // today (`lib/documents/status-repo.ts`, `lib/matches/repo.ts`). See MV-156's migration.
+        expect(def, `${name} is a live ON CONFLICT arbiter and MUST NOT be partial`).not.toContain("WHERE");
       }
     });
 
@@ -766,13 +791,32 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       sql(`update public.profiles set case_id = '${caseId}' where owner = '${userA.id}';`);
       reconcile();
 
-      // (2) a row pointed at somebody else's personal case. Driven on `application_attempts`
-      //     because it is the one seeded table with no per-case uniqueness rule in MV-155 — on
-      //     `plan_items` or `profiles` the re-point would be refused by 23505 before the
-      //     reconciliation function ever ran, and the test would prove the index, not the guard.
-      sql(`update public.application_attempts set case_id = '${otherCaseId}' where owner = '${userA.id}';`);
+      // (2) a row pointed at somebody else's personal case.
+      //
+      //     MOVED FROM `application_attempts` TO `documents` AT MV-156, and the reason is the point
+      //     of that card: `application_attempts` now carries a composite FK
+      //     `(prediction_id, case_id) → program_predictions (id, case_id)`, so re-pointing an
+      //     attempt's `case_id` is refused with 23503 before the reconciliation function ever runs.
+      //     The fixture became unbuildable — which is the new constraint working exactly as
+      //     designed, not a regression. Every other seeded table is blocked too, each for its own
+      //     reason: `profiles` / `plan_items` / `user_program_state` / `document_status` collide on
+      //     a per-case unique (23505), `assessments` on the primary-per-case partial unique,
+      //     `program_predictions` is refused by the immutability trigger, `outcome_events` by the
+      //     other new composite FK, and the two seam tables would have `case_id` re-derived from
+      //     `owner` by MV-155's own trigger before anything else could see it.
+      //
+      //     `documents` is the one that still works: no case-side composite FK, and `kind='other'`
+      //     collides with nothing in the other user's case. INSERTed rather than UPDATEd so no
+      //     trigger is in the path at all. The guard, not the index, is what this asserts.
+      const strayDocId = sqlOne(
+        `with ins as (
+           insert into public.documents (owner, case_id, kind, file_path, file_size, original_name)
+           values ('${userA.id}', '${otherCaseId}', 'other', '${userA.id}/other/stray.pdf', 1, 'stray.pdf')
+           returning id
+         ) select id from ins;`,
+      );
       expect(sqlError("select private.mv155_assert_case_backfill();")).toContain("is not the owner's personal case");
-      sql(`update public.application_attempts set case_id = '${caseId}' where owner = '${userA.id}';`);
+      sql(`delete from public.documents where id = '${strayDocId}';`);
       reconcile();
 
       // (3) an anonymous assessment that acquired a case — the shape that would silently cancel
@@ -1176,27 +1220,39 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         expect(error?.message, `${table}: refused by the policy`).toMatch(/row-level security policy/i);
       }
 
-      // THE SECOND, INDEPENDENT BARRIER — pinned so MV-156 cannot remove it silently. `owner` is
-      // NOT NULL on both tables AND a PRIMARY KEY column (`(owner, program_id)` / `(owner, kind)`),
-      // so even with grants and RLS entirely out of the picture a superuser `set owner = null`
-      // raises 23502. MV-156 replaces those primary keys and relaxes `owner`; when it does, this
-      // assertion goes red and the WITH CHECK above becomes the ONLY barrier left — which is
-      // exactly the moment someone should re-read the two tests above rather than discover the
-      // question later.
+      // THE SECOND BARRIER IS GONE, AS DESIGNED — AND THAT IS WHY THIS BLOCK STILL EXISTS.
+      //
+      // Until MV-156 this assertion read the other way: `owner` was NOT NULL on both tables and a
+      // PRIMARY KEY column (`(owner, program_id)` / `(owner, kind)`), so even with grants and RLS
+      // out of the picture a superuser `set owner = null` raised 23502. MV-155 pinned that
+      // DELIBERATELY, so that the slice which removed it would go red rather than inherit the
+      // question silently. MV-156 is that slice: it replaced both primary keys with a surrogate
+      // `id` and relaxed the column, because a consultancy case has no Auth user to own its rows.
+      //
+      // So this is the moment the pin was written for. The two barriers are now ONE — the WITH
+      // CHECK asserted immediately above is the only thing refusing `owner → NULL` for an
+      // authenticated client, and the tests above have been re-read against that fact rather than
+      // assumed to still hold. They do: Postgres admits a row only when a WITH CHECK evaluates to
+      // TRUE, and `auth.uid() = null` is NULL, which is refused exactly like FALSE. That is a
+      // property of the policy, not of the dropped NOT NULL, so removing the NOT NULL cannot
+      // weaken it.
+      //
+      // The assertion is inverted rather than deleted: it now pins the POST-MV-156 shape, so a
+      // rollback or a re-tightening that quietly restores the composite PK also goes red.
       for (const table of ["user_program_state", "document_status"] as const) {
         expect(
           sqlOne(`select is_nullable from information_schema.columns
                    where table_schema='public' and table_name='${table}' and column_name='owner';`),
-          `${table}.owner is NOT NULL today; if MV-156 relaxed it, re-read the WITH CHECK tests above`,
-        ).toBe("NO");
+          `${table}.owner is nullable from MV-156 on; the WITH CHECK above is now the only barrier`,
+        ).toBe("YES");
         expect(
           sqlOne(`select count(*) from information_schema.key_column_usage k
                    join information_schema.table_constraints c
                      on c.constraint_name = k.constraint_name and c.constraint_schema = k.constraint_schema
                   where c.constraint_type = 'PRIMARY KEY' and k.table_schema = 'public'
                     and k.table_name = '${table}' and k.column_name = 'owner';`),
-          `${table}.owner is a PRIMARY KEY column today`,
-        ).toBe("1");
+          `${table}.owner left the PRIMARY KEY at MV-156 — the PK is the surrogate id`,
+        ).toBe("0");
       }
       reconcile();
     });
@@ -1370,10 +1426,15 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
     /**
      * OWNER-NULL BRANCH — honoured, not touched.
      *
-     * This one runs on a SCRATCH TABLE and that is a finding, not a shortcut: `owner` is `NOT NULL`
-     * on both real tables today, and on both it is a PRIMARY KEY column, so an `owner IS NULL` row
-     * is not insertable until MV-156 replaces those primary keys. The card's test plan asks for the
-     * real-table form; it is unsatisfiable in MV-155's own state.
+     * This one runs on a SCRATCH TABLE, and that was a finding rather than a shortcut: when MV-155
+     * shipped, `owner` was `NOT NULL` on both real tables and a PRIMARY KEY column on both, so an
+     * `owner IS NULL` row was not insertable at all. MV-156 has since replaced those primary keys
+     * and relaxed the column, so the real-table form is now REPRESENTABLE — but performing it is
+     * MV-160 §D's counsellor-write proof, and it needs MV-159's policies to be meaningful. The
+     * scratch table is kept here because what MV-155 owns is the FUNCTION and its `WHEN` clause,
+     * and this exercises both without depending on a policy set that does not exist yet.
+     * (MV-156's own suite covers the real-table NULL-owner shape structurally:
+     * `tests/integration/owner-nullable-rebase.itest.ts` §G.)
      *
      * What IS provable here is the property MV-160 §D depends on: the function plus the WHEN clause
      * honour a supplied `case_id` when `owner` is null, and leave it alone on a later UPDATE. The
