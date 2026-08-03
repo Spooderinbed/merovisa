@@ -317,3 +317,74 @@ Everything before those two points is reversible, and the rehearsal executed the
 | `✓ tests/integration/tenant-isolation.itest.ts` anchor | OK — **429** (floor 400) |
 | `✓ tests/integration/case-rls.itest.ts` anchor | OK |
 | `✓ tests/integration/case-backfill.itest.ts` anchor **(NEW)** | OK — **37** (floor 30) |
+
+## Production apply — 2026-08-03 (integrator)
+
+**Founder-gated rehearsal against REAL production data: PASSED.** A dump of the live database (9 auth
+users and every student row) was loaded into a local stack and the full cycle run: pre-fingerprint →
+apply via the documented command → verify → rollback with the recorded id list → re-apply. The dump and
+every derived artifact were deleted afterwards and deletion confirmed; no row content was ever printed
+or written to the repo.
+
+What only real data could prove — the `display_name` coalesce chain against real JSON payloads:
+
+| tier | resolved |
+|---|---|
+| 1 · `sections->'personal'->>'name'` | 7 |
+| 2 · `raw_user_meta_data->>'full_name'` | **2** (users with no `profiles` row — never exercised by the corpus) |
+| 3-5 · other fallbacks / literal | 0 |
+| NULL | **0** |
+
+All 7 real `profiles.sections` were well-formed objects. Every absurdity detector returned zero (no
+blank, untrimmed, JSON-punctuation, email-shaped, `[object Object]`, all-digit, or over-length names).
+Whole-row md5 over all nine tables, plus targeted hashes for `sections`, `result`, `profile_snapshot`
+and both `updated_at` columns, was **byte-identical at all four capture points**.
+
+**Applied to production `obfvrxixtautamflzxzq` on 2026-08-03** via `npx supabase db push`, piped through
+`tee`. Report: profiles 7 · assessments 36 · plan_items 74 · user_program_state 12 · documents 6 ·
+document_status 0 · program_predictions 10 · application_attempts 10 · outcome_events 19 ·
+**cases_created 9** — identical to the rehearsal.
+
+Post-apply verification against production: `private.mv155_assert_case_backfill()` → **CLEAN**;
+9 personal cases for 9 auth users; **0** users without a personal case; **0** rows with a null `case_id`
+on any of the nine tables; 0 anonymous assessments (MV-135's purge cleared that population, so the
+case-less branch has no live subject — proven by synthetic seed instead). Supabase security and
+performance advisors re-run: no new findings.
+
+**`personal_case_ids` — rollback material, capture-once.** These are the nine cases MV-155 minted. The
+`raise notice` prints them exactly once; without them the non-destructive rollback path in
+`MV-155-rollback.sql` is unobtainable after MV-157 merges.
+
+```
+30661af1-2835-4b4a-b50c-d1157573a63f
+372da6ca-1539-4da2-b3f3-f270dd7ea100
+3c816dc7-7006-4f0e-8bea-67ec6fd4867d
+5cc9f1db-5eb0-4cfa-8e46-2839e5765634
+719a1ec8-9fe7-42c6-bc79-e97efc1758ec
+7270dc7c-ca7c-422d-9882-9470a2819baa
+85b9468a-fcf6-495f-9e97-301b05f47a44
+94302cad-9d02-419b-a84f-655dcee87f0d
+e9ad1092-520e-43f3-9216-febbe6700822
+```
+
+**Deploy ordering used, and why:** the code merged and Vercel deployed the account-deletion fix BEFORE
+the migration was applied. Between an apply and that deploy, any account deletion would leave the
+orphaned name-and-email case this card exists to prevent. The reverse order is harmless; this order is
+not optional.
+
+### Operational gap found by the rehearsal — read before any rollback
+
+`MV-155-rollback.sql` does **not** delete the `supabase_migrations.schema_migrations` row for
+`20260802120000`. After a rollback, `npx supabase db push` therefore sees nothing to apply and **silently
+no-ops**. Anyone re-applying after a rollback must first run:
+
+```sql
+delete from supabase_migrations.schema_migrations where version = '20260802120000';
+```
+
+The rehearsal procedure hides this because it moves the migration file aside and applies through `psql`.
+
+Two smaller notes: README step 8 says the re-apply report "must be identical to the first apply" — the
+counts are, but `personal_case_ids` are freshly minted UUIDs each time (zero overlap), so an operator
+should not read that as a failure. And the repo is linked to production, so a bare `npx supabase db push`
+targets the hosted project — every local rehearsal command needs `--local`.
