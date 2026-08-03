@@ -914,6 +914,30 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
         ["outcome_events", evtId],
       ];
 
+      // A REFUSED QUERY AND AN EMPTY RESULT ARE DIFFERENT FACTS, and the first draft of this block
+      // collapsed them: `expect(result.data ?? [], …).toEqual([])` is satisfied by a transport
+      // failure, a typo in the table name, a dropped table, or a 42501, exactly as well as by RLS
+      // doing its job. A fail-closed assertion that passes when the query never ran is not
+      // fail-closed — it is unfalsifiable. Each leg below therefore says which mechanism it saw.
+      //
+      // The two roles legitimately fail closed by DIFFERENT mechanisms, which is why they are not
+      // asserted identically — and the anon half is the reason this rewrite is not cosmetic.
+      //
+      //   * `authenticated` HOLDS a SELECT grant on all eight, so PostgREST runs the query and RLS
+      //     FILTERS the row out. The correct outcome is `error === null` AND zero rows; an error
+      //     there would mean something other than the policy produced the emptiness.
+      //   * `anon` holds no grant at all (spec §4, "anon = —"), so the request is REFUSED before
+      //     any policy is consulted. MEASURED against this stack on 2026-08-03: all eight return
+      //     **HTTP 401 / 42501**, never an empty array. So the old `expect(data ?? [], …)
+      //     .toEqual([])` on this leg was passing on the `?? []` and asserting nothing about
+      //     visibility — it would have passed identically against a dropped table or a typo'd
+      //     name. The denial is real, but the test was not proving it.
+      //
+      // Both mechanisms are fail-closed. The test now records WHICH it saw and rejects an
+      // unexpected error code either way, rather than accepting any falsy result as success.
+      const GRANT_OR_RLS_DENIAL = ["42501", "PGRST301", "PGRST116", "PGRST205"];
+      const anonMechanism: string[] = [];
+
       try {
         for (const [table, id] of targets) {
           // The row exists — asserted through service-role/psql, so "zero rows" below cannot be a
@@ -921,11 +945,29 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
           expect(sqlOne(`select count(*) from public.${table} where id='${id}';`), `${table} seed`).toBe("1");
 
           const asOwner = await userA.client.from(table).select("id").eq("id", id);
-          expect(asOwner.data ?? [], `${table}: invisible even to the case's own student`).toEqual([]);
+          expect(
+            asOwner.error,
+            `${table}: the owner's read must be FILTERED by RLS, not REJECTED — an error here means the emptiness below proves nothing about the policy (got ${asOwner.error?.code}: ${asOwner.error?.message})`,
+          ).toBeNull();
+          expect(asOwner.data, `${table}: invisible even to the case's own student`).toEqual([]);
 
           const asAnon = await anon.from(table).select("id").eq("id", id);
-          expect(asAnon.data ?? [], `${table}: invisible to anon`).toEqual([]);
+          if (asAnon.error) {
+            expect(
+              GRANT_OR_RLS_DENIAL,
+              `${table}: anon was refused, but not by a grant/RLS denial — code ${asAnon.error.code}: ${asAnon.error.message}`,
+            ).toContain(asAnon.error.code);
+            expect(asAnon.data ?? [], `${table}: a refused anon read must also carry no rows`).toEqual([]);
+            anonMechanism.push(`${table}=refused(${asAnon.error.code})`);
+          } else {
+            expect(asAnon.data, `${table}: invisible to anon`).toEqual([]);
+            anonMechanism.push(`${table}=empty`);
+          }
         }
+
+        // Whichever mechanism fired, it fired for all eight — a table that behaved differently from
+        // its seven siblings is a finding, not a detail, and this is what surfaces it in the log.
+        expect(anonMechanism, "anon fail-closed mechanism, per table").toHaveLength(targets.length);
 
         // And it cannot be created through an authenticated client either: `with check` on the
         // insert-granted tables refuses a NULL owner for the same reason (NULL is not TRUE).

@@ -467,7 +467,7 @@ not each state them differently.**
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; **surrogate `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`**; composite PK dropped; `owner` nullable |
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | PK `(owner, program_id)` |
-| **Uniqueness after** | `UNIQUE (case_id, program_id)` — **full, not partial; the `onConflict` arbiter for `upsertProgramState`, so it cannot be partial** (MV-155 §E; rule 1 above) **+** MV-156's interim `UNIQUE (owner, program_id) WHERE owner IS NOT NULL`, which **must also be dropped at MV-160** (§9.4) |
+| **Uniqueness after** | `UNIQUE (case_id, program_id)` — **full, not partial; the `onConflict` arbiter for `upsertProgramState`, so it cannot be partial** (MV-155 §E; rule 1 above) **+** MV-156's interim `UNIQUE (owner, program_id)` — **FULL, not partial. AMENDED 2026-08-03; this cell previously read `WHERE owner IS NOT NULL`, which is UNEXECUTABLE as an arbiter.** `lib/matches/repo.ts:28` drives `upsertProgramState` with a bare `onConflict: "owner,program_id"`, and PostgREST's bare `on_conflict=` cannot infer a PARTIAL index (Postgres infers one only when the statement itself supplies the predicate) — so the partial form raises **42P10** on a live request for the whole MV-156 → MV-157 window. The predicate bought nothing anyway: **NULLs are distinct in a unique index**, so the full form already permits unlimited NULL-owner rows, which is the only thing the predicate was there to allow. Same failure as rule 1, on the owner axis. **Must also be dropped at MV-160** (§9.4) |
 | **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the UPSERT-seam definer trigger **qualified `when (new.owner is not null)`** — rule 2 above); **MV-156 (PK replacement — a PK column cannot be nullable; this is not an `alter column`)**; MV-157 (`onConflict` string move); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), UPDATE(all), DELETE. |
 | **Grants after** | SELECT(all) · **INSERT (owner, program_id, status, notes, case_id)** · **UPDATE (owner, program_id, status, notes)** · DELETE. `case_id` is **in** the INSERT list and **out** of the UPDATE list — the asymmetry in MV-155 §H, and it is deliberate: INSERT creates a row (bounded by `WITH CHECK`), UPDATE re-points one. **AMENDED 2026-08-03 — this cell previously read `UPDATE (status, notes)`, which is UNEXECUTABLE; see §12 and the note below.** |
@@ -510,7 +510,7 @@ not each state them differently.**
 | **Target Stage 2 shape** | `+ case_id uuid NOT NULL REFERENCES cases(id) ON DELETE RESTRICT`; **surrogate `id uuid PRIMARY KEY`**; composite PK dropped; `owner` nullable |
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | PK `(owner, kind)` |
-| **Uniqueness after** | `UNIQUE (case_id, kind)` — **full, not partial; the `onConflict` arbiter for `setObtained`** (rule 1 above) **+** MV-156's interim `UNIQUE (owner, kind) WHERE owner IS NOT NULL`, which **must also be dropped at MV-160** (§9.4) |
+| **Uniqueness after** | `UNIQUE (case_id, kind)` — **full, not partial; the `onConflict` arbiter for `setObtained`** (rule 1 above) **+** MV-156's interim `UNIQUE (owner, kind)` — **FULL, not partial. AMENDED 2026-08-03; this cell previously read `WHERE owner IS NOT NULL`, which is UNEXECUTABLE as an arbiter, and here it is not hypothetical:** `lib/documents/status-repo.ts:36` drives `setObtained` with a bare `onConflict: "owner,kind"` and `app/api/documents/status/route.ts` calls it on the **authenticated** client **today**, so the partial form would have taken the live document checklist down with **42P10** the day MV-156 applied — not at some future flip. PostgREST's bare `on_conflict=` cannot infer a partial index. The predicate bought nothing: NULLs are distinct in a unique index, so the full form already permits unlimited NULL-owner rows. **Must also be dropped at MV-160** (§9.4) |
 | **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the definer trigger **qualified `when (new.owner is not null)`** — rule 2 above); **MV-156 (PK replacement)**; MV-157 (`setObtained` `onConflict`); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), UPDATE(all), DELETE. |
 | **Grants after** | SELECT(all) · **INSERT (owner, kind, obtained, case_id)** · **UPDATE (owner, kind, obtained)** · DELETE. **AMENDED 2026-08-03 — this cell previously read `UPDATE (obtained)`, which is UNEXECUTABLE; see §12 and the note below.** |
@@ -841,16 +841,30 @@ drop list.**
 ### 9.4 `[D]` MV-156's PK replacements create two more owner-keyed uniques that MV-160 does not know about.
 
 MV-156 §33-34 replaces the PKs on `user_program_state` and `document_status` with surrogate `id`
-columns and preserves the legacy rule as:
+columns and preserves the legacy rule as — **AMENDED 2026-08-03, these are the names and shapes that
+actually shipped**:
 ```
-unique index … (owner, program_id) where owner is not null
-unique index … (owner, kind)       where owner is not null
+create unique index user_program_state_owner_program_idx on public.user_program_state (owner, program_id);
+create unique index document_status_owner_kind_idx      on public.document_status      (owner, kind);
 ```
-Those are **owner-keyed unique indexes on migrated tables**. MV-160 §D's assertion forbids them and
-MV-160 §D's drop list does not name them. Either the assertion or the drop list must move. **Resolved
-here: add both to MV-160's drop list** (they are superseded by MV-155 §E's
-`UNIQUE (case_id, program_id)` / `UNIQUE (case_id, kind)` once `case_id` is NOT NULL). Recorded in
-§4.4 and §4.6.
+**Both are FULL. This paragraph previously wrote them `where owner is not null`, and that form is
+unexecutable in this codebase** — it is rule 1 again, arriving on the **owner** axis one slice later.
+`lib/documents/status-repo.ts:36` (`setObtained`, `onConflict: "owner,kind"`, driven by
+`app/api/documents/status/route.ts` on the **authenticated** client today) and `lib/matches/repo.ts:28`
+(`upsertProgramState`, `onConflict: "owner,program_id"`) both name these indexes as `ON CONFLICT`
+arbiters. PostgREST's bare `on_conflict=` emits a plain column list, and Postgres infers a **partial**
+unique index as an arbiter only when the statement itself supplies the index predicate — so the
+partial form raises **42P10** at runtime, on a live request, for the whole MV-156 → MV-157 window.
+Measured in both directions in a rolled-back transaction: partial → 42P10, full → both branches
+succeed. **The predicate was never load-bearing:** NULLs are distinct in a unique index, so the FULL
+form already permits unlimited NULL-owner rows, which is the only behaviour the predicate was
+proposed to buy.
+
+Either way they are **owner-keyed unique indexes on migrated tables**. MV-160 §D's assertion forbids
+them and MV-160 §D's drop list did not name them. Either the assertion or the drop list must move.
+**Resolved here: add both to MV-160's drop list, BY THE NAMES ABOVE and with no predicate** (they are
+superseded by MV-155 §E's `UNIQUE (case_id, program_id)` / `UNIQUE (case_id, kind)` once `case_id` is
+NOT NULL). Recorded in §4.4, §4.6 and §10.1 R1.
 
 ### 9.5 `[B]` board.json's MV-156 summary states the compensating check MV-156 explicitly rejected.
 
@@ -872,6 +886,20 @@ would write `alter table … drop constraint program_predictions_case_id_not_nul
 
 **Correct shape, for the record:** `check (owner is not null or case_id is not null)`, named
 `<table>_ownership_axis_present`, on **all eight** tables (MV-156 §45).
+
+**DISCHARGED 2026-08-03.** The board summary was rewritten in `13c62b2` and now states the disjunct as
+what ships, with the rejected `check (case_id is not null)` named only as the rejected draft and the
+"no scan-free flip" consequence stated. Anything still asserting this item is out of date — including
+MV-156's own migration comment, which was corrected in the same pass that wrote this line.
+
+**BUT THE SAME SUMMARY ACQUIRED A NEW STALE CLAIM, AND IT IS THE ONE MV-156 ITSELF INVALIDATED.**
+board.json's MV-156 summary said the two PK replacements each need *"a **partial** unique on the
+legacy pair, and MV-160 must drop those two **partial** uniques as well"*. MV-156 shipped **FULL**
+uniques for the 42P10 reason in §9.4, so an agent reading the board would hunt for a predicate that is
+not in the catalog and would carry the unexecutable shape forward into MV-157 or MV-160. **Corrected
+2026-08-03 in the same field**; no other field of board.json was touched. The lesson §9.4 already
+carried is now twice-demonstrated: a correction that lands only in a migration comment, a Decision log
+and a PR body does not reach the next slice, because the next slice reads the board and the spec.
 
 ### 9.6 `[R]` Every dossier's anonymous-assessment figures are stale; there are currently **zero** anonymous rows.
 
@@ -974,7 +1002,7 @@ schema.
 
 | # | Undo | Valid predecessor state (what must be true before this script runs) | Failure if run out of order |
 |---:|---|---|---|
-| **R1** | **MV-160** — **FIRST, re-create MV-159's policy set with the transitional owner disjunct restored** (MV-160 §D removes it as step (d) of its apply, so the undo puts it back — and it must go back *before* the column is re-widened: a pure case predicate over re-widened nullable rows makes a case-less row invisible to its own owner, silently, for the length of the window); then re-widen `case_id` to nullable on the eight; drop the `assessments` CHECK; **re-create** the eight `_ownership_axis_present` checks; re-create `UNIQUE (id, owner)` ×3, then the two legacy composite FKs `(prediction_id, owner)` / `(attempt_id, owner)`, then `outcome_events_attempt_id_owner_idx`; re-create the four legacy owner uniques (`profiles_owner_key`, `assessments_primary_idx`, `plan_items_kind_open_idx`, `documents_owner_kind_key`) **and** the two from §9.4; restore the narrowed `reject_prediction_update()` body | Stage 2 fully applied. **Re-creating a `unique (id, owner)` requires no duplicate `(id, owner)` pairs and no NULL owners in those rows** — true only if Stage 3 has written nothing. | Re-create the FKs before their unique targets → `42830`. Re-widen `case_id` **without** re-creating `_ownership_axis_present` → the MATCH SIMPLE hole reopens **silently**; nothing complains. This is the one step whose misordering does not fail loudly. |
+| **R1** | **MV-160** — **FIRST, re-create MV-159's policy set with the transitional owner disjunct restored** (MV-160 §D removes it as step (d) of its apply, so the undo puts it back — and it must go back *before* the column is re-widened: a pure case predicate over re-widened nullable rows makes a case-less row invisible to its own owner, silently, for the length of the window); then re-widen `case_id` to nullable on the eight; drop the `assessments` CHECK; **re-create** the eight `_ownership_axis_present` checks; re-create `UNIQUE (id, owner)` ×3, then the two legacy composite FKs `(prediction_id, owner)` / `(attempt_id, owner)`, then `outcome_events_attempt_id_owner_idx`; re-create the four legacy owner uniques (`profiles_owner_key`, `assessments_primary_idx`, `plan_items_kind_open_idx`, `documents_owner_kind_key`) **and** the two from §9.4 — `user_program_state_owner_program_idx (owner, program_id)` and `document_status_owner_kind_idx (owner, kind)`, **FULL, with NO `where owner is not null` predicate. AMENDED 2026-08-03:** this row used to say only "the two from §9.4" while §9.4 quoted the partial form, so an unwind written from this table would have re-created an index PostgREST's bare `on_conflict=` cannot infer and taken the live document checklist down with **42P10** — re-introducing, during a rollback, the exact defect MV-156 corrected on the way in. Re-create them by the shapes MV-156 shipped, not by the shapes it was told to ship; restore the narrowed `reject_prediction_update()` body | Stage 2 fully applied. **Re-creating a `unique (id, owner)` requires no duplicate `(id, owner)` pairs and no NULL owners in those rows** — true only if Stage 3 has written nothing. | Re-create the FKs before their unique targets → `42830`. Re-widen `case_id` **without** re-creating `_ownership_axis_present` → the MATCH SIMPLE hole reopens **silently**; nothing complains. This is the one step whose misordering does not fail loudly. |
 | **R2** | **MV-159** — re-apply the **pre-Stage-2 (legacy owner)** policy set verbatim (the reverse migration MV-159 §"Reversibility" holds in its PR); drop the new `private` helpers (`actor_case_ids`, `assessment_case_id`, `prediction_case_id`, `attempt_case_id`) | R1 done. Policy-only, so exact and instant. | Dropping a helper while a policy still references it → `2BP01`. Drop policies **first**, helpers second. |
 | **R3** | **MV-158** — revert the claim path to the owner-only bind | R2 done. Any assessment claimed under the case model keeps a valid `owner`, so no data repair is needed — **this is only true because MV-158 binds `owner` and `case_id` in one statement**. If it ever regressed to two statements, R3 needs a repair pass for owned-but-case-less rows. | Reverting the code while MV-159's case-only policies are still live hides claimed assessments from their owners. |
 | **R4** | **MV-157** — revert repositories/routes to `.eq("owner", …)`; restore the service-role exception registry entries that flipped | R3 done, **and MV-159 reverted (R2) so the owner-only predicate still authorizes**. Code-only: MV-157 ships no migration. | Reverting repositories while MV-159's policies are live = every read returns 0 rows for a case-scoped actor. |
@@ -1158,3 +1186,38 @@ D-A work item 1 is satisfied for the current schema.
   cases()` now returns `personal_case_ids` in its report and `supabase/rehearsal/README.md` makes
   capturing it a numbered apply step. R6's "six rewritten tables" is corrected to **seven** in the
   same pass, and its cascade into `case_assignments` / `invitations` is noted.
+- **2026-08-03** — **§4.4, §4.6, §9.4 and §10.1 R1 were WRONG about MV-156's two replacement uniques,
+  and are amended to the shape that shipped: `user_program_state_owner_program_idx (owner, program_id)`
+  and `document_status_owner_kind_idx (owner, kind)`, both FULL, neither carrying
+  `WHERE OWNER IS NOT NULL`.** Discovered by MV-156's builder while implementing the PK replacements,
+  by measurement rather than reasoning — the same way MV-155's builder found the `UPDATE` grant cells.
+  **This is §4 rule 1 arriving on the OWNER axis one slice later, and the mechanism is identical:**
+  Postgres infers a PARTIAL unique index as an `ON CONFLICT` arbiter only when the statement itself
+  supplies the index predicate, PostgREST's `on_conflict=` emits a bare column list, and the privilege
+  of naming the index belongs to code that is live **today** and that MV-157 has not yet re-pointed —
+  `lib/documents/status-repo.ts:36` `setObtained` (`onConflict: "owner,kind"`, driven by
+  `app/api/documents/status/route.ts` on the **authenticated** client) and `lib/matches/repo.ts:28`
+  `upsertProgramState` (`onConflict: "owner,program_id"`). The partial form therefore raises **42P10**
+  at runtime, on a live request, for the whole MV-156 → MV-157 window; the document checklist would
+  have gone down the day MV-156 applied. Probed in both directions against this project's own Postgres
+  in a rolled-back transaction: partial → 42P10, full → both the INSERT and the DO UPDATE branch
+  succeed. **The predicate was never load-bearing** — NULLs are distinct in a unique index, so the FULL
+  form already permits unlimited NULL-owner rows, which is the only behaviour the predicate was
+  proposed to buy; both stated verifications (23505 on a duplicate non-null pair, two NULL-owner rows
+  accepted) hold unchanged and are pinned in `tests/integration/owner-nullable-rebase.itest.ts` §J.
+  **The §10.1 R1 correction is the one with teeth:** that row's unwind said "the two from §9.4" while
+  §9.4 quoted the partial form, so unwinding Stage 2 from this table would have *re-created* the
+  broken shape mid-rollback. **Also corrected in the same pass:** MV-160 §D's drop list (which named
+  the partial form), MV-160 §D's "re-keyed onto `case_id`" description of the two PK replacements
+  (nothing was re-keyed onto `case_id` — a `case_id`-keyed PK is impossible while `case_id` is
+  nullable, which is MV-160's own job to change, so a surrogate `id` was the only available shape),
+  and board.json's MV-156 `summary`, whose "partial unique" wording was the newly-stale claim §9.5's
+  discharged item left behind. Recorded here under §1 rule 3.
+- **2026-08-03** — **§1 rule 3 is now an explicit, per-card acceptance criterion on every remaining
+  Stage 2 slice, because stating it once in this file did not work twice running.** MV-155 and MV-156
+  each had a builder correctly discover this spec was wrong, correctly ship the right thing, and
+  correctly report it — in a Decision log and a PR body, and **not** in this file. Both times the
+  amendment had to be made afterwards by a reviewer, and in MV-156's case the un-amended cell was one
+  a rollback would have executed. Prose in §1 is read once at the start of a slice; an unticked
+  acceptance criterion is read at the end, when the contradiction is actually known. MV-157, MV-158,
+  MV-159 and MV-160 now each carry the criterion verbatim, and MV-154 carries it as a stage-level rule.

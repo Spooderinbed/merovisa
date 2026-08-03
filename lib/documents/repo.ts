@@ -5,9 +5,25 @@ import type { DocumentKind } from "./types";
 
 type DB = SupabaseClient<Database>;
 
+// Row shape returned to callers. `owner` is nullable from MV-156 on: a consultancy case has no Auth
+// user, so a `documents` row can legitimately carry `case_id` and no `owner`.
+//
+// This interface is NOT derived from `Database["public"]["Tables"]["documents"]["Row"]` — every read
+// below launders its result through an `as DocumentRow` cast, so `owner: string` was a claim
+// TypeScript had no way to check and the MV-156 types regen could not surface. That is exactly the
+// shape of hidden non-null assertion this card's criterion bans, and `lib/documents/repo.ts:10` is
+// named in it; widening the field is that criterion discharged. No caller reads `row.owner` today
+// (the reads all filter `.eq("owner", userId)` server-side), so nothing downstream moves — which is
+// the point: a cast was holding a nullable column behind a non-null type with no consumer pressure
+// to notice. Re-keying these reads onto `case_id` is MV-157.
+//
+// The WRITE-side `owner: string` parameters below (`insertDocument`, `upsertDocument`) stay non-null
+// deliberately: both are called only from the authenticated upload path, where an owner always
+// exists, and widening them would invite a NULL-owner insert that no Stage 2 policy authorizes.
+// A consultancy upload path is Stage 4 (spec §8), not this card.
 export interface DocumentRow {
   id: string;
-  owner: string;
+  owner: string | null;
   kind: DocumentKind;
   file_path: string;
   file_size: number;

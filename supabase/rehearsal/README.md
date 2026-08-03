@@ -15,7 +15,7 @@ rehearsal rather than merely written: a written rollback that was never run is a
 | `MV-155-counts.sql` | The before/after snapshot: per-table row counts, `case_id` fill, the reconciliation call, and the column-grant surface. Runs unchanged against the pre-migration, post-migration and post-rollback states. |
 | `MV-156-rollback.sql` | The MV-156 unwind, ordered per spec §10.1 **R5**. Fail-closed with four guards; needs **no** `-v` flag, because every one of its expiries is a fact about the database rather than about the codebase. |
 | `MV-156-counts.sql` | MV-156's DATA fingerprint — row counts, both ownership axes, whole-row and `updated_at` md5s, and row identity. Must be **byte-identical at every capture point**, because MV-156 writes no row data. |
-| `MV-156-catalog.sql` | MV-156's SCHEMA capture — columns (with ordinals), constraints, indexes, triggers, column grants and policies for the eight. The pre-apply capture vs the post-rollback capture is what turns "the rollback ran" into "the rollback restored". |
+| `MV-156-catalog.sql` | MV-156's SCHEMA capture — columns (with ordinals), constraints, indexes, triggers, column grants and policies for the **nine** student-owned tables. The pre-apply capture vs the post-rollback capture is what turns "the rollback ran" into "the rollback restored". **Widened from eight to nine on 2026-08-03** so it covers `assessments`: MV-156's "`assessments` is untouched" criterion was not something an eight-table capture could ever have falsified. |
 
 ## Running the MV-155 rehearsal
 
@@ -103,18 +103,30 @@ PSQL="docker exec -i supabase_db_merovisa psql -U postgres -d postgres -tAX -v O
    `diff catalog.before.txt catalog.postrollback.txt` — **it must be empty.** That is what catches a
    rollback which restores the composite primary keys but forgets to drop the surrogate `id`
    columns: that unwind exits without error and leaves a *third* schema shape.
+
+   **7a. Clear the bookkeeping row — the rollback's one fail-open residue, and it is a numbered step
+   for that reason.** `MV-156-rollback.sql` restores the schema and asserts that it did, but it does
+   **not** touch `supabase_migrations.schema_migrations`. On any database where MV-156 was applied
+   through `supabase db push`, the history row for `20260803120000` outlives the unwind: the history
+   then says *applied* while the catalog says *not applied*, and nothing in the system notices they
+   disagree. Two consequences, and the second is the one that bites a human: `supabase db push`
+   silently no-ops on a re-apply, and `supabase migration list` tells an operator the opposite of
+   the truth at exactly the moment they are deciding whether it is safe to proceed.
+
+   ```sql
+   delete from supabase_migrations.schema_migrations where version = '20260803120000';
+   ```
+
+   Run it **immediately after the rollback commits**, not only when you intend to re-apply. It is a
+   harmless no-op in the rehearsal itself — this procedure applies through `psql` with the migration
+   file moved aside, so no row was ever written — which is precisely why the gap is easy to miss
+   here and expensive to miss in production. Same class of manual-step-at-the-point-of-use that
+   MV-155's `personal_case_ids` capture is (step 4a).
 8. **Re-apply** step 4. Roll forward, roll back, roll forward again — a rollback tested in only one
    direction has not been tested. Expect **one** benign difference against the first apply: the
    re-added surrogate `id` lands at the next attnum (`user_program_state` 8 → 9, `document_status`
    6 → 7), because the dropped column left a gap. Four tables in this schema already carry such
    gaps; see the note at the foot of `MV-156-rollback.sql`.
-
-**If you rollback and then want `supabase db push` to re-apply**, delete the bookkeeping row first —
-the same gap MV-155 recorded:
-
-```sql
-delete from supabase_migrations.schema_migrations where version = '20260803120000';
-```
 
 ## Applying MV-155 to production
 
@@ -185,6 +197,176 @@ exception — means **do not proceed**; investigate before any Stage 2 slice is 
 
 Then record, on the card: the captured `personal_case_ids` array, the counts script's output, and the
 wall clock.
+
+## Applying MV-156 to production
+
+**Founder-gated. Nothing in this section is an agent action.** It exists because MV-156 is the
+**higher-consequence apply of the two** — MV-155 added columns and updated rows; MV-156 **replaces
+two primary keys, changes the foreign-key topology of the outcomes chain, and rewrites two tables** —
+and until this section existed the higher-consequence apply was the one with no written path.
+
+### The command, and why it is atomic
+
+```bash
+npx supabase link --project-ref obfvrxixtautamflzxzq   # once
+npx supabase db push
+```
+
+Identical mechanism to MV-155, and the atomicity was **measured** there, not assumed — see
+§"Applying MV-155 to production" above for the experiment and its two-row result table. The same
+three consequences carry:
+
+- The file carries **no `begin;`/`commit;`**, deliberately. `supabase db push` submits it as one
+  multi-statement simple query, which Postgres runs as a single **implicit transaction**; an inner
+  `commit` would end that early and leave a half-applied schema the migration history does not know
+  about. MV-156 is the file where that matters most: a half-apply that stopped after the PK drop
+  and before the PK add leaves `user_program_state` with **no primary key at all**.
+- `set lock_timeout = '10s'` is a plain `set`, not `set local`, for the 25P01 reason recorded above.
+  **Read the lock note in the migration header before applying:** two of the eight tables are
+  REWRITTEN under `ACCESS EXCLUSIVE` (the surrogate `id` has a VOLATILE default) and the other six
+  take the same lock for `drop not null`. The work is sub-millisecond at 12 and 0 rows; what the
+  timeout bounds is the **wait to acquire**, behind which every reader of the shortlist and the
+  document checklist would queue. A `55P03 lock_not_available` is the migration doing its job —
+  retry it, do not raise the timeout.
+- **Statement-by-statement application is not acceptable** — no Studio SQL editor, no paste, no
+  `psql` without `--single-transaction`. If a different path is ever used, it is one explicit
+  transaction plus the bookkeeping row by hand, exactly as spelled out for MV-155:
+
+  ```bash
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction \
+    -f supabase/migrations/20260803120000_stage2_owner_nullable_case_fk_rebase.sql
+  psql "$DATABASE_URL" -c "insert into supabase_migrations.schema_migrations (version) \
+    values ('20260803120000');"
+  ```
+
+### Before the push
+
+1. **The rehearsal against the founder's real dump has happened and is recorded on the card**, dated
+   before this apply (MV-154's reversibility doctrine). The corpus rehearsal is not a substitute.
+2. **Capture the pre-apply baseline from PRODUCTION**, not from the rehearsal host:
+   `psql "$DATABASE_URL" -tAX -f supabase/rehearsal/MV-156-counts.sql  > prod.data.before.txt`
+   `psql "$DATABASE_URL" -tAX -f supabase/rehearsal/MV-156-catalog.sql > prod.catalog.before.txt`
+   Without these the post-apply comparison below cannot be performed, only guessed at — and
+   `prod.catalog.before.txt` is also the only thing a rollback can be verified against.
+3. **Confirm MV-155 is applied and reconciled:** `select private.mv155_assert_case_backfill();`
+   must report CLEAN, and `case_id` must be non-null on every row of the three chain tables. MV-156
+   cannot create its `unique (id, case_id)` targets otherwise.
+
+### Verify the apply was COMPLETE, not merely error-free
+
+Atomicity means a failure leaves nothing behind; it does not prove the operator ran the whole file.
+**Run this immediately after the push** — it asserts and raises rather than printing, so a partial
+or wrong apply is a loud failure rather than something to eyeball:
+
+```sql
+do $$
+declare
+  v_problems text[] := '{}';
+  v_n int;
+begin
+  -- 1. owner is nullable on exactly the eight
+  select count(*) into v_n from information_schema.columns
+   where table_schema='public' and column_name='owner' and is_nullable='YES'
+     and table_name in ('profiles','plan_items','user_program_state','documents','document_status',
+                        'program_predictions','application_attempts','outcome_events');
+  if v_n <> 8 then v_problems := v_problems || format('owner nullable on %s of 8 tables', v_n); end if;
+
+  -- 2. all eight compensating checks exist AND are VALIDATED (convalidated, not merely present)
+  select count(*) into v_n from pg_constraint
+   where contype='c' and convalidated and conname like '%\_ownership\_axis\_present';
+  if v_n <> 8 then v_problems := v_problems || format('%s of 8 validated _ownership_axis_present checks', v_n); end if;
+
+  -- 3. the new case chain: 3 unique targets + 2 composite FKs, then their 2 covering indexes
+  select count(*) into v_n from pg_constraint
+   where conname in ('program_predictions_id_case_id_key','application_attempts_id_case_id_key',
+                     'outcome_events_id_case_id_key','application_attempts_prediction_id_case_id_fkey',
+                     'outcome_events_attempt_id_case_id_fkey');
+  if v_n <> 5 then v_problems := v_problems || format('%s of 5 case-chain objects', v_n); end if;
+  select count(*) into v_n from pg_indexes where schemaname='public'
+   and indexname in ('application_attempts_prediction_id_case_id_idx','outcome_events_attempt_id_case_id_idx');
+  if v_n <> 2 then v_problems := v_problems || format('%s of 2 covering indexes', v_n); end if;
+
+  -- 4. THE 42P10 CANARY. Both replacement uniques must exist and be FULL — indpred IS NULL. A
+  --    partial one cannot be inferred by PostgREST's bare on_conflict= and takes the live document
+  --    checklist down on the next request. This is the check that would have caught the defect the
+  --    builder found by measurement; it is here so a future re-cut cannot reintroduce it silently.
+  select count(*) into v_n from pg_index i join pg_class c on c.oid = i.indexrelid
+   where c.relname in ('user_program_state_owner_program_idx','document_status_owner_kind_idx')
+     and i.indisunique and i.indpred is null;
+  if v_n <> 2 then v_problems := v_problems || format('%s of 2 replacement uniques are FULL unique indexes', v_n); end if;
+
+  -- 5. both primary keys are the surrogate id
+  if (select pg_get_constraintdef(oid) from pg_constraint
+       where conrelid='public.user_program_state'::regclass and contype='p')
+     is distinct from 'PRIMARY KEY (id)'
+  then v_problems := v_problems || 'user_program_state PK is not PRIMARY KEY (id)'; end if;
+  if (select pg_get_constraintdef(oid) from pg_constraint
+       where conrelid='public.document_status'::regclass and contype='p')
+     is distinct from 'PRIMARY KEY (id)'
+  then v_problems := v_problems || 'document_status PK is not PRIMARY KEY (id)'; end if;
+
+  -- 6. the LEGACY owner chain is still fully intact — MV-156 drops none of it; MV-160 does
+  select count(*) into v_n from pg_constraint
+   where conname in ('program_predictions_id_owner_key','application_attempts_id_owner_key',
+                     'outcome_events_id_owner_key','application_attempts_prediction_id_owner_fkey',
+                     'outcome_events_attempt_id_owner_fkey');
+  if v_n <> 5 then v_problems := v_problems || format('legacy owner chain is %s of 5', v_n); end if;
+
+  if array_length(v_problems, 1) > 0 then
+    raise exception 'MV-156 apply verification FAILED: %', array_to_string(v_problems, '; ');
+  end if;
+  raise notice 'MV-156 apply verification: COMPLETE';
+end;
+$$;
+```
+
+Then, in this order:
+
+1. **Data must be untouched.** Re-run the counts script and `diff prod.data.before.txt` — **empty**.
+   MV-156 writes no row data; the two table rewrites exclude the surrogate `id` from the fingerprint
+   precisely so this comparison stays meaningful. A non-empty diff means the `ADD COLUMN` rewrite
+   fired `set_updated_at` or MV-155's `_derive_case_id` seam trigger, which is a defect.
+2. **Catalog diff, read line by line.** Re-run the catalog script and diff. Expect **48 lines, all
+   intended**: 8 `owner` `NO → YES` flips, 8 checks, 5 new uniques, 2 composite FKs, 2 covering
+   indexes, 2 surrogate columns, 2 PK swaps. **Nothing under `assessments`, no policy line, and no
+   `INSERT`/`UPDATE`/`DELETE` column-grant line** — `SELECT` legitimately gains the two new
+   surrogate `id` columns because it is a table-level grant. Anything else is a finding.
+3. **Smoke the two live upsert paths — this is the one failure the catalog cannot show you.** Open
+   the document checklist as a real signed-in student and toggle one item
+   (`app/api/documents/status/route.ts` → `setObtained`), then add a program to the shortlist
+   (`app/api/shortlist/route.ts` → `upsertProgramState`). Both compile to
+   `INSERT … ON CONFLICT DO UPDATE` against the replacement uniques. A **42P10** here means an
+   arbiter is not inferrable and check 4 above should have caught it; treat it as an incident and
+   roll back rather than "fixing forward".
+4. **Advisors.** Re-run the Supabase performance advisor: `unindexed_foreign_keys` must be silent.
+   Two new composite FKs mean two required covering indexes, and `20260620010000` exists only
+   because that was missed once already on this exact chain.
+5. **Record on the card:** the wall clock, the two diffs, the advisor result, and the smoke result.
+
+Anything other than `MV-156 apply verification: COMPLETE` — including a raised exception — means
+**do not proceed**, and no Stage 2 slice merges until it is understood.
+
+### Rolling MV-156 back in production
+
+`supabase/rehearsal/MV-156-rollback.sql`, run through `psql -v ON_ERROR_STOP=1`. It is one
+transaction, it refuses rather than half-runs (four guards plus an in-transaction post-condition
+block), and it needs no `-v` flag. Two things the script cannot do for you:
+
+1. **Delete the bookkeeping row, immediately after it commits.** The rollback restores the schema
+   and does not touch the migration history, so the history says applied while the catalog says
+   otherwise:
+
+   ```sql
+   delete from supabase_migrations.schema_migrations where version = '20260803120000';
+   ```
+
+2. **Diff the catalog against `prod.catalog.before.txt`.** "The rollback ran" and "the rollback
+   restored" are different claims and only the diff proves the second.
+
+**The hard expiry is real and it is not far away:** step 6 re-applies `SET NOT NULL` to `owner`, which
+succeeds only while no NULL-owner row exists. The first consultancy row Stage 3 writes ends that
+permanently, and the recovery path becomes a restore from backup (spec §10.2). Guard 2 refuses with
+the table names and the count rather than letting Postgres raise a bare `23502`.
 
 ## Why the corpus exists, and what it does not prove
 

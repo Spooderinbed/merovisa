@@ -20,9 +20,30 @@
 --
 -- ============================ ITS PREDECESSOR, AND ITS EXPIRY ============================
 --
--- VALID PREDECESSOR STATE: MV-156 applied, MV-157 NOT yet merged. Running it against any other
--- state either fails loudly or — the dangerous case — succeeds and leaves an unenforced schema.
--- Guards 0-2 below check the state rather than trusting the operator.
+-- VALID PREDECESSOR STATE: **MV-156 applied and MV-160 not applied**, with no NULL-owner row and no
+-- duplicate legacy pair. Running it against any other state either fails loudly or — the dangerous
+-- case — succeeds and leaves an unenforced schema. Guards 0-3 below check exactly those four facts
+-- rather than trusting the operator; every one of them is queryable, which is the whole reason this
+-- script needs no `-v` flag (see below).
+--
+-- RECONCILED 2026-08-03 — this line used to read "MV-156 applied, MV-157 NOT yet merged", and then
+-- claimed the guards check that state. THEY DO NOT, AND THEY CANNOT: whether MV-157 has merged is a
+-- fact about the CODEBASE, and the paragraph below correctly says this script checks only facts about
+-- the DATABASE. The two halves contradicted each other. The resolution is that **MV-157's merge is
+-- not part of this script's predicate at all**, and here is why, so nobody re-adds it:
+--   * MV-157 ships NO MIGRATION (spec §9.7, MV-157 §F). It touches no object this script drops,
+--     restores or re-creates, so nothing here becomes invalid when it merges.
+--   * What MV-157's merge DOES expire is R6 — MV-155's blanket personal-case delete, because after
+--     MV-157 a live create-or-resolve path mints cases that a blanket delete would destroy. That
+--     expiry is guarded where it lives: `MV-155-rollback.sql` refuses without an explicit
+--     `-v mv157_merged`, and its non-destructive path needs the `personal_case_ids` array captured
+--     at apply time. Running R5 → R6 after MV-157 is therefore still possible; it is R6 that changes
+--     shape, not R5.
+--   * Spec §10.1 lists R5's predecessor as "R4 done" — i.e. MV-157's *code* reverted — because that
+--     table describes the full reverse sweep, not this file's runnable precondition. Reverting the
+--     code is an operator step above this script, and the consequence of skipping it is stated
+--     there: repositories that still write `case_id`-only rows will trip Guard 2 on the next attempt
+--     rather than corrupt anything. Loud, not silent.
 --
 -- WHAT THIS SCRIPT DOES TO ITS PREDECESSOR'S ROLLBACK, STATED BECAUSE IT IS EASY TO MISS:
 -- `supabase/rehearsal/MV-155-rollback.sql` EXPIRED THE MOMENT MV-156's MIGRATION APPLIED. Its own
@@ -336,11 +357,30 @@ commit;
 -- column NAME rather than `ordinal_position` — a comparison written against ordinals would go red
 -- on any database that had ever been rolled back and re-applied, for no real reason.
 --
--- IF YOU INTEND TO RE-APPLY MV-156 rather than continue unwinding, note the operational gap MV-155
--- recorded and this script inherits: nothing here deletes the `supabase_migrations.schema_migrations`
--- row, so `npx supabase db push` sees the migration as already applied and SILENTLY NO-OPS. Run
+-- THE ONE FAIL-OPEN RESIDUE IN AN OTHERWISE FAIL-CLOSED UNWIND — STATED AS SUCH, 2026-08-03, RATHER
+-- THAN AS A RE-APPLY FOOTNOTE. Everything above refuses rather than guesses: four guards before the
+-- first drop, a post-condition block inside the transaction that aborts the whole unwind if the
+-- schema is not exactly the post-MV-155 shape. **None of it touches the migration bookkeeping.** When
+-- this script commits after a `supabase db push` apply, `supabase_migrations.schema_migrations` still
+-- carries the row for `20260803120000` while the schema no longer carries MV-156 — the history says
+-- applied, the catalog says not. That divergence is silent, and it has two distinct consequences:
+--
+--   1. `npx supabase db push` sees the migration as already applied and SILENTLY NO-OPS, so a
+--      re-apply appears to succeed and changes nothing.
+--   2. Anything that reads the history to decide what state the database is in — including a human
+--      running `supabase migration list` before deciding whether it is safe to proceed — is told the
+--      opposite of the truth.
+--
+-- The row is NOT deleted here on purpose: this file is a script, not a migration, it is run against
+-- databases that never had the row (the rehearsal applies through psql with the migration file moved
+-- aside, so there is nothing to delete), and a DELETE against another project's bookkeeping table is
+-- not a thing a rollback should do without the operator knowing. So it is the operator's step, and it
+-- is written at every point of use rather than only here — `supabase/rehearsal/README.md` §"Running
+-- the MV-156 rehearsal" step 7 and §"Rolling MV-156 back in production" both carry it as a numbered
+-- action, which is the discipline MV-155 established for its own manual apply-time step:
 --
 --     delete from supabase_migrations.schema_migrations where version = '20260803120000';
 --
--- first. The rehearsal procedure hides this because it applies through psql with the migration file
--- moved aside.
+-- Run it IMMEDIATELY after this script commits, not later and not only when you intend to re-apply.
+-- Leaving it is the same class of gap MV-155's rehearsal surfaced: a true statement about the schema
+-- and a false one about the history, with nothing in the system that notices they disagree.

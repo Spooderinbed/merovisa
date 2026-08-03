@@ -121,8 +121,18 @@ create index outcome_events_attempt_id_case_id_idx
 -- insertPrediction/insertAttempt/insertEvent, `lib/outcomes/freeze.ts`, and
 -- `app/api/outcomes/{prediction,attempt,event}/route.ts`). `check (case_id is not null)` therefore
 -- raises 23514 on every one of them, from the moment this migration applies until MV-157 deploys —
--- a window this card does not control. board.json's MV-156 summary still states that rejected shape;
--- spec §9.5 records it as stale. This is the shape that ships.
+-- a window this card does not control. This is the shape that ships.
+--
+-- CORRECTED 2026-08-03 — this comment named the wrong stale claim, and the one that WAS stale is the
+-- one this migration itself invalidated. board.json's MV-156 summary NO LONGER states the rejected
+-- `check (case_id is not null)`: it was rewritten in 13c62b2 and now names the disjunct as what ships
+-- and the CHECK only as the rejected draft, so spec §9.5 is DISCHARGED, not outstanding. What that
+-- same summary DID still state — until this PR — is that the two PK replacements below leave "a
+-- PARTIAL unique on the legacy pair … and MV-160 must drop those two partial uniques as well". §5
+-- ships them FULL, for the 42P10 reason spelled out there, so that was the live falsehood: an agent
+-- reading the board would look for a predicate that is not in `pg_index.indpred` and would carry the
+-- unexecutable shape into MV-157 or MV-160. Corrected in the board summary, in spec §4.4/§4.6/§9.4/
+-- §9.5/§10.1 R1, and in MV-160 §D, in the same PR as this comment.
 --
 -- What the disjunct forbids is EXACTLY the one row shape no chain covers — both axes NULL — which is
 -- the MATCH SIMPLE hole from §2. An owner-set / case-less row is still structurally enforced by the
@@ -130,10 +140,25 @@ create index outcome_events_attempt_id_case_id_idx
 -- refused, and a row owned by nothing — invisible to every RLS policy, reached by no cascade,
 -- deletable only by service_role — becomes unrepresentable.
 --
--- `not valid` then `validate constraint` is the card's prescribed two-step. Every existing row has
--- `owner` set, so validation cannot fail here; the point is that the end state is a VALIDATED
--- constraint (`convalidated = true`) reached through the idiom that does not hold ACCESS EXCLUSIVE
--- across the verification scan.
+-- `not valid` then `validate constraint` is the card's prescribed two-step, and every existing row
+-- has `owner` set, so validation cannot fail here. The end state is what matters: a VALIDATED
+-- constraint (`convalidated = true`) on all eight.
+--
+-- CORRECTED 2026-08-03 — this comment previously claimed the split reaches that state "through the
+-- idiom that does not hold ACCESS EXCLUSIVE across the verification scan". IT BUYS NO LOCK RELIEF
+-- HERE, and claiming otherwise would mislead whoever tunes the production apply. The relief is real
+-- only when the two statements are in SEPARATE transactions: `ADD CONSTRAINT … NOT VALID` takes
+-- ACCESS EXCLUSIVE, and a `VALIDATE CONSTRAINT` in its own later transaction downgrades to SHARE
+-- UPDATE EXCLUSIVE, which readers and writers do not block on. This file is ONE implicit transaction
+-- (see the header), so the ACCESS EXCLUSIVE taken by the `ADD` is held until COMMIT and the
+-- verification scan runs underneath it — exactly as a plain `add constraint … check (…)` would.
+--
+-- The split is RETAINED anyway, and the reason is not lock behaviour: (a) there is no cheaper form
+-- available inside a single transaction, so it costs nothing; (b) it is the shape the card and spec
+-- §10.1 R1 both name, and the rollback re-creates these checks the same way, so the forward and
+-- reverse scripts read as mirrors; (c) if this migration is ever re-cut for a table large enough
+-- that the scan matters, splitting the file at this point is then a one-line change rather than a
+-- rewrite. What actually bounds the lock at this scale is `lock_timeout` plus 39 rows, not the idiom.
 --
 -- CONSEQUENCE ACCEPTED AND HANDED TO MV-160: because this is not `check (case_id is not null)`,
 -- MV-160's `SET NOT NULL` on `case_id` has no matching validated check to skip its verification scan
