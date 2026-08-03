@@ -426,7 +426,8 @@ not each state them differently.**
 | **Owner/case invariant** | §3, plus the anonymous carve-out: `owner IS NULL ⇒ case_id IS NULL`. A successful `SET NOT NULL` here means the anonymous rows were destroyed — treat as failure. |
 | **Uniqueness before** | `assessments_primary_idx UNIQUE (owner) WHERE is_primary` |
 | **Uniqueness after** | `+ UNIQUE (case_id) WHERE is_primary` — the `is_primary` predicate is the **domain** rule and stays; `AND case_id IS NOT NULL` is dropped (rule 1); not an `onConflict` arbiter (MV-155 §E), **both** live until MV-160 — the MV-158 interlock (a partial unique treats NULLs as distinct; swapping early makes two primaries per case insertable) |
-| **Slice ownership** | MV-155 (`case_id`, **lookup** index `(case_id) WHERE case_id IS NOT NULL` — partial by design, it keeps anonymous rows out and is never an `ON CONFLICT` arbiter — backfill, anonymous rows left case-less); MV-158 (claim writes `owner` + `case_id` + `claimed_at` in **one** statement); MV-159 (policies); MV-160 (CHECK, drop `assessments_primary_idx`) |
+| **Slice ownership** | MV-155 (`case_id`, **lookup** index `(case_id) WHERE case_id IS NOT NULL` — partial by design, it keeps anonymous rows out and is never an `ON CONFLICT` arbiter — backfill, anonymous rows left case-less); MV-158 (claim writes `owner` + `case_id` + `claimed_at` in **one** statement; **plus `healAssessmentCase`, the F2 repair for an owned row with a NULL `case_id`, added 2026-08-03** — it is the RUNTIME half of the same reconciliation MV-160 §B does in bulk, scoped `owner = caller AND case_id IS NULL` so it can never re-point an already-bound row); MV-159 (policies); MV-160 (CHECK, drop `assessments_primary_idx`) |
+| **Claimed ⇒ owned, asserted 2026-08-03 (MV-158)** | MV-160 §B's CHECK also covers `claimed_at`-set rows, and MV-155's repair sweep only repairs *owned* rows — so a claimed-but-`owner`-NULL row would abort that tighten migration against live data. The claim path was *believed* to always set `owner`; nothing asserted it. It is now proved for **every** successful leg (Google-shaped session, email-OTP session with no display name, re-claim of the caller's own row) plus a corpus-level assertion that zero such rows exist, in `tests/integration/claim-path.itest.ts`. |
 | **Grants before** | `authenticated`: **SELECT only.** |
 | **Grants after** | **Unchanged — SELECT only.** MV-155 §H correctly excludes this table. |
 | **Role × verb** | SELECT: O/A/C/S = **S2** · anon = — · INSERT / UPDATE / DELETE: **S3 (grant)** for every role. Anonymous assessment creation, refresh, and claim are and remain **service-role**. |
@@ -592,6 +593,23 @@ Recorded so a reviewer can tell an omission from an oversight.
 - **The six Stage-1 tenancy tables** get no column, no policy edit, no grant edit. The only Stage-1
   object Stage 2 touches is `public.cases`, which gains `cases_personal_student_idx`
   (`UNIQUE (student_user_id) WHERE organization_id IS NULL`) in MV-155 §A.
+  - **ADDED 2026-08-03 (MV-157), because it constrains which client every caller must hand the
+    resolver, and nothing in this file said it: an AUTHENTICATED client CANNOT create a personal
+    case.** `cases_insert_admin` is the only INSERT policy on `cases`, and its `WITH CHECK` requires
+    `organization_id IS NOT NULL` — so a student inserting their own organization-less personal case
+    is refused **`42501 new row violates row-level security policy`**. Measured against this
+    project's own Postgres in a rolled-back transaction, not reasoned; pinned in
+    `tests/integration/case-data-access.itest.ts` §"personal case resolution".
+    **Consequences, so the next slice does not re-derive them.** (1) `ensurePersonalCase` must be
+    handed a **service-role** client, and its two Stage 2 callers are exactly the already-registered
+    `sanctioned` account-linking exceptions (`lib/auth/finish-sign-in.ts`, plus `app/api/assess`
+    and the dev harness) — so go-forward personal-case creation adds **no new service-role call
+    site**. (2) No page and no ordinary route can create one; they call the read-only
+    `resolvePersonalCaseId` and treat a null as "no rows yet". (3) `cases_personal_student_idx` is
+    **partial**, so `ensurePersonalCase` is a read-then-insert-then-re-read that treats `23505` as a
+    resolve — an upsert against a partial index is not an inferrable `ON CONFLICT` arbiter and would
+    raise `42P10` (§4 rule 1, same mechanism). (4) **This is a policy fact, so widening it is
+    MV-159's decision to take or refuse, not MV-157's** — Stage 2 changed no policy.
 - **`leads`, `universities`, `programs`** — untouched. `leads` is deny-all by design.
 - **Every cell of `2026-08-02-stage1-canonical-access-matrix.md`** — unmoved. If a Stage 1 suite needs
   an edit to stay green, Stage 2 moved a cell and is wrong.
@@ -948,6 +966,38 @@ Seven names for eight repositories. Minor, but it is the kind of unverifiable co
 had to strip from a gate criterion (three different assertion counts for one gate). Either name the
 eighth or drop the number.
 
+**SETTLED 2026-08-03 by MV-157's builder, by counting the shipped diff rather than the prose. The
+number is SEVEN, and the seven names already listed are the complete set:**
+`lib/profiles/repo.ts` · `lib/assessments/repo.ts` (read side only — the write side is MV-158's) ·
+`lib/plan/repo.ts` · `lib/matches/repo.ts` · `lib/documents/repo.ts` ·
+`lib/documents/status-repo.ts` · `lib/outcomes/repo.ts`. There is no eighth repository; MV-157 §B's
+own header ("all eight modules") carries the same off-by-one and is corrected on the card. What the
+"8" appears to have absorbed is the ORCHESTRATOR layer above the repos — `lib/plan/invalidate.ts`,
+`lib/outcomes/freeze.ts`, `lib/outcomes/on-apply.ts`, `lib/assessments/re-score.ts`,
+`lib/journey/signals.ts` — which is five modules, not one, and which §B already lists separately.
+**Drop the number rather than inventing an eighth.** board.json itself is NOT edited in this PR
+(the builder was instructed to leave the generated board alone); this correction is handed to the
+integrator with the rest of the board move.
+
+### 9.8a `[D]` MV-157 §D enumerates ELEVEN Server Components and omits a twelfth case-scoped reader.
+
+`app/(app)/layout.tsx` — the signed-in chrome — calls `getJourneySignals`, which fans out to six
+case-scoped repository reads (primary assessment, profile, documents, plan, outcomes, shortlist) on
+**every** signed-in page render. It is not on §D's list, and it is not on §C's route list either,
+because it is neither.
+
+Found by MV-157's builder when the compiler did **not** flag it: `getJourneySignals(supabase, string)`
+still type-checked after the rename, because the parameter changed meaning from `userId` to `caseId`
+without changing type. That is Risk 3's hazard on an orchestrator rather than an `onConflict` string,
+and it is the reason MV-157 renames repositories but could not rename every orchestrator.
+
+**Canonical: twelve case-scoped Server Components, the twelfth being `app/(app)/layout.tsx`.** It
+resolves and authorizes exactly like a page, and degrades to *no journey marker* rather than a
+redirect on a null case or a denial — wayfinding chrome must never be the thing that decides a
+student cannot see their own app. The same sweep caught `app/api/outcomes/prediction/route.ts`,
+which IS on §C's list but whose call to `freezePredictionForProgram(db, userId, programId)` likewise
+still compiled; both are fixed in this PR.
+
 ### 9.9 `[R]` MV-159 states the anon safety net for `documents`; the same reasoning does **not** hold for `storage.objects`.
 
 MV-159 §24 is correct that on `public.documents` the `PUBLIC`-role policies are covered because
@@ -1213,6 +1263,31 @@ D-A work item 1 is satisfied for the current schema.
   nullable, which is MV-160's own job to change, so a surrogate `id` was the only available shape),
   and board.json's MV-156 `summary`, whose "partial unique" wording was the newly-stale claim §9.5's
   discharged item left behind. Recorded here under §1 rule 3.
+- **2026-08-03** — **MV-157 + MV-158 (one PR): four amendments, all found by measurement, none of
+  which contradicted a §4 cell — which is itself worth recording, because it means the per-table
+  matrix survived first contact with the code that has to satisfy it.** What this file was missing
+  was one policy fact and two counts.
+  **(a) §5 — an AUTHENTICATED client cannot create a personal case.** `cases_insert_admin`'s
+  `WITH CHECK` requires `organization_id IS NOT NULL`, so a student inserting their own
+  organization-less case is refused `42501`. Probed in a rolled-back transaction. It is the fact
+  that decides which client every caller hands `ensurePersonalCase`, and it was nowhere in this
+  file — §5 said only that `cases` gains an index. Recorded with its four consequences, including
+  that widening it is **MV-159's** call to take or refuse, since Stage 2 changes no policy.
+  **(b) §9.8 — the repository count is SEVEN, settled by counting the diff.** There is no eighth
+  repository; the "8" appears to have absorbed the five-module orchestrator layer that §B already
+  lists separately. board.json is deliberately NOT edited in that PR (the builder was instructed to
+  leave the generated board alone) and the correction is handed to the integrator.
+  **(c) §9.8a — MV-157 §D enumerates eleven Server Components and there are TWELVE.**
+  `app/(app)/layout.tsx` reads six case-scoped repositories on every signed-in render.
+  **The way it was found is the transferable part:** the compiler did not flag it, because
+  `getJourneySignals(supabase, string)` still type-checks when the parameter changes meaning from
+  `userId` to `caseId` without changing type. MV-157's rename discipline (`…ForUser` → `…ForCase`)
+  makes the compiler enumerate REPOSITORY call sites; it does nothing for orchestrators whose
+  scoping argument is a bare `string`. `app/api/outcomes/prediction/route.ts` was caught by the same
+  sweep. **Stage 3 should expect this class again** — a positional `string` scoping argument is
+  invisible to a rename.
+  **(d) §4.2 — the claimed ⇒ owned invariant is now ASSERTED, not believed**, and `healAssessmentCase`
+  is added to that table's slice ownership as the runtime half of MV-160 §B's bulk reconciliation.
 - **2026-08-03** — **§1 rule 3 is now an explicit, per-card acceptance criterion on every remaining
   Stage 2 slice, because stating it once in this file did not work twice running.** MV-155 and MV-156
   each had a builder correctly discover this spec was wrong, correctly ship the right thing, and

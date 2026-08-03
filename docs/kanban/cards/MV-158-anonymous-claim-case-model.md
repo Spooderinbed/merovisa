@@ -165,7 +165,131 @@ Locally: `npx supabase start`, then export `SUPABASE_TEST_URL`, `SUPABASE_TEST_S
 - 2026-08-02 — **`already-mine` heals a case-less row rather than only landing the student.** This is the runtime remedy for anything claimed in the MV-157→MV-158 window; the bulk remedy is MV-160's reconciliation sweep, which is now an explicit ordered step in **MV-160 §B** (re-run `private.mv155_backfill_personal_cases()`, then assert) rather than an assumption this card makes about a sibling. Without it, a student in that window has to re-run a claim that already "succeeded" and still sees nothing.
 - 2026-08-02 — **No `requireCasePermission` call on the claim path.** The claimer is the data subject and the row has no owner until this path runs, so there is no case to authorize against yet — the conditional-update predicate is the gate, as it already is for the anonymous-recovery read (MV-28). Recorded explicitly so a reviewer running MV-151's Stage 3 checklist sees a decision rather than an omission.
 
+- 2026-08-03 — **Builder: `googleName` is DELETED, not renamed.** The risk note offered
+  `displayName` as an in-file tidy. Taking the verified `User` object removes the parameter
+  altogether, which is strictly better: a provider-shaped value cannot drift if there is no
+  provider-shaped value. `email` goes the same way — both are now read off the session inside the
+  function, so all four entry points pass the same one thing.
+- 2026-08-03 — **Builder: the FIRST version of the "exactly one primary under both keys" itest was
+  green against the WRONG implementation, and the mutation check is the only reason that is known.**
+  Scoping the demote to `case_id` alone passed every case, because owner ↔ personal case is 1:1 in
+  Stage 2 and the two demotes therefore select identical rows. The discriminating fixture is an
+  owned, `is_primary` row with a NULL `case_id` — precisely the residue F2 heals — which a
+  case-scoped demote cannot see, leaving the promote to trip the surviving owner-keyed index. That
+  case now exists by name and the mutation goes red on it. **The general lesson, worth carrying to
+  MV-159/MV-160: while owner and case are 1:1, an assertion phrased "under both keys" proves nothing
+  by itself — the fixture has to break the 1:1 for the two keys to disagree.**
+- 2026-08-03 — **Builder: the derivation tests passed on first run and were mutation-verified rather
+  than presented as TDD.** §A puts the signature in MV-157's first commit deliberately ("no widening
+  step"), so the derivation existed before the tests this card owns. Recorded plainly instead of
+  implying a red-green cycle that did not happen; two mutations (empty fallback, dropped `name`
+  rung) confirm the cases bite.
+- 2026-08-03 — **Builder: the release-train argument was OBSERVED, not just asserted.** At MV-157's
+  commit alone, two `claim-path.itest.ts` cases are red for exactly the reason §J predicts. Left in
+  MV-157's commit message as evidence rather than smoothed over by reordering the commits.
 - 2026-08-02 — **Integrator: assert the invariant MV-160 relies on — a claimed assessment always has a non-null `owner`.** MV-160 §B applies a CHECK to `assessments` that also covers `claimed_at`-set rows, and MV-155's repair sweep only repairs *owned* rows. If a claimed-but-`owner`-null row can exist, that `SET NOT NULL`/CHECK aborts the tighten migration against live data. The claim path is believed to always set `owner` — believed, because no card asserts it. This card owns the claim path, so this card asserts it: add a real-DB test proving that **every** successful claim leg (Google, email OTP, and re-claim of the caller's own row) leaves `owner` non-null whenever `claimed_at` is set, and a query-level assertion that zero such rows exist in the seeded corpus. If a leg is found that can produce one, that is a finding for MV-160's sweep, not something to paper over here.
 
 ## Done evidence
-(pending)
+
+**Branch `mv-157-158-case-aware-access`, commit 2 of 2 (`05cde96`), on top of MV-157 (`4ab7a18`). ONE PR, per §J.**
+
+### Gate (combined branch)
+`npm run typecheck` clean · `npm run lint` clean · `npm test` **2526/2526** ·
+`npm run test:integration` **649/649** against a local stack · `npm run build` clean.
+
+### The release train, demonstrated rather than argued
+At MV-157's commit **in isolation**, two cases in `tests/integration/claim-path.itest.ts` were RED:
+the assessment reads had moved to `case_id` while the claim path still wrote `owner` only. That is
+precisely the production window §J forbids, reproduced on the branch. MV-158's commit turns them
+green. It is recorded here because it is the strongest available evidence that "MV-157 may merge
+ahead" was never executable.
+
+### §A — resolution and derivation
+`ensurePersonalCase` is consumed, not re-implemented; this card added **no** resolver. What it owns
+is the derivation, and its tests: `tests/cases/personal-case.test.ts` grew from 10 to 18 cases —
+`full_name` → `name` → email local-part → `"MeroVisa student"`, an email-OTP session with no name
+yielding neither `""` nor `"undefined"`, Google and email sessions agreeing on identical fields, and
+`email` from `user.email`.
+
+**The derivation tests passed on first run**, because the signature and the derivation shipped in
+MV-157's commit exactly as §A requires ("this is the signature from the first commit — there is no
+widening step"). Since they therefore drove nothing, they were **mutation-verified**: setting the
+fallback to `""` turns 2 red; deleting the `user_metadata.name` rung turns 1 red. Both restored.
+
+The `{ displayName, email }` "ignored" test is **deleted, not rewritten**, and replaced by a
+`@ts-expect-error` type-level assertion — `npm run typecheck` fails if the signature ever widens
+enough to accept the bag.
+
+### §B/§D — atomicity and the demote, and where the first version of this evidence was WRONG
+`claimAssessment` sets `owner`, `case_id` and `claimed_at` in one `.update()`; the unit test asserts
+`updates).toHaveLength(1)`, because "one statement" is only observable as a call count.
+
+The demote satisfies both live predicates in one statement:
+`.or("owner.eq.<uid>,case_id.eq.<cid>").eq("is_primary", true)`.
+
+**Mutation check, first attempt: the mutation did NOT go red.** Scoping the demote to `case_id`
+alone passed all 12 itest cases, because owner ↔ personal case is 1:1, so both demotes select
+exactly the same rows. The "exactly one primary under both keys" assertions were green against the
+**wrong** implementation — they could not tell the two apart.
+
+The row that separates them is an **owned, `is_primary` row carrying no `case_id`** — the exact
+residue F2 exists to heal, and the only thing a case-scoped demote cannot see. That fixture is now
+the named case *"THE DEMOTE MUST SATISFY BOTH KEYS"*. Re-run: correct implementation **13/13**;
+demote scoped to `case_id` only → **1 failed, 12 passed**, on that case. Restored, 13/13.
+
+### §E — the MV-135 landmine
+`lib/assessments/purge.ts` is **untouched** and keyed on `owner is null`. Three new unit tests pin
+it: an owned `case_id`-null row is refused by the guard; an unclaimed case-less expired row is still
+purged; the scan never issues `.is("case_id", …)`. **Mutation-verified**: re-keying the predicate to
+`case_id is null` turns 7 tests red including *"refuses an OWNED row whose case_id is null"*.
+Restored, 15/15. Two real-DB cases cover the same ground through the actual purge job.
+
+### §F — every recovery leg
+| Leg | Reason | Destination / status | Covered |
+|---|---|---|---|
+| F1 `already-mine` (case intact) | `already-mine` | `/assessment/{id}`, 200 | unit + itest; no re-bootstrap, no duplicate lead, no second case |
+| F2 `already-mine` (case-less) | `already-mine` **+ heal** | `/assessment/{id}` | unit + itest — the row's `case_id` is repaired to the caller's case |
+| F3 `claimed` | `claimed` | `/assess?error=claimed`, 409 | unit + itest — B's attempt on A's row writes nothing |
+| F4 resolution/bind failure | `error` | `/assess?error=claim-failed`, 503 | unit — and `claimAssessment` is never called |
+| F5 purged / expired | `expired` | `/assess?error=expired`, 410 | unit + itest through the real purge job |
+
+`ClaimFailureReason` and `lib/auth/claim-error.ts` changed **only by addition** — in fact by nothing:
+`error` already existed; this card gave it a second producer.
+
+### §G — provider parity
+All four entry points converge on one `claimAndBootstrapProfile`, and the parameter is now the
+verified session `User`, so there is no provider-shaped value to fork on. `googleName` — a
+Google-only name on a parameter three providers use — is **deleted** rather than renamed (the card's
+risk note offered `displayName`; removing it entirely is strictly better). `tests/auth/finish-sign-in.test.ts`
+still asserts a Google and an email session resolve identically.
+
+### The invariant MV-160 depends on — ASSERTED
+Real-DB test *"THE MV-160 PRECONDITION"*: every successful leg (Google-shaped session, email-OTP
+session with no display name, re-claim of the caller's own row) leaves `owner` non-null wherever
+`claimed_at` is set, **plus** a corpus-level assertion that zero claimed-but-`owner`-null rows exist.
+**No leg was found that can produce one**, so there is nothing to hand MV-160 as a finding. The
+email-OTP leg additionally asserts its personal case carries a non-empty `display_name` that is not
+the literal `"undefined"`.
+
+### §H/§I
+`tests/integration/claim-path.itest.ts` grew from 5 to 13 cases; `afterAll` now deletes seeded
+`cases` rows in the correct order (owned rows → cases → auth users), since `case_id` FKs are
+`ON DELETE RESTRICT` and `student_user_id` is `ON DELETE SET NULL`. Both account-linking entries in
+`lib/supabase/service-role-exceptions.ts` now describe what the code does — the finish-sign-in
+entry's "Once cases are claimable this path must additionally bind case → Auth user" is replaced —
+and the `auditEvent: null`s are re-justified against `private.write_audit_event`'s revoked EXECUTE
+rather than left stale. Fence **54/54**, no new service-role call site,
+`lib/cases/personal-case.ts` names no service-role key.
+
+### A0
+Spec amended in this PR: §4.2's slice-ownership row gains `healAssessmentCase` and a new
+*"Claimed ⇒ owned"* row, alongside MV-157's §5 / §9.8 / §9.8a amendments and the shared dated §12
+entry. `git diff --stat origin/master -- docs/superpowers/` is non-empty.
+
+### Rollback note (per the risk notes, stated rather than left to the integrator)
+This card ships **application code, no migration**, so it has no rehearsal obligation — but the rows
+it writes at runtime (personal `cases`, `case_id` on assessments and profiles) survive a revert.
+Pre-MV-158 code ignores `case_id`, so the personal student experience keeps working on reverted
+code; the residue is additive and is reconciled by MV-160 §B. **A revert reverts both cards
+together**, which is the other reason the train is the right shape: reverting MV-157 alone would
+leave a case-writing claim path feeding reads that no longer look at `case_id`.
