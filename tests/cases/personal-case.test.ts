@@ -132,3 +132,79 @@ describe("ensurePersonalCase", () => {
     expect(inserts).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// MV-158 §A owns the DERIVATION. MV-157 owns resolution and idempotency above.
+// ---------------------------------------------------------------------------
+describe("ensurePersonalCase — display_name / email derivation", () => {
+  const insertedRow = async (user: Record<string, unknown>) => {
+    const { client, inserts } = fakeCaseDb({ cases: [] });
+    await ensurePersonalCase(user as never, client);
+    return inserts[0]!.row as { display_name: string; email: string | null };
+  };
+
+  it("prefers user_metadata.full_name", async () => {
+    expect(
+      (await insertedRow(sessionUser({ user_metadata: { full_name: "Asha Gurung", name: "asha" } }))).display_name,
+    ).toBe("Asha Gurung");
+  });
+
+  it("falls back to user_metadata.name", async () => {
+    expect(
+      (await insertedRow(sessionUser({ user_metadata: { name: "Asha G" } }))).display_name,
+    ).toBe("Asha G");
+  });
+
+  it("falls back to the email local-part when the session carries no name", async () => {
+    // The email-OTP path: Supabase mints a session with an empty user_metadata,
+    // so this is the ordinary case for every student who did not use Google.
+    expect(
+      (await insertedRow(sessionUser({ user_metadata: {}, email: "asha.gurung@example.com" }))).display_name,
+    ).toBe("asha.gurung");
+  });
+
+  it("falls back to a stable non-empty string when there is nothing at all", async () => {
+    // `cases.display_name` is NOT NULL. Never "", never the literal "undefined".
+    const row = await insertedRow({ id: ACTOR, email: null, user_metadata: null });
+    expect(row.display_name).toBe("MeroVisa student");
+    expect(row.display_name).not.toBe("");
+    expect(row.display_name).not.toBe("undefined");
+  });
+
+  it("never yields an empty string or 'undefined' from blank metadata", async () => {
+    const row = await insertedRow(
+      sessionUser({ user_metadata: { full_name: "   ", name: "" }, email: "  " }),
+    );
+    expect(row.display_name).toBe("MeroVisa student");
+    expect(row.email).toBeNull();
+  });
+
+  it("takes email from user.email", async () => {
+    expect((await insertedRow(sessionUser({ email: "student@example.com" }))).email).toBe("student@example.com");
+  });
+
+  it("a Google session and an email session carrying the same fields agree", async () => {
+    // The derivation reads the `User` object, not the provider, so there is no
+    // provider fork to drift (MV-147: do not fork the claim path).
+    const google = await insertedRow({
+      id: ACTOR, email: "same@example.com", user_metadata: { full_name: "Same Person", provider: "google" },
+    });
+    const email = await insertedRow({
+      id: ACTOR, email: "same@example.com", user_metadata: { full_name: "Same Person", provider: "email" },
+    });
+    expect(google).toEqual(email);
+  });
+
+  it("admits no caller-supplied identity parameter — the TYPE is the proof", () => {
+    // This replaces the deleted "a caller-supplied name or email is ignored"
+    // test, which was unprovable: once identity arrives as two plain strings,
+    // nothing in the function can distinguish a value read off
+    // `supabase.auth.getUser()` from one read off a request body, so that test
+    // could only ever cover the shapes its author imagined. The signature admits
+    // no such shape at all. Any future PR that re-adds a string identity
+    // parameter re-opens this decision.
+    const { client } = fakeCaseDb({ cases: [] });
+    // @ts-expect-error `ensurePersonalCase` takes the verified Supabase User, not a { displayName, email } bag.
+    void ensurePersonalCase({ id: ACTOR, displayName: "Attacker", email: "attacker@example.com" }, client);
+  });
+});

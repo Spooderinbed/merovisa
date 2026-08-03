@@ -120,6 +120,47 @@ describe("purgeUnclaimedAnonymousAssessments — the delete", () => {
     expect(report).toMatchObject({ scanned: 1, purged: 0, skipped: 1 });
   });
 
+  // MV-158 §E — THE CASE MODEL INVITES EXACTLY THE WRONG FIX HERE.
+  //
+  // `case_id is null` looks like the cleaner, more modern predicate and it
+  // selects the same set TODAY. It is wrong, and the two tests below are what
+  // stop it: an OWNED row with a null `case_id` — the residue of a partially
+  // applied claim, or of a row claimed before the claim path learned about cases
+  // — is a converted student's assessment. Re-keying the purge would make it
+  // deletable. `owner is null` stays the load-bearing predicate.
+  it("refuses an OWNED row whose case_id is null — the residue of a partial claim", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const residue = { ...overdue("residue-1", 400), owner: "user-1", case_id: null };
+    const { client, calls } = fakeSupabase([{ data: [residue], error: null }, noRows]);
+
+    const report = await purgeUnclaimedAnonymousAssessments(client, { now: NOW });
+
+    expect(calls.some((c) => c.method === "delete")).toBe(false);
+    expect(report).toMatchObject({ scanned: 1, purged: 0, skipped: 1 });
+  });
+
+  it("still purges an UNCLAIMED, expired, case-less row — retention has not quietly stopped", async () => {
+    const anonymous = { ...overdue("anon-1", 400), owner: null, case_id: null };
+    const { client, calls } = fakeSupabase([
+      { data: [anonymous], error: null },
+      { data: [{ id: "anon-1" }], error: null },
+    ]);
+
+    const report = await purgeUnclaimedAnonymousAssessments(client, { now: NOW });
+
+    expect(calls.some((c) => c.method === "delete")).toBe(true);
+    expect(report).toMatchObject({ scanned: 1, purged: 1, skipped: 0 });
+  });
+
+  it("scans on `owner is null`, never on `case_id is null`", async () => {
+    const { client, calls } = fakeSupabase([noRows, noRows]);
+
+    await purgeUnclaimedAnonymousAssessments(client, { now: NOW });
+
+    expect(calls.some((c) => c.method === "is" && c.args[0] === "owner" && c.args[1] === null)).toBe(true);
+    expect(calls.some((c) => c.method === "is" && c.args[0] === "case_id")).toBe(false);
+  });
+
   it("excludes a candidate that fails the app-layer re-check and counts it as skipped", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     // A row claimed between the scan and the delete — the guard must drop it.

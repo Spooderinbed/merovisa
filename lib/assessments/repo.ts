@@ -43,13 +43,36 @@ export async function createLead(db: DB, input: { email: string; assessmentId: s
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Bind an anonymous assessment to its claimer — `owner`, `case_id` and
+ * `claimed_at` in ONE conditional UPDATE (MV-158 §B).
+ *
+ * THE SINGLE STATEMENT IS THE POINT, not an optimisation. Two sequential updates
+ * would leave, on a crash between them, an OWNED-BUT-CASE-LESS row: no error is
+ * raised, no test fails by default, the student signed in successfully — and
+ * their assessment is simply not on the case-scoped dashboard they land on
+ * seconds later. That silent-loss state is the whole reason this seam was carved
+ * out of MV-157.
+ *
+ * The guard is unchanged in strength. `.is("owner", null)` and
+ * `.gt("expires_at", now)` are not the actor-equals-student predicate MV-157
+ * removed — they are the definition of "an anonymous row that is still
+ * claimable", and on `/api/assess/claim` they ARE the authorization: that route
+ * takes a caller-supplied id and verifies no token, so an already-claimed or
+ * expired row matching nothing is what stops a caller stealing another account's
+ * assessment.
+ */
 export async function claimAssessment(
   db: DB,
-  input: { id: string; userId: string; nowIso: string },
+  input: { id: string; userId: string; caseId: string; nowIso: string },
 ): Promise<boolean> {
   const { data, error } = await db
     .from("assessments")
-    .update({ owner: input.userId, claimed_at: new Date().toISOString() })
+    .update({
+      owner: input.userId,
+      case_id: input.caseId,
+      claimed_at: new Date().toISOString(),
+    })
     .eq("id", input.id)
     .is("owner", null)
     .gt("expires_at", input.nowIso)
@@ -75,6 +98,8 @@ export async function claimAssessment(
  */
 export interface AssessmentClaimState {
   owner: string | null;
+  /** Null on an anonymous row (correct) OR on a claimed row that lost its case write (F2). */
+  caseId: string | null;
   expired: boolean;
 }
 
@@ -85,15 +110,49 @@ export async function getAssessmentClaimState(
 ): Promise<AssessmentClaimState | null> {
   const { data, error } = await db
     .from("assessments")
-    .select("owner, expires_at")
+    .select("owner, case_id, expires_at")
     .eq("id", id)
     .maybeSingle();
   if (error || !data) return null;
-  const row = data as { owner: string | null; expires_at: string };
+  const row = data as { owner: string | null; case_id: string | null; expires_at: string };
   return {
     owner: row.owner,
+    caseId: row.case_id,
     expired: new Date(row.expires_at).getTime() <= new Date(nowIso).getTime(),
   };
+}
+
+/**
+ * Repair an OWNED assessment that carries no `case_id` — MV-158 F2, the runtime
+ * remedy for a row bound before the claim path learned about cases.
+ *
+ * Without it, a student in that state re-runs a claim that already "succeeded",
+ * is told `already-mine`, lands on the assessment — and still sees nothing on the
+ * dashboard, because every case-scoped read filters on a column their row does
+ * not carry. The BULK remedy is MV-160 §B's reconciliation sweep; this is the
+ * one that fires when the student is actually standing there.
+ *
+ * Scoped to `owner = caller AND case_id IS NULL`, so it can only ever repair a
+ * row the caller already owns and can never re-point one that is already bound.
+ * Returns false rather than throwing: a failed repair must not turn a successful
+ * `already-mine` into an error the student sees.
+ */
+export async function healAssessmentCase(
+  db: DB,
+  input: { id: string; userId: string; caseId: string },
+): Promise<boolean> {
+  const { error } = await db
+    .from("assessments")
+    .update({ case_id: input.caseId })
+    .eq("id", input.id)
+    .eq("owner", input.userId)
+    .is("case_id", null)
+    .select("id");
+  if (error) {
+    console.error("[assessments] case heal failed", { id: input.id, error });
+    return false;
+  }
+  return true;
 }
 
 /**

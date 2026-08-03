@@ -80,7 +80,10 @@ describe("POST /api/auth/email/verify", () => {
 
     expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ assessmentId: ASSESSMENT_UUID, userId: "user-1" }),
+      expect.objectContaining({
+        assessmentId: ASSESSMENT_UUID,
+        user: expect.objectContaining({ id: "user-1" }),
+      }),
     );
     expect(await res.json()).toEqual({ redirectTo: `/assessment/${ASSESSMENT_UUID}` });
   });

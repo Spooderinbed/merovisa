@@ -27,11 +27,14 @@ describe("resolveSignInDestination", () => {
     expect(dest).toBe(`/assessment/${ASSESSMENT_UUID}`);
     expect(claimAndBootstrapProfile).toHaveBeenCalledWith(
       expect.anything(),
+      // MV-158: the VERIFIED session object goes in whole. There is no
+      // `userId`, no `googleName` and no `email` parameter — identity is derived
+      // inside `ensurePersonalCase`, which is what makes "no client-supplied
+      // string reaches cases.display_name/email" true by construction rather
+      // than by a test that can only check the shapes it imagined.
       expect.objectContaining({
         assessmentId: ASSESSMENT_UUID,
-        userId: "user-1",
-        googleName: "Aarav",
-        email: "aarav@example.com",
+        user: expect.objectContaining({ id: "user-1", email: "aarav@example.com" }),
       }),
     );
   });
@@ -57,9 +60,12 @@ describe("resolveSignInDestination", () => {
     const [, googleArgs] = claimAndBootstrapProfile.mock.calls[0]!;
     const [, emailArgs] = claimAndBootstrapProfile.mock.calls[1]!;
     expect(emailArgs.assessmentId).toBe(googleArgs.assessmentId);
-    expect(emailArgs.userId).toBe(googleArgs.userId);
-    expect(emailArgs.email).toBe(googleArgs.email);
-    expect(emailArgs.googleName).toBeUndefined();
+    expect(emailArgs.user.id).toBe(googleArgs.user.id);
+    expect(emailArgs.user.email).toBe(googleArgs.user.email);
+    // The email session carries no provider display name — and that is now a
+    // fact about the SESSION, not about a parameter one provider fills in. The
+    // derivation reads the User object, so there is no provider fork to drift.
+    expect(emailArgs.user.user_metadata?.full_name).toBeUndefined();
   });
 
   it("sends the user to /assess?error=expired when the row can no longer be claimed", async () => {

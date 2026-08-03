@@ -90,8 +90,16 @@ export interface ServiceRoleException {
 }
 
 /**
+ * AUDIT WIRING, RE-CHECKED AT MV-157/MV-158 rather than left stale: every
+ * `auditEvent` below is still `null`, and it still means "no audit event is
+ * emissible", not "auditing was skipped". `private.write_audit_event` has EXECUTE
+ * revoked from PUBLIC (MV-150) and Stage 2 adds NO grant — grants are reviewed
+ * once, with the policies, in MV-159 (spec §7.3). The two account-linking entries
+ * are the ones that will want `case.student_linked` the moment that grant lands.
+ *
  * The allow-list. Every entry was read and classified against the file's actual
- * behaviour on 2026-07-30 (MV-151); none is speculative.
+ * behaviour on 2026-07-30 (MV-151) and re-read at MV-157/MV-158; none is
+ * speculative.
  *
  * The ESLint rule extracts the `path:` literals from this array, so keep them as
  * plain double-quoted string literals on their own line.
@@ -109,9 +117,9 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     path: "lib/auth/finish-sign-in.ts",
     status: "sanctioned",
     justification:
-      "Account linking (plan line 342). Claims an anonymous assessment into a freshly created account and bootstraps the profile. The row has no owner until this runs, so an authenticated client under RLS could not see the row it is about to claim.",
+      "Account linking (plan line 342). Claims an anonymous assessment into a freshly created account, creates or resolves the claimer's personal case, and bootstraps the profile. The row has no owner until this runs, so an authenticated client under RLS could not see the row it is about to claim.",
     requiredCaseCheck:
-      "Verifies an HMAC claim token — verifyClaim(params.claim) — before reaching for service-role on the CLAIM branch, and the conditional-update predicate inside claimAssessment is the gate on which row it may bind. MV-157 added the NO-CLAIM branch: it calls ensurePersonalCase(user, admin) to create the signed-in student's personal case go-forward, which needs service-role because cases_insert_admin's WITH CHECK requires organization_id IS NOT NULL and therefore refuses a personal case from the authenticated client. Both branches derive the actor from the verified session object, never from a parameter.",
+      "TWO branches, both service-role, both deriving the actor from the VERIFIED session object rather than a parameter. CLAIM branch: verifyClaim(params.claim) gates entry, then claimAndBootstrapProfile create-or-resolves the personal case (ensurePersonalCase) BEFORE the bind, and the conditional-update predicate inside claimAssessment — id + owner IS NULL + expires_at > now — is what decides which row may be bound. NO-CLAIM branch (MV-157): ensurePersonalCase alone, so a go-forward signup gets the case MV-155 only backfilled for owners that existed at migration time. Service-role is structurally required on both: the row has no owner until the claim runs, so an authenticated client under RLS cannot see the row it is about to claim; and cases_insert_admin's WITH CHECK requires organization_id IS NOT NULL, so the authenticated client cannot create a personal case at all. NO requireCasePermission call, and that is a decision, not an omission (MV-158): the claimer IS the data subject and there is no case to authorize against until this path creates one.",
     auditEvent: null,
   },
   {
@@ -120,7 +128,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Account linking (plan line 342): binds an ownerless anonymous assessment, named by a caller-supplied id, to the signed-in caller. Unlike finish-sign-in.ts this route verifies NO claim token.",
     requiredCaseCheck:
-      "Authenticates via supabase.auth.getUser(); the only authorization is the conditional-update predicate inside claimAssessment (binds an UNCLAIMED, UNEXPIRED row only). That predicate is therefore load-bearing and must not be relaxed — a caller-supplied id alone decides which row is targeted.",
+      "Authenticates via supabase.auth.getUser(); the only authorization is the conditional-update predicate inside claimAssessment (binds an UNCLAIMED, UNEXPIRED row only). That predicate is therefore load-bearing and must not be relaxed — a caller-supplied id alone decides which row is targeted. MV-158 kept it at exactly its old strength while adding case_id to the SAME single UPDATE, and added no second claim mechanism: this route calls the same claimAndBootstrapProfile the sign-in seam does, so the personal-case resolution, the atomic bind and the F1-F5 recovery legs cannot drift between the two entry points.",
     auditEvent: null,
   },
   {

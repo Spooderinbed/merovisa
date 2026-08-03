@@ -46,9 +46,7 @@ describe("GET /auth/callback", () => {
       expect.anything(),
       expect.objectContaining({
         assessmentId: ASSESSMENT_UUID,
-        userId: "user-1",
-        googleName: "Aarav",
-        email: "aarav@example.com",
+        user: expect.objectContaining({ id: "user-1", email: "aarav@example.com" }),
       }),
     );
     expect(res.status).toBe(307);

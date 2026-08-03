@@ -37,6 +37,7 @@ import { purgeUnclaimedAnonymousAssessments, ANON_RETENTION_DAYS } from "@/lib/a
 import { claimAndBootstrapProfile } from "@/lib/assessments/claim";
 import { createAnonymousAssessment, createLead } from "@/lib/assessments/repo";
 import { getProfileForCase } from "@/lib/profiles/repo";
+import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
 import type { Database } from "@/lib/supabase/types";
 
 const url = process.env.SUPABASE_TEST_URL;
@@ -74,6 +75,8 @@ if (url && !isLocalStack(url)) {
 describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postgres", () => {
   let admin: SupabaseClient<Database>;
   let userId: string;
+  /** The verified session object the claim path takes (MV-158). */
+  let sessionUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null };
   // Unique per run so a failed teardown never collides with the next run.
   const email = `mv135-purge-smoke-${Date.now()}@example.test`;
   const seededAssessmentIds: string[] = [];
@@ -118,6 +121,7 @@ describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postg
     const { data, error } = await admin.auth.admin.createUser({ email, email_confirm: true });
     if (error || !data.user) throw new Error(`failed to mint test user: ${error?.message}`);
     userId = data.user.id;
+    sessionUser = data.user;
   });
 
   afterAll(async () => {
@@ -153,7 +157,7 @@ describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postg
   // expires_at, so this row is indistinguishable from an abandoned one on time alone.
   it("keeps a CLAIMED assessment whose expiry is long past", async () => {
     const claimed = await seedAnonymous(0);
-    const { claimed: ok } = await claimAndBootstrapProfile(admin, { assessmentId: claimed, userId, email });
+    const { claimed: ok } = await claimAndBootstrapProfile(admin, { assessmentId: claimed, user: sessionUser });
     expect(ok).toBe(true);
     // Backdate it past every purge threshold — only `owner is null` can save it now.
     const longAgo = new Date(Date.now() - (ANON_RETENTION_DAYS + 365) * MS_PER_DAY).toISOString();
@@ -181,15 +185,18 @@ describe.skipIf(!url || !serviceKey)("anonymous purge against a real local Postg
     try {
       const result = await claimAndBootstrapProfile(admin, {
         assessmentId: doomed,
-        userId: freshUserId,
-        googleName: "Ghost Claimant",
-        email,
+        user: fresh.user!,
       });
       // MV-130 enriched the miss with a classification; a purged row must read
       // as expired — the honest "deleted, not recoverable" signal, never a retry.
       expect(result).toEqual({ claimed: false, reason: "expired" });
       // A failed claim must not leave a half-bootstrapped account behind.
-      expect(await getProfileForCase(admin, freshUserId)).toBeNull();
+      // Asked per CASE now. A personal case IS created before the bind (it is a
+      // per-user singleton the account needs regardless, and creating it is
+      // explicitly not orphaning) — but no profile is bootstrapped, because the
+      // claim never succeeded.
+      const freshCase = await resolvePersonalCaseId(freshUserId, admin);
+      expect(freshCase === null ? null : await getProfileForCase(admin, freshCase)).toBeNull();
       expect(await exists(doomed)).toBe(false);
     } finally {
       await admin.auth.admin.deleteUser(freshUserId);

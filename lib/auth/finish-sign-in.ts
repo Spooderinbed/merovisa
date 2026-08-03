@@ -70,11 +70,15 @@ export async function resolveSignInDestination(
   if (!verified) return "/assess?error=invalid-claim";
   if (!user?.id) return fallback;
 
+  // MV-158: the verified session object goes in whole. There is no `googleName`
+  // and no `email` parameter any more — identity is derived inside, so all four
+  // entry points (Google OAuth, the emailed 6-digit code, the emailed link, and
+  // the recover-in-place endpoint) produce byte-identical results from the same
+  // available data. `claimAndBootstrapProfile` create-or-resolves the personal
+  // case itself, before it touches the row.
   const { claimed, reason } = await claimAndBootstrapProfile(createSupabaseAdminClient(), {
     assessmentId: verified.assessmentId,
-    userId: user.id,
-    googleName: user.user_metadata?.full_name ?? undefined,
-    email: user.email ?? undefined,
+    user,
   });
   if (claimed) return `/assessment/${verified.assessmentId}`;
 
