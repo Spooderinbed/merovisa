@@ -1935,7 +1935,7 @@
     },
     {
       "id": "MV-156",
-      "col": "ready",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-156-owner-nullable-composite-fk.md",
@@ -1946,14 +1946,14 @@
     },
     {
       "id": "MV-157",
-      "col": "backlog",
+      "col": "ready",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-157-case-aware-data-access.md",
       "title": "Case-aware data access: repositories and routes move off actor-equals-student onto case authorization + `case_id` (dual-write)",
       "summary": "Steps 9-10 of the plan's additive migration sequence, and the half of the Stage 2 exit gate that says \"case-scoped repositories no longer depend on actor equals student\". Moves the student-data repositories (profiles, assessments-read, plan, matches/user_program_state, documents, document_status, outcomes orchestrators) and the 15 routes / 11 Server Components above them off the `.eq(\"owner\", userId)` predicate onto a resolved `case_id` + MV-151's `requireCasePermission`, with one writer helper enforcing the dual-write rule (case_id ALWAYS; owner only where the case has a student_user_id, derived from `cases.student_user_id` and never caller-supplied, so the two can never disagree). Ships NO migration: the case-keyed uniqueness indexes are MV-155 §E's — two cards creating the same indexes means one apply fails or is a silent no-op — so what remains here is the application half, moving every PostgREST `onConflict` target onto MV-155's case-scoped indexes and proving each with a real-DB upsert-twice test. Introduces `lib/cases/personal-case.ts` with `ensurePersonalCase(sessionUser, db?)` taking the VERIFIED Supabase User object and deriving display_name/email internally, so no client-supplied identity string can reach `cases`. Also rewrites every `legacy-owner-scoped` entry in MV-151's service-role exception registry: paths whose grants already allow it (shortlist) flip to the authenticated client and leave the list; the rest keep an entry whose `requiredCaseCheck` now names a real case check, with the flip deferred to Stage 3's grant review or Stage 4 Storage. HARD-BLOCKED BY MV-156 (Done before this card starts — it moves the primary keys this card writes repository code against), and SHIPS IN ONE PULL REQUEST WITH MV-158: master is production and Vercel auto-deploys, so merging this card alone creates the owner-set/case_id-null claim window; the combined merge is gated on MV-155's and MV-156's migrations being applied and reconciled on the hosted database. Preserves the personal student experience byte-for-byte (per-repo and per-route equivalence snapshots); the production-shaped before/after regression and the stage exit are MV-160's. Owner NULLABLE + composite-FK rebase (MV-156), case-aware RLS on these tables (MV-159), and the document header/versions replacement (Stage 4) are explicit non-goals.",
       "created": "2026-08-02",
-      "entered": "2026-08-02"
+      "entered": "2026-08-03"
     },
     {
       "id": "MV-158",
