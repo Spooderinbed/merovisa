@@ -13,7 +13,13 @@ export interface PlanItem {
 
 export interface PlanItemRow {
   id: number;
-  owner: string;
+  /**
+   * Nullable from MV-156: a consultancy case has no Auth user, so a plan item can carry `case_id`
+   * and no `owner`. Admitted here rather than asserted away at the mapping site — a `!` would
+   * re-assert "actor equals student" where typecheck can no longer see it. MV-157 re-keys the
+   * repository onto `case_id`.
+   */
+  owner: string | null;
   kind: string;
   impact: Impact;
   title: string;

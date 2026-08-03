@@ -48,7 +48,7 @@ export type Database = {
           id: string
           institution_id: string | null
           intake: string | null
-          owner: string
+          owner: string | null
           prediction_id: string
           program_id: string
         }
@@ -60,7 +60,7 @@ export type Database = {
           id?: string
           institution_id?: string | null
           intake?: string | null
-          owner: string
+          owner?: string | null
           prediction_id: string
           program_id: string
         }
@@ -72,7 +72,7 @@ export type Database = {
           id?: string
           institution_id?: string | null
           intake?: string | null
-          owner?: string
+          owner?: string | null
           prediction_id?: string
           program_id?: string
         }
@@ -83,6 +83,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_attempts_prediction_id_case_id_fkey"
+            columns: ["prediction_id", "case_id"]
+            isOneToOne: false
+            referencedRelation: "program_predictions"
+            referencedColumns: ["id", "case_id"]
           },
           {
             foreignKeyName: "application_attempts_prediction_id_fkey"
@@ -278,23 +285,26 @@ export type Database = {
       document_status: {
         Row: {
           case_id: string | null
+          id: string
           kind: string
           obtained: boolean
-          owner: string
+          owner: string | null
           updated_at: string
         }
         Insert: {
           case_id?: string | null
+          id?: string
           kind: string
           obtained?: boolean
-          owner: string
+          owner?: string | null
           updated_at?: string
         }
         Update: {
           case_id?: string | null
+          id?: string
           kind?: string
           obtained?: boolean
-          owner?: string
+          owner?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -316,7 +326,7 @@ export type Database = {
           id: string
           kind: string
           original_name: string
-          owner: string
+          owner: string | null
         }
         Insert: {
           case_id?: string | null
@@ -326,7 +336,7 @@ export type Database = {
           id?: string
           kind: string
           original_name: string
-          owner: string
+          owner?: string | null
         }
         Update: {
           case_id?: string | null
@@ -336,7 +346,7 @@ export type Database = {
           id?: string
           kind?: string
           original_name?: string
-          owner?: string
+          owner?: string | null
         }
         Relationships: [
           {
@@ -519,7 +529,7 @@ export type Database = {
           id: string
           occurred_at: string
           occurred_on: string | null
-          owner: string
+          owner: string | null
           reason_code: string | null
           recorded_at: string
           source: string
@@ -537,7 +547,7 @@ export type Database = {
           id?: string
           occurred_at: string
           occurred_on?: string | null
-          owner: string
+          owner?: string | null
           reason_code?: string | null
           recorded_at?: string
           source?: string
@@ -555,7 +565,7 @@ export type Database = {
           id?: string
           occurred_at?: string
           occurred_on?: string | null
-          owner?: string
+          owner?: string | null
           reason_code?: string | null
           recorded_at?: string
           source?: string
@@ -564,6 +574,13 @@ export type Database = {
           verified_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "outcome_events_attempt_id_case_id_fkey"
+            columns: ["attempt_id", "case_id"]
+            isOneToOne: false
+            referencedRelation: "application_attempts"
+            referencedColumns: ["id", "case_id"]
+          },
           {
             foreignKeyName: "outcome_events_attempt_id_fkey"
             columns: ["attempt_id"]
@@ -604,7 +621,7 @@ export type Database = {
           impact: string
           kind: string
           lift_estimate: string | null
-          owner: string
+          owner: string | null
           started_at: string | null
           status: string
           time_estimate: string | null
@@ -619,7 +636,7 @@ export type Database = {
           impact: string
           kind: string
           lift_estimate?: string | null
-          owner: string
+          owner?: string | null
           started_at?: string | null
           status?: string
           time_estimate?: string | null
@@ -634,7 +651,7 @@ export type Database = {
           impact?: string
           kind?: string
           lift_estimate?: string | null
-          owner?: string
+          owner?: string | null
           started_at?: string | null
           status?: string
           time_estimate?: string | null
@@ -656,7 +673,7 @@ export type Database = {
           completeness: number
           created_at: string
           id: string
-          owner: string
+          owner: string | null
           sections: Json
           updated_at: string
         }
@@ -665,7 +682,7 @@ export type Database = {
           completeness?: number
           created_at?: string
           id?: string
-          owner: string
+          owner?: string | null
           sections?: Json
           updated_at?: string
         }
@@ -674,7 +691,7 @@ export type Database = {
           completeness?: number
           created_at?: string
           id?: string
-          owner?: string
+          owner?: string | null
           sections?: Json
           updated_at?: string
         }
@@ -693,7 +710,7 @@ export type Database = {
           assessment_id: string
           case_id: string | null
           id: string
-          owner: string
+          owner: string | null
           predicted_at: string
           program_id: string
           rule_version: string
@@ -705,7 +722,7 @@ export type Database = {
           assessment_id: string
           case_id?: string | null
           id?: string
-          owner: string
+          owner?: string | null
           predicted_at?: string
           program_id: string
           rule_version: string
@@ -717,7 +734,7 @@ export type Database = {
           assessment_id?: string
           case_id?: string | null
           id?: string
-          owner?: string
+          owner?: string | null
           predicted_at?: string
           program_id?: string
           rule_version?: string
@@ -879,8 +896,9 @@ export type Database = {
         Row: {
           case_id: string | null
           created_at: string
+          id: string
           notes: string | null
-          owner: string
+          owner: string | null
           program_id: string
           status: string
           updated_at: string
@@ -888,8 +906,9 @@ export type Database = {
         Insert: {
           case_id?: string | null
           created_at?: string
+          id?: string
           notes?: string | null
-          owner: string
+          owner?: string | null
           program_id: string
           status: string
           updated_at?: string
@@ -897,8 +916,9 @@ export type Database = {
         Update: {
           case_id?: string | null
           created_at?: string
+          id?: string
           notes?: string | null
-          owner?: string
+          owner?: string | null
           program_id?: string
           status?: string
           updated_at?: string
