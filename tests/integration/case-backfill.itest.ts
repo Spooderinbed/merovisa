@@ -43,6 +43,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 vi.mock("server-only", () => ({}));
 
@@ -602,38 +603,34 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
     it("adds no RLS policy and changes none on the nine", () => {
       // MV-159 owns policies. This card's diff must show zero policy movement, so the shape is
       // asserted rather than trusted to a `git diff` a reviewer might skim.
-      const policies = sql(`
-        select tablename || '.' || policyname from pg_policies
-         where schemaname = 'public' and tablename in (${NINE.map((t) => `'${t}'`).join(",")})
-         order by 1;
+      //
+      // RE-SCOPED BY MV-159, AND THE RE-SCOPING IS THE POINT. This assertion used to pin the LIVE
+      // `pg_policies` catalogue to the 25 legacy `*_own` policies — which asserted a property of
+      // MV-159's migration (that it had not landed yet) under the name of a property of MV-155's.
+      // It went red the moment MV-159 replaced them, against a correct migration, on a card that
+      // had not touched a policy. What MV-155 actually claims is a fact about its own FILE, so
+      // that is what is asserted now, and it stays true for MV-159, MV-160 and everything after.
+      const migration = readFileSync(
+        new URL("../../supabase/migrations/20260802120000_stage2_case_id_and_personal_cases.sql", import.meta.url),
+        "utf8",
+      )
+        // Strip `--` comments: this file DISCUSSES policies at length (MV-159's WITH CHECK is
+        // where the owner-null bound lives, and §6a says so), and a comment is not DDL.
+        .split(/\r?\n/)
+        .map((line) => line.replace(/--.*$/, ""))
+        .join("\n");
+      expect(migration, "MV-155 creates no policy").not.toMatch(/\bcreate\s+policy\b/i);
+      expect(migration, "MV-155 drops no policy").not.toMatch(/\bdrop\s+policy\b/i);
+      expect(migration, "MV-155 alters no policy").not.toMatch(/\balter\s+policy\b/i);
+      // And RLS itself is untouched: enabling or forcing it is nobody's job here — it was already
+      // enabled AND forced on all nine before Stage 2 began.
+      expect(migration, "MV-155 does not touch row level security").not.toMatch(/row\s+level\s+security/i);
+      const forced = sql(`
+        select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relname in (${NINE.map((t) => `'${t}'`).join(",")})
+           and c.relrowsecurity and c.relforcerowsecurity;
       `);
-      expect(policies).toEqual([
-        "application_attempts.aa_delete_own",
-        "application_attempts.aa_insert_own",
-        "application_attempts.aa_select_own",
-        "assessments.assessments_select_own",
-        "document_status.ds_delete_own",
-        "document_status.ds_insert_own",
-        "document_status.ds_select_own",
-        "document_status.ds_update_own",
-        "documents.Service inserts documents",
-        "documents.Users delete own documents",
-        "documents.Users read own documents",
-        "outcome_events.oe_delete_own",
-        "outcome_events.oe_insert_own",
-        "outcome_events.oe_select_own",
-        "plan_items.plan_items_select_own",
-        "plan_items.plan_items_update_own",
-        "profiles.profiles_select_own",
-        "profiles.profiles_update_own",
-        "program_predictions.pp_delete_own",
-        "program_predictions.pp_insert_own",
-        "program_predictions.pp_select_own",
-        "user_program_state.ups_delete_own",
-        "user_program_state.ups_insert_own",
-        "user_program_state.ups_select_own",
-        "user_program_state.ups_update_own",
-      ]);
+      expect(forced, "RLS stays enabled AND forced on all nine").toEqual(["9"]);
     });
   });
 
@@ -1194,31 +1191,68 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       reconcile();
     });
 
-    it("refuses an authenticated UPDATE that NULLs owner — the same WITH CHECK, and a NOT NULL under it", async () => {
-      // THIS IS THE NON-OBVIOUS HALF, AND IT IS WHY THIS TEST EXISTS SEPARATELY FROM THE ONE ABOVE.
-      // A reader can reasonably expect `with check ((select auth.uid()) = owner)` to catch only a
-      // re-point to a DIFFERENT uid and to let NULL through, since `auth.uid() = null` is NULL
-      // rather than false — which would mean `update (owner, …)` lets a student strip their own
-      // row's owner, and the seam trigger would not fire to stop it because it is qualified
-      // `when (new.owner is not null)`. Traced against the shipped policies: it does not hold.
-      // Postgres admits a row only when a WITH CHECK evaluates to TRUE, and NULL is refused exactly
-      // like FALSE.
+    it("lets an owner NULL their OWN row's owner once the policies are case-aware — MV-159's measured change", async () => {
+      // ===================================================================================
+      // THIS ASSERTION WAS INVERTED BY MV-159, BY MEASUREMENT, AND THE INVERSION IS A FINDING
+      // RATHER THAN A FIX. It previously read "refuses an authenticated UPDATE that NULLs owner",
+      // and it was TRUE of the policy it was written against — the legacy
+      // `ups_update_own` / `ds_update_own`, whose `with check ((select auth.uid()) = owner)`
+      // refuses NULL exactly like FALSE, because Postgres admits a row only on TRUE.
+      //
+      // MV-159 replaces that predicate with
+      //     owner = (select auth.uid()) OR (case_id is not null and case_id = any(actor_case_ids))
+      // and the SECOND branch is TRUE for a row that stays in the actor's own case. So nulling
+      // `owner` on your own row, inside your own case, is now admitted.
+      //
+      // IT IS NOT A HOLE, AND THE THREE REASONS ARE WHY THIS SHIPPED RATHER THAN BEING PATCHED:
+      //  1. THE ROW CANNOT LEAVE THE CASE. `case_id` is in no UPDATE grant, so it is unchanged;
+      //     the row is still scoped to the same case and still invisible to everyone else. The
+      //     assertions below prove that rather than assert it.
+      //  2. THE DANGEROUS DIRECTION IS STILL CLOSED. `owner -> another user` remains 42501: the
+      //     MV-155 §H derive trigger fires `when (new.owner is not null)` and re-derives `case_id`
+      //     onto THAT user's personal case, which is not in this actor's `actor_case_ids()`.
+      //     Pinned by the test immediately above.
+      //  3. IT IS THE END STATE, NOT A TRANSITIONAL WRINKLE. MV-160 drops the owner disjunct and
+      //     leaves a pure case predicate, under which this is equally admitted — because `owner`
+      //     stops being the authorization axis, which is the entire point of Stage 2. Papering
+      //     over it here would need a predicate that READS `owner` outside the one line MV-160
+      //     deletes, and MV-160 §D asserts no predicate reads `owner`.
+      //
+      // What is genuinely lost is PROVENANCE on that one row: `owner … on delete cascade` no
+      // longer reaches it when the Auth user is deleted. Recorded in matrix spec §4.4/§4.6 and
+      // §12, and it is Stage 6's `owner`-column removal that closes the question for good. No
+      // MeroVisa-authored caller can reach it: `lib/supabase/types.ts` types `owner` non-nullable
+      // on both tables (the cast below exists to get past that), and every write goes through
+      // `lib/cases/dual-write.ts`, which derives `owner` and never nulls it.
+      // ===================================================================================
       backfill();
-      // THE CAST IS DELIBERATE AND IS ITSELF PART OF THE FINDING. `lib/supabase/types.ts` types
-      // `owner` as non-nullable on both tables, so TypeScript refuses this payload outright — a
-      // THIRD barrier, and the one a MeroVisa-authored caller meets first. It is also the weakest:
-      // it binds our own code and nothing else, so a hand-rolled PostgREST request from a browser
-      // never sees it. Casting past it is what makes the two runtime barriers below observable.
       const nullOwner = { owner: null } as unknown as { owner: string };
-      const probes: Array<[string, PromiseLike<{ error: { code?: string; message?: string } | null }>]> = [
+      const probes: Array<
+        [string, PromiseLike<{ error: { code?: string; message?: string } | null }>]
+      > = [
         ["user_program_state", userA.client.from("user_program_state").update(nullOwner).eq("owner", userA.id)],
         ["document_status", userA.client.from("document_status").update(nullOwner).eq("owner", userA.id)],
       ];
+      const personalCase = personalCaseOf(userA.id);
       for (const [table, p] of probes) {
         const { error } = await p;
-        expect(error?.code, `${table}: nulling owner must be refused`).toBe("42501");
-        expect(error?.message, `${table}: refused by the policy`).toMatch(/row-level security policy/i);
+        expect(error, `${table}: nulling owner inside one's own case is admitted: ${error?.message}`).toBeNull();
+        // …and the row is still in the SAME case. This is the assertion that makes the change
+        // safe rather than merely observed.
+        expect(
+          sqlOne(`select count(*) from public.${table} where case_id = '${personalCase}' and owner is null;`),
+          `${table}: the row must stay scoped to the case it was already in`,
+        ).toBe("1");
+        expect(
+          sqlOne(`select count(*) from public.${table} where case_id is null;`),
+          `${table}: and it must not have become ownerless on BOTH axes`,
+        ).toBe("0");
       }
+      // Put it back, so the upsert probes that follow meet the fixture they expect. Without this
+      // the orphaned NULL-owner row collides with the case-keyed unique on the next INSERT branch
+      // and the failure lands two tests away from its cause.
+      sql(`update public.user_program_state set owner = '${userA.id}' where case_id = '${personalCase}' and owner is null;`);
+      sql(`update public.document_status set owner = '${userA.id}' where case_id = '${personalCase}' and owner is null;`);
 
       // THE SECOND BARRIER IS GONE, AS DESIGNED — AND THAT IS WHY THIS BLOCK STILL EXISTS.
       //
@@ -1229,21 +1263,19 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       // question silently. MV-156 is that slice: it replaced both primary keys with a surrogate
       // `id` and relaxed the column, because a consultancy case has no Auth user to own its rows.
       //
-      // So this is the moment the pin was written for. The two barriers are now ONE — the WITH
-      // CHECK asserted immediately above is the only thing refusing `owner → NULL` for an
-      // authenticated client, and the tests above have been re-read against that fact rather than
-      // assumed to still hold. They do: Postgres admits a row only when a WITH CHECK evaluates to
-      // TRUE, and `auth.uid() = null` is NULL, which is refused exactly like FALSE. That is a
-      // property of the policy, not of the dropped NOT NULL, so removing the NOT NULL cannot
-      // weaken it.
+      // So this is the moment the pin was written for. The two barriers became ONE at MV-156 —
+      // and at MV-159 the remaining one stopped applying to this direction at all, because the
+      // case branch is TRUE for a row that stays in its own case. THAT IS WHY THE PROBES ABOVE
+      // NOW READ THE OTHER WAY, and why they assert `case_id` is unchanged instead: under the
+      // case model, `owner` is provenance and `case_id` is the boundary.
       //
-      // The assertion is inverted rather than deleted: it now pins the POST-MV-156 shape, so a
-      // rollback or a re-tightening that quietly restores the composite PK also goes red.
+      // The schema half of the pin is kept rather than deleted: it holds the POST-MV-156 shape,
+      // so a rollback or a re-tightening that quietly restores the composite PK still goes red.
       for (const table of ["user_program_state", "document_status"] as const) {
         expect(
           sqlOne(`select is_nullable from information_schema.columns
                    where table_schema='public' and table_name='${table}' and column_name='owner';`),
-          `${table}.owner is nullable from MV-156 on; the WITH CHECK above is now the only barrier`,
+          `${table}.owner is nullable from MV-156 on; the case predicate is now the boundary`,
         ).toBe("YES");
         expect(
           sqlOne(`select count(*) from information_schema.key_column_usage k

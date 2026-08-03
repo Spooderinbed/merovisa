@@ -15,6 +15,8 @@ rehearsal rather than merely written: a written rollback that was never run is a
 | `MV-155-counts.sql` | The before/after snapshot: per-table row counts, `case_id` fill, the reconciliation call, and the column-grant surface. Runs unchanged against the pre-migration, post-migration and post-rollback states. |
 | `MV-156-rollback.sql` | The MV-156 unwind, ordered per spec §10.1 **R5**. Fail-closed with four guards; needs **no** `-v` flag, because every one of its expiries is a fact about the database rather than about the codebase. |
 | `MV-156-counts.sql` | MV-156's DATA fingerprint — row counts, both ownership axes, whole-row and `updated_at` md5s, and row identity. Must be **byte-identical at every capture point**, because MV-156 writes no row data. |
+| `MV-159-rollback.sql` | The MV-159 unwind, ordered per spec §10.1 **R2**: drop the 24 case-aware policies, re-apply the legacy owner set verbatim, then drop the four helpers. One transaction — a table with RLS FORCED and zero policies returns zero rows to every client. Three guards; no `-v` flag; no point of no return. |
+| `MV-159-visibility.sql` | MV-159's rehearsal, and it is a different SHAPE from the two above because the card mutates no data. It captures the set of row ids **visible as each authenticated owner** on each of the nine tables, applies the migration inline, re-captures, and RAISES on any diff. Rolls itself back. |
 | `MV-156-catalog.sql` | MV-156's SCHEMA capture — columns (with ordinals), constraints, indexes, triggers, column grants and policies for the **nine** student-owned tables. The pre-apply capture vs the post-rollback capture is what turns "the rollback ran" into "the rollback restored". **Widened from eight to nine on 2026-08-03** so it covers `assessments`: MV-156's "`assessments` is untouched" criterion was not something an eight-table capture could ever have falsified. |
 
 ## Running the MV-155 rehearsal
@@ -127,6 +129,36 @@ PSQL="docker exec -i supabase_db_merovisa psql -U postgres -d postgres -tAX -v O
    re-added surrogate `id` lands at the next attnum (`user_program_state` 8 → 9, `document_status`
    6 → 7), because the dropped column left a gap. Four tables in this schema already carry such
    gaps; see the note at the foot of `MV-156-rollback.sql`.
+
+## Running the MV-159 rehearsal
+
+MV-159 changes **no data**, so there is no backfill to replay and no row count to compare. What it
+changes is what live users can SEE, and that failure is silent: an RLS SELECT refusal returns zero
+rows and no error, so a wrong predicate does not throw — it makes a real student's assessments
+disappear. The rehearsal is therefore a **visible-row-id diff per owner per table**, and the thing
+that makes it evidence rather than decoration is that every read is issued after
+`set local role authenticated`. Run the same query as `postgres` and BYPASSRLS returns every row of
+every table for every "owner": the diff is empty however wrong the policies are.
+
+1. `npx supabase start`, then `npx supabase db reset`. Every migration applies, MV-159 included.
+2. `docker exec -i <db> psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/rehearsal/MV-159-rollback.sql`
+   — this is what pins the stack at **post-MV-156 / pre-MV-159**. It also exercises the rollback,
+   which is the point: R2 is run for real before the forward script is, not after an incident.
+3. Load `MV-155-rehearsal-corpus.sql` (or the founder-supplied dump in its place), then
+   `select private.mv155_backfill_personal_cases();` so every row carries the `case_id` production
+   has. **Skipping the backfill is the way to get a meaningless green:** with no `case_id`
+   anywhere, every case predicate matches nothing and the transitional owner disjunct carries 100%
+   of the load. `MV-159-visibility.sql`'s guard 0 refuses that state rather than reporting on it.
+4. `... -f - < supabase/rehearsal/MV-159-visibility.sql`. It captures, applies the migration
+   inline, re-captures, prints a per-owner/per-table table, and **raises** on any moved set. Then
+   it rolls back, so the stack is still pre-MV-159 and step 4 can be repeated.
+5. Re-apply for real (`npx supabase db reset`) and run `npm run test:integration`. Roll forward,
+   roll back, roll forward again — a rollback tested in only one direction has not been tested.
+
+**What the rehearsal cannot prove**, same caveat as MV-155's and narrower: the corpus reproduces
+shapes and counts, not the real `sections` / `result` / `profile_snapshot` payloads. No policy in
+MV-159 reads any of those columns, so the gap is smaller here — but the founder-gated dump replay
+is still owed before the production apply.
 
 ## Applying MV-155 to production
 

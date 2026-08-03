@@ -1,0 +1,316 @@
+-- MV-159 — ROLLBACK. This is a SCRIPT, not a migration: it is never applied by
+-- `supabase db push` and it carries no entry in supabase_migrations.
+--
+--   psql -v ON_ERROR_STOP=1 -f supabase/rehearsal/MV-159-rollback.sql
+--
+-- Order is spec §10.1 **R2**, which is authoritative
+-- (docs/superpowers/specs/2026-08-02-stage2-migration-and-access-matrix.md):
+--   1  drop the 24 case-aware policies
+--   2  re-apply the pre-Stage-2 (legacy owner) policy set VERBATIM — the 24 shapes captured in
+--      spec §2.6 from the hosted project on 2026-08-02
+--   3  THEN drop the four new `private` helpers    ← reversed, Postgres refuses with 2BP01
+--
+-- The whole script is ONE transaction, so no session ever observes a table with no policy at all.
+-- That matters more here than it did on MV-155/MV-156: RLS is FORCED on all nine, and a table with
+-- RLS forced and zero policies returns ZERO ROWS to every client — a total, silent outage of the
+-- student-facing product for the length of the window.
+--
+-- ============================ ITS PREDECESSOR, AND ITS POINT OF NO RETURN ============================
+--
+-- VALID PREDECESSOR STATE: **MV-159 applied and MV-160 NOT applied.** Guards 0-2 below check
+-- exactly that against the DATABASE rather than trusting the operator.
+--
+-- WHY MV-160 IS THE HARD BOUNDARY, and it is not a policy question: MV-160 sets `case_id NOT NULL`
+-- on eight of the nine and DROPS the legacy owner-keyed uniques and the legacy owner composite-FK
+-- chain. The legacy policies this script restores are `(select auth.uid()) = owner` — and after
+-- MV-160 a consultancy row legitimately has `owner IS NULL`, so restoring them would make every
+-- such row invisible to the counsellor who owns the case, silently. Spec §10.1 is explicit that
+-- the unwind is stage-level and strictly reverse-DAG: **R1 (MV-160) must run before this script.**
+-- Guard 2 refuses rather than producing that state.
+--
+-- POINT OF NO RETURN, STATED PLAINLY: there isn't one for THIS script. It mutates no data, creates
+-- no object a later slice depends on, and can be run and re-run. The stage's real expiries live
+-- one and two steps further down the unwind — R5's `SET NOT NULL` on `owner` (expires the moment
+-- Stage 3 writes its first consultancy row) and R6's personal-case delete (expired when MV-157
+-- merged, which it has). This script is the cheap, exact, instant step; everything expensive is
+-- below it.
+--
+-- WHAT IT DOES NOT RESTORE, DELIBERATELY: the `documents` policies come back with **no `to` clause**,
+-- exactly as they were. That is a defect MV-159 fixed (they apply to `PUBLIC`, which includes
+-- `anon`), and a rollback that quietly kept the fix would not be a rollback — it would be a second,
+-- unreviewed migration wearing an unwind's name. It is harmless in the restored state for the same
+-- reason it was harmless before: `anon` holds no grant on `documents`. Guard 3 re-asserts that.
+
+begin;
+
+-- =====================================================================
+-- Guard 0 — this database has MV-159 applied
+-- =====================================================================
+do $$
+declare
+  v_policies int;
+begin
+  select count(*) into v_policies
+    from pg_policy p join pg_class c on c.oid = p.polrelid join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and p.polname like '%\_case';
+  if v_policies <> 24 then
+    raise exception 'MV-159 rollback refuses: expected 24 *_case policies on the nine student '
+      'tables, found %. This script only runs against a database with MV-159 applied.', v_policies;
+  end if;
+end;
+$$;
+
+-- =====================================================================
+-- Guard 1 — the four helpers this script drops are the ones MV-159 created
+-- =====================================================================
+do $$
+declare
+  v_helpers int;
+begin
+  select count(*) into v_helpers
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'private'
+     and p.proname in ('actor_case_ids', 'assessment_case_id', 'prediction_case_id', 'attempt_case_id');
+  if v_helpers <> 4 then
+    raise exception 'MV-159 rollback refuses: expected 4 MV-159 helpers in schema private, found %.', v_helpers;
+  end if;
+end;
+$$;
+
+-- =====================================================================
+-- Guard 2 — MV-160 has NOT been applied
+-- =====================================================================
+-- `case_id` still nullable on the eight, and the legacy owner-keyed uniques still present. If
+-- MV-160 has run, the legacy `(select auth.uid()) = owner` policies restored below would hide every
+-- `owner IS NULL` row from the actor who legitimately owns its case — a silent, total denial on
+-- exactly the rows Stage 3 exists to create. Unwind R1 first.
+do $$
+declare
+  v_notnull int;
+  v_legacy  int;
+begin
+  select count(*) into v_notnull
+    from information_schema.columns
+   where table_schema = 'public' and column_name = 'case_id' and is_nullable = 'NO'
+     and table_name in ('profiles', 'plan_items', 'user_program_state', 'documents', 'document_status',
+                        'program_predictions', 'application_attempts', 'outcome_events');
+  if v_notnull > 0 then
+    raise exception 'MV-159 rollback refuses: case_id is already NOT NULL on % of the eight, so '
+      'MV-160 has been applied. Spec §10.1 unwinds strictly in reverse: run R1 (MV-160) first, '
+      'which also re-creates MV-159''s policies WITH the transitional owner disjunct.', v_notnull;
+  end if;
+
+  select count(*) into v_legacy from pg_class where relname in
+    ('profiles_owner_key', 'assessments_primary_idx', 'plan_items_kind_open_idx', 'documents_owner_kind_key');
+  if v_legacy <> 4 then
+    raise exception 'MV-159 rollback refuses: only % of the 4 legacy owner-keyed uniques survive, '
+      'so MV-160''s drop list has partially run. Unwind R1 first.', v_legacy;
+  end if;
+end;
+$$;
+
+-- =====================================================================
+-- 1  drop the 24 case-aware policies
+-- =====================================================================
+drop policy if exists profiles_select_case    on public.profiles;
+drop policy if exists profiles_update_case    on public.profiles;
+drop policy if exists assessments_select_case on public.assessments;
+drop policy if exists plan_items_select_case  on public.plan_items;
+drop policy if exists plan_items_update_case  on public.plan_items;
+drop policy if exists ups_select_case         on public.user_program_state;
+drop policy if exists ups_insert_case         on public.user_program_state;
+drop policy if exists ups_update_case         on public.user_program_state;
+drop policy if exists ups_delete_case         on public.user_program_state;
+drop policy if exists documents_select_case   on public.documents;
+drop policy if exists documents_delete_case   on public.documents;
+drop policy if exists ds_select_case          on public.document_status;
+drop policy if exists ds_insert_case          on public.document_status;
+drop policy if exists ds_update_case          on public.document_status;
+drop policy if exists ds_delete_case          on public.document_status;
+drop policy if exists pp_select_case          on public.program_predictions;
+drop policy if exists pp_insert_case          on public.program_predictions;
+drop policy if exists pp_delete_case          on public.program_predictions;
+drop policy if exists aa_select_case          on public.application_attempts;
+drop policy if exists aa_insert_case          on public.application_attempts;
+drop policy if exists aa_delete_case          on public.application_attempts;
+drop policy if exists oe_select_case          on public.outcome_events;
+drop policy if exists oe_insert_case          on public.outcome_events;
+drop policy if exists oe_delete_case          on public.outcome_events;
+
+-- =====================================================================
+-- 2  re-apply the pre-Stage-2 legacy policy set, VERBATIM
+-- =====================================================================
+-- Transcribed from spec §2.6 (captured from the hosted project 2026-08-02) and cross-checked
+-- against the migrations that created them: 20260603170655 (profiles), 20260603011208
+-- (assessments), 20260604024609 (plan_items), 20260604002139 (user_program_state), 20260604060000
+-- + 20260605130000 + 20260618120000 (documents), 20260626000000 (document_status), 20260620000000
+-- (the three chain tables).
+--
+-- The `(select auth.uid())` form is the InitPlan shape 20260618120000 rewrote them into — NOT the
+-- bare `auth.uid()` of the original files. Restoring the bare form would re-introduce an
+-- `auth_rls_initplan` advisor finding that was fixed two months before Stage 2 began.
+
+-- profiles
+create policy profiles_select_own on public.profiles
+  for select to authenticated using ((select auth.uid()) = owner);
+create policy profiles_update_own on public.profiles
+  for update to authenticated using ((select auth.uid()) = owner) with check ((select auth.uid()) = owner);
+
+-- assessments — SELECT only; there was never an INSERT/UPDATE/DELETE policy on this table.
+create policy assessments_select_own on public.assessments
+  for select to authenticated using ((select auth.uid()) = owner);
+
+-- plan_items
+create policy plan_items_select_own on public.plan_items
+  for select to authenticated using ((select auth.uid()) = owner);
+create policy plan_items_update_own on public.plan_items
+  for update to authenticated using ((select auth.uid()) = owner) with check ((select auth.uid()) = owner);
+
+-- user_program_state
+create policy ups_select_own on public.user_program_state
+  for select to authenticated using ((select auth.uid()) = owner);
+create policy ups_insert_own on public.user_program_state
+  for insert to authenticated with check ((select auth.uid()) = owner);
+create policy ups_update_own on public.user_program_state
+  for update to authenticated using ((select auth.uid()) = owner) with check ((select auth.uid()) = owner);
+create policy ups_delete_own on public.user_program_state
+  for delete to authenticated using ((select auth.uid()) = owner);
+
+-- documents — QUOTED names and NO `to` clause, both restored exactly as they were. See the header:
+-- the missing `to` clause is a defect MV-159 fixed, and a rollback does not keep the fix.
+create policy "Users read own documents" on public.documents
+  for select using ((select auth.uid()) = owner);
+create policy "Users delete own documents" on public.documents
+  for delete using ((select auth.uid()) = owner);
+
+-- document_status
+create policy ds_select_own on public.document_status
+  for select to authenticated using ((select auth.uid()) = owner);
+create policy ds_insert_own on public.document_status
+  for insert to authenticated with check ((select auth.uid()) = owner);
+create policy ds_update_own on public.document_status
+  for update to authenticated using ((select auth.uid()) = owner) with check ((select auth.uid()) = owner);
+create policy ds_delete_own on public.document_status
+  for delete to authenticated using ((select auth.uid()) = owner);
+
+-- program_predictions — the INSERT policy's inline `EXISTS` against `assessments` comes back with
+-- it. It is an anti-recursion violation and a silent-denial hazard the moment `assessments` has a
+-- policy of its own, which is precisely why MV-159 replaced it — but with MV-159 unwound,
+-- `assessments` is back to a plain owner predicate and the hazard is back to being latent.
+create policy pp_select_own on public.program_predictions
+  for select to authenticated using ((select auth.uid()) = owner);
+create policy pp_insert_own on public.program_predictions
+  for insert to authenticated
+  with check (
+    owner = (select auth.uid())
+    and exists (
+      select 1 from public.assessments a
+       where a.id = program_predictions.assessment_id and a.owner = (select auth.uid())
+    )
+  );
+create policy pp_delete_own on public.program_predictions
+  for delete to authenticated using ((select auth.uid()) = owner);
+
+-- application_attempts
+create policy aa_select_own on public.application_attempts
+  for select to authenticated using ((select auth.uid()) = owner);
+create policy aa_insert_own on public.application_attempts
+  for insert to authenticated
+  with check (
+    owner = (select auth.uid())
+    and exists (
+      select 1 from public.program_predictions p
+       where p.id = application_attempts.prediction_id and p.owner = (select auth.uid())
+    )
+  );
+create policy aa_delete_own on public.application_attempts
+  for delete to authenticated using ((select auth.uid()) = owner);
+
+-- outcome_events — the two non-ownership integrity clauses (`source`, `verified_by`) are part of
+-- the original policy and come back with it; MV-159 retained them deliberately, so this is one
+-- place the forward and reverse scripts agree.
+create policy oe_select_own on public.outcome_events
+  for select to authenticated using ((select auth.uid()) = owner);
+create policy oe_insert_own on public.outcome_events
+  for insert to authenticated
+  with check (
+    owner = (select auth.uid())
+    and source = 'self_reported'
+    and verified_by is null
+    and exists (
+      select 1 from public.application_attempts a
+       where a.id = outcome_events.attempt_id and a.owner = (select auth.uid())
+    )
+  );
+create policy oe_delete_own on public.outcome_events
+  for delete to authenticated using ((select auth.uid()) = owner);
+
+-- =====================================================================
+-- 3  drop the four MV-159 helpers — LAST, and the ordering is mandatory
+-- =====================================================================
+-- Dropping a helper while a policy still references it raises 2BP01 (spec §10.1 R2's stated
+-- failure mode). No `cascade`: if something still depends on one of these, the correct outcome is
+-- a loud abort, not a silent removal of whatever that was.
+drop function private.actor_case_ids();
+drop function private.assessment_case_id(uuid);
+drop function private.prediction_case_id(uuid);
+drop function private.attempt_case_id(uuid);
+
+-- MV-152's helpers are NOT dropped: `actor_admin_org_ids`, `actor_assigned_case_ids`,
+-- `can_access_case` and the rest are Stage 1's and are still load-bearing for the six tenancy
+-- tables' policies, which this script does not touch.
+
+-- =====================================================================
+-- 4  assert the restored state — the last statements, so a failure aborts the whole unwind
+-- =====================================================================
+do $$
+declare
+  v_own    int;
+  v_case   int;
+  v_forced int;
+  v_anon   int;
+begin
+  select count(*) into v_own
+    from pg_policy p join pg_class c on c.oid = p.polrelid join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public'
+     and c.relname in ('profiles','assessments','plan_items','user_program_state','documents',
+                       'document_status','program_predictions','application_attempts','outcome_events');
+  -- 24 legacy + the untouched service_role INSERT policy on documents.
+  if v_own <> 25 then
+    raise exception 'MV-159 rollback: expected 25 policies on the nine after the restore, found %.', v_own;
+  end if;
+
+  select count(*) into v_case from pg_policy where polname like '%\_case';
+  if v_case <> 0 then
+    raise exception 'MV-159 rollback: % case-aware policies survived the drop.', v_case;
+  end if;
+
+  -- RLS must still be ENABLED and FORCED on all nine. A rollback that left a table with RLS off
+  -- would be a tenant hole created by the unwind itself.
+  select count(*) into v_forced
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relrowsecurity and c.relforcerowsecurity
+     and c.relname in ('profiles','assessments','plan_items','user_program_state','documents',
+                       'document_status','program_predictions','application_attempts','outcome_events');
+  if v_forced <> 9 then
+    raise exception 'MV-159 rollback: RLS is enabled AND forced on only % of the nine.', v_forced;
+  end if;
+
+  -- The restored `documents` policies apply to PUBLIC. That is only safe because `anon` holds no
+  -- grant — the same latent-grant argument spec §9.9 records. Asserted rather than assumed, here,
+  -- at the moment the safety net becomes the ONLY thing keeping anon out.
+  select count(*) into v_anon
+    from information_schema.role_table_grants
+   where table_schema = 'public' and grantee = 'anon'
+     and table_name in ('profiles','assessments','plan_items','user_program_state','documents',
+                        'document_status','program_predictions','application_attempts','outcome_events');
+  if v_anon > 0 then
+    raise exception 'MV-159 rollback: anon holds % grant(s) on the nine, and the restored documents '
+      'policies apply to PUBLIC. Do not commit this.', v_anon;
+  end if;
+
+  raise notice 'MV-159 rollback complete: 25 policies restored, 4 helpers dropped, RLS forced on 9/9.';
+end;
+$$;
+
+commit;
