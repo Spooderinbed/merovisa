@@ -58,6 +58,25 @@ export const TENANCY_TABLES = [
 ] as const;
 export type TenancyTable = (typeof TENANCY_TABLES)[number];
 
+/**
+ * MV-159 — the nine student-owned tables Stage 2 migrated onto `case_id`. Stage 1's harness said
+ * nothing about any of them: `TENANCY_TABLES` above is the consultancy skeleton, and a green
+ * 429-assertion matrix over it proved exactly nothing about whether one student can read another's
+ * profile, assessment or plan.
+ */
+export const STUDENT_DATA_TABLES = [
+  "profiles",
+  "assessments",
+  "plan_items",
+  "user_program_state",
+  "documents",
+  "document_status",
+  "program_predictions",
+  "application_attempts",
+  "outcome_events",
+] as const;
+export type StudentDataTable = (typeof STUDENT_DATA_TABLES)[number];
+
 export type WriteVerb = "insert" | "update" | "delete";
 
 /**
@@ -106,21 +125,41 @@ const sqlLines = (statement: string): string[] =>
  * blind to a column being added to an existing verb (`cases.email` was exactly that: granted,
  * and probed by nothing):
  *
- *  - INSERT and DELETE are table-level, from `role_table_grants`.
+ *  - DELETE is table-level, from `role_table_grants` — it has no column granularity in SQL.
+ *  - INSERT is read from `column_privileges` and collapsed with `distinct`. **It used to come
+ *    from `role_table_grants`, and MV-159 measured that as a blind spot rather than a style
+ *    choice:** MV-155 §H revoked the flat INSERT on five of the nine student tables and re-granted
+ *    explicit column lists, and a COLUMN-level grant writes no `role_table_grants` row at all — so
+ *    the old query reported `authenticated` as holding no INSERT anywhere on those five, and the
+ *    completeness guard demanded no probe for a verb they very much hold. `column_privileges`
+ *    expands a table-level grant into one row per column, so this form is identical for the six
+ *    Stage 1 tables and correct for the nine.
  *  - UPDATE is read from `column_privileges`, which is column-exact. Note it also EXPANDS a
  *    table-level grant into one row per column — so if someone ever writes
  *    `grant update on public.cases`, this returns every column of `cases` and the completeness
  *    test demands a probe for each. Loud, and correct: that grant would be a serious change.
  *
  * Keys: `table.insert`, `table.delete`, `table.update(column)`.
+ *
+ * MV-159 generalised the table list into a parameter rather than forking the function. The
+ * default is `TENANCY_TABLES`, so every Stage 1 call site is byte-identical; the student-data
+ * suite passes `STUDENT_DATA_TABLES` and inherits the mechanism — including the property that
+ * makes it worth anything, which is that BOTH sides of the completeness comparison are derived
+ * (one from `information_schema`, one from the probes that actually ran).
  */
-export function readGrantedWriteSurface(): string[] {
-  const tables = TENANCY_TABLES.map((t) => `'${t}'`).join(",");
+export function readGrantedWriteSurface(forTables: ReadonlyArray<string> = TENANCY_TABLES): string[] {
+  const tables = forTables.map((t) => `'${t}'`).join(",");
   return sqlLines(`
-    select table_name || '.' || lower(privilege_type)
+    select distinct table_name || '.insert'
+      from information_schema.column_privileges
+     where table_schema = 'public' and grantee = 'authenticated'
+       and privilege_type = 'INSERT'
+       and table_name in (${tables})
+    union
+    select table_name || '.delete'
       from information_schema.role_table_grants
      where table_schema = 'public' and grantee = 'authenticated'
-       and privilege_type in ('INSERT', 'DELETE')
+       and privilege_type = 'DELETE'
        and table_name in (${tables})
     union
     select table_name || '.update(' || column_name || ')'
@@ -138,9 +177,11 @@ export function readGrantedWriteSurface(): string[] {
  * acquires a write grant drops out of this list and appears in the one above, and the
  * completeness test fails either way until somebody says what the new probe is.
  */
-export function readUngrantedWriteTables(): TenancyTable[] {
-  const granted = new Set(readGrantedWriteSurface().map((key) => key.split(".")[0]));
-  return TENANCY_TABLES.filter((table) => !granted.has(table));
+export function readUngrantedWriteTables<T extends string = TenancyTable>(
+  forTables: ReadonlyArray<T> = TENANCY_TABLES as unknown as ReadonlyArray<T>,
+): T[] {
+  const granted = new Set(readGrantedWriteSurface(forTables).map((key) => key.split(".")[0]));
+  return forTables.filter((table) => !granted.has(table));
 }
 
 const isLocalStack = (u: string | undefined): boolean => {
@@ -1167,3 +1208,278 @@ export function createDbProbes(fixture: TenancyFixture) {
 }
 
 export type DbProbes = ReturnType<typeof createDbProbes>;
+
+// =====================================================================================
+// MV-159 — student data on a case, in every shape the nine tables can take
+// =====================================================================================
+
+/** Every row id one `seedStudentCase` call produced, so a denial can be paired with a proof. */
+export interface StudentCaseRows {
+  caseId: string;
+  owner: string | null;
+  profile: string;
+  primaryAssessment: string;
+  secondaryAssessment: string;
+  openPlanItem: string;
+  donePlanItem: string;
+  programState: string;
+  programId: string;
+  document: string;
+  documentKind: string;
+  documentStatus: string;
+  prediction: string;
+  attempt: string;
+  outcomeEvent: string;
+}
+
+/** A row deliberately left `case_id` NULL — the state MV-159's transitional disjunct exists for. */
+export interface CaselessRows {
+  owner: string;
+  planItem: string;
+  planItemKind: string;
+  document: string;
+  assessment: string;
+}
+
+export interface StudentDataSeeder {
+  /**
+   * One full set of student data on `caseId`.
+   *
+   * `owner` IS A REAL DECISION, NOT A CONVENIENCE. Pass **null** for a consultancy case and the
+   * student's own id only for a personal case, because MV-155 §H's definer triggers on
+   * `user_program_state` and `document_status` fire `when (new.owner is not null)` and OVERWRITE
+   * `case_id` with that owner's PERSONAL case. Seed an org case with `owner` set and those two
+   * rows silently land on the owner's personal case instead — a fixture that lies in exactly the
+   * direction the suite is trying to measure. `owner: null` is also the consultancy row shape
+   * MV-156 exists to permit and spec §7.2's "write half" proves.
+   */
+  seedStudentCase: (args: {
+    label: string;
+    caseId: string;
+    owner: string | null;
+    programId: string;
+    documentKind: string;
+  }) => Promise<StudentCaseRows>;
+  /**
+   * An UNCLAIMED anonymous assessment: `owner` NULL **and** `case_id` NULL. Invisible to every
+   * authenticated client by construction (spec §4.2) and inside MV-135's `owner is null` purge
+   * predicate. Seeded service-role because `assessments` has no authenticated INSERT grant.
+   */
+  seedAnonymousAssessment: () => Promise<string>;
+  /** Owner set, `case_id` NULL — the not-yet-backfilled row MV-160 makes unrepresentable. */
+  seedCaselessRows: (args: { owner: string; documentKind: string }) => Promise<CaselessRows>;
+  /**
+   * MUST run before `fixture.teardown()`. Every one of the nine references `cases` with
+   * **ON DELETE RESTRICT** (MV-155 §2), so deleting an organization — which cascades its cases —
+   * raises `23503` while any of these rows survive. Stage 1's teardown never met that because
+   * Stage 1 seeded none of them.
+   */
+  cleanup: () => Promise<void>;
+}
+
+export function createStudentDataSeeder(fixture: TenancyFixture): StudentDataSeeder {
+  const { admin, stamp } = fixture;
+  let sequence = 0;
+  const seeded: Record<StudentDataTable, string[]> = {
+    profiles: [],
+    assessments: [],
+    plan_items: [],
+    user_program_state: [],
+    documents: [],
+    document_status: [],
+    program_predictions: [],
+    application_attempts: [],
+    outcome_events: [],
+  };
+
+  /** Service-role insert that throws loudly. A fixture that half-seeded manufactures denials. */
+  const put = async <T extends StudentDataTable>(table: T, row: Record<string, unknown>): Promise<string> => {
+    const { data, error } = await admin
+      .from(table)
+      .insert(row as never)
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(`MV-159 fixture: failed to seed ${table}: ${error?.message}`);
+    // Stringified deliberately: `plan_items.id` is a bigint and every other table's is a uuid, so
+    // the harness carries ids as text and compares them as text. The `.eq("id", …)` call sites
+    // that need the numeric form say so.
+    const id = String((data as unknown as { id: string | number }).id);
+    seeded[table].push(id);
+    return id;
+  };
+
+  const assessmentRow = (owner: string | null, caseId: string | null, isPrimary: boolean) => ({
+    owner,
+    case_id: caseId,
+    result: { verdict: "possible", band: "possible" },
+    rule_version: "mv159-test",
+    destination_id: "AU",
+    is_primary: isPrimary,
+    profile_snapshot: {},
+    expires_at: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+  });
+
+  const seedStudentCase: StudentDataSeeder["seedStudentCase"] = async ({
+    label,
+    caseId,
+    owner,
+    programId,
+    documentKind,
+  }) => {
+    sequence += 1;
+    const tag = `mv159-${label}-${stamp}-${sequence}`;
+
+    const profile = await put("profiles", {
+      owner,
+      case_id: caseId,
+      sections: { personal: { name: `MV-159 ${label}` } },
+      completeness: 42,
+    });
+    const primaryAssessment = await put("assessments", assessmentRow(owner, caseId, true));
+    const secondaryAssessment = await put("assessments", assessmentRow(owner, caseId, false));
+
+    // `kind` carries no CHECK on plan_items, so a per-case tag keeps `plan_items_kind_open_idx`
+    // (owner, kind) where status='todo' and MV-155's (case_id, kind) mirror both satisfiable
+    // however many cases one owner holds.
+    const openPlanItem = await put("plan_items", {
+      owner,
+      case_id: caseId,
+      kind: `${tag}-open`,
+      impact: "high",
+      title: `Open item · ${label}`,
+      status: "todo",
+    });
+    const donePlanItem = await put("plan_items", {
+      owner,
+      case_id: caseId,
+      kind: `${tag}-done`,
+      impact: "low",
+      title: `Done item · ${label}`,
+      status: "done",
+    });
+
+    // The two derive-trigger tables. With `owner` null the trigger does not fire and the supplied
+    // `case_id` is honoured (spec §4 rule 2) — which is the whole reason `owner` is a parameter.
+    const programState = await put("user_program_state", {
+      owner,
+      case_id: caseId,
+      program_id: programId,
+      status: "shortlisted",
+      notes: `shortlisted by ${label}`,
+    });
+    const documentStatus = await put("document_status", {
+      owner,
+      case_id: caseId,
+      kind: documentKind,
+      obtained: true,
+    });
+
+    const document = await put("documents", {
+      owner,
+      case_id: caseId,
+      kind: documentKind,
+      file_path: `${owner ?? "consultancy"}/${documentKind}/${tag}.pdf`,
+      file_size: 1024,
+      original_name: `${tag}.pdf`,
+    });
+
+    const prediction = await put("program_predictions", {
+      owner,
+      case_id: caseId,
+      assessment_id: primaryAssessment,
+      program_id: programId,
+      verdict: "possible",
+      rule_version: "mv159-test",
+      score_snapshot: { total: 50 },
+    });
+    const attempt = await put("application_attempts", {
+      owner,
+      case_id: caseId,
+      prediction_id: prediction,
+      program_id: programId,
+      destination: "AU",
+    });
+    const outcomeEvent = await put("outcome_events", {
+      owner,
+      case_id: caseId,
+      attempt_id: attempt,
+      event_type: "applied",
+      gate: "admission",
+      source: "self_reported",
+      occurred_at: new Date().toISOString(),
+    });
+
+    return {
+      caseId,
+      owner,
+      profile,
+      primaryAssessment,
+      secondaryAssessment,
+      openPlanItem,
+      donePlanItem,
+      programState,
+      programId,
+      document,
+      documentKind,
+      documentStatus,
+      prediction,
+      attempt,
+      outcomeEvent,
+    };
+  };
+
+  const seedAnonymousAssessment: StudentDataSeeder["seedAnonymousAssessment"] = async () =>
+    put("assessments", assessmentRow(null, null, false));
+
+  const seedCaselessRows: StudentDataSeeder["seedCaselessRows"] = async ({ owner, documentKind }) => {
+    sequence += 1;
+    const tag = `mv159-caseless-${stamp}-${sequence}`;
+    // `is_primary` false: `assessments_primary_idx` is unique (owner) where is_primary, and this
+    // owner's personal case already holds a primary.
+    const assessment = await put("assessments", assessmentRow(owner, null, false));
+    const planItem = await put("plan_items", {
+      owner,
+      case_id: null,
+      kind: `${tag}-open`,
+      impact: "medium",
+      title: "A row the backfill never reached",
+      status: "todo",
+    });
+    const document = await put("documents", {
+      owner,
+      case_id: null,
+      kind: documentKind,
+      file_path: `${owner}/${documentKind}/${tag}.pdf`,
+      file_size: 512,
+      original_name: `${tag}.pdf`,
+    });
+    return { owner, planItem, planItemKind: `${tag}-open`, document, assessment };
+  };
+
+  const cleanup: StudentDataSeeder["cleanup"] = async () => {
+    // Child-before-parent, then rows-before-cases. The chain tables carry ON DELETE CASCADE on
+    // their single-column FKs, so the order is belt rather than strictly required — but
+    // `documents` / `profiles` / the rest hold `case_id … ON DELETE RESTRICT`, and THAT is what
+    // makes this function mandatory rather than tidy.
+    const order: StudentDataTable[] = [
+      "outcome_events",
+      "application_attempts",
+      "program_predictions",
+      "document_status",
+      "documents",
+      "user_program_state",
+      "plan_items",
+      "assessments",
+      "profiles",
+    ];
+    for (const table of order) {
+      const ids = seeded[table];
+      if (!ids.length) continue;
+      const { error } = await admin.from(table).delete().in("id", ids);
+      if (error) throw new Error(`MV-159 fixture: failed to clean up ${table}: ${error.message}`);
+      seeded[table] = [];
+    }
+  };
+
+  return { seedStudentCase, seedAnonymousAssessment, seedCaselessRows, cleanup };
+}

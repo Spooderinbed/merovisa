@@ -194,6 +194,27 @@ jobs:
           grep -q '✓ tests/integration/claim-path.itest.ts' vitest-integration.log
           # 13 tests today. Same floor rationale.
           test "$(grep -c '✓ tests/integration/claim-path.itest.ts' vitest-integration.log)" -ge 11
+          # MV-159: the ONLY suite that evaluates the nine migrated student tables' policies AS
+          # THE AUTHENTICATED USER. Every other suite in this lane either bypasses RLS through
+          # the service role (by design — MV-157's does so precisely so a case-scoping bug is
+          # visible) or covers the six Stage 1 tenancy tables. Without this one, a policy that
+          # showed one student another student's profile, assessment or plan would keep the whole
+          # lane green. It is also a NEW file, and the failure mode it guards is silent: an RLS
+          # SELECT denial returns zero rows and no error, so a suite that stopped running looks
+          # exactly like a suite that is passing.
+          grep -q '✓ tests/integration/student-data-rls.itest.ts' vitest-integration.log
+          # 142 tests today (9 tables x 9 actors in the positive matrix, plus the catalogue
+          # smoke, the parentage chain, the deferral negatives, the branch-coverage guard, the
+          # insider re-point probes, the round-3 owner-axis mirror probes and the EXPLAIN probe).
+          # Floor set well below that so an incidental removal does not trip it, high enough that
+          # a gutted suite does. Raise it when the matrix grows; do not lower it without saying why.
+          # COUNT RECONCILED 2026-08-04 (review round 2): this comment said 132, the card said
+          # 132, and the suite was actually 135 — three numbers for one measurement, none of
+          # which CI checked. All three now come from one run.
+          # 139 -> 142 at review round 3: the behavioural owner-axis mirror probe, the structural
+          # probe that pins the clause MV-160 §D must keep, and one more `it.each` leg from the
+          # fifth helper (`private.case_student_id`).
+          test "$(grep -c '✓ tests/integration/student-data-rls.itest.ts' vitest-integration.log)" -ge 110
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup

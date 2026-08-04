@@ -15,6 +15,8 @@ rehearsal rather than merely written: a written rollback that was never run is a
 | `MV-155-counts.sql` | The before/after snapshot: per-table row counts, `case_id` fill, the reconciliation call, and the column-grant surface. Runs unchanged against the pre-migration, post-migration and post-rollback states. |
 | `MV-156-rollback.sql` | The MV-156 unwind, ordered per spec §10.1 **R5**. Fail-closed with four guards; needs **no** `-v` flag, because every one of its expiries is a fact about the database rather than about the codebase. |
 | `MV-156-counts.sql` | MV-156's DATA fingerprint — row counts, both ownership axes, whole-row and `updated_at` md5s, and row identity. Must be **byte-identical at every capture point**, because MV-156 writes no row data. |
+| `MV-159-rollback.sql` | The MV-159 unwind, ordered per spec §10.1 **R2**: drop the 24 case-aware policies, re-apply the legacy owner set verbatim, then drop the five helpers (**five since MV-159 review round 3** — `case_student_id`, the OWNER-axis helper the five INSERT `WITH CHECK`s and §1b clause (c) share). One transaction — a table with RLS FORCED and zero policies returns zero rows to every client. Four guards; no `-v` flag; no point of no return. Guard 2 keys on the **hazard** (`owner IS NULL` case-bearing rows exist) rather than on its usual cause (MV-160 applied), and the closing block **fingerprints the restored catalogue** against the measured pre-MV-159 state, so "it ran" and "it restored" are separate claims. |
+| `MV-159-visibility.sql` | MV-159's rehearsal, and it is a different SHAPE from the two above because the card mutates no data. It captures the set of row ids **visible as each authenticated user AND as `anon`** on each of the nine tables, applies the migration inline, re-captures, and RAISES on any diff, on any widening, and on any pair reachable only through the transitional owner disjunct. Rolls itself back. Applies the migration with `\ir`, so it must be run **by path**, not on stdin — see step 4. |
 | `MV-156-catalog.sql` | MV-156's SCHEMA capture — columns (with ordinals), constraints, indexes, triggers, column grants and policies for the **nine** student-owned tables. The pre-apply capture vs the post-rollback capture is what turns "the rollback ran" into "the rollback restored". **Widened from eight to nine on 2026-08-03** so it covers `assessments`: MV-156's "`assessments` is untouched" criterion was not something an eight-table capture could ever have falsified. |
 
 ## Running the MV-155 rehearsal
@@ -127,6 +129,56 @@ PSQL="docker exec -i supabase_db_merovisa psql -U postgres -d postgres -tAX -v O
    re-added surrogate `id` lands at the next attnum (`user_program_state` 8 → 9, `document_status`
    6 → 7), because the dropped column left a gap. Four tables in this schema already carry such
    gaps; see the note at the foot of `MV-156-rollback.sql`.
+
+## Running the MV-159 rehearsal
+
+MV-159 changes **no data**, so there is no backfill to replay and no row count to compare. What it
+changes is what live users can SEE, and that failure is silent: an RLS SELECT refusal returns zero
+rows and no error, so a wrong predicate does not throw — it makes a real student's assessments
+disappear. The rehearsal is therefore a **visible-row-id diff per owner per table**, and the thing
+that makes it evidence rather than decoration is that every read is issued after
+`set local role authenticated`. Run the same query as `postgres` and BYPASSRLS returns every row of
+every table for every "owner": the diff is empty however wrong the policies are.
+
+1. `npx supabase start`, then `npx supabase db reset`. Every migration applies, MV-159 included.
+2. `docker exec -i <db> psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/rehearsal/MV-159-rollback.sql`
+   — this is what pins the stack at **post-MV-156 / pre-MV-159**. It also exercises the rollback,
+   which is the point: R2 is run for real before the forward script is, not after an incident.
+3. Load `MV-155-rehearsal-corpus.sql` (or the founder-supplied dump in its place), then
+   `select private.mv155_backfill_personal_cases();` so every row carries the `case_id` production
+   has. **Skipping the backfill is the way to get a meaningless green:** with no `case_id`
+   anywhere, every case predicate matches nothing and the transitional owner disjunct carries 100%
+   of the load. `MV-159-visibility.sql`'s guard 0 refuses that state rather than reporting on it.
+4. **Copy the rehearsal and the migration into the container, then run the script BY PATH** —
+   not on stdin:
+
+   ```sh
+   DB=$(docker ps --filter name=supabase_db_ --format '{{.Names}}')
+   docker exec "$DB" rm -rf /tmp/mv159 && docker exec "$DB" mkdir -p /tmp/mv159/supabase
+   docker cp supabase/migrations "$DB":/tmp/mv159/supabase/migrations
+   docker cp supabase/rehearsal  "$DB":/tmp/mv159/supabase/rehearsal
+   docker exec "$DB" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+     -f /tmp/mv159/supabase/rehearsal/MV-159-visibility.sql
+   ```
+
+   **THIS STEP USED TO BE `... -f - < MV-159-visibility.sql` AND IT COULD NOT WORK.** The script
+   applies the migration inline, and with `-f -` psql reads the script from **stdin**, where a
+   relative `\i` resolves against psql's CWD — inside the container, which mounts only `pgdata`.
+   Measured: `No such file or directory`, and step 4 aborted before capturing anything. The
+   script now uses `\ir` (relative to the script's OWN location), which is why it must be run by
+   path and why both directories are copied in with their relative layout preserved.
+
+   It captures, applies the migration, re-captures, prints a per-owner/per-table table and a
+   case-arm-only table, and **raises** on any moved set, on any widening, and on any pair that is
+   visible only through the transitional owner disjunct. Then it rolls back, so the stack is still
+   pre-MV-159 and step 4 can be repeated.
+5. Re-apply for real (`npx supabase db reset`) and run `npm run test:integration`. Roll forward,
+   roll back, roll forward again — a rollback tested in only one direction has not been tested.
+
+**What the rehearsal cannot prove**, same caveat as MV-155's and narrower: the corpus reproduces
+shapes and counts, not the real `sections` / `result` / `profile_snapshot` payloads. No policy in
+MV-159 reads any of those columns, so the gap is smaller here — but the founder-gated dump replay
+is still owed before the production apply.
 
 ## Applying MV-155 to production
 
@@ -367,6 +419,118 @@ block), and it needs no `-v` flag. Two things the script cannot do for you:
 succeeds only while no NULL-owner row exists. The first consultancy row Stage 3 writes ends that
 permanently, and the recovery path becomes a restore from backup (spec §10.2). Guard 2 refuses with
 the table names and the count rather than letting Postgres raise a bare `23502`.
+
+## Applying MV-159 to production
+
+**Founder-gated. Nothing in this section is an agent action.**
+
+This section exists because it did not, and that was the **third recurrence of the same omission**:
+MV-155 and MV-156 each shipped a rollback that silently left the migration-history row behind, each
+was caught in review, and each wrote a numbered step at the point of use. MV-159 then shipped with
+**no "Applying" and no "Rolling back" section at all**, so there was nowhere for the step to live
+and the lesson had nothing to attach to. Both sections are below, in MV-156's shape.
+
+### The command
+
+```bash
+npx supabase link --project-ref obfvrxixtautamflzxzq   # once
+npx supabase db push
+```
+
+Same mechanism and same atomicity argument as MV-155/MV-156 — the file carries no
+`begin;`/`commit;` and `supabase db push` submits it as one implicit transaction. MV-159 is the
+**lowest-consequence apply of the three on data** (it writes none) and the **highest on
+visibility**: it swaps 24 policies on nine student-facing tables, and a wrong predicate does not
+raise, it silently returns zero rows.
+
+`set lock_timeout = '10s'` bounds the `ACCESS EXCLUSIVE` each `drop policy` / `create policy` takes.
+The work is sub-millisecond; what the timeout bounds is the **wait to acquire**. A
+`55P03 lock_not_available` is the migration doing its job — retry, do not raise the timeout.
+
+**Statement-by-statement application is not acceptable.** If a different path is ever used it is
+one explicit transaction **plus the bookkeeping row by hand**:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction \
+  -f supabase/migrations/20260803180000_case_aware_student_data_rls.sql
+psql "$DATABASE_URL" -c "insert into supabase_migrations.schema_migrations (version) \
+  values ('20260803180000');"
+```
+
+### Before the push
+
+1. **Capture the pre-apply catalogue**, which is what the rollback's fingerprint is compared to:
+
+   ```bash
+   psql "$DATABASE_URL" -tAc "select c.relname||'|'||p.polname||'|'||p.polcmd::text||'|'||
+     coalesce((select string_agg(r.rolname,',' order by r.rolname) from pg_roles r
+                where r.oid = any(p.polroles)),'PUBLIC')||'|'||
+     coalesce(pg_get_expr(p.polqual,p.polrelid),'-')||'|'||
+     coalesce(pg_get_expr(p.polwithcheck,p.polrelid),'-')
+     from pg_policy p join pg_class c on c.oid=p.polrelid
+     join pg_namespace n on n.oid=c.relnamespace
+     where n.nspname='public' and c.relname in ('profiles','assessments','plan_items',
+       'user_program_state','documents','document_status','program_predictions',
+       'application_attempts','outcome_events') order by 1;" > prod.mv159.policies.before.txt
+   ```
+
+2. **Confirm zero `owner IS NULL` case-bearing rows**, which is the rollback's Guard 2 hazard and
+   therefore the window in which R2 is lossless:
+
+   ```sql
+   select count(*) from public.user_program_state where owner is null and case_id is not null;
+   ```
+
+3. **Confirm the residue is still zero** (`private.mv155_assert_case_backfill()` raises if not).
+
+### Verify the apply was COMPLETE, not merely error-free
+
+```sql
+select count(*) from pg_policy where polname like '%\_case';          -- expect 24
+select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname='private' and p.proname in ('actor_case_ids','assessment_case_id',
+   'prediction_case_id','attempt_case_id');                            -- expect 4
+select count(*) from pg_trigger where tgname in ('user_program_state_derive_case_id',
+   'document_status_derive_case_id') and not tgisinternal and tgqual is not null;  -- expect 0
+select version from supabase_migrations.schema_migrations where version = '20260803180000';
+```
+
+The third one is the §1b binding guard: a non-zero count means a `WHEN` clause survived and
+`owner -> NULL` would not fire the guard. The migration asserts all of this at apply time too —
+these are the same properties, checked from outside, so a partially-applied file cannot claim them.
+
+Then run the **student-facing smoke**: sign in as a real account, load the dashboard, the document
+checklist and the shortlist. A silent RLS regression looks exactly like an empty account.
+
+### Rolling MV-159 back in production
+
+`supabase/rehearsal/MV-159-rollback.sql`, run through `psql -v ON_ERROR_STOP=1`. One transaction,
+four guards plus a closing catalogue fingerprint, no `-v` flag, and **no point of no return** — it
+mutates no data and re-runs. Two things the script cannot do for you:
+
+1. **Delete the bookkeeping row, immediately after it commits.** The rollback restores the policies
+   and does not touch the migration history, so the history says applied while the catalogue says
+   otherwise — and the next `supabase db push` will therefore NOT re-apply MV-159:
+
+   ```sql
+   delete from supabase_migrations.schema_migrations where version = '20260803180000';
+   ```
+
+   **This is the step MV-155 and MV-156 each shipped without.** It is written here, at the point of
+   use, for the same reason theirs are.
+
+2. **Diff the catalogue against `prod.mv159.policies.before.txt`.** The script's closing block
+   hashes the restored catalogue and compares it against the fingerprint measured on a pre-MV-159
+   stack (`827bf303bff5f90d84780f03f5e6c0e6` as of 2026-08-04), which turns "the rollback ran" into
+   "the rollback restored" — but that hash is a *local* measurement. On production, diff against the
+   file captured in "Before the push"; if the two disagree the hash cannot tell you which policy.
+
+**Guard 2 is the one to read before running it.** It refuses if ANY case-bearing row has
+`owner IS NULL`, because the legacy `(select auth.uid()) = owner` predicates this script restores
+evaluate NULL for such a row and RLS admits only TRUE — every one of them would vanish from the
+counsellor and admin who own its case, silently. MV-160 is the usual cause but not the only one:
+MV-157's dual-write writes `owner IS NULL` on every consultancy-created row, so the **first
+consultancy row makes this rollback lossy**, long before MV-160.
 
 ## Why the corpus exists, and what it does not prove
 

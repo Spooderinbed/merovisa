@@ -224,7 +224,16 @@ The REVOKE-FROM-PUBLIC discipline holds on **every definer helper**, as designed
 trigger functions retain the default PUBLIC EXECUTE, which is harmless because they are SECURITY
 INVOKER and raise outside a trigger context — but **any new definer function Stage 2 adds must be
 revoked**, and `private.mv155_backfill_personal_cases()` / `mv155_assert_case_backfill()` /
-MV-155 §H's UPSERT-seam definer trigger (the one qualified `when (new.owner is not null)` — §4 rule 2) are all in that class.
+MV-155 §H's UPSERT-seam definer trigger (**un-qualified since MV-159 §1b — §4 rule 2**) are all in that class.
+
+> **This §2.5 inventory is the PRE-STAGE-2 capture and is left as captured.** For the record, Stage 2
+> adds two triggers to the nine, both on the upsert seam:
+> `user_program_state_derive_case_id` and `document_status_derive_case_id`, `BEFORE INSERT OR UPDATE
+> … FOR EACH ROW` → `private.mv155_derive_case_id_from_owner()`. MV-155 created them
+> `WHEN (new.owner IS NOT NULL)`; **MV-159 §1b removed that clause** (`owner → NULL` is exactly what
+> it excluded, and exactly what breaks `/api/account/delete`) and re-bodied the function as a
+> binding guard. MV-159 asserts the absent `WHEN` at apply time, because restoring it would silently
+> re-open the re-point.
 
 ### 2.6 RLS state and policies
 
@@ -374,17 +383,59 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
    `plan_items UNIQUE (case_id, kind) WHERE status = 'todo'`. The `assessments (case_id)` **lookup**
    index also stays partial — it keeps anonymous rows out of the index and a lookup index is never an
    arbiter.
-2. **MV-155 §H's UPSERT-seam definer trigger fires only `when (new.owner is not null)`.** With `owner`
-   set it derives `case_id` from that owner's personal case and **overwrites** any supplied value (the
-   re-pointing hazard stays closed). With `owner IS NULL` the row is consultancy-created, there is
-   nothing to derive from, the trigger does not fire, and the **statement-supplied `case_id` is
-   honoured** — bounded by MV-159's `WITH CHECK`, not by the trigger. Unqualified, the trigger's
-   overwrite hardening destroyed the only `case_id` an `owner IS NULL` row could carry, which made
-   MV-160 §D's counsellor-write proof (INSERT/UPDATE/DELETE on these two tables "each succeeding with
-   `owner IS NULL`") unsatisfiable by construction. Residual seam, no Stage 2 caller, recorded as a
-   Stage 3 input: a consultancy row written through an **upsert** must supply `case_id`, so its
-   `ON CONFLICT DO UPDATE SET` list needs `UPDATE(case_id)`, which Stage 2 does not grant — MV-160 §D
-   drives plain statements, and MV-157 keeps `case_id` out of both upsert payloads.
+2. **MV-155 §H's UPSERT-seam definer trigger is a BINDING GUARD that derives into a gap. AMENDED
+   2026-08-04 (MV-159 review round 2) — this rule previously read "fires only
+   `when (new.owner is not null)`… and **overwrites** any supplied value (the re-pointing hazard stays
+   closed)", and BOTH halves of that parenthesis were false.** The overwrite did not close the
+   re-pointing hazard, it *was* the re-pointing hazard, and the qualifier excluded the single
+   transition that matters most.
+
+   **What was measured.** A BEFORE ROW trigger fires *before* the RLS `WITH CHECK`, so the check
+   never sees the row the client sent — it sees the row the trigger has already rewritten. `owner`
+   **is** in the UPDATE grant on these two tables (the cell in §4.4 explains why PostgREST forces
+   that). So an assigned counsellor issuing one `PATCH /rest/v1/document_status?id=eq.<id>` with
+   `{"owner":"<their own uid>"}` against a client's consultancy row had `case_id` re-derived onto
+   **their own personal case**, and the `WITH CHECK` then admitted it on `owner = auth.uid()`. The
+   client's org admin could no longer see the row. The old reasoning only ever covered
+   `owner → another user`; it inverted for `owner → self`. Not transitional: MV-160's pure case
+   predicate admits it identically, because after the trigger the row genuinely *is* in the
+   attacker's case.
+
+   **The rule as it now stands** (`private.mv155_derive_case_id_from_owner`, re-bodied by MV-159
+   §1b, trigger un-qualified on both tables):
+   - `case_id` is **write-once**: derived from the owner's personal case only when it is NULL, and
+     immutable once set. NULL → value stays open for the backfill and for residue adoption.
+   - `owner` is **write-once on the same terms**, and the only value it may take is the
+     **student of the row's own case**. This is what stops `owner → self`, `owner → another user`
+     and `owner → NULL` alike, and it is why removing the `WHEN` clause was necessary rather than
+     tidy: `owner → NULL` never fired a `WHEN (new.owner IS NOT NULL)` trigger at all.
+     **READ THAT AS AN `UPDATE` PROPERTY — AMENDED 2026-08-04 (MV-159 review round 3).** The
+     trigger's write-once clauses return early on `tg_op = 'INSERT'`, so an INSERT that *names* a
+     third party as owner never met them. That is the exact mirror of the round-3 blocker in §9.2
+     (d) and it is closed **one layer up**, in the five INSERT `WITH CHECK`s, by
+     `owner is null or owner = private.case_student_id(case_id)` — the same helper clause (c) now
+     reads, so the two halves cannot drift. It had to go there rather than here for a reason that
+     is not stylistic: **three of the five INSERT-granted tables carry no derive trigger at all**
+     (`program_predictions`, `application_attempts`, `outcome_events` — rule 3), so a trigger-only
+     fix would have closed two of the five holes. The whole sentence is therefore: *this trigger
+     says a row that EXISTS may not have either axis re-pointed; MV-159's INSERT predicates say a
+     row being CREATED may name neither an unreachable case nor an owner who is not that case's
+     student.*
+   - Role-independent (the `program_predictions_no_update` precedent). It cannot be otherwise: the
+     function is SECURITY DEFINER, so the `rolbypassrls` test `enforce_case_write_surface` uses
+     would be unconditionally true inside it.
+
+   With `owner IS NULL` the row is consultancy-created, there is nothing to derive from, and the
+   **statement-supplied `case_id` is honoured** — bounded by MV-159's `WITH CHECK`, not by the
+   trigger. `owner IS NULL` is also the one owner value that INSERT's owner-axis bound admits
+   unconditionally, so the consultancy shape is untouched by the round-3 fix (measured: the
+   `owner IS NULL` insert into a reachable case is ADMITTED on both tables). That property is preserved by the derive half's own `new.case_id is null and
+   new.owner is not null` qualifier, so MV-160 §D's counsellor-write proof (INSERT/UPDATE/DELETE on
+   these two tables "each succeeding with `owner IS NULL`") stays satisfiable. Residual seam, no
+   Stage 2 caller, recorded as a Stage 3 input: a consultancy row written through an **upsert** must
+   supply `case_id`, so its `ON CONFLICT DO UPDATE SET` list needs `UPDATE(case_id)`, which Stage 2
+   does not grant — MV-160 §D drives plain statements, and MV-157 keeps `case_id` out of both
+   upsert payloads.
 3. **MV-155 RESIDUE IS A FAILURE MODE, NOT A DEGRADED ONE — added 2026-08-03 from the MV-157/MV-158
    review.** Rule 2 explains why only **two** of the nine tables carry a derive trigger. The
    consequence for the other **seven** was never written down, and it is not the consequence the cards
@@ -416,14 +467,64 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
    Measured on `obfvrxixtautamflzxzq` on 2026-08-03: residue **zero on all nine tables**, and **zero**
    users without a personal case. A window to close before merge, not an outage.
 4. **The policy lifecycle is two slices, not one.** Every *Policy form* row below describes what
-   **MV-159** creates, including the transitional `owner = (select auth.uid()) OR …` disjunct.
+   **MV-159** creates, including the transitional ownership disjunct.
    **MV-160 §D re-creates every one of those policies with the disjunct removed**, as step (d) of its
    migration — after its `SET NOT NULL`s, which are what make the disjunct redundant — and only then
    asserts that no predicate reads `owner`. Read each *Slice ownership* row's `policies → MV-159`
-   as `policies → MV-159, disjunct removal → MV-160 §D`. The removal is behaviour-preserving on
-   SELECT and UPDATE (a row's `case_id` provably resolves to the case whose `student_user_id` is its
-   `owner`, and `private.actor_case_ids()` reaches every such case) and **strictly tightening on
-   INSERT**, where it closes a cross-case insert the disjunct's first branch would have admitted.
+   as `policies → MV-159, disjunct removal → MV-160 §D`.
+
+   **THE DISJUNCT HAS TWO SHAPES. AMENDED 2026-08-04 (MV-159 review round 2).** This rule used to
+   describe one shape, `owner = (select auth.uid()) OR …`, and to note that MV-160's removal is
+   "**strictly tightening on INSERT**, where it closes a cross-case insert the disjunct's first
+   branch would have admitted". **That sentence was correct, and it was the bug report.** A
+   cross-case INSERT that a Stage-2 predicate admits is a tenancy breach for the whole life of
+   Stage 2; it is not a tightening to schedule for the next card. It was measured — a user who
+   could not SELECT another user's assessment inserted `owner = self, case_id = <their case>,
+   assessment_id = <their assessment>` into `program_predictions`, and the victim saw it in their
+   own record — and it is a **regression** against legacy `pp_insert_own`, whose
+   `exists (… a.owner = auth.uid())` required the actor to own the parent. On
+   `application_attempts` / `outcome_events` the only thing refusing it was a legacy composite FK
+   **that MV-160 drops**. So it is closed in MV-159, by shape:
+
+   | Command | Disjunct |
+   |---|---|
+   | SELECT / UPDATE / DELETE (23 predicates) | `owner = (select auth.uid())` |
+   | INSERT (5 predicates: ups, ds, pp, aa, oe) | `(owner = (select auth.uid()) and case_id is null)` |
+
+   The property restored is **a row that names a case must name a case the actor can REACH**: with
+   `case_id` non-null the predicate always routes through `private.actor_case_ids()`. The
+   READ/UPDATE/DELETE shape keeps the bare form, because that is what holds a not-yet-backfilled
+   row visible to its owner — the Stage 2 exit regression the disjunct exists to avoid.
+
+   **AMENDED 2026-08-04 (MV-159 review round 3) — the INSERT case arm carries a THIRD conjunct, and
+   the table above is only half the shape.** Bounding which CASE a row may name says nothing about
+   which OWNER it may name, and the mirror (`owner = <victim>, case_id = <the actor's OWN case>`)
+   was ADMITTED on all five. The full INSERT predicate is therefore:
+
+   ```
+   (owner = (select auth.uid()) and case_id is null)          <- transitional, MV-160 §D deletes
+   or (
+     case_id is not null
+     and case_id = any ((select private.actor_case_ids())::uuid[])
+     and (owner is null or owner = private.case_student_id(case_id))   <- MV-160 §D KEEPS THIS
+   )
+   ```
+
+   **EVERY ARM BOUNDS BOTH AXES**, which is the invariant to hold onto rather than the syntax: the
+   transitional arm pins `owner` to the actor and `case_id` to NULL; the case arm pins `case_id` to
+   a reachable case and `owner` to that case's own student (`owner IS NULL` — the consultancy shape
+   — is admitted unconditionally). Second property restored: **on INSERT, a non-NULL `owner` may
+   only be the student of the case the row names**, which is the INSERT half of rule 2's sentence.
+   MV-159 §13 (4) asserts the clause's presence at APPLY time precisely because MV-160 §D
+   re-creates all five predicates — see §9.2's 2026-08-04 round-3 entry.
+
+   MV-160's removal is therefore **behaviour-preserving on SELECT/UPDATE/DELETE** (a row's
+   `case_id` provably resolves to the case whose `student_user_id` is its `owner`, and
+   `private.actor_case_ids()` reaches every such case) and, now, a verifiable **no-op on INSERT**:
+   on the three chain tables the arm is dead (`case_id is null` against a parentage clause that
+   yields NULL, which a WITH CHECK refuses), and on the two upsert-seam tables it admits only a
+   residue insert that MV-160's `SET NOT NULL` refuses with 23502 anyway. MV-160 still deletes
+   **one marked line per predicate** — the shape differs, the edit does not.
 
 ---
 
@@ -500,15 +601,15 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | PK `(owner, program_id)` |
 | **Uniqueness after** | `UNIQUE (case_id, program_id)` — **full, not partial; the `onConflict` arbiter for `upsertProgramState`, so it cannot be partial** (MV-155 §E; rule 1 above) **+** MV-156's interim `UNIQUE (owner, program_id)` — **FULL, not partial. AMENDED 2026-08-03; this cell previously read `WHERE owner IS NOT NULL`, which is UNEXECUTABLE as an arbiter.** `lib/matches/repo.ts:28` drives `upsertProgramState` with a bare `onConflict: "owner,program_id"`, and PostgREST's bare `on_conflict=` cannot infer a PARTIAL index (Postgres infers one only when the statement itself supplies the predicate) — so the partial form raises **42P10** on a live request for the whole MV-156 → MV-157 window. The predicate bought nothing anyway: **NULLs are distinct in a unique index**, so the full form already permits unlimited NULL-owner rows, which is the only thing the predicate was there to allow. Same failure as rule 1, on the owner axis. **Must also be dropped at MV-160** (§9.4) |
-| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the UPSERT-seam definer trigger **qualified `when (new.owner is not null)`** — rule 2 above); **MV-156 (PK replacement — a PK column cannot be nullable; this is not an `alter column`)**; MV-157 (`onConflict` string move); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
+| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the UPSERT-seam definer trigger — ~~**qualified `when (new.owner is not null)`**~~ **UN-qualified and re-bodied by MV-159 §1b; rule 2 above**); **MV-156 (PK replacement — a PK column cannot be nullable; this is not an `alter column`)**; MV-157 (`onConflict` string move); MV-159 (policies, incl. the INSERT owner-axis bound `private.case_student_id()`); MV-160 (NOT NULL, drop both legacy uniques) |
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), UPDATE(all), DELETE. |
 | **Grants after** | SELECT(all) · **INSERT (owner, program_id, status, notes, case_id)** · **UPDATE (owner, program_id, status, notes)** · DELETE. `case_id` is **in** the INSERT list and **out** of the UPDATE list — the asymmetry in MV-155 §H, and it is deliberate: INSERT creates a row (bounded by `WITH CHECK`), UPDATE re-points one. **AMENDED 2026-08-03 — this cell previously read `UPDATE (status, notes)`, which is UNEXECUTABLE; see §12 and the note below.** |
-| **Why UPDATE is the payload list, not the mutable list** | `UPDATE (status, notes)` raises **42501 on the INSERT branch of the very first upsert, with no row present**. PostgREST compiles an upsert to `INSERT … ON CONFLICT DO UPDATE SET` and puts **every payload column in the SET list, including the conflict-target columns**; the privilege check happens at plan time, so neither branch is reachable. Measured against this project's own stack, incrementally: `(status,notes)` → 42501 · `(status,notes,program_id)` → 42501 · `(status,notes,owner)` → 42501 · `(status,notes,owner,program_id)` → **OK**. The shipped grant is the last of those. It is still strictly narrower than the flat table-level grant it replaces (`case_id`, `created_at` and `updated_at` all leave the surface), and §H's actual invariant is untouched: **`case_id` is in no UPDATE list, and an authenticated `update … set case_id` is 42501 under exactly these grants.** Granting `UPDATE(owner)` does not let a student move or erase their own `owner` either — `owner → another user` and `owner → NULL` are both **42501, `new row violates row-level security policy`**, because a WITH CHECK admits a row only when it evaluates to TRUE and `auth.uid() = NULL` is NULL, not TRUE. Both directions are traced and asserted in `tests/integration/case-backfill.itest.ts`. |
+| **Why UPDATE is the payload list, not the mutable list** | `UPDATE (status, notes)` raises **42501 on the INSERT branch of the very first upsert, with no row present**. PostgREST compiles an upsert to `INSERT … ON CONFLICT DO UPDATE SET` and puts **every payload column in the SET list, including the conflict-target columns**; the privilege check happens at plan time, so neither branch is reachable. Measured against this project's own stack, incrementally: `(status,notes)` → 42501 · `(status,notes,program_id)` → 42501 · `(status,notes,owner)` → 42501 · `(status,notes,owner,program_id)` → **OK**. The shipped grant is the last of those. It is still strictly narrower than the flat table-level grant it replaces (`case_id`, `created_at` and `updated_at` all leave the surface), and §H's actual invariant is untouched: **`case_id` is in no UPDATE list, and an authenticated `update … set case_id` is 42501 under exactly these grants.** Granting `UPDATE(owner)` does not let a student move their own row to another user: `owner → another user` is **42501**. **AMENDED TWICE — READ BOTH.** *(a) 2026-08-04 (MV-159):* this cell originally said `owner → NULL` is 42501, which was true only of the LEGACY `ups_update_own` policy; under the case-aware `WITH CHECK` the case disjunct is TRUE for a row that stays in the actor's own case, so nulling `owner` became **admitted**, and the cell was amended to bless it, describing the cost as **"provenance on that row"**. *(b) **2026-08-04 (MV-159 review round 2) — that blessing is WITHDRAWN and the cost was understated.*** Measured end to end, the cost is not provenance, it is **the right to delete**: `/api/account/delete` step 2 deletes each owned table by `.eq("owner", userId)` and removes **0 rows** against a NULL-owner row; step 3 then fails **23503** on `user_program_state_case_id_fkey`, because all nine tables carry `case_id … ON DELETE RESTRICT` since MV-155. **One hand-rolled PATCH from a browser console permanently breaks that user's ability to delete their account**, with no privilege, no second account and no race. "No MeroVisa-authored caller can reach it" was true and irrelevant — the grant is on the public REST surface. The three reasons given for shipping it unpatched are also each withdrawn: the row staying in its case is not the property at issue; the "dangerous direction" argument covered `owner → another user` only and **inverted for `owner → self`**, which is the round-2 blocker; and "MV-160 admits it equally" is an argument that it never self-heals, not that it is safe. **Current behaviour: `owner → NULL`, `owner → self` on somebody else's row, and `owner → another user` are all 42501**, refused by MV-155 §H's derive trigger re-bodied as a binding guard (§4 rule 2), which is the only mechanism that can see a *transition* — a `WITH CHECK` sees only NEW, and `owner IS NULL` is legitimate on a consultancy row, so no predicate can distinguish "was null, stays null" from "was mine, now null". The guard is a trigger rather than a predicate reading `owner`, so **MV-160 §D's "no predicate reads `owner`" assertion is unaffected**. All four directions are traced and asserted in `tests/integration/case-backfill.itest.ts` and `tests/integration/student-data-rls.itest.ts`. |
 | **Role × verb** | SELECT / INSERT / UPDATE / DELETE: O/A/C/S = **S2** for all four · anon = — |
-| **Policy form** | Four policies, transitional disjunct, UPDATE with USING + WITH CHECK. This is one of only two tables where the assigned-counsellor **write** proof is expressible in Stage 2 (§7). |
-| **Service-role disposition** | **Leaves the list.** `app/api/shortlist/route.ts` flips to the authenticated client at MV-157 §G — **sound only because MV-155 shipped the widened UPDATE list above. CORRECTED 2026-08-03: this cell previously read "sound, because the grant already exists", and that was false as written on two counts.** (1) The route writes through the **service-role** client today (`upsertProgramState(admin, …)`; the authenticated client on the line above is used for the auth check only), so no authenticated grant was being exercised at all. (2) The grant this cell pointed at — the pre-amendment `UPDATE (status, notes)` — would have made the flip raise 42501 on its first call. Depends on MV-155 §H's definer trigger deriving `case_id` from `owner`, because PostgREST compiles the upsert to `INSERT … ON CONFLICT DO UPDATE SET`, whose SET list would otherwise need `UPDATE(case_id)` — so **MV-157 must keep `case_id` out of the `upsertProgramState` payload**; the conflict *target* may name it, the payload may not. The trigger fires only `when (new.owner is not null)` (rule 2), so the personal-case path is derived-and-overwritten while the consultancy path (`owner IS NULL`) supplies its own `case_id`, bounded by MV-159's `WITH CHECK`. Also depends on the `onConflict` arbiter being a **full** unique index (rule 1), or the upsert raises 42P10. |
+| **Policy form** | Four policies — **`ups_select_case` / `ups_insert_case` / `ups_update_case` / `ups_delete_case`, the names MV-159 shipped (added 2026-08-04; this cell previously said only "four policies", and MV-160 §D re-creates them BY NAME)** — transitional disjunct, UPDATE with USING + WITH CHECK. This is one of only two tables where the assigned-counsellor **write** proof is expressible in Stage 2 (§7). **`ups_insert_case` carries the INSERT shape of the disjunct, `(owner = (select auth.uid()) and case_id is null)` — §4 rule 4 (round 2).** Without it the round-2 trigger fix would have re-opened a cross-case INSERT here: with `case_id` no longer re-derived, naming yourself as owner while naming somebody else's case would pass. |
+| **Service-role disposition** | **Leaves the list.** `app/api/shortlist/route.ts` flips to the authenticated client at MV-157 §G — **sound only because MV-155 shipped the widened UPDATE list above. CORRECTED 2026-08-03: this cell previously read "sound, because the grant already exists", and that was false as written on two counts.** (1) The route writes through the **service-role** client today (`upsertProgramState(admin, …)`; the authenticated client on the line above is used for the auth check only), so no authenticated grant was being exercised at all. (2) The grant this cell pointed at — the pre-amendment `UPDATE (status, notes)` — would have made the flip raise 42501 on its first call. Depends on MV-155 §H's definer trigger deriving `case_id` from `owner`, because PostgREST compiles the upsert to `INSERT … ON CONFLICT DO UPDATE SET`, whose SET list would otherwise need `UPDATE(case_id)` — so **MV-157 must keep `case_id` out of the `upsertProgramState` payload**; the conflict *target* may name it, the payload may not. ~~The trigger fires only `when (new.owner is not null)`~~ **CORRECTED 2026-08-04 (MV-159 §1b): the trigger carries NO `WHEN` clause and fires on every row** (rule 2), so the personal-case path is derived **into a gap and never over an existing binding**, while the consultancy path (`owner IS NULL`) supplies its own `case_id`, bounded on BOTH axes by MV-159's `WITH CHECK`. Also depends on the `onConflict` arbiter being a **full** unique index (rule 1), or the upsert raises 42P10. |
 | **Storage path** | none |
-| **Rollback** | Drop `case_id`; drop the definer trigger (and its `WHEN` clause with it); restore flat grants; restore the composite PK (requires no NULL owners — **this rollback expires when Stage 3 writes its first consultancy row**); restore the four `ups_*_own` policies. |
+| **Rollback** | Drop `case_id`; drop the definer trigger (~~and its `WHEN` clause with it~~ — it carries none since MV-159 §1b); restore flat grants; restore the composite PK (requires no NULL owners — **this rollback expires when Stage 3 writes its first consultancy row**); restore the four `ups_*_own` policies. |
 | **Final Stage 2 state** | Surrogate PK, `case_id NOT NULL`, unique per `(case_id, program_id)`, no owner-keyed unique, `owner` retained. |
 
 ---
@@ -543,13 +644,13 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
 | **Owner/case invariant** | §3 |
 | **Uniqueness before** | PK `(owner, kind)` |
 | **Uniqueness after** | `UNIQUE (case_id, kind)` — **full, not partial; the `onConflict` arbiter for `setObtained`** (rule 1 above) **+** MV-156's interim `UNIQUE (owner, kind)` — **FULL, not partial. AMENDED 2026-08-03; this cell previously read `WHERE owner IS NOT NULL`, which is UNEXECUTABLE as an arbiter, and here it is not hypothetical:** `lib/documents/status-repo.ts:36` drives `setObtained` with a bare `onConflict: "owner,kind"` and `app/api/documents/status/route.ts` calls it on the **authenticated** client **today**, so the partial form would have taken the live document checklist down with **42P10** the day MV-156 applied — not at some future flip. PostgREST's bare `on_conflict=` cannot infer a partial index. The predicate bought nothing: NULLs are distinct in a unique index, so the full form already permits unlimited NULL-owner rows. **Must also be dropped at MV-160** (§9.4) |
-| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the definer trigger **qualified `when (new.owner is not null)`** — rule 2 above); **MV-156 (PK replacement)**; MV-157 (`setObtained` `onConflict`); MV-159 (policies); MV-160 (NOT NULL, drop both legacy uniques) |
+| **Slice ownership** | MV-155 (column, index, backfill, grant rewrite, the definer trigger — ~~**qualified `when (new.owner is not null)`**~~ **UN-qualified and re-bodied by MV-159 §1b; rule 2 above**); **MV-156 (PK replacement)**; MV-157 (`setObtained` `onConflict`); MV-159 (policies, incl. the INSERT owner-axis bound `private.case_student_id()`); MV-160 (NOT NULL, drop both legacy uniques) |
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), UPDATE(all), DELETE. |
 | **Grants after** | SELECT(all) · **INSERT (owner, kind, obtained, case_id)** · **UPDATE (owner, kind, obtained)** · DELETE. **AMENDED 2026-08-03 — this cell previously read `UPDATE (obtained)`, which is UNEXECUTABLE; see §12 and the note below.** |
-| **Why UPDATE is the payload list, not the mutable list** | Same PostgREST mechanism as §4.4, and **more urgent here**: `app/api/documents/status/route.ts` already calls `setObtained` on the **authenticated** client today, so the narrow list would have taken the live document checklist down **the day MV-155 applied** — not at some future flip. Measured incrementally: `(obtained)` → 42501 · `(obtained,kind)` → 42501 · `(obtained,owner)` → 42501 · `(obtained,owner,kind)` → **OK**. Still strictly narrower than the flat grant it replaces (`case_id` and `updated_at` leave the surface), `case_id` is in no UPDATE list, and `owner → another user` / `owner → NULL` are both 42501 at the RLS `WITH CHECK` (see §4.4's note). |
+| **Why UPDATE is the payload list, not the mutable list** | Same PostgREST mechanism as §4.4, and **more urgent here**: `app/api/documents/status/route.ts` already calls `setObtained` on the **authenticated** client today, so the narrow list would have taken the live document checklist down **the day MV-155 applied** — not at some future flip. Measured incrementally: `(obtained)` → 42501 · `(obtained,kind)` → 42501 · `(obtained,owner)` → 42501 · `(obtained,owner,kind)` → **OK**. Still strictly narrower than the flat grant it replaces (`case_id` and `updated_at` leave the surface), `case_id` is in no UPDATE list, and `owner → another user` is 42501 at the RLS `WITH CHECK`. **AMENDED 2026-08-04 (MV-159) — `owner → NULL` is NO LONGER refused**, for the reasons set out in §4.4's note; the row provably stays in the same case and invisible to everyone else, and MV-160's pure case predicate admits it equally. |
 | **Role × verb** | SELECT / INSERT / UPDATE / DELETE: O/A/C/S = **S2** for all four · anon = — |
-| **Policy form** | Four policies, transitional disjunct, UPDATE with USING + WITH CHECK. Second of the two tables where the counsellor write proof is expressible in Stage 2 (§7). |
-| **Service-role disposition** | **Not on the list today** — `app/api/documents/status/route.ts` already uses `createSupabaseServerClient()`. Stays authenticated; depends on MV-155 §H's definer trigger — qualified `when (new.owner is not null)` (rule 2) — for the same UPSERT reason as `user_program_state`, and on the `(case_id, kind)` arbiter being **full** (rule 1). **MV-157 must keep `case_id` out of the `setObtained` payload.** |
+| **Policy form** | Four policies — **`ds_select_case` / `ds_insert_case` / `ds_update_case` / `ds_delete_case`, the names MV-159 shipped (added 2026-08-04, same reason as §4.4)** — transitional disjunct, UPDATE with USING + WITH CHECK. Second of the two tables where the counsellor write proof is expressible in Stage 2 (§7). **`ds_insert_case` carries the INSERT shape of the disjunct — §4 rule 4 (round 2), same reason as §4.4.** This is also the table the round-2 re-point was measured on. |
+| **Service-role disposition** | **Not on the list today** — `app/api/documents/status/route.ts` already uses `createSupabaseServerClient()`. Stays authenticated; depends on MV-155 §H's definer trigger — ~~qualified `when (new.owner is not null)`~~ **un-qualified since MV-159 §1b** (rule 2) — for the same UPSERT reason as `user_program_state`, and on the `(case_id, kind)` arbiter being **full** (rule 1). **MV-157 must keep `case_id` out of the `setObtained` payload.** **AND THIS IS THE PATH THE ROUND-3 MIRROR BROKE (§9.2 (d)):** one planted `(owner = <victim>, kind = K)` row and this call returns 23505 on `document_status_owner_kind_idx` forever — the `(case_id, kind)` arbiter cannot absorb a violation of a different index, and the repo's heal path is case-scoped, so the app can neither see nor remove the planted row. The INSERT owner-axis bound is what stops the plant. |
 | **Storage path** | none |
 | **Rollback** | Drop `case_id`; drop the trigger; restore flat grants; restore composite PK; restore the four `ds_*_own` policies. **Trivially safe today — the table is empty.** |
 | **Final Stage 2 state** | Surrogate PK, `case_id NOT NULL`, unique per `(case_id, kind)`, no owner-keyed unique. |
@@ -569,7 +670,7 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), DELETE. **No UPDATE — and there must never be one.** |
 | **Grants after** | SELECT(all) · **INSERT (id, owner, assessment_id, program_id, verdict, rule_version, score_snapshot, supersedes_prediction_id, case_id)** · DELETE. **No UPDATE grant, ever.** |
 | **Role × verb** | SELECT / INSERT / DELETE: O/A/C/S = **S2** · **UPDATE: — for every role, permanently** (immutability is the point of `20260620000000`) · anon = — |
-| **Policy form** | `pp_select_case` / `pp_insert_case` / `pp_delete_case`. The INSERT `WITH CHECK` replaces the inline `EXISTS (… assessments …)` with `private.assessment_case_id(assessment_id) = <the case being written>` — the inline subquery is both an anti-recursion violation and a silent-denial hazard once `assessments` gains its own policy. **No UPDATE policy.** |
+| **Policy form** | `pp_select_case` / `pp_insert_case` / `pp_delete_case`. The INSERT `WITH CHECK` is ~~TWO~~ **THREE** clauses (amended 2026-08-04, round 3): the ownership disjunct in its **INSERT shape**, `(owner = (select auth.uid()) and case_id is null)` (§4 rule 4), whose case arm now also carries the **owner-axis bound** `owner is null or owner = private.case_student_id(case_id)` — this table carries NO derive trigger, so that clause is the only thing bounding the owner axis on insert — **AND** `private.assessment_case_id(assessment_id) = <the case being written>` — the inline subquery it replaces is both an anti-recursion violation and a silent-denial hazard once `assessments` gains its own policy. **BOTH CLAUSES ARE LOAD-BEARING AND ROUND 2 MEASURED WHY (2026-08-04):** the parentage clause tests only that parent and child AGREE, never that the actor can REACH the case, so under the bare disjunct naming yourself as owner admitted a prediction into any case at all — a regression against legacy `pp_insert_own`'s `exists (… a.owner = auth.uid())`. **No UPDATE policy.** **CONSEQUENCE MADE EXPLICIT 2026-08-04 (MV-159), because it retires a property MV-156's suite asserted: the comparison is plain `=`, so a child carrying `case_id IS NULL` yields NULL and a WITH CHECK admits a row only on TRUE — an AUTHENTICATED client can therefore no longer create an owner-only, case-less chain row.** `=` rather than `is not distinct from` is deliberate and closes a hole the legacy `a.owner = uid` closed: an unclaimed anonymous assessment is `owner NULL, case_id NULL` and its id travels in a shareable URL, so a NULL-tolerant comparison would let any signed-in client hang a prediction-of-record off a stranger's assessment. Nothing live is affected — MV-157 routed every chain insert through `lib/cases/dual-write.ts`, which writes `case_id` unconditionally with no owner-only fallback — and the SCHEMA still permits the shape (`_ownership_axis_present` is a disjunct), so the service-role and backfill paths are untouched. `tests/integration/owner-nullable-rebase.itest.ts` asserts the new boundary in both directions. |
 | **Service-role disposition** | `captureApplication` in `lib/outcomes/on-apply.ts` already runs RLS-scoped. Nothing to move. |
 | **Storage path** | none |
 | **Rollback** | Restore the unconditional `private.reject_prediction_update()` body **first**; then drop the FK/uniques; then drop `case_id`. Reverse of the apply order. |
@@ -589,7 +690,7 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), DELETE. No UPDATE. |
 | **Grants after** | SELECT(all) · INSERT(all cols **+ `case_id`**) · DELETE. No UPDATE. |
 | **Role × verb** | SELECT / INSERT / DELETE: O/A/C/S = **S2** · UPDATE: — (no grant today; **do not add one in Stage 2**) · anon = — |
-| **Policy form** | `aa_select_case` / `aa_insert_case` / `aa_delete_case`; INSERT `WITH CHECK` uses `private.prediction_case_id(prediction_id)`. |
+| **Policy form** | `aa_select_case` / `aa_insert_case` / `aa_delete_case`; INSERT `WITH CHECK` is the ownership disjunct in its **INSERT shape** (§4 rule 4, case arm carrying the **owner-axis bound** `owner is null or owner = private.case_student_id(case_id)` — added 2026-08-04 round 3; no derive trigger on this table either) AND `private.prediction_case_id(prediction_id) = case_id`. Same plain-`=` consequence as §4.7, for the same reason (added 2026-08-04). **ROUND 2 (2026-08-04):** under the bare disjunct this table's cross-case INSERT was refused only by the legacy composite FK `application_attempts_prediction_id_owner_fkey` — **which MV-160 drops** — so the protection had a scheduled removal date and no test. |
 | **Service-role disposition** | RLS-scoped already. |
 | **Storage path** | none |
 | **Rollback** | Drop the new composite FK → drop `UNIQUE (id, case_id)` → drop `case_id`. `2BP01` if reversed. |
@@ -609,7 +710,7 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), DELETE. No UPDATE. |
 | **Grants after** | SELECT(all) · INSERT(all cols **+ `case_id`**) · DELETE. No UPDATE. |
 | **Role × verb** | SELECT / INSERT / DELETE: O/A/C/S = **S2** · UPDATE: — permanently (corrections are a new row + `supersedes_event_id`) · anon = — |
-| **Policy form** | `oe_select_case` / `oe_insert_case` / `oe_delete_case`. The INSERT `WITH CHECK` **must retain the two integrity clauses that are not about ownership** — `source = 'self_reported'` and `verified_by IS NULL` — while replacing the owner equality and the inline `EXISTS`. Dropping them while "making it case-aware" would let a client self-certify an `official_verified` outcome. |
+| **Policy form** | `oe_select_case` / `oe_insert_case` / `oe_delete_case`. The INSERT `WITH CHECK` **must retain the two integrity clauses that are not about ownership** — `source = 'self_reported'` and `verified_by IS NULL` — while replacing the inline `EXISTS` with `private.attempt_case_id(attempt_id) = case_id`. **The owner equality is REPLACED, not dropped (amended 2026-08-04, round 3):** the case arm carries `owner is null or owner = private.case_student_id(case_id)`, which is the legacy `a.owner = auth.uid()` generalised to a case that may have a student who is not the actor — without it, `owner = <victim>, case_id = <the actor's own case>` planted a fabricated `visa_granted` **outcome event of record** in the victim's data. Dropping them while "making it case-aware" would let a client self-certify an `official_verified` outcome; both are retained and both are asserted in `tests/integration/student-data-rls.itest.ts` (added 2026-08-04). Same plain-`=` consequence as §4.7. The ownership disjunct is in its **INSERT shape** (§4 rule 4); **ROUND 2 (2026-08-04):** as with §4.8, the bare form's cross-case INSERT was refused here only by the legacy composite FK `outcome_events_attempt_id_owner_fkey`, which MV-160 drops. |
 | **Service-role disposition** | RLS-scoped already. |
 | **Storage path** | none |
 | **Rollback** | Drop new composite FK → drop `UNIQUE (id, case_id)` → drop `case_id`. |
@@ -641,6 +742,15 @@ Recorded so a reviewer can tell an omission from an oversight.
     resolve — an upsert against a partial index is not an inferrable `ON CONFLICT` arbiter and would
     raise `42P10` (§4 rule 1, same mechanism). (4) **This is a policy fact, so widening it is
     MV-159's decision to take or refuse, not MV-157's** — Stage 2 changed no policy.
+    **ANSWERED 2026-08-04: MV-159 REFUSED to widen it, and `cases_insert_admin` is unchanged.**
+    Three reasons, recorded in the migration's closing omissions block so the refusal reads as a
+    decision rather than an oversight: `ensurePersonalCase` is handed a **service-role** client at
+    exactly two already-registered account-linking exceptions, so go-forward creation needs
+    nothing; a client-side personal-case INSERT would be a **new write verb on a Stage 1 tenancy
+    table**, which is precisely the "a grant change is a separate reviewed decision" MV-159
+    refuses (§7); and `cases_personal_student_idx` is PARTIAL, so a client upsert against it
+    raises `42P10` regardless of what any policy says. If Stage 3 or Stage 5 needs it, it arrives
+    with its own review, like every other deferred verb in §6.
 - **`leads`, `universities`, `programs`** — untouched. `leads` is deny-all by design.
 - **Every cell of `2026-08-02-stage1-canonical-access-matrix.md`** — unmoved. If a Stage 1 suite needs
   an edit to stay green, Stage 2 moved a cell and is wrong.
@@ -1084,7 +1194,7 @@ schema.
 | # | Undo | Valid predecessor state (what must be true before this script runs) | Failure if run out of order |
 |---:|---|---|---|
 | **R1** | **MV-160** — **FIRST, re-create MV-159's policy set with the transitional owner disjunct restored** (MV-160 §D removes it as step (d) of its apply, so the undo puts it back — and it must go back *before* the column is re-widened: a pure case predicate over re-widened nullable rows makes a case-less row invisible to its own owner, silently, for the length of the window); then re-widen `case_id` to nullable on the eight; drop the `assessments` CHECK; **re-create** the eight `_ownership_axis_present` checks; re-create `UNIQUE (id, owner)` ×3, then the two legacy composite FKs `(prediction_id, owner)` / `(attempt_id, owner)`, then `outcome_events_attempt_id_owner_idx`; re-create the four legacy owner uniques (`profiles_owner_key`, `assessments_primary_idx`, `plan_items_kind_open_idx`, `documents_owner_kind_key`) **and** the two from §9.4 — `user_program_state_owner_program_idx (owner, program_id)` and `document_status_owner_kind_idx (owner, kind)`, **FULL, with NO `where owner is not null` predicate. AMENDED 2026-08-03:** this row used to say only "the two from §9.4" while §9.4 quoted the partial form, so an unwind written from this table would have re-created an index PostgREST's bare `on_conflict=` cannot infer and taken the live document checklist down with **42P10** — re-introducing, during a rollback, the exact defect MV-156 corrected on the way in. Re-create them by the shapes MV-156 shipped, not by the shapes it was told to ship; restore the narrowed `reject_prediction_update()` body | Stage 2 fully applied. **Re-creating a `unique (id, owner)` requires no duplicate `(id, owner)` pairs and no NULL owners in those rows** — true only if Stage 3 has written nothing. | Re-create the FKs before their unique targets → `42830`. Re-widen `case_id` **without** re-creating `_ownership_axis_present` → the MATCH SIMPLE hole reopens **silently**; nothing complains. This is the one step whose misordering does not fail loudly. |
-| **R2** | **MV-159** — re-apply the **pre-Stage-2 (legacy owner)** policy set verbatim (the reverse migration MV-159 §"Reversibility" holds in its PR); drop the new `private` helpers (`actor_case_ids`, `assessment_case_id`, `prediction_case_id`, `attempt_case_id`) | R1 done. Policy-only, so exact and instant. | Dropping a helper while a policy still references it → `2BP01`. Drop policies **first**, helpers second. |
+| **R2** | **MV-159** — re-apply the **pre-Stage-2 (legacy owner)** policy set verbatim, then drop the new `private` helpers (`actor_case_ids`, `assessment_case_id`, `prediction_case_id`, `attempt_case_id`). **SHIPPED 2026-08-04 as `supabase/rehearsal/MV-159-rollback.sql`** — one transaction (a table with RLS FORCED and zero policies returns zero rows to every client, so no session may observe the gap), with guards that refuse unless MV-159 is applied AND MV-160 is not. It restores the two `documents` policies **without** their `to authenticated` clause, i.e. with the `PUBLIC`-role defect MV-159 fixed, because a rollback that silently keeps the fix is a second unreviewed migration; the closing assert re-checks that `anon` still holds no grant, which is what makes that safe. | R1 done. Policy-only, so exact and instant. **No point of no return: it mutates no data and can be re-run.** | Dropping a helper while a policy still references it → `2BP01`. Drop policies **first**, helpers second. Running it AFTER MV-160 would restore `(select auth.uid()) = owner` over `owner IS NULL` consultancy rows and hide them from the counsellor who owns the case, silently — Guard 2 refuses that. |
 | **R3** | **MV-158** — revert the claim path to the owner-only bind | R2 done. Any assessment claimed under the case model keeps a valid `owner`, so no data repair is needed — **this is only true because MV-158 binds `owner` and `case_id` in one statement**. If it ever regressed to two statements, R3 needs a repair pass for owned-but-case-less rows. | Reverting the code while MV-159's case-only policies are still live hides claimed assessments from their owners. |
 | **R4** | **MV-157** — revert repositories/routes to `.eq("owner", …)`; restore the service-role exception registry entries that flipped | R3 done, **and MV-159 reverted (R2) so the owner-only predicate still authorizes**. Code-only: MV-157 ships no migration. | Reverting repositories while MV-159's policies are live = every read returns 0 rows for a case-scoped actor. |
 | **R5** | **MV-156** — drop the two case-side composite FKs, then the three `UNIQUE (id, case_id)` targets, then their covering indexes; drop all eight `_ownership_axis_present` checks; restore the composite PKs on `user_program_state` / `document_status` and drop the surrogate `id` columns; `SET NOT NULL` on `owner` ×8 | R4 done. **`SET NOT NULL` on `owner` succeeds only while no NULL-owner row exists** — i.e. only before Stage 3's first consultancy row. **This is the stage's hard rollback expiry.** Restoring a composite PK requires no NULL owners and no duplicate `(owner, program_id)` / `(owner, kind)` pairs. | Drop the unique targets before their FKs → `2BP01`. `SET NOT NULL` with a consultancy row present → `23502`, and the only way forward is deleting consultancy data. |
@@ -1207,15 +1317,24 @@ D-A work item 1 is satisfied for the current schema.
 - **2026-08-02** — **Three collisions BETWEEN the blocker fixes, found on a second pass and resolved
   here as §4 rules 1-3.** Each was produced by one correct fix meeting another correct fix, which is why
   none existed before the first pass and none was visible from a single card.
-  **(a) The UPSERT-seam definer trigger is qualified `when (new.owner is not null)`.** MV-155 §H
+  **(a) ~~The UPSERT-seam definer trigger is qualified `when (new.owner is not null)`.~~ SUPERSEDED
+  2026-08-04 — it carries no `WHEN` clause; see the amendment at the end of this entry and §4 rule 2.** MV-155 §H
   specified it to derive `case_id` from `owner` on every write and to *overwrite* any supplied value;
   blocker 4's fix then narrowed MV-160 §D to require counsellor INSERT/UPDATE/DELETE on exactly those
   two tables with `owner IS NULL`. An `owner IS NULL` row has nothing to derive from, and the overwrite
   destroys the only value that could identify its case — the two criteria were mutually unsatisfiable.
-  Qualifying the trigger keeps the re-pointing hazard closed on the owner-set branch and moves the bound
-  on the owner-null branch to MV-159's `WITH CHECK`, which is the right layer for what is an
+  Qualifying the trigger ~~keeps the re-pointing hazard closed on the owner-set branch and~~ moves the
+  bound on the owner-null branch to MV-159's `WITH CHECK`, which is the right layer for what is an
   authorization question. Rejected alternative: re-narrow MV-160 §D to owner-set writes, which would
   delete the one Stage 2 proof that a write path needs no Auth user — the property Stage 3 depends on.
+  **AMENDED 2026-08-04 (MV-159 review round 2): the struck clause was false, and inverted.** The
+  overwrite did not close the re-pointing hazard on the owner-set branch — it *was* the mechanism of
+  one, because a BEFORE ROW trigger runs before the `WITH CHECK` and `owner` is in the UPDATE grant,
+  so `set owner = <self>` re-derived a client's row onto the actor's OWN case and the check then
+  admitted it. The qualifier was also excluding `owner → NULL`, the transition that breaks account
+  deletion. MV-159 §1b keeps the CONCLUSION of this note — the owner-null branch is bounded by the
+  `WITH CHECK`, and the derive still fills a gap it finds — while removing the `WHEN` clause and
+  making both axes write-once. §4 rule 2 is the current statement.
   Residual seam recorded rather than hidden: a consultancy row written through an **upsert** still needs
   `UPDATE(case_id)`; no Stage 2 caller does that, and it joins §6's Stage 3 list.
   **(b) The case-keyed uniques are FULL, not partial.** `where case_id is not null` makes an index
@@ -1360,6 +1479,135 @@ D-A work item 1 is satisfied for the current schema.
   They now take the already-authorized `caseId`, which puts the read inside the boundary the route
   established and does so while the legacy policy is still there to catch a mistake rather than after
   it is gone. No grant or policy changes; MV-159 should not treat these as blocked paths.
+- **2026-08-04** — **MV-159 shipped the 24 case-aware policies and 4 definer helpers, and found
+  THREE places this file was wrong or silent. All three are amended above, in the cells, not only
+  here.** The per-table §4 *Policy form* matrix survived contact with the SQL — every policy is a
+  transcription of its cell — so what moved was a second-order consequence, a name gap, and an
+  unanswered question this file had explicitly assigned to this card.
+  **(a) §4.4/§4.6 said `owner → NULL` is refused 42501. That is a property of the LEGACY policy
+  MV-159 replaces, and it stops holding.** The case-aware `WITH CHECK`'s second disjunct is TRUE
+  for a row that stays in the actor's own case, so an authenticated client may now null `owner` on
+  its own row. Measured, not reasoned: the shipped assertion in `case-backfill.itest.ts` went red
+  against a correct migration. ~~It ships UNPATCHED and the three reasons are in §4.4~~ —
+  **SUPERSEDED 2026-08-04 by the round-2 entry below. It ships PATCHED; all three reasons were
+  wrong or beside the point, and the "residual loss is provenance" framing was an understatement
+  of a right-to-delete break.**
+  **(b) §4.7-§4.9's parentage clause is plain `=`, and that RETIRES a property MV-156's suite
+  asserted.** A child carrying `case_id IS NULL` compares NULL against any parent, and a WITH CHECK
+  admits only TRUE — so an authenticated client can no longer create an owner-only chain row, and
+  `owner-nullable-rebase.itest.ts`'s "an authenticated user can still write owner-only rows on all
+  three chain tables" went red. `=` is this file's own wording and it is load-bearing rather than
+  incidental: `is not distinct from` would compare TRUE against an unclaimed ANONYMOUS assessment
+  (`owner NULL, case_id NULL`, id shareable in a URL) and let any signed-in client hang a
+  prediction-of-record off a stranger's assessment — which the legacy `a.owner = uid` refused.
+  Nothing live is affected (MV-157 routed every chain insert through `lib/cases/dual-write.ts`,
+  which writes `case_id` unconditionally and has no owner-only fallback) and the SCHEMA still
+  permits the shape, so the service-role and backfill paths are untouched. The MV-156 assertion is
+  inverted rather than deleted, with the reasoning on it.
+  **(c) §5's open question — may an authenticated client create its own personal case — is
+  ANSWERED: REFUSED.** `cases_insert_admin` is unchanged. Reasoning in §5.
+  **Also recorded, because they are facts the next slice inherits rather than decisions:** the 24
+  policy names and 4 helper names MV-160 §D re-creates are now in §4.4/§4.6/§4.7-§4.9 and in the
+  migration header; the rollback R2 exists as a real file with guards (§10.1); and MV-153's
+  `readGrantedWriteSurface()` had a BLIND SPOT this card had to fix before its completeness guard
+  meant anything — INSERT was read from `role_table_grants`, and MV-155 §H's **column-level**
+  INSERT grants write no row there, so five of the nine reported "no INSERT grant" while holding
+  one. It now reads INSERT from `column_privileges`; the six Stage 1 tables are unaffected.
+- **2026-08-04** — **MV-159 REVIEW ROUND 2: two security blockers, both caught BEFORE the migration
+  was applied to production, both fixed in the same PR.** The mechanics of round 1 held up — the
+  helpers cannot recurse, the calls are InitPlan-hoisted, the 9x4 coverage matrix is complete, no
+  grant widened, the anonymous row is invisible, MV-135's purge and MV-158's claim are untouched.
+  Both blockers were in the `WITH CHECK` predicates and in the probes that should have caught them.
+  **(a) CROSS-CASE INSERT VIA THE OWNER DISJUNCT.** `(owner = auth.uid() OR <case arm>)` is
+  satisfied unconditionally by naming yourself as owner, and on the three chain tables the only
+  other clause tests that parent and child AGREE, never that the actor can REACH the case. Measured:
+  a user who could not SELECT another user's assessment inserted `owner = self, case_id = <their
+  case>, assessment_id = <their assessment>` into `program_predictions`, and the victim saw it in
+  their own record. A **regression** against legacy `pp_insert_own`. `aa`/`oe` were refused only by
+  legacy composite FKs **MV-160 drops**. §4 rule 4 had *predicted* this ("strictly tightening on
+  INSERT, where it closes a cross-case insert the disjunct's first branch would have admitted") and
+  scheduled the fix for MV-160; a cross-case INSERT admitted for the life of Stage 2 is a breach,
+  not a tightening to schedule. **Fixed:** the five INSERT predicates take the disjunct's INSERT
+  shape, `(owner = (select auth.uid()) and case_id is null)` — §4 rule 4's table. Property restored:
+  *a row that names a case must name a case the actor can reach.*
+  **(b) A CLIENT COULD CARRY A ROW OUT OF ITS CASE, AND MV-160 DID NOT CLOSE IT.** §13 of the
+  migration and this file both claimed re-pointing was "unexpressible" because `case_id` is in no
+  UPDATE grant. But `owner` **is** in the UPDATE grant on `user_program_state` / `document_status`,
+  a BEFORE ROW trigger fires *before* the `WITH CHECK`, and MV-155 §H's derive trigger performed an
+  unconditional `new.case_id := …`. Measured: an assigned counsellor issued ONE
+  `PATCH /rest/v1/document_status` with `{"owner":"<own uid>"}` against a client's consultancy row
+  and the row's `case_id` became the counsellor's own personal case, invisible to the client's org
+  admin. **Not transitional** — MV-160's pure case predicate admits it identically. **Fixed** at the
+  trigger (§4 rule 2): `case_id` and `owner` are both write-once, and `owner` may only become the
+  student of the row's own case. The `WHEN (new.owner IS NOT NULL)` clause was removed because
+  `owner → NULL` is the one transition it excluded — see (c).
+  **(c) `owner → NULL` WAS NOT A PROVENANCE LOSS, IT WAS A RIGHT-TO-DELETE BREAK**, and the
+  understatement was the justification for shipping it unpatched. `/api/account/delete` step 2
+  deletes by `.eq("owner", userId)` (0 rows), step 3 then fails 23503 on the `ON DELETE RESTRICT`
+  case FK. One PATCH from a browser console, permanently. The round-1 entry above is marked
+  superseded rather than rewritten, and §4.4's cell carries both amendments in order.
+  **(d) THE PROBES COULD NOT SEE EITHER BLOCKER.** All eight cross-boundary write probes passed
+  `owner: null`, so every `WITH CHECK` was exercised through its case branch only, and the
+  completeness guard derived coverage **per verb** from `information_schema` — full coverage over
+  probes that all took one path. The guard is now **branch-aware**: it enumerates the top-level OR
+  arms of every `WITH CHECK` out of `pg_policy` and requires a cross-boundary probe aimed at each.
+  Scoped to `WITH CHECK` deliberately — a `USING` clause matches a row that already exists and the
+  actor cannot steer which arm fires, and §E's fixture covers both arms by construction.
+  **(e) MV-160 INHERITED THREE COUPLED BLOCKS, NOT THE PROMISED ONE.** The disjunct-shape assertion
+  and the `InitPlan 2` count were both coupled to the disjunct MV-160 removes. The first MOVED into
+  the single transitional block; the second was rewritten as "an InitPlan and no SubPlan", which is
+  MV-160-durable and a strictly stronger statement. The promise is now true by construction.
+- **2026-08-04** — **MV-159 REVIEW ROUND 3: one security blocker — the MIRROR of round 2's, on the
+  axis round 2's fix did not touch. Caught before the migration reached the hosted project.**
+  **(a) THE FIVE INSERT PREDICATES BOUNDED WHICH CASE A ROW MAY NAME, AND NOTHING BOUNDED WHICH
+  OWNER.** Round 2's hole was *name yourself owner, point `case_id` at the victim's case*; the
+  mirror is *name the VICTIM owner, point `case_id` at YOUR OWN case*, and the victim then saw the
+  row through the transitional `owner = (select auth.uid())` SELECT disjunct. §4 rule 2 and MV-159
+  §1b both **claimed** the property — "`owner` is write-once … and the only value it may be given
+  is the student of the row's own case" — but the trigger's write-once clauses return early on
+  `tg_op = 'INSERT'`, so the property did not hold on the path where the client chooses the value.
+  Measured over real PostgREST with real JWTs, two ordinary students: `POST` with
+  `{owner: B, case_id: <A's own case>}` **ADMITTED** on all five INSERT-granted tables, `GET` as B
+  returned them, and — planting B-owned parents first so the legacy composite owner FKs are
+  satisfied down the chain — B ended up with a fabricated `visa_granted` **outcome event of
+  record**. A **regression**, not a pre-existing gap: legacy `ups_insert_own`
+  (`with check (owner = auth.uid())`) refuses the identical insert with 42501.
+  **(b) THE SHARPEST CONSEQUENCE IS A DENIAL OF SERVICE ON THE ONE LIVE STUDENT-FACING PATH.** After
+  A plants `(owner = B, kind = 'toefl')` on `document_status`, B's own `setObtained` (§4.6, the one
+  table of the nine with no service-role fallback behind it) returns **23505 on
+  `document_status_owner_kind_idx`** — forever. The upsert arbiter is `(case_id, kind)` and the
+  violated index is `(owner, kind)`, so `ON CONFLICT` cannot absorb it, and the repo's heal path is
+  case-scoped, so the app can neither see nor remove the planted row. ONE REST CALL PERMANENTLY
+  BREAKS AN ARBITRARY VICTIM'S CHECKLIST FOR A CHOSEN DOCUMENT KIND. Those rows also fail
+  `private.mv155_assert_case_backfill()` — MV-160 §B's exit gate — turning a data-integrity incident
+  into a stage-exit blocker needing hand cleanup.
+  **(c) FIXED IN THE PREDICATE, NOT THE TRIGGER, AND THE REASON IS COUNTING.** New helper
+  `private.case_student_id(uuid)` (§1a, SECURITY DEFINER, `search_path = ''`, EXECUTE revoked from
+  PUBLIC then granted to `authenticated`), and each of the five INSERT `WITH CHECK`s gains a third
+  conjunct **inside its case arm**: `owner is null or owner = private.case_student_id(case_id)`. So
+  EVERY arm of every INSERT predicate now bounds BOTH axes — the transitional arm pins `owner` to
+  the actor and `case_id` to NULL; the case arm pins `case_id` to a reachable case and `owner` to
+  that case's own student. The obvious-looking alternative — drop the trigger's early
+  `return new` — was **rejected because the trigger exists on two of the five tables**
+  (`program_predictions`, `application_attempts` and `outcome_events` carry none, rule 3), so it
+  would have closed two holes and left three; and because `OLD` is unassigned in a PL/pgSQL INSERT
+  trigger, so clause (c) needs a `tg_op` guard around every `old.*` reference to be reachable at
+  all. §1b clause (c) now reads the SAME helper, so the UPDATE and INSERT halves cannot drift.
+  **(d) IT IS ASSERTED AT APPLY TIME, NOT ONLY TESTED.** MV-159 §13 gains **(4)**: every one of the
+  five INSERT policies must still name `case_student_id` in its `WITH CHECK`, and all five must
+  exist. The case axis is self-announcing (drop it and the counsellor suite goes red immediately);
+  the owner axis is **not** — drop it and every legitimate write still works, because
+  `caseWriteColumns` / `caseBindColumns` / `caseUpsertColumns` all derive `owner` from
+  `cases.student_user_id` and never accept it from a caller. Only an attacker notices. **MV-160 §D
+  re-creates all five policies; if its re-creation drops this clause, the apply FAILS** rather than
+  silently re-opening the mirror.
+  **(e) THE PROBES COULD NOT SEE IT, AGAIN, AND FOR A NEW REASON.** Round 2 made the completeness
+  guard **branch-aware**, and it stayed green: the mirror aims at the SAME case arm the existing
+  probes aim at, differing only in the value of a column the predicate never read. Arm coverage
+  cannot see an unbounded column. The suite now carries the behavioural probe (all five tables,
+  asserting `42501` **specifically** — "any error" would have stayed green through MV-160's FK drop,
+  since `23503` refuses some shapes today) plus a structural probe pinning the clause text.
+  Mutation-tested: reverting the clause turns both red with *admitted*.
 - **2026-08-03** — **A failed case-scoped read now THROWS (`CaseReadError`) instead of rendering as
   no-data.** MV-133 shipped this idiom for the catalogue; MV-157 re-introduced the defect on the case
   axis — `resolvePersonalCaseId` ended `if (error || !data) return null` with no log, and

@@ -43,6 +43,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 vi.mock("server-only", () => ({}));
 
@@ -602,38 +603,34 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
     it("adds no RLS policy and changes none on the nine", () => {
       // MV-159 owns policies. This card's diff must show zero policy movement, so the shape is
       // asserted rather than trusted to a `git diff` a reviewer might skim.
-      const policies = sql(`
-        select tablename || '.' || policyname from pg_policies
-         where schemaname = 'public' and tablename in (${NINE.map((t) => `'${t}'`).join(",")})
-         order by 1;
+      //
+      // RE-SCOPED BY MV-159, AND THE RE-SCOPING IS THE POINT. This assertion used to pin the LIVE
+      // `pg_policies` catalogue to the 25 legacy `*_own` policies — which asserted a property of
+      // MV-159's migration (that it had not landed yet) under the name of a property of MV-155's.
+      // It went red the moment MV-159 replaced them, against a correct migration, on a card that
+      // had not touched a policy. What MV-155 actually claims is a fact about its own FILE, so
+      // that is what is asserted now, and it stays true for MV-159, MV-160 and everything after.
+      const migration = readFileSync(
+        new URL("../../supabase/migrations/20260802120000_stage2_case_id_and_personal_cases.sql", import.meta.url),
+        "utf8",
+      )
+        // Strip `--` comments: this file DISCUSSES policies at length (MV-159's WITH CHECK is
+        // where the owner-null bound lives, and §6a says so), and a comment is not DDL.
+        .split(/\r?\n/)
+        .map((line) => line.replace(/--.*$/, ""))
+        .join("\n");
+      expect(migration, "MV-155 creates no policy").not.toMatch(/\bcreate\s+policy\b/i);
+      expect(migration, "MV-155 drops no policy").not.toMatch(/\bdrop\s+policy\b/i);
+      expect(migration, "MV-155 alters no policy").not.toMatch(/\balter\s+policy\b/i);
+      // And RLS itself is untouched: enabling or forcing it is nobody's job here — it was already
+      // enabled AND forced on all nine before Stage 2 began.
+      expect(migration, "MV-155 does not touch row level security").not.toMatch(/row\s+level\s+security/i);
+      const forced = sql(`
+        select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relname in (${NINE.map((t) => `'${t}'`).join(",")})
+           and c.relrowsecurity and c.relforcerowsecurity;
       `);
-      expect(policies).toEqual([
-        "application_attempts.aa_delete_own",
-        "application_attempts.aa_insert_own",
-        "application_attempts.aa_select_own",
-        "assessments.assessments_select_own",
-        "document_status.ds_delete_own",
-        "document_status.ds_insert_own",
-        "document_status.ds_select_own",
-        "document_status.ds_update_own",
-        "documents.Service inserts documents",
-        "documents.Users delete own documents",
-        "documents.Users read own documents",
-        "outcome_events.oe_delete_own",
-        "outcome_events.oe_insert_own",
-        "outcome_events.oe_select_own",
-        "plan_items.plan_items_select_own",
-        "plan_items.plan_items_update_own",
-        "profiles.profiles_select_own",
-        "profiles.profiles_update_own",
-        "program_predictions.pp_delete_own",
-        "program_predictions.pp_insert_own",
-        "program_predictions.pp_select_own",
-        "user_program_state.ups_delete_own",
-        "user_program_state.ups_insert_own",
-        "user_program_state.ups_select_own",
-        "user_program_state.ups_update_own",
-      ]);
+      expect(forced, "RLS stays enabled AND forced on all nine").toEqual(["9"]);
     });
   });
 
@@ -1175,7 +1172,14 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
     // MV-155 ships the payload lists, which include `owner`. THE WHOLE SAFETY ARGUMENT FOR THAT
     // WIDENING RESTS ON THE RLS `WITH CHECK` — and until now nothing anywhere asserted it. These
     // two tests are that assertion.
-    it("refuses an authenticated UPDATE that re-points owner at another user — the WITH CHECK backstop", async () => {
+    it("refuses an authenticated UPDATE that re-points owner at another user — the binding guard", async () => {
+      // THE MECHANISM CHANGED AT MV-159 AND THE OLD ONE WAS NEVER SOUND. This used to assert the
+      // refusal came from the POLICY, on the reasoning that the derive trigger re-pointed
+      // `case_id` onto the NEW owner's personal case, which the actor cannot reach. True for
+      // `owner -> another user` — and it INVERTED for `owner -> self`, where the same
+      // re-derivation landed the row in the ATTACKER'S case and the WITH CHECK then admitted it.
+      // That was the round-2 blocker. MV-159 §1b makes the trigger refuse the change itself, so
+      // the refusal no longer depends on where a re-derivation happens to land.
       backfill();
       const probes: Array<[string, PromiseLike<{ error: { code?: string; message?: string } | null }>]> = [
         [
@@ -1187,37 +1191,88 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       for (const [table, p] of probes) {
         const { error } = await p;
         expect(error?.code, `${table}: re-pointing owner must be refused`).toBe("42501");
-        expect(error?.message, `${table}: and refused by the POLICY, not by a grant`).toMatch(
-          /row-level security policy/i,
+        expect(error?.message, `${table}: and refused by the BINDING GUARD, which says why`).toMatch(
+          /owner is immutable once set/i,
         );
       }
       reconcile();
     });
 
-    it("refuses an authenticated UPDATE that NULLs owner — the same WITH CHECK, and a NOT NULL under it", async () => {
-      // THIS IS THE NON-OBVIOUS HALF, AND IT IS WHY THIS TEST EXISTS SEPARATELY FROM THE ONE ABOVE.
-      // A reader can reasonably expect `with check ((select auth.uid()) = owner)` to catch only a
-      // re-point to a DIFFERENT uid and to let NULL through, since `auth.uid() = null` is NULL
-      // rather than false — which would mean `update (owner, …)` lets a student strip their own
-      // row's owner, and the seam trigger would not fire to stop it because it is qualified
-      // `when (new.owner is not null)`. Traced against the shipped policies: it does not hold.
-      // Postgres admits a row only when a WITH CHECK evaluates to TRUE, and NULL is refused exactly
-      // like FALSE.
+    it("refuses an owner NULLing their OWN row's owner — it would strand the row for account deletion", async () => {
+      // ===================================================================================
+      // THIS ASSERTION WAS INVERTED TWICE AND THE SECOND INVERSION PUT IT BACK. Read the history,
+      // because the middle state is the interesting one.
+      //
+      // Originally it read "refuses an authenticated UPDATE that NULLs owner", and it was TRUE of
+      // the legacy `ups_update_own` / `ds_update_own`, whose `with check ((select auth.uid()) =
+      // owner)` refuses NULL exactly like FALSE — Postgres admits a row only on TRUE.
+      //
+      // MV-159's first round replaced that with
+      //     owner = (select auth.uid()) OR (case_id is not null and case_id = any(actor_case_ids))
+      // whose SECOND branch is TRUE for a row that stays in the actor's own case. So nulling
+      // `owner` became admitted, and this test was FLIPPED to bless it. The cost was recorded, in
+      // the spec, on the card and in the PR body, as losing "PROVENANCE".
+      //
+      // THAT WORD WAS THE PROBLEM. Round 2 measured the cost end to end and it is not provenance,
+      // it is the RIGHT TO DELETE:
+      //
+      //     `/api/account/delete` step 2 deletes each owned table by `.eq("owner", userId)`.
+      //     Against a row whose `owner` is NULL that removes ZERO rows. Step 3 then deletes the
+      //     personal case and fails `23503` on `user_program_state_case_id_fkey`, because all
+      //     nine tables carry `case_id … ON DELETE RESTRICT` since MV-155.
+      //
+      // So ONE hand-rolled PATCH from a browser console — no privilege, no other account, no race
+      // — permanently breaks that user's ability to delete their account, and the route reports
+      // the failure forever after. "Provenance" was the justification for shipping it unpatched;
+      // it was an understatement of a right-to-delete break, and the wording is corrected
+      // wherever it appears (spec §4.4/§4.6/§12, the card's decision log, the PR body).
+      //
+      // MV-159 §1b closes it at the trigger, which is the only place that can see the transition:
+      // a WITH CHECK sees only NEW, and `owner IS NULL` is LEGITIMATE on a consultancy row, so no
+      // predicate can distinguish "was null, stays null" from "was mine, now null". The trigger
+      // sees OLD and NEW and refuses only the second.
+      //
+      // NOTE THIS IS NOT TRANSITIONAL. MV-160's pure case predicate admits the NULLing exactly as
+      // the current one does, so nothing about it self-heals; and the guard survives MV-160
+      // untouched because it is a trigger rather than a predicate that reads `owner`.
+      // ===================================================================================
       backfill();
-      // THE CAST IS DELIBERATE AND IS ITSELF PART OF THE FINDING. `lib/supabase/types.ts` types
-      // `owner` as non-nullable on both tables, so TypeScript refuses this payload outright — a
-      // THIRD barrier, and the one a MeroVisa-authored caller meets first. It is also the weakest:
-      // it binds our own code and nothing else, so a hand-rolled PostgREST request from a browser
-      // never sees it. Casting past it is what makes the two runtime barriers below observable.
       const nullOwner = { owner: null } as unknown as { owner: string };
-      const probes: Array<[string, PromiseLike<{ error: { code?: string; message?: string } | null }>]> = [
+      const probes: Array<
+        [string, PromiseLike<{ error: { code?: string; message?: string } | null }>]
+      > = [
         ["user_program_state", userA.client.from("user_program_state").update(nullOwner).eq("owner", userA.id)],
         ["document_status", userA.client.from("document_status").update(nullOwner).eq("owner", userA.id)],
       ];
+      const personalCase = personalCaseOf(userA.id);
       for (const [table, p] of probes) {
         const { error } = await p;
-        expect(error?.code, `${table}: nulling owner must be refused`).toBe("42501");
-        expect(error?.message, `${table}: refused by the policy`).toMatch(/row-level security policy/i);
+        expect(error?.code, `${table}: nulling your own row's owner must be refused`).toBe("42501");
+        expect(error?.message, `${table}: and the refusal must say why`).toMatch(/owner is immutable once set/i);
+        // The row is untouched on BOTH axes — still owned, still in its case.
+        expect(
+          sqlOne(`select count(*) from public.${table} where case_id = '${personalCase}' and owner = '${userA.id}';`),
+          `${table}: the row must be exactly as it was`,
+        ).toBe("1");
+        // SCOPED TO THIS FIXTURE'S CASE, not the whole table. An unscoped `count(*)` in a suite
+        // that shares one CI database with eight others asserts something about every other
+        // suite's rows too: it fails when a sibling seeds a legitimate consultancy row, and it
+        // passes for the wrong reason when a sibling's teardown happens to run first. Neither
+        // outcome is about the code under test.
+        expect(
+          sqlOne(`select count(*) from public.${table} where case_id = '${personalCase}' and owner is null;`),
+          `${table}: no row in this fixture's case may have been stranded`,
+        ).toBe("0");
+      }
+
+      // AND THE PROPERTY THAT ACTUALLY MATTERS: deletion by owner still reaches every row, which
+      // is the step the NULLing used to break. Counted rather than argued.
+      for (const table of ["user_program_state", "document_status"] as const) {
+        expect(
+          sqlOne(`select count(*) from public.${table} where case_id = '${personalCase}' and owner is distinct from '${userA.id}';`),
+          `${table}: a row in this user's personal case that /api/account/delete's owner-scoped ` +
+            "step 2 would not reach — step 3 would then fail 23503 on the ON DELETE RESTRICT FK",
+        ).toBe("0");
       }
 
       // THE SECOND BARRIER IS GONE, AS DESIGNED — AND THAT IS WHY THIS BLOCK STILL EXISTS.
@@ -1229,21 +1284,21 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       // question silently. MV-156 is that slice: it replaced both primary keys with a surrogate
       // `id` and relaxed the column, because a consultancy case has no Auth user to own its rows.
       //
-      // So this is the moment the pin was written for. The two barriers are now ONE — the WITH
-      // CHECK asserted immediately above is the only thing refusing `owner → NULL` for an
-      // authenticated client, and the tests above have been re-read against that fact rather than
-      // assumed to still hold. They do: Postgres admits a row only when a WITH CHECK evaluates to
-      // TRUE, and `auth.uid() = null` is NULL, which is refused exactly like FALSE. That is a
-      // property of the policy, not of the dropped NOT NULL, so removing the NOT NULL cannot
-      // weaken it.
+      // So this is the moment the pin was written for. The two barriers became ONE at MV-156 —
+      // and at MV-159 the remaining POLICY barrier stopped applying to this direction at all,
+      // because the case branch is TRUE for a row that stays in its own case. For one review
+      // round that left the direction OPEN and this test blessed it. It is now closed by a THIRD
+      // barrier of a different kind: §1b's trigger, which is the only mechanism that can see a
+      // transition rather than a row. Under the case model `case_id` is the boundary and `owner`
+      // is provenance — but provenance that `/api/account/delete` depends on, so it is bound too.
       //
-      // The assertion is inverted rather than deleted: it now pins the POST-MV-156 shape, so a
-      // rollback or a re-tightening that quietly restores the composite PK also goes red.
+      // The schema half of the pin is kept rather than deleted: it holds the POST-MV-156 shape,
+      // so a rollback or a re-tightening that quietly restores the composite PK still goes red.
       for (const table of ["user_program_state", "document_status"] as const) {
         expect(
           sqlOne(`select is_nullable from information_schema.columns
                    where table_schema='public' and table_name='${table}' and column_name='owner';`),
-          `${table}.owner is nullable from MV-156 on; the WITH CHECK above is now the only barrier`,
+          `${table}.owner is nullable from MV-156 on; the case predicate is now the boundary`,
         ).toBe("YES");
         expect(
           sqlOne(`select count(*) from information_schema.key_column_usage k
@@ -1344,10 +1399,20 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
   // H — the UPSERT seam, both branches of the WHEN clause
   // =====================================================================
   describe("the UPSERT-seam trigger", () => {
-    it("carries the WHEN (new.owner IS NOT NULL) qualification on both tables", () => {
-      // The clause is part of the specification, not an optimisation: unqualified, the overwrite
-      // destroys the only case_id an `owner IS NULL` row could carry, and MV-160 §D's counsellor
-      // write proof becomes unsatisfiable by construction.
+    it("fires UNQUALIFIED on both tables — MV-159 removed the WHEN clause, deliberately", () => {
+      // THIS ASSERTION WAS INVERTED BY MV-159 §1b, AND THE REASON THE OLD ONE WAS SAFE NO LONGER
+      // HOLDS. `when (new.owner is not null)` was correct while the function did nothing but
+      // derive: unqualified, the UNCONDITIONAL `new.case_id := v_case_id` would have destroyed
+      // the only case_id an `owner IS NULL` row could carry, making the counsellor write proof
+      // unsatisfiable by construction. That is why MV-155 wrote the clause.
+      //
+      // MV-159 §1b makes the function a BINDING GUARD as well as a deriver, and the derive half
+      // now self-qualifies (`if new.case_id is null and new.owner is not null`) — so the clause
+      // buys nothing it used to buy, and it costs the one transition that matters:
+      // `owner -> NULL` never fires a `WHEN (new.owner IS NOT NULL)` trigger, and `owner -> NULL`
+      // is what permanently breaks `/api/account/delete` (see "the client write surface" above).
+      // The consultancy shape is protected by the derive half's own qualifier instead, and the
+      // owner-null branch of the seam is exercised directly below.
       const defs = sql(`
         select t.tgname || '|' || pg_get_triggerdef(t.oid)
           from pg_trigger t join pg_class c on c.oid = t.tgrelid
@@ -1358,17 +1423,24 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       expect(defs.length).toBe(2);
       for (const def of defs) {
         expect(def).toMatch(/BEFORE INSERT OR UPDATE ON public\./);
-        expect(def).toMatch(/WHEN \(\(new\.owner IS NOT NULL\)\)/);
+        expect(def, "a WHEN clause here would re-open the `owner -> NULL` transition").not.toMatch(/\bWHEN\b/);
         expect(def).toContain("EXECUTE FUNCTION private.mv155_derive_case_id_from_owner()");
       }
     });
 
-    it("owner-set branch: derives case_id, and OVERWRITES a supplied one", async () => {
+    it("owner-set branch: derives into the GAP, and refuses to move an existing binding", async () => {
+      // MV-159 §1b NARROWED THE DERIVE AND THE TITLE FOLLOWS IT. The old behaviour — "overwrite
+      // whatever the statement supplied" — read as belt-and-braces and was in fact the mechanism
+      // of a cross-case re-point: on an UPDATE it turned a legal `owner` write into a `case_id`
+      // write that the RLS WITH CHECK then saw as already-legitimate. The derive now fills a gap
+      // and never moves an existing binding; what stops a client SUPPLYING a bad one on INSERT is
+      // the policy, which is (b).
       backfill();
       const mine = personalCaseOf(userA.id);
       const theirs = personalCaseOf(userB.id);
 
-      // (a) authenticated INSERT supplying NOTHING → derived.
+      // (a) authenticated INSERT supplying NOTHING → derived. The MV-155 upsert-insert seam,
+      //     unchanged, and this is the path `caseUpsertColumns` actually takes.
       await admin.from("user_program_state").delete().eq("owner", userA.id).eq("program_id", programB);
       const derived = await userA.client
         .from("user_program_state")
@@ -1378,32 +1450,46 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         mine,
       );
 
-      // (b) authenticated INSERT supplying the WRONG case → overwritten, not honoured. Permitted as
-      //     a plain INSERT because case_id IS in the INSERT column list; that is the whole design.
+      // (b) authenticated INSERT supplying ANOTHER USER'S case → REFUSED, where it used to be
+      //     silently corrected. This is MV-159's INSERT disjunct doing the work the trigger used
+      //     to do by accident: `(owner = auth.uid() and case_id is null)` fails on the non-null
+      //     case_id, and the case arm fails because `theirs` is not reachable. The old silent
+      //     correction is exactly why the bare disjunct looked safe on this table and was not
+      //     safe on the three chain tables, which have no trigger at all.
       await admin.from("user_program_state").delete().eq("owner", userA.id).eq("program_id", programB);
       const wrong = await userA.client
         .from("user_program_state")
         .insert({ owner: userA.id, program_id: programB, status: "shortlisted", case_id: theirs });
-      expect(wrong.error).toBeNull();
+      expect(wrong.error?.code, "naming another user's case on INSERT must be refused, not corrected").toBe("42501");
       expect(
-        sqlOne(`select case_id from public.user_program_state where owner='${userA.id}' and program_id='${programB}';`),
-        "a client-supplied case_id must be overwritten, never honoured, when owner is set",
-      ).toBe(mine);
+        sqlOne(`select count(*) from public.user_program_state where owner='${userA.id}' and program_id='${programB}';`),
+        "and no row may have landed",
+      ).toBe("0");
 
-      // (c) service-role UPSERT supplying the wrong case → same answer. service_role bypasses RLS
-      //     and holds every grant, so the trigger is the ONLY thing standing here.
-      const svcUpsert = await admin
+      // (c) authenticated INSERT naming your OWN case explicitly → admitted, through the CASE arm.
+      const right = await userA.client
         .from("user_program_state")
-        .upsert(
-          { owner: userA.id, program_id: programB, status: "applied", case_id: theirs },
-          { onConflict: "owner,program_id" },
-        );
-      expect(svcUpsert.error).toBeNull();
-      expect(
-        sqlOne(`select case_id from public.user_program_state where owner='${userA.id}' and program_id='${programB}';`),
-      ).toBe(mine);
+        .insert({ owner: userA.id, program_id: programB, status: "shortlisted", case_id: mine });
+      expect(right.error, `naming your own case must stay legal: ${right.error?.message}`).toBeNull();
+      expect(sqlOne(`select case_id from public.user_program_state where owner='${userA.id}' and program_id='${programB}';`)).toBe(
+        mine,
+      );
 
-      // (d) the seam itself: an AUTHENTICATED upsert that NAMES case_id is refused by the grant
+      // (d) SERVICE-ROLE UPDATE that would move an existing binding → refused by the trigger.
+      //     service_role bypasses RLS and holds every grant, so the guard is the ONLY thing
+      //     standing here — and it is role-independent on purpose (the
+      //     `program_predictions_no_update` precedent), which this is the proof of.
+      const svcMove = await admin
+        .from("user_program_state")
+        .update({ case_id: theirs })
+        .eq("owner", userA.id)
+        .eq("program_id", programB);
+      expect(svcMove.error?.code, "not even service_role may carry a row out of its case").toBe("42501");
+      expect(sqlOne(`select case_id from public.user_program_state where owner='${userA.id}' and program_id='${programB}';`)).toBe(
+        mine,
+      );
+
+      // (e) the seam itself: an AUTHENTICATED upsert that NAMES case_id is refused by the grant
       //     before the trigger is ever reached. This is why MV-157 must keep case_id out of the
       //     upsertProgramState / setObtained payloads.
       const refused = await userA.client
@@ -1414,9 +1500,20 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         );
       expect(refused.error?.code, "an authenticated upsert naming case_id must be 42501").toBe("42501");
 
-      // The same three shapes on document_status.
+      // (f) and the upsert the application ACTUALLY issues — `owner` only, never `case_id` — still
+      //     round-trips through both branches. This is the seam MV-155 built the trigger for and
+      //     the one MV-159 must not have disturbed.
+      const seam = await userA.client
+        .from("user_program_state")
+        .upsert({ owner: userA.id, program_id: programB, status: "applied" }, { onConflict: "owner,program_id" });
+      expect(seam.error, `the owner-only upsert must still work: ${seam.error?.message}`).toBeNull();
+      expect(sqlOne(`select case_id from public.user_program_state where owner='${userA.id}' and program_id='${programB}';`)).toBe(
+        mine,
+      );
+
+      // document_status: the derive-into-the-gap shape, via service_role.
       await admin.from("document_status").delete().eq("owner", userA.id).eq("kind", "medical");
-      const dsDerived = await admin.from("document_status").insert({ owner: userA.id, kind: "medical", obtained: true, case_id: theirs });
+      const dsDerived = await admin.from("document_status").insert({ owner: userA.id, kind: "medical", obtained: true });
       expect(dsDerived.error).toBeNull();
       expect(sqlOne(`select case_id from public.document_status where owner='${userA.id}' and kind='medical';`)).toBe(mine);
 
@@ -1436,13 +1533,20 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
      * (MV-156's own suite covers the real-table NULL-owner shape structurally:
      * `tests/integration/owner-nullable-rebase.itest.ts` §G.)
      *
-     * What IS provable here is the property MV-160 §D depends on: the function plus the WHEN clause
-     * honour a supplied `case_id` when `owner` is null, and leave it alone on a later UPDATE. The
-     * scratch table carries the same two columns and the SAME trigger definition, so a regression in
-     * the function or in the clause turns this red. The real-table replay is MV-156's to enable and
-     * MV-160 §D's to perform.
+     * What IS provable here is the property MV-160 §D depends on: the function honours a supplied
+     * `case_id` when `owner` is null and leaves it alone on a later UPDATE. The scratch table
+     * carries the same two columns and the SAME trigger definition, so a regression in the
+     * function turns this red. The real-table replay is MV-156's to enable and MV-160 §D's to
+     * perform.
+     *
+     * MV-159 §1b WIDENED WHAT THIS BLOCK COVERS. The trigger lost its `WHEN (new.owner IS NOT
+     * NULL)` qualifier — `owner -> NULL` is precisely the transition it excluded and precisely
+     * the one that breaks account deletion — so the scratch trigger drops it too, and the four
+     * transitions the function now refuses are exercised here rather than only on the real
+     * tables. The scratch table deliberately has NO policies, so every refusal below is the
+     * FUNCTION's and cannot be confused with the policy's.
      */
-    it("owner-null branch: honours a supplied case_id and does not touch it on a later UPDATE", () => {
+    it("owner-null branch: honours a supplied case_id, and neither axis may move afterwards", () => {
       backfill();
       const caseId = personalCaseOf(userA.id);
       const scratch = `mv155_seam_${stamp}`;
@@ -1457,11 +1561,11 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
           );
           create trigger ${scratch}_derive_case_id
             before insert or update on public.${scratch}
-            for each row when (new.owner is not null)
+            for each row
             execute function private.mv155_derive_case_id_from_owner();
         `);
 
-        // owner NULL → the trigger does not fire, the supplied case_id survives.
+        // owner NULL → nothing to derive from, the supplied case_id survives.
         sql(`insert into public.${scratch} (owner, case_id, note) values (null, '${caseId}', 'consultancy');`);
         expect(sqlOne(`select case_id from public.${scratch} where note = 'consultancy';`)).toBe(caseId);
 
@@ -1473,16 +1577,44 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         sql(`delete from public.${scratch} where note = 'edited';`);
         expect(sqlOne(`select count(*) from public.${scratch};`)).toBe("0");
 
-        // And the contrast that makes the WHEN clause observable: owner SET on the same table
-        // derives-and-overwrites, so the two branches genuinely differ.
+        // owner SET and case_id ABSENT → derived. This is the gap-filling half, and it is the
+        // only half MV-155's upsert-insert seam ever exercised.
+        sql(`insert into public.${scratch} (owner, note) values ('${userB.id}', 'derived');`);
+        expect(sqlOne(`select case_id from public.${scratch} where note = 'derived';`)).toBe(personalCaseOf(userB.id));
+
+        // owner SET and case_id SUPPLIED → HONOURED, not overwritten. INVERTED BY MV-159 §1b.
+        // The old overwrite looked like belt-and-braces and was the re-point mechanism; what
+        // stops a CLIENT supplying an unreachable case here is the INSERT policy on the real
+        // tables, which this scratch table deliberately does not have (see the docblock).
         sql(`insert into public.${scratch} (owner, case_id, note)
              values ('${userB.id}', '${caseId}', 'personal');`);
-        expect(sqlOne(`select case_id from public.${scratch} where note = 'personal';`)).toBe(personalCaseOf(userB.id));
+        expect(sqlOne(`select case_id from public.${scratch} where note = 'personal';`)).toBe(caseId);
 
-        // THE BOUND ON THE owner-NULL BRANCH LIVES ELSEWHERE. Once MV-159 lands, an AUTHENTICATED
-        // counsellor naming a case they cannot reach is rejected by the policy's WITH CHECK, not by
-        // this trigger. MV-159 owns that assertion; MV-155 asserts only that the value survives —
-        // read the honoured value as provenance, never as an unguarded write.
+        // AND THE TWO REFUSALS THAT ARE NOW THE POINT OF THE FUNCTION.
+        // (i) an existing binding may not move.
+        expect(() =>
+          sql(`update public.${scratch} set case_id = '${personalCaseOf(userB.id)}' where note = 'personal';`),
+        ).toThrow(/case_id is immutable once set/i);
+        expect(sqlOne(`select case_id from public.${scratch} where note = 'personal';`)).toBe(caseId);
+
+        // (ii) an existing owner may not be cleared or re-pointed.
+        expect(() => sql(`update public.${scratch} set owner = null where note = 'personal';`)).toThrow(
+          /owner is immutable once set/i,
+        );
+        expect(() => sql(`update public.${scratch} set owner = '${userA.id}' where note = 'personal';`)).toThrow(
+          /owner is immutable once set/i,
+        );
+
+        // …and NULL -> value stays open, because that is the residue-adoption direction the
+        // backfill and `lib/cases/residue.ts` both need. Only onto the case's own student.
+        sql(`insert into public.${scratch} (owner, case_id, note) values (null, '${caseId}', 'adoptable');`);
+        sql(`update public.${scratch} set owner = '${userA.id}' where note = 'adoptable';`);
+        expect(sqlOne(`select owner from public.${scratch} where note = 'adoptable';`)).toBe(userA.id);
+        // …but not onto somebody else.
+        sql(`insert into public.${scratch} (owner, case_id, note) values (null, '${caseId}', 'not-adoptable');`);
+        expect(() => sql(`update public.${scratch} set owner = '${userB.id}' where note = 'not-adoptable';`)).toThrow(
+          /may only become the student of its own case/i,
+        );
       } finally {
         sql(`drop table if exists public.${scratch};`);
       }

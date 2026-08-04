@@ -742,33 +742,78 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       sql(`delete from public.program_predictions where id='${prediction.data!.id}';`);
     });
 
-    it("an authenticated user can still write owner-only rows on all three chain tables", async () => {
+    /**
+     * INVERTED BY MV-159, AND THE INVERSION IS THE POINT OF THE TEST NOW.
+     *
+     * This read "an authenticated user can still write owner-only rows on all three chain
+     * tables", and it was true and necessary for the MV-156 → MV-157 window: the compensating
+     * `_ownership_axis_present` disjunct had to tolerate an owner-set / case-less row because
+     * that is what every live chain writer produced. **That window has closed on both ends.**
+     * MV-157 routed every chain insert through `lib/cases/dual-write.ts`, which writes `case_id`
+     * unconditionally and has no owner-only fallback (`caseWriteColumns` returning null makes the
+     * caller return null, it does not degrade); and MV-159's `pp_insert_case` / `aa_insert_case` /
+     * `oe_insert_case` re-assert CASE parentage —
+     * `private.assessment_case_id(assessment_id) = case_id` (matrix spec §4.7-§4.9). A child with
+     * a NULL `case_id` compares NULL against any parent, and a WITH CHECK admits a row only on
+     * TRUE, so an authenticated client can no longer create one.
+     *
+     * `=` rather than `is not distinct from` is deliberate and is what closes a hole the legacy
+     * policy's `a.owner = uid` used to close: an unclaimed ANONYMOUS assessment is
+     * `owner NULL, case_id NULL` and its id travels in a shareable URL, so a NULL-tolerant
+     * comparison would let any signed-in client hang a prediction-of-record off a stranger's
+     * assessment.
+     *
+     * WHAT MV-156 ACTUALLY OWNS IS UNTOUCHED, AND THE TEST ABOVE STILL PROVES IT: the SCHEMA
+     * still permits an owner-only chain row — `_ownership_axis_present` is a disjunct, not
+     * `check (case_id is not null)` — which is what keeps the service-role and backfill paths
+     * working. What tightened is the authenticated POLICY path, on a card that owns policies.
+     */
+    it("no longer lets an AUTHENTICATED client write an owner-only chain row — MV-159's case parentage", async () => {
       const { assessmentId } = seedOf(userA.id);
-      const prediction = await userA.client
+      const prediction = await userA.client.from("program_predictions").insert({
+        owner: userA.id,
+        assessment_id: assessmentId,
+        program_id: programB,
+        verdict: "strong",
+        rule_version: "v-auth-only",
+        score_snapshot: { total: 80 },
+      });
+      expect(prediction.error?.code, "a case-less prediction has no case parentage to prove").toBe("42501");
+      expect(prediction.error?.message, "refused by the POLICY, not by a grant").toMatch(/row-level security policy/i);
+
+      // The same actor CAN write the case-scoped shape — so the refusal above is a boundary, not
+      // a dead policy. `case_id` must match the parent assessment's, which the backfill guarantees.
+      const caseId = sqlOne(
+        `select case_id::text from public.assessments where id = '${assessmentId}';`,
+      );
+      expect(caseId, "HARNESS DEFECT: the seeded assessment carries no case").not.toBe("");
+      const scoped = await userA.client
         .from("program_predictions")
         .insert({
           owner: userA.id,
+          case_id: caseId,
           assessment_id: assessmentId,
           program_id: programB,
           verdict: "strong",
-          rule_version: "v-auth-only",
+          rule_version: "v-auth-cased",
           score_snapshot: { total: 80 },
         })
         .select("id")
         .single();
-      expect(prediction.error, "program_predictions as authenticated").toBeNull();
+      expect(scoped.error, `the case-scoped shape must still be writable: ${scoped.error?.message}`).toBeNull();
 
       const attempt = await userA.client
         .from("application_attempts")
-        .insert({ owner: userA.id, prediction_id: prediction.data!.id, program_id: programB })
+        .insert({ owner: userA.id, case_id: caseId, prediction_id: scoped.data!.id, program_id: programB })
         .select("id")
         .single();
-      expect(attempt.error, "application_attempts as authenticated").toBeNull();
+      expect(attempt.error, `application_attempts as authenticated: ${attempt.error?.message}`).toBeNull();
 
       const event = await userA.client
         .from("outcome_events")
         .insert({
           owner: userA.id,
+          case_id: caseId,
           attempt_id: attempt.data!.id,
           event_type: "applied",
           source: "self_reported",
@@ -776,11 +821,11 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
         })
         .select("id")
         .single();
-      expect(event.error, "outcome_events as authenticated").toBeNull();
+      expect(event.error, `outcome_events as authenticated: ${event.error?.message}`).toBeNull();
 
       sql(`delete from public.outcome_events where id='${event.data!.id}';`);
       sql(`delete from public.application_attempts where id='${attempt.data!.id}';`);
-      sql(`delete from public.program_predictions where id='${prediction.data!.id}';`);
+      sql(`delete from public.program_predictions where id='${scoped.data!.id}';`);
     });
   });
 
