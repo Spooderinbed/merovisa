@@ -61,8 +61,13 @@ end;
 $$;
 
 -- =====================================================================
--- Guard 1 — the four helpers this script drops are the ones MV-159 created
+-- Guard 1 — the five helpers this script drops are the ones MV-159 created
 -- =====================================================================
+-- FIVE SINCE REVIEW ROUND 3, not four: `case_student_id` is the OWNER-axis helper the five INSERT
+-- `WITH CHECK`s and §1b clause (c) both read. Counted rather than assumed for the same reason as
+-- everything else in this file — a rollback that leaves a helper behind leaves a policy that
+-- references it undroppable, and one that expects four finds five and stops here instead of
+-- half-running.
 do $$
 declare
   v_helpers int;
@@ -70,9 +75,10 @@ begin
   select count(*) into v_helpers
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'private'
-     and p.proname in ('actor_case_ids', 'assessment_case_id', 'prediction_case_id', 'attempt_case_id');
-  if v_helpers <> 4 then
-    raise exception 'MV-159 rollback refuses: expected 4 MV-159 helpers in schema private, found %.', v_helpers;
+     and p.proname in ('actor_case_ids', 'assessment_case_id', 'prediction_case_id',
+                       'attempt_case_id', 'case_student_id');
+  if v_helpers <> 5 then
+    raise exception 'MV-159 rollback refuses: expected 5 MV-159 helpers in schema private, found %.', v_helpers;
   end if;
 end;
 $$;
@@ -298,7 +304,7 @@ create policy oe_delete_own on public.outcome_events
   for delete to authenticated using ((select auth.uid()) = owner);
 
 -- =====================================================================
--- 3  drop the four MV-159 helpers — LAST, and the ordering is mandatory
+-- 3  drop the five MV-159 helpers — LAST, and the ordering is mandatory
 -- =====================================================================
 -- Dropping a helper while a policy still references it raises 2BP01 (spec §10.1 R2's stated
 -- failure mode). No `cascade`: if something still depends on one of these, the correct outcome is
@@ -307,6 +313,10 @@ drop function private.actor_case_ids();
 drop function private.assessment_case_id(uuid);
 drop function private.prediction_case_id(uuid);
 drop function private.attempt_case_id(uuid);
+-- Round 3's OWNER-axis helper. Dropped LAST of the five and unqualified by `if exists`, exactly
+-- like its four siblings: Guard 1 has already proved all five are present, so a missing one here is
+-- a state this script has no business continuing through.
+drop function private.case_student_id(uuid);
 
 -- MV-152's helpers are NOT dropped: `actor_admin_org_ids`, `actor_assigned_case_ids`,
 -- `can_access_case` and the rest are Stage 1's and are still load-bearing for the six tenancy
@@ -361,7 +371,7 @@ begin
       'policies apply to PUBLIC. Do not commit this.', v_anon;
   end if;
 
-  raise notice 'MV-159 rollback complete: 25 policies restored, 4 helpers dropped, RLS forced on 9/9.';
+  raise notice 'MV-159 rollback complete: 25 policies restored, 5 helpers dropped, RLS forced on 9/9.';
 end;
 $$;
 
@@ -428,7 +438,13 @@ begin
       and (coalesce(pg_get_expr(p.polqual, p.polrelid), '') like '%actor_case_ids%'
         or coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') like '%actor_case_ids%'
         or coalesce(pg_get_expr(p.polqual, p.polrelid), '') like '%_case_id(%'
-        or coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') like '%_case_id(%')
+        or coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') like '%_case_id(%'
+        -- Round 3's helper is named `case_student_id`, which the `%_case_id(%` pattern does NOT
+        -- match. Today every predicate carrying it also carries `actor_case_ids`, so the first
+        -- clause would catch it anyway — spelled out because "caught by another clause" is a
+        -- coincidence of the current predicate shape, and this check outlives that shape.
+        or coalesce(pg_get_expr(p.polqual, p.polrelid), '') like '%case_student_id(%'
+        or coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') like '%case_student_id(%')
   ) then
     raise exception 'MV-159 rollback: a restored predicate still calls an MV-159 helper, which this '
       'script has just dropped. Every query against that table would raise. Do not commit.';

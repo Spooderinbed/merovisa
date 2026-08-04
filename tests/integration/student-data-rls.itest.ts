@@ -60,16 +60,28 @@ const anonKey = process.env.SUPABASE_TEST_ANON_KEY;
 assertLocalStack("student-data-rls.itest.ts", url);
 
 /**
- * The four helpers MV-159 adds. The first string is what
+ * The five helpers MV-159 adds. The first string is what
  * `pg_get_function_identity_arguments` renders (parameter NAME included, which is why it is not
  * just `uuid`); the second is the signature `has_function_privilege` accepts.
+ *
+ * `case_student_id` is the round-3 addition and the only one that answers about the OWNER axis
+ * rather than the case axis — it is what the five INSERT `WITH CHECK`s and §1b clause (c) both
+ * read, so the INSERT and UPDATE halves of "owner may only be the case's own student" cannot drift.
  */
 const NEW_HELPERS: ReadonlyArray<readonly [name: string, identityArgs: string, signature: string]> = [
   ["actor_case_ids", "", "private.actor_case_ids()"],
   ["assessment_case_id", "p_assessment_id uuid", "private.assessment_case_id(uuid)"],
   ["prediction_case_id", "p_prediction_id uuid", "private.prediction_case_id(uuid)"],
   ["attempt_case_id", "p_attempt_id uuid", "private.attempt_case_id(uuid)"],
+  ["case_student_id", "p_case_id uuid", "private.case_student_id(uuid)"],
 ];
+
+/**
+ * The OWNER-axis bound the five INSERT `WITH CHECK`s carry, byte-exact as `pg_get_expr` renders it.
+ * MV-160 §D re-creates all five and must keep this; §13 (4) of the migration asserts the same
+ * property at APPLY time, so a re-creation that drops it cannot even land.
+ */
+const OWNER_BOUND_INSERT = "(owner IS NULL) OR (owner = private.case_student_id(case_id))";
 
 /** Every policy this card ships, by table. MV-160 §D re-creates this exact list. */
 const EXPECTED_POLICIES: Record<StudentDataTable, ReadonlyArray<readonly [name: string, cmd: string]>> = {
@@ -1008,6 +1020,137 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         expect((await rowStill(table, id)) as { owner: string }, `${table}.owner was cleared`).toEqual(before);
       }
     }, 120_000);
+
+    // ---------------------------------------------------------------------------------------
+    // THE MIRROR OF THE ROUND-2 INSERT BLOCKER, and round 3 measured it open on ALL FIVE.
+    //
+    // Round 2 closed "name YOURSELF owner, point `case_id` at the VICTIM'S case" by bounding
+    // WHICH CASE a row may name. Nothing bounded WHICH OWNER. The mirror is "name the VICTIM
+    // owner, point `case_id` at YOUR OWN case" — every predicate said yes, because the case is
+    // reachable and `owner` was never looked at — and the victim then saw the row through the
+    // transitional `owner = (select auth.uid())` SELECT disjunct.
+    //
+    // WHY THIS FILE'S EXISTING PROBES COULD NOT SEE IT. `owner: null → victim's case` and
+    // `owner: self → victim's case` are both here; `owner: victim → the actor's OWN case` was
+    // not, and it is the only one of the three that aims at the owner axis with the case axis
+    // SATISFIED. Legacy `ups_insert_own` (`with check (owner = auth.uid())`) refused it, so it
+    // was a REGRESSION rather than a pre-existing gap.
+    //
+    // EVERY ASSERTION HERE IS `42501` AND THAT IS THE POINT, NOT PEDANTRY. On
+    // `application_attempts` and `outcome_events` the legacy composite owner FKs
+    // (`…_prediction_id_owner_fkey`, `…_attempt_id_owner_fkey`) refuse SOME shapes of this attack
+    // with `23503` — and MV-160 DROPS BOTH. A test that accepted "any error" would stay green
+    // through MV-160 and go quietly wrong; these two probes name their own parents inside the
+    // actor's own case so both FKs are satisfiable, which leaves the policy as the only thing
+    // that can refuse.
+    // ---------------------------------------------------------------------------------------
+    it("refuses naming ANOTHER USER as owner on a row in a case the actor CAN reach", async () => {
+      // ATTACKER is studentB, writing into the org case they are the linked student of; VICTIM is
+      // studentA, who holds a PERSONAL case — which is what lets the last probe drive the REAL
+      // `setObtained` payload (`owner`, never `case_id`; status-repo.ts) rather than an
+      // approximation of it.
+      const student = actor("studentB");
+      const victim = actor("studentA");
+      const own = data.orgAssignedB; // the attacker's OWN reachable case
+      const ownCase = caseId("orgAssignedB");
+      const plantedKind = "coe"; // unused by every fixture row, on both unique axes
+
+      const mirrors: Array<[StudentDataTable, Record<string, unknown>]> = [
+        [
+          "user_program_state",
+          { owner: victim.id, case_id: ownCase, program_id: spareProgram, status: "applied" },
+        ],
+        ["document_status", { owner: victim.id, case_id: ownCase, kind: plantedKind, obtained: true }],
+        [
+          "program_predictions",
+          {
+            owner: victim.id,
+            case_id: ownCase,
+            assessment_id: own.primaryAssessment, // the ACTOR'S OWN parent — parentage agrees
+            program_id: spareProgram,
+            verdict: "strong",
+            rule_version: "mv159-mirror",
+            score_snapshot: {},
+          },
+        ],
+        [
+          "application_attempts",
+          { owner: victim.id, case_id: ownCase, prediction_id: own.prediction, program_id: own.programId },
+        ],
+        [
+          "outcome_events",
+          {
+            owner: victim.id,
+            case_id: ownCase,
+            attempt_id: own.attempt,
+            event_type: "visa_granted", // a fabricated OUTCOME OF RECORD in the victim's data
+            occurred_at: new Date().toISOString(),
+            source: "self_reported",
+          },
+        ],
+      ];
+
+      for (const [table, row] of mirrors) {
+        record(`${table}.insert@case`);
+        const { error } = await student.client.from(table).insert(row as never);
+        expect(
+          error?.code,
+          `${table}: naming another user as owner was admitted (or refused by an FK MV-160 drops, ` +
+            `not by the policy) — got ${error?.code ?? "NO ERROR"}: ${error?.message ?? "admitted"}`,
+        ).toBe("42501");
+      }
+
+      // The victim must see NOTHING of it, on their own authenticated client, through EITHER
+      // SELECT disjunct. This is the assertion the transitional `owner = auth.uid()` arm makes
+      // necessary: a planted row would be visible to them even though its case is not theirs.
+      for (const [table] of mirrors) {
+        const { data: seen, error } = await victim.client.from(table).select("id").eq("case_id", ownCase);
+        expect(error ?? null, `${table}: unexpected read error`).toBeNull();
+        expect(seen ?? [], `${table}: the victim can see a row planted in someone else's case`).toEqual([]);
+      }
+
+      // THE SHARPEST CONSEQUENCE, and why this is a blocker and not a tidiness note. A planted
+      // `(owner = victim, kind = K)` row breaks the victim's OWN live checklist call for K
+      // FOREVER: `setObtained` (lib/documents/status-repo.ts) upserts on the `(case_id, kind)`
+      // arbiter, the violated index is `(owner, kind)`, so `ON CONFLICT` cannot absorb it and the
+      // repo's case-scoped heal path can neither see nor remove the row. One REST call.
+      // The payload is byte-for-byte what `setObtained` sends: `owner`, never `case_id` (naming
+      // case_id puts it in the ON CONFLICT DO UPDATE SET list and is a 42501 on the ungranted
+      // column), with MV-155 §H's definer trigger deriving the case.
+      const heal = await victim.client
+        .from("document_status")
+        .upsert({ owner: victim.id, kind: plantedKind, obtained: true } as never, { onConflict: "case_id,kind" })
+        .select("id");
+      expect(
+        heal.error,
+        `the victim's own setObtained('${plantedKind}') must still work after the attempt was refused: ` +
+          `${heal.error?.code} ${heal.error?.message}`,
+      ).toBeNull();
+      const healedId = (heal.data as Array<{ id: string }> | null)?.[0]?.id;
+      if (healedId) await fixture.admin.from("document_status").delete().eq("id", healedId);
+    }, 120_000);
+
+    // The STRUCTURAL half of the same property. The behavioural probe above proves the bound
+    // works; this proves it is still WRITTEN, on all five, so MV-160 §D's re-creation cannot drop
+    // it silently. Both halves are needed for the reason §F2 records: a negative-only probe
+    // cannot tell "correctly denied" from "denied because the policy is missing".
+    it("carries the OWNER-axis bound in all five INSERT predicates — what MV-160 §D must keep", () => {
+      const withChecks = sqlLines(`
+        select c.relname || '.' || p.polname || '|' ||
+               replace(replace(pg_get_expr(p.polwithcheck, p.polrelid), e'\\n', ' '), '  ', ' ')
+          from pg_policy p
+          join pg_class c on c.oid = p.polrelid
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and c.relname || '.' || p.polname in (${[...INSERT_POLICIES].map((p) => `'${p}'`).join(",")})
+         order by 1;
+      `);
+      expect(withChecks.length, "all five INSERT policies must exist").toBe(5);
+      for (const line of withChecks) {
+        const [name, ...rest] = line.split("|");
+        expect(rest.join("|"), `${name}: the owner-axis bound is missing or reshaped`).toContain(OWNER_BOUND_INSERT);
+      }
+    });
 
     // The two UPDATE-granted tables whose grant does NOT include `owner`. Their WITH CHECK
     // carries the same two arms, but the OWNER arm is unreachable because the COLUMN is
