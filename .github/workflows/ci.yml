@@ -203,10 +203,14 @@ jobs:
           # SELECT denial returns zero rows and no error, so a suite that stopped running looks
           # exactly like a suite that is passing.
           grep -q '✓ tests/integration/student-data-rls.itest.ts' vitest-integration.log
-          # 132 tests today (9 tables x 9 actors in the positive matrix, plus the catalogue
-          # smoke, the parentage chain, the deferral negatives and the EXPLAIN probe). Floor set
-          # well below that so an incidental removal does not trip it, high enough that a gutted
-          # suite does. Raise it when the matrix grows; do not lower it without saying why.
+          # 139 tests today (9 tables x 9 actors in the positive matrix, plus the catalogue
+          # smoke, the parentage chain, the deferral negatives, the branch-coverage guard, the
+          # insider re-point probes and the EXPLAIN probe). Floor set well below that so an
+          # incidental removal does not trip it, high enough that a gutted suite does. Raise it
+          # when the matrix grows; do not lower it without saying why.
+          # COUNT RECONCILED 2026-08-04 (review round 2): this comment said 132, the card said
+          # 132, and the suite was actually 135 — three numbers for one measurement, none of
+          # which CI checked. All three now come from one run.
           test "$(grep -c '✓ tests/integration/student-data-rls.itest.ts' vitest-integration.log)" -ge 110
       - name: Stop Supabase
         if: always()

@@ -78,12 +78,57 @@ end;
 $$;
 
 -- =====================================================================
--- Guard 2 — MV-160 has NOT been applied
+-- Guard 2 — no `owner IS NULL` row exists, and (as a proxy) MV-160 has not been applied
 -- =====================================================================
+-- ROUND 2 REORDERED THIS GUARD AROUND THE ACTUAL HAZARD. It used to key ONLY on "has MV-160 run?",
+-- which is a PROXY: the thing that makes restoring `(select auth.uid()) = owner` dangerous is not
+-- MV-160 itself, it is the existence of rows with `owner IS NULL`, because those become invisible
+-- to the counsellor who legitimately owns their case — silently, since an RLS SELECT refusal
+-- returns zero rows and no error.
+--
+-- The proxy and the hazard are NOT the same set, and the gap is reachable today rather than
+-- theoretical: MV-156 made `owner` nullable and MV-157's dual-write writes `owner IS NULL` on
+-- every consultancy-created row, so the FIRST consultancy row makes this rollback lossy while
+-- MV-160 is still months away and every proxy check below still passes happily. Stage 3 is when
+-- that starts happening in volume; nothing prevents it before then.
+--
+-- So the hazard is checked FIRST and directly, and the MV-160 proxies are kept as the ORDERING
+-- guard they always really were (spec §10.1: the unwind is strictly reverse-DAG, R1 before R2).
+do $$
+declare
+  v_ownerless int;
+  v_detail    text;
+begin
+  select coalesce(sum(n), 0), string_agg(tbl || '=' || n, ', ' order by tbl)
+    into v_ownerless, v_detail
+    from (
+      select 'profiles' as tbl, count(*) as n from public.profiles where owner is null and case_id is not null
+      union all select 'plan_items', count(*) from public.plan_items where owner is null and case_id is not null
+      union all select 'user_program_state', count(*) from public.user_program_state where owner is null and case_id is not null
+      union all select 'documents', count(*) from public.documents where owner is null and case_id is not null
+      union all select 'document_status', count(*) from public.document_status where owner is null and case_id is not null
+      union all select 'program_predictions', count(*) from public.program_predictions where owner is null and case_id is not null
+      union all select 'application_attempts', count(*) from public.application_attempts where owner is null and case_id is not null
+      union all select 'outcome_events', count(*) from public.outcome_events where owner is null and case_id is not null
+      union all select 'assessments', count(*) from public.assessments where owner is null and case_id is not null
+    ) s
+   where n > 0;
+
+  if v_ownerless > 0 then
+    raise exception 'MV-159 rollback refuses: % case-bearing rows have `owner IS NULL` (%). The '
+      'legacy `(select auth.uid()) = owner` policies this script restores evaluate NULL for every '
+      'one of them, and a WITH CHECK/USING admits only TRUE — so each row would vanish from the '
+      'counsellor and admin who legitimately own its case, with no error anywhere. This is the '
+      'hazard Guard 2 exists for; MV-160 is only its most common cause. If you must unwind with '
+      'consultancy rows present, they have to be exported or re-owned FIRST, as a separate '
+      'decision with its own record.', v_ownerless, v_detail;
+  end if;
+end;
+$$;
+
 -- `case_id` still nullable on the eight, and the legacy owner-keyed uniques still present. If
--- MV-160 has run, the legacy `(select auth.uid()) = owner` policies restored below would hide every
--- `owner IS NULL` row from the actor who legitimately owns its case — a silent, total denial on
--- exactly the rows Stage 3 exists to create. Unwind R1 first.
+-- MV-160 has run, this script is out of order regardless of whether any `owner IS NULL` row
+-- happens to exist yet. Unwind R1 first.
 do $$
 declare
   v_notnull int;
@@ -202,7 +247,12 @@ create policy pp_select_own on public.program_predictions
 create policy pp_insert_own on public.program_predictions
   for insert to authenticated
   with check (
-    owner = (select auth.uid())
+    -- Operand order matches 20260620000000 verbatim: `(select auth.uid()) = owner`, not
+    -- `owner = (select auth.uid())`. The two are semantically identical and `pg_get_expr` renders
+    -- them DIFFERENTLY, so the §4 catalogue fingerprint below — which is what turns "the rollback
+    -- ran" into "the rollback restored" — would report a diff on these three chain policies.
+    -- Measured: it did, on exactly these three, until this was corrected.
+    (select auth.uid()) = owner
     and exists (
       select 1 from public.assessments a
        where a.id = program_predictions.assessment_id and a.owner = (select auth.uid())
@@ -217,7 +267,8 @@ create policy aa_select_own on public.application_attempts
 create policy aa_insert_own on public.application_attempts
   for insert to authenticated
   with check (
-    owner = (select auth.uid())
+    -- Operand order verbatim per 20260620000000 — see the note on `pp_insert_own`.
+    (select auth.uid()) = owner
     and exists (
       select 1 from public.program_predictions p
        where p.id = application_attempts.prediction_id and p.owner = (select auth.uid())
@@ -234,7 +285,8 @@ create policy oe_select_own on public.outcome_events
 create policy oe_insert_own on public.outcome_events
   for insert to authenticated
   with check (
-    owner = (select auth.uid())
+    -- Operand order verbatim per 20260620000000 — see the note on `pp_insert_own`.
+    (select auth.uid()) = owner
     and source = 'self_reported'
     and verified_by is null
     and exists (
@@ -310,6 +362,88 @@ begin
   end if;
 
   raise notice 'MV-159 rollback complete: 25 policies restored, 4 helpers dropped, RLS forced on 9/9.';
+end;
+$$;
+
+-- =====================================================================
+-- 5  THE RESTORE FINGERPRINT — "it ran" and "it restored" are different claims
+-- =====================================================================
+-- ROUND 2 ADDED THIS. Everything above proves the script RAN: 25 policies exist, none is
+-- case-aware, the helpers are gone, RLS is forced. None of it proves the policies are the ones
+-- that were there BEFORE — a rollback that restored 25 subtly different predicates satisfies
+-- every count above and is not a rollback.
+--
+-- So the closing assertion is a FINGERPRINT of the rendered catalogue, compared against the
+-- literal below. The literal was produced by MEASUREMENT rather than transcription: a stack was
+-- reset with `20260803180000_case_aware_student_data_rls.sql` moved out of the migrations
+-- directory, which is the true pre-MV-159 state, and its `pg_get_expr` output hashed. Doing that
+-- is how the three chain-table operand-order differences above were found — they are semantically
+-- identical, they render differently, and no count-based check could see them.
+--
+-- IF THIS FIRES AFTER A LEGITIMATE CHANGE, re-measure rather than edit the hash to match: the
+-- procedure is in README §"Rolling MV-159 back in production".
+do $$
+declare
+  v_fingerprint text;
+  -- MEASURED 2026-08-04 on a stack reset with 20260803180000_case_aware_student_data_rls.sql moved
+  -- OUT of supabase/migrations/ — i.e. the true pre-MV-159 catalogue — and confirmed byte-identical
+  -- to the catalogue this script produces. Re-measure, never retype, if it ever has to change.
+  v_expected constant text := '827bf303bff5f90d84780f03f5e6c0e6';
+begin
+  select md5(string_agg(
+           c.relname || '|' || p.polname || '|' || p.polcmd::text || '|' ||
+           coalesce((select string_agg(r.rolname, ',' order by r.rolname)
+                       from pg_roles r where r.oid = any (p.polroles)), 'PUBLIC') || '|' ||
+           coalesce(pg_get_expr(p.polqual, p.polrelid), '-') || '|' ||
+           coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '-'),
+           E'\n' order by c.relname, p.polname))
+    into v_fingerprint
+    from pg_policy p
+    join pg_class c on c.oid = p.polrelid
+    join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public'
+     and c.relname in ('profiles','assessments','plan_items','user_program_state','documents',
+                       'document_status','program_predictions','application_attempts','outcome_events');
+
+  if v_fingerprint <> v_expected then
+    raise exception 'MV-159 rollback: the restored catalogue does not match the pre-MV-159 state. '
+      'expected % / got %. Every count-based check above passed, so this is a restore that RAN '
+      'without RESTORING. Reproduce the baseline (reset with the MV-159 migration moved out of '
+      'supabase/migrations/), dump both catalogues and diff them policy by policy — README '
+      '§"Rolling MV-159 back in production" has the exact commands. Do not commit until they '
+      'agree or the difference is a decision somebody recorded.', v_expected, v_fingerprint;
+  end if;
+  raise notice 'MV-159 restored-catalogue fingerprint matches the pre-MV-159 baseline: %', v_fingerprint;
+
+  -- The one property the hash cannot express on its own, asserted directly so a mismatch is
+  -- actionable rather than merely alarming: no restored predicate may mention the MV-159 helpers,
+  -- which are dropped above and would make every policy raise at query time.
+  if exists (
+    select 1 from pg_policy p
+     join pg_class c on c.oid = p.polrelid
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relname in ('profiles','assessments','plan_items','user_program_state','documents',
+                        'document_status','program_predictions','application_attempts','outcome_events')
+      and (coalesce(pg_get_expr(p.polqual, p.polrelid), '') like '%actor_case_ids%'
+        or coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') like '%actor_case_ids%'
+        or coalesce(pg_get_expr(p.polqual, p.polrelid), '') like '%_case_id(%'
+        or coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') like '%_case_id(%')
+  ) then
+    raise exception 'MV-159 rollback: a restored predicate still calls an MV-159 helper, which this '
+      'script has just dropped. Every query against that table would raise. Do not commit.';
+  end if;
+
+  -- And the three chain INSERT policies must carry their inline EXISTS back, in the legacy
+  -- operand order. These are the three the measured catalogue diff caught.
+  if (select count(*) from pg_policy p join pg_class c on c.oid = p.polrelid
+       where p.polname in ('pp_insert_own', 'aa_insert_own', 'oe_insert_own')
+         and pg_get_expr(p.polwithcheck, p.polrelid) like '%( SELECT auth.uid() AS uid) = owner%'
+         and pg_get_expr(p.polwithcheck, p.polrelid) like '%EXISTS%') <> 3 then
+    raise exception 'MV-159 rollback: the three chain INSERT policies are not textually the legacy '
+      'ones. They render as `(select auth.uid()) = owner AND exists (…)`; anything else means the '
+      'restore was retyped rather than reproduced.';
+  end if;
 end;
 $$;
 

@@ -122,12 +122,92 @@ const EXPECTED_POLICIES: Record<StudentDataTable, ReadonlyArray<readonly [name: 
  * The transitional disjunct, byte-exact as `pg_get_expr` renders it. MV-160 §D deletes this
  * clause from every predicate; asserting the rendered form here is what makes that a mechanical
  * edit rather than a judgement call.
+ *
+ * IT HAS TWO SHAPES SINCE ROUND 2, and the split is the security fix rather than a style drift.
+ * On READ/UPDATE/DELETE the bare form keeps a not-yet-backfilled row reachable by its owner. On
+ * INSERT the bare form was a HOLE: the client chooses the `case_id` it writes, so naming yourself
+ * as owner admitted a row into ANY case. `and case_id is null` restores the property that a row
+ * naming a case must name a case the actor can reach.
  */
 const TRANSITIONAL_DISJUNCT = "(owner = ( SELECT auth.uid() AS uid))";
+
+/** The INSERT shape of the same disjunct — five policies carry this instead of the bare one. */
+const TRANSITIONAL_DISJUNCT_INSERT = `(${TRANSITIONAL_DISJUNCT} AND (case_id IS NULL))`;
+
+/** The five INSERT policies, i.e. the ones whose disjunct must carry `and case_id is null`. */
+const INSERT_POLICIES: ReadonlySet<string> = new Set([
+  "user_program_state.ups_insert_case",
+  "document_status.ds_insert_case",
+  "program_predictions.pp_insert_case",
+  "application_attempts.aa_insert_case",
+  "outcome_events.oe_insert_case",
+]);
 
 /** The case-scoped half, likewise byte-exact — what must SURVIVE MV-160's edit. */
 const CASE_BRANCH =
   "(case_id IS NOT NULL) AND (case_id = ANY (( SELECT private.actor_case_ids() AS actor_case_ids)::uuid[]))";
+
+/**
+ * Split a rendered predicate into its TOP-LEVEL ownership arms — the disjuncts of the
+ * parenthesised ownership group, ignoring any integrity clauses `AND`ed alongside it.
+ *
+ * This exists because the completeness guard used to be VERB-aware and round 2 showed that is not
+ * enough: every cross-boundary write probe on this card passed `owner: null`, so every WITH CHECK
+ * was exercised through its CASE arm only, and the guard reported full coverage over probes that
+ * all took one path. The OWNER arm of five INSERT policies was admitting cross-case rows and no
+ * test could see it. A guard that enumerates ARMS out of the catalogue fails on an unprobed arm
+ * whether or not anybody remembers to write the probe.
+ */
+const ownershipArms = (expr: string): string[] => {
+  // Top-level split, paren-depth aware. `pg_get_expr` fully parenthesises, so the ownership
+  // group is the single top-level operand that mentions the helper.
+  const splitTop = (s: string, op: string): string[] => {
+    const out: string[] = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "(") depth++;
+      else if (s[i] === ")") depth--;
+      else if (depth === 0 && s.startsWith(op, i)) {
+        out.push(s.slice(start, i));
+        i += op.length - 1;
+        start = i + 1;
+      }
+    }
+    out.push(s.slice(start));
+    return out.map((p) => p.trim()).filter(Boolean);
+  };
+  const unwrap = (s: string): string => {
+    let t = s.trim();
+    // Strip a wrapper paren only when it encloses the WHOLE expression.
+    for (;;) {
+      if (!t.startsWith("(") || !t.endsWith(")")) return t;
+      let depth = 0;
+      let wraps = true;
+      for (let i = 0; i < t.length; i++) {
+        if (t[i] === "(") depth++;
+        else if (t[i] === ")") depth--;
+        if (depth === 0 && i < t.length - 1) {
+          wraps = false;
+          break;
+        }
+      }
+      if (!wraps) return t;
+      t = t.slice(1, -1).trim();
+    }
+  };
+
+  const body = unwrap(expr);
+  const andParts = splitTop(body, " AND ");
+  const group = andParts.find((p) => p.includes("actor_case_ids")) ?? body;
+  return splitTop(unwrap(group), " OR ").map((arm) => {
+    const a = unwrap(arm);
+    if (a.includes("actor_case_ids")) return "case";
+    if (a.includes("auth.uid()")) return "owner";
+    // Anything else is a NEW arm nobody has probed. Named so the guard's failure says what it is.
+    return `unprobed-arm:${a}`;
+  });
+};
 
 describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the nine student-owned tables", () => {
   let fixture: TenancyFixture;
@@ -452,47 +532,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
   });
 
   // ===================================================================================
-  // B  the transitional disjunct is uniform, so MV-160's removal is a predicate edit
+  // B  MOVED — see §M at the foot of this file.
   // ===================================================================================
-  describe("MV-160 can retire the owner disjunct with a predicate edit and nothing else", () => {
-    it("writes the disjunct identically in every predicate, as the outermost OR", () => {
-      const predicates = sqlLines(`
-        select c.relname || '.' || p.polname || '@' || kind || '::' ||
-               replace(replace(expr, e'\\n', ' '), '  ', ' ')
-          from pg_policy p
-          join pg_class c on c.oid = p.polrelid
-          join pg_namespace n on n.oid = c.relnamespace
-          cross join lateral (
-            values ('using', pg_get_expr(p.polqual, p.polrelid)),
-                   ('check', pg_get_expr(p.polwithcheck, p.polrelid))
-          ) as v(kind, expr)
-         where n.nspname = 'public'
-           and c.relname in (${STUDENT_DATA_TABLES.map((t) => `'${t}'`).join(",")})
-           and p.polname <> 'Service inserts documents'
-           and v.expr is not null
-         order by 1;
-      `);
-
-      // 24 policies; every SELECT/INSERT/DELETE contributes one expression and every UPDATE two.
-      expect(predicates.length, "every new policy must carry a predicate").toBe(28);
-
-      for (const line of predicates) {
-        const expr = line.split("::").slice(1).join("::");
-        expect(expr, `${line}: the transitional disjunct is missing or reshaped`).toContain(TRANSITIONAL_DISJUNCT);
-        expect(expr, `${line}: the case branch is missing or reshaped`).toContain(CASE_BRANCH);
-        // Exactly once. A second copy would mean the disjunct was woven into the case branch, and
-        // MV-160's edit would have to restructure rather than delete.
-        expect(
-          expr.split(TRANSITIONAL_DISJUNCT).length - 1,
-          `${line}: the owner disjunct appears more than once`,
-        ).toBe(1);
-        // And it is the LEFT operand of the outermost OR: everything before it is opening
-        // parentheses. A predicate MV-160 has to restructure is a predicate MV-160 will get wrong.
-        const prefix = expr.slice(0, expr.indexOf(TRANSITIONAL_DISJUNCT));
-        expect(prefix.replace(/[\s(]/g, ""), `${line}: the owner disjunct is not the outermost OR`).toBe("");
-      }
-    });
-  });
+  // The disjunct-shape assertion used to live here, and that made the card's central promise
+  // FALSE: MV-160 was told it would delete exactly one `describe` block, while this block
+  // asserted every predicate CONTAINS the disjunct MV-160 removes and would therefore go red
+  // too. It now lives inside the one transitional block, so the promise is true by construction
+  // rather than by hope. Nothing else moved.
 
   // ===================================================================================
   // C  the four new definer helpers
@@ -650,7 +696,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       });
     }
 
-    it("shows anon nothing on any of the nine — the `to authenticated` clause, doing its job", async () => {
+    it("shows anon nothing on any of the nine — today by the absent grant, provably", async () => {
       for (const table of STUDENT_DATA_TABLES) {
         const { data: rows } = await fixture.anon.from(table).select("id");
         expect(rows ?? [], `anon must see no ${table}`).toEqual([]);
@@ -658,6 +704,44 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       // Paired existence proof: the rows are there, anon simply cannot have them.
       await proveExists("profiles", data.orgAssignedA.profile);
       await proveExists("documents", data.orgAssignedA.document);
+    });
+
+    it("keeps anon out by the `to authenticated` CLAUSE even if the grant ever appears", () => {
+      // ROUND 2 RENAMED THE TEST ABOVE AND ADDED THIS ONE. The old test was called "the `to
+      // authenticated` clause, doing its job" and did not test that clause at all: `anon` holds
+      // no grant on any of the nine, so its empty result is the GRANT refusing, and the
+      // observation would have been byte-identical against the PUBLIC-scoped legacy policies
+      // this card renamed. The rename is an acceptance criterion, so it needs a probe that fails
+      // if it is reverted.
+      //
+      // The only way to see the clause work is to remove the thing that is masking it. This
+      // grants `anon` SELECT inside a transaction, reads as `anon`, and ROLLS BACK — so the
+      // grant never outlives the statement. Spec §9.9 records the mirror case where no such net
+      // exists (`storage.objects`, where `anon` holds the full grant set), which is exactly why
+      // this policy set must not depend on the grant staying absent.
+      const seen = sqlLines(`
+        begin;
+        grant select on public.documents, public.profiles to anon;
+        set local role anon;
+        select 'documents=' || count(*) from public.documents;
+        select 'profiles=' || count(*) from public.profiles;
+        rollback;
+      `)
+        // psql prints a command tag for every non-SELECT statement even under `-tA`; left in,
+        // the four tags around the transaction read as four extra result rows.
+        .filter((line) => !/^(BEGIN|GRANT|SET|ROLLBACK)\b/.test(line));
+      expect(seen, "with the grant present, only the `to authenticated` clause stands between anon and the rows").toEqual(
+        ["documents=0", "profiles=0"],
+      );
+
+      // …and the grant really is gone again, so this test left no residue.
+      const residue = sqlLines(`
+        select table_name from information_schema.role_table_grants
+         where table_schema = 'public' and grantee = 'anon'
+           and table_name in (${STUDENT_DATA_TABLES.map((t) => `'${t}'`).join(",")})
+         order by 1;
+      `);
+      expect(residue, "the probe leaked a grant to anon").toEqual([]);
     });
   });
 
@@ -669,10 +753,19 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
     const record = (key: string) => attempted.add(key);
 
     /** Service-role read-back that fails loudly rather than reading as "the write did not land". */
-    const rowStill = async (table: StudentDataTable, id: string): Promise<Record<string, unknown> | null> => {
+    const rowStill = async (table: StudentDataTable, id: string): Promise<Record<string, unknown>> => {
       const { data: row, error } = await fixture.admin.from(table).select("*").eq("id", id).maybeSingle();
       expect(error, `HARNESS DEFECT: service-role read of ${table} failed — that is not a denial`).toBeNull();
-      return row as Record<string, unknown> | null;
+      // ROUND 2: this returned null happily, so every `toEqual(before)` below compared null with
+      // null and PASSED VACUOUSLY against a row that was never seeded. A cross-tenant UPDATE
+      // probe with no row to protect proves nothing, and it proves it silently.
+      expect(
+        row,
+        `${table} row ${id} is absent. Either the attacker just deleted it — in which case this is ` +
+          "a real cross-tenant write — or the fixture never seeded it and every assertion about " +
+          "this row is vacuous. Both are failures, and neither is a denial.",
+      ).not.toBeNull();
+      return row as Record<string, unknown>;
     };
 
     it("refuses org A's owner and admin every write against org B's student data", async () => {
@@ -704,6 +797,10 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         ];
         for (const [table, id, patch, columns] of updates) {
           for (const column of columns) record(`${table}.update(${column})`);
+          // The victim row carries `owner NULL` (consultancy shape), so the owner arm of the
+          // UPDATE predicate is NULL and the case arm is the one refusing. The owner arm gets
+          // its own probes below.
+          record(`${table}.update@case`);
           const before = await rowStill(table, id);
           await attacker.client
             .from(table)
@@ -767,12 +864,169 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         ];
         for (const [table, row] of inserts) {
           record(`${table}.insert`);
+          // These name `owner: null`, so the OWNER arm is trivially false and the CASE arm is
+          // what refuses. That is one branch of a two-branch predicate — see below.
+          record(`${table}.insert@case`);
           const { error } = await attacker.client.from(table).insert(row as never);
           // INSERT is the one verb whose denial is LOUD: a WITH CHECK rejection is 42501.
           expect(error?.code, `${attackerKey} inserted into ${table} across the boundary`).toBe("42501");
         }
+
+        // ---- INSERT into the victim's case, NAMING YOURSELF AS OWNER ------------------------
+        // THE OTHER BRANCH, AND THE ONE ROUND 2 FOUND OPEN. Every probe above passes
+        // `owner: null`, which makes `owner = auth.uid()` NULL and leaves the case arm as the
+        // only thing under test. Name yourself instead and the owner arm is TRUE — under the
+        // bare disjunct that ADMITTED the row, whatever case it named. Measured: a user who
+        // could not SELECT another user's assessment inserted a prediction into their case and
+        // the victim saw it in their own record. On `application_attempts` / `outcome_events`
+        // the only thing refusing it was a legacy composite FK MV-160 DROPS.
+        //
+        // Nothing here is hypothetical about the future: this is the probe that fails if the
+        // `and case_id is null` is ever removed from one of the five INSERT predicates.
+        //
+        // THE VALUES ARE VARIED OFF THE PROBES ABOVE ON PURPOSE. `user_program_state` is unique
+        // on `(case_id, program_id)` and `document_status` on `(case_id, kind)`, so reusing the
+        // victim's own program/kind makes a mutated (hole-restored) policy answer `23505`
+        // instead of admitting the row — a red for the wrong reason, and one that would hide
+        // whether the predicate is doing anything at all. Measured during mutation testing.
+        const insertsNamingSelf: Array<[StudentDataTable, Record<string, unknown>]> = inserts.map(
+          ([table, row]) => [
+            table,
+            {
+              ...row,
+              owner: attacker.id,
+              ...(table === "user_program_state" ? { program_id: spareProgram2 } : {}),
+              ...(table === "document_status" ? { kind: "sponsor-income" } : {}),
+              ...(table === "program_predictions" ? { rule_version: "mv159-attack-self" } : {}),
+            },
+          ],
+        );
+        for (const [table, row] of insertsNamingSelf) {
+          record(`${table}.insert@owner`);
+          const { error } = await attacker.client.from(table).insert(row as never);
+          expect(
+            error?.code,
+            `${attackerKey} named THEMSELVES owner and inserted into ${table} inside org B's case — ` +
+              "the owner disjunct is admitting a row into a case the actor cannot reach",
+          ).toBe("42501");
+        }
       }
     }, 120_000);
+
+    // ---------------------------------------------------------------------------------------
+    // THE INSIDER RE-POINT. Every probe above is an OUTSIDER: the USING clause never matches, so
+    // the row is unreachable and WITH CHECK is never consulted. The round-2 blocker needed the
+    // opposite shape — an actor who legitimately REACHES the row and then carries it off — and
+    // no probe in this file had it. `owner` IS in the UPDATE grant on the two upsert-seam tables
+    // (MV-155 §H, forced by PostgREST), so this is a live client path, not a hypothetical.
+    // ---------------------------------------------------------------------------------------
+    it("refuses an actor INSIDE the case every attempt to move a row's ownership axes", async () => {
+      const counsellor = actor("counsellorAssignedA");
+      const student = actor("studentA");
+      const consultancy = data.orgAssignedA; // owner NULL, case_id = a case the counsellor reaches
+      const personal = data.personalA; // owner = studentA, case_id = studentA's personal case
+
+      // (1) owner -> SELF on an OWNER-NULL CONSULTANCY ROW. THE MEASURED BLOCKER: one
+      //     `PATCH /rest/v1/document_status?id=eq.<id>` with `{"owner":"<own uid>"}` was ADMITTED
+      //     and re-pointed the client's row into the COUNSELLOR'S OWN PERSONAL CASE, where the
+      //     client's org admin can no longer see it. The BEFORE ROW derive trigger fired before
+      //     the WITH CHECK, so the check saw the already-re-pointed row and admitted it on
+      //     `owner = auth.uid()`. No predicate in this migration could have caught that.
+      for (const [table, id] of [
+        ["document_status", consultancy.documentStatus],
+        ["user_program_state", consultancy.programState],
+      ] as Array<[StudentDataTable, string]>) {
+        record(`${table}.update@owner`);
+        const before = await rowStill(table, id);
+        const { error } = await counsellor.client
+          .from(table)
+          .update({ owner: counsellor.id } as never)
+          .eq("id", id);
+        expect(
+          error?.code,
+          `${table}: an assigned counsellor took ownership of a client's consultancy row`,
+        ).toBe("42501");
+        expect(await rowStill(table, id), `${table}: the row moved`).toEqual(before);
+        // And it is still in the CLIENT's case, which is the property that actually matters.
+        expect((before as { case_id: string }).case_id).toBe(consultancy.caseId);
+      }
+
+      // (2) owner -> SELF on an OWNER-SET row belonging to somebody else's case. Same attack,
+      //     the other actor shape the review asked to be pinned.
+      for (const [table, id] of [
+        ["document_status", personal.documentStatus],
+        ["user_program_state", personal.programState],
+      ] as Array<[StudentDataTable, string]>) {
+        const before = await rowStill(table, id);
+        const { error } = await counsellor.client
+          .from(table)
+          .update({ owner: counsellor.id } as never)
+          .eq("id", id);
+        // The counsellor cannot reach a personal case at all, so this one dies at USING —
+        // silently, zero rows. Asserted on the ROW, which is the only honest proof.
+        expect(error ?? null, `${table}: unexpected error shape`).toBeNull();
+        expect(await rowStill(table, id), `${table}: a counsellor re-owned a personal row`).toEqual(before);
+      }
+
+      // (3) owner -> SELF by the row's OWN owner, on their OWN row. Legal, a no-op, and here so
+      //     that (1) and (2) are not passing because the whole column is frozen.
+      const okSelf = await student.client
+        .from("document_status")
+        .update({ owner: student.id } as never)
+        .eq("id", personal.documentStatus);
+      expect(okSelf.error, `re-affirming your own ownership must stay legal: ${okSelf.error?.message}`).toBeNull();
+
+      // (4) owner -> ANOTHER USER. Previously refused because the derive trigger re-pointed
+      //     `case_id` onto the other user's personal case and the WITH CHECK then failed. That
+      //     argument died with the fix — `case_id` is no longer re-derived — so the refusal now
+      //     has to come from the trigger's own guard, and this proves it does.
+      const other = actor("studentB");
+      const beforeOther = await rowStill("user_program_state", personal.programState);
+      const reOwn = await student.client
+        .from("user_program_state")
+        .update({ owner: other.id } as never)
+        .eq("id", personal.programState);
+      expect(reOwn.error?.code, "handing your row to another user must be refused").toBe("42501");
+      expect(await rowStill("user_program_state", personal.programState)).toEqual(beforeOther);
+
+      // (5) owner -> NULL. Admitted before round 2, and it is not a provenance nicety: it
+      //     PERMANENTLY BREAKS `/api/account/delete` for that user. Step 2 deletes by
+      //     `.eq("owner", userId)` and removes 0 rows; step 3 then fails 23503 on
+      //     `user_program_state_case_id_fkey`, because all nine carry `case_id ON DELETE
+      //     RESTRICT`. One hand-rolled PATCH from a browser console and the account can never
+      //     be deleted again.
+      for (const [table, id] of [
+        ["document_status", personal.documentStatus],
+        ["user_program_state", personal.programState],
+      ] as Array<[StudentDataTable, string]>) {
+        const before = await rowStill(table, id);
+        const { error } = await student.client
+          .from(table)
+          .update({ owner: null } as never)
+          .eq("id", id);
+        expect(error?.code, `${table}: clearing owner must be refused, not merely regretted`).toBe("42501");
+        expect((await rowStill(table, id)) as { owner: string }, `${table}.owner was cleared`).toEqual(before);
+      }
+    }, 120_000);
+
+    // The two UPDATE-granted tables whose grant does NOT include `owner`. Their WITH CHECK
+    // carries the same two arms, but the OWNER arm is unreachable because the COLUMN is
+    // ungranted — which is a fact about the grant set that can change, so it is probed rather
+    // than assumed. This is what supplies `profiles.update@owner` / `plan_items.update@owner`.
+    it("refuses to name yourself owner on the two tables whose UPDATE grant omits the column", async () => {
+      const student = actor("studentA");
+      for (const [table, id] of [
+        ["profiles", data.personalA.profile],
+        ["plan_items", data.personalA.openPlanItem],
+      ] as Array<[StudentDataTable, string]>) {
+        record(`${table}.update@owner`);
+        const { error } = await student.client
+          .from(table)
+          .update({ owner: student.id } as never)
+          .eq("id", table === "plan_items" ? (planId(id) as unknown as string) : id);
+        expect(error?.code, `${table}: UPDATE(owner) is not granted and must stay that way`).toBe("42501");
+      }
+    });
 
     // The three ungranted `assessments` verbs. Declared BEFORE the completeness guard because
     // vitest runs `it`s in declaration order and the guard counts what has actually run.
@@ -820,9 +1074,57 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       expect(ungranted, "assessments is the only one of the nine with no write grant").toEqual(["assessments"]);
 
       const required = [...granted, ...ungranted.flatMap((t) => [`${t}.insert`, `${t}.update`, `${t}.delete`])].sort();
-      expect([...attempted].sort(), "every write verb `authenticated` holds must be probed across the boundary").toEqual(
-        required,
-      );
+      const verbLevel = [...attempted].filter((k) => !k.includes("@")).sort();
+      expect(verbLevel, "every write verb `authenticated` holds must be probed across the boundary").toEqual(required);
+    });
+
+    it("attempted every BRANCH of every client-steerable predicate, not merely every verb", () => {
+      // ROUND 2'S ACTUAL FINDING, TURNED INTO A GUARD. Verb-level completeness was green while
+      // five WITH CHECK predicates had an unprobed OR arm that admitted cross-case rows: every
+      // probe in the file passed `owner: null`, so the owner arm was NULL every time and only
+      // the case arm was ever under test. "Full coverage" over probes that all take one path is
+      // not coverage, and no count of verbs could have said so.
+      //
+      // SCOPED TO `WITH CHECK`, AND THAT IS A REASONED LINE RATHER THAN A CONVENIENT ONE. A
+      // WITH CHECK is evaluated against the row the CLIENT SUPPLIES, so the client chooses which
+      // arm it aims at, and every arm is therefore an attack surface that a probe must aim at
+      // too. A USING clause is evaluated against a row that ALREADY EXISTS: the actor cannot
+      // steer which arm matches, and both arms are already exercised by construction in the
+      // positive matrix (§E), whose fixture holds owner-set personal rows AND owner-null
+      // consultancy rows on all nine tables.
+      //
+      // Both sides derived: arms come out of `pg_policy` at run time, probes out of what ran.
+      const checkPredicates = sqlLines(`
+        select c.relname || '|' || p.polcmd::text || '|' ||
+               replace(replace(pg_get_expr(p.polwithcheck, p.polrelid), e'\\n', ' '), '  ', ' ')
+          from pg_policy p
+          join pg_class c on c.oid = p.polrelid
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and c.relname in (${STUDENT_DATA_TABLES.map((t) => `'${t}'`).join(",")})
+           and p.polname <> 'Service inserts documents'
+           and p.polwithcheck is not null
+         order by 1;
+      `);
+      expect(checkPredicates.length, "HARNESS DEFECT: no WITH CHECK predicates found").toBe(9);
+
+      const requiredBranches = new Set<string>();
+      for (const line of checkPredicates) {
+        const [table, cmd, ...rest] = line.split("|");
+        const verb = cmd === "a" ? "insert" : "update";
+        const arms = ownershipArms(rest.join("|"));
+        expect(
+          arms.length,
+          `${table}.${verb}: expected exactly two ownership arms, got ${arms.length} (${arms.join(" / ")})`,
+        ).toBe(2);
+        for (const arm of arms) requiredBranches.add(`${table}.${verb}@${arm}`);
+      }
+
+      const probedBranches = [...attempted].filter((k) => k.includes("@")).sort();
+      expect(
+        probedBranches,
+        "every OR arm of every client-supplied predicate must have a cross-boundary probe aimed at it",
+      ).toEqual([...requiredBranches].sort());
     });
   });
 
@@ -1149,7 +1451,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
   // ===================================================================================
   // I  no re-point: a row cannot be carried out of its case by any client on any path
   // ===================================================================================
-  describe("re-pointing a row into another case is unexpressible, not merely rejected", () => {
+  // ROUND 2 RENAMED THIS BLOCK. It used to be titled "…is unexpressible, not merely rejected",
+  // which was the migration's claim too, and both were FALSE: `case_id` is in no UPDATE grant,
+  // but `owner` IS on two tables, and until §1b the derive trigger turned a legal `owner` write
+  // into a `case_id` re-point BEFORE the WITH CHECK could look. Re-pointing takes TWO mechanisms
+  // to close — the absent column grant AND the trigger's binding guard — so the block now names
+  // both and probes both.
+  describe("re-pointing a row into another case is closed by the grant AND by the binding guard", () => {
     it("refuses an UPDATE naming case_id on every update-granted table — the column grant, 42501", async () => {
       const student = actor("studentA");
       const target = caseId("orgAssignedB");
@@ -1170,11 +1478,20 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       }
     });
 
-    it("refuses re-pointing `owner` at another user, on the two tables whose grant includes it", async () => {
+    it("refuses re-pointing `owner`, on the two tables whose grant includes it", async () => {
       // MV-155 §H had to grant `update (owner, …)` because PostgREST puts every payload column in
-      // an upsert's SET list. THE SAFETY ARGUMENT FOR THAT WIDENING NOW RESTS HERE: the derive
-      // trigger re-derives `case_id` from the NEW owner's personal case, which is not in this
-      // actor's `actor_case_ids()`, so the WITH CHECK refuses.
+      // an upsert's SET list. THE SAFETY ARGUMENT FOR THAT WIDENING USED TO BE RECORDED HERE AS:
+      // "the derive trigger re-derives `case_id` from the NEW owner's personal case, which is not
+      // in this actor's `actor_case_ids()`, so the WITH CHECK refuses."
+      //
+      // THAT ARGUMENT WAS ONLY EVER TRUE FOR `owner -> ANOTHER USER`, AND IT INVERTED FOR
+      // `owner -> SELF`: the re-derivation then landed the row in the ATTACKER'S OWN case, where
+      // the WITH CHECK happily admitted it. That is the round-2 blocker, measured on
+      // `document_status` with an assigned counsellor and one PATCH. The safety argument now
+      // rests on §1b's binding guard, which refuses the change itself rather than relying on
+      // where the re-derivation happens to land — so this asserts the TRIGGER's refusal, not the
+      // policy's. `owner -> SELF` and `owner -> NULL` are probed in §F where the completeness
+      // guard can see them.
       const student = actor("studentA");
       const other = actor("studentB");
       const probes: Array<[StudentDataTable, string]> = [
@@ -1187,11 +1504,12 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
           .update({ owner: other.id } as never)
           .eq("id", id);
         expect(error?.code, `${table}: re-pointing owner must be refused`).toBe("42501");
-        expect(error?.message, `${table}: and refused by the POLICY, not by a grant`).toMatch(
-          /row-level security policy/i,
+        expect(error?.message, `${table}: and refused by the BINDING GUARD, with its reason`).toMatch(
+          /owner is immutable once set/i,
         );
-        const { data: row } = await fixture.admin.from(table).select("owner").eq("id", id).single();
+        const { data: row } = await fixture.admin.from(table).select("owner, case_id").eq("id", id).single();
         expect((row as { owner: string }).owner, `${table}.owner moved`).toBe(student.id);
+        expect((row as { case_id: string }).case_id, `${table}.case_id moved`).toBe(caseId("personalA"));
       }
     });
 
@@ -1432,16 +1750,33 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
           new RegExp(`Bitmap Heap Scan on ${table}\\b`),
         );
       }
-      // TWO InitPlans per statement — `auth.uid()` and `private.actor_case_ids()`, each evaluated
-      // ONCE for the whole statement rather than once per row. Without them the definer helper is
-      // a per-row call: the `auth_rls_initplan` finding, at tenancy scale.
-      // The DECLARATION line only (`   InitPlan 2`), not the two references to it that appear in
-      // the Recheck Cond and the Index Cond — counting those would report 27 and pass for the
-      // wrong reason.
-      const initPlanBlocks = plans.match(/^\s*InitPlan 2\s*$/gm) ?? [];
-      expect(initPlanBlocks.length, "every one of the nine must hoist both helpers to an InitPlan").toBe(
+      // THE HELPERS ARE HOISTED, EVALUATED ONCE PER STATEMENT RATHER THAN ONCE PER ROW. Without
+      // that, the definer helper is a per-row call: the `auth_rls_initplan` finding, at tenancy
+      // scale.
+      //
+      // THIS IS ASSERTED AS "AN InitPlan AND NO SubPlan", NOT AS A COUNT, AND THE CHANGE IS
+      // DELIBERATE. It used to assert exactly nine `InitPlan 2` declarations — one per table,
+      // two hoists each (`auth.uid()` and `private.actor_case_ids()`). That number is
+      // TRANSITIONAL: MV-160 deletes the owner disjunct, `auth.uid()` leaves the predicate, and
+      // the count becomes nine `InitPlan 1` and ZERO `InitPlan 2`. So the old assertion made
+      // this block a SECOND casualty of MV-160, silently contradicting the card's promise that
+      // MV-160 deletes one block and edits nothing else.
+      //
+      // The property actually worth pinning survives that edit unchanged, and is strictly
+      // stronger than the count: the helper must never be a SubPlan. A count of InitPlans cannot
+      // even see a per-row SubPlan; this can.
+      const perTable = plans.split(/^### /m).slice(1);
+      expect(perTable.length, "HARNESS DEFECT: the EXPLAIN output did not split per table").toBe(
         STUDENT_DATA_TABLES.length,
       );
+      for (const [i, section] of perTable.entries()) {
+        const table = STUDENT_DATA_TABLES[i]!;
+        expect(
+          (section.match(/^\s*InitPlan \d+\s*$/gm) ?? []).length,
+          `${table} hoisted no helper to an InitPlan — the predicate is being evaluated per row`,
+        ).toBeGreaterThanOrEqual(1);
+        expect(section, `${table} evaluates a helper as a per-row SubPlan`).not.toMatch(/^\s*SubPlan \d+\s*$/m);
+      }
     }, 180_000);
   });
 
@@ -1454,7 +1789,80 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
   // revocation, no anonymous invisibility — so the retirement is a block deletion rather than an
   // access-control edit. A SECOND red block during MV-160 is a finding, not an extension of this
   // exception.
+  //
+  // ROUND 2 MADE THAT PROMISE TRUE INSTEAD OF NEARLY TRUE. Two other blocks were coupled to the
+  // disjunct and would have gone red as well, which is precisely the "second red block" the
+  // paragraph above calls a finding:
+  //
+  //   * the disjunct-SHAPE assertion, which asserted all 28 predicates CONTAIN the clause
+  //     MV-160 removes. MOVED INTO THIS BLOCK — it is the first test below.
+  //   * the EXPLAIN block's `InitPlan 2` count, which is 2 only while `auth.uid()` is in the
+  //     predicate and becomes 1 after MV-160. REWRITTEN as "an InitPlan and no SubPlan", which
+  //     is both MV-160-durable and a strictly stronger statement of the property.
+  //
+  // So the inherited work is once again exactly this block, deleted whole.
   describe("transitional owner disjunct — retired by MV-160", () => {
+    // MOVED HERE IN ROUND 2 from its own block near the top of the file, because it belongs to
+    // exactly this retirement: it asserts every predicate CONTAINS the clause MV-160 deletes, so
+    // leaving it outside made the "one block, nothing else" promise false on the card's own
+    // terms. It is the FIRST test MV-160 should read and the first it should delete.
+    it("writes the disjunct on ONE line in every predicate, as the outermost OR", () => {
+      const predicates = sqlLines(`
+        select c.relname || '.' || p.polname || '@' || kind || '::' ||
+               replace(replace(expr, e'\\n', ' '), '  ', ' ')
+          from pg_policy p
+          join pg_class c on c.oid = p.polrelid
+          join pg_namespace n on n.oid = c.relnamespace
+          cross join lateral (
+            values ('using', pg_get_expr(p.polqual, p.polrelid)),
+                   ('check', pg_get_expr(p.polwithcheck, p.polrelid))
+          ) as v(kind, expr)
+         where n.nspname = 'public'
+           and c.relname in (${STUDENT_DATA_TABLES.map((t) => `'${t}'`).join(",")})
+           and p.polname <> 'Service inserts documents'
+           and v.expr is not null
+         order by 1;
+      `);
+
+      // 24 policies; every SELECT/INSERT/DELETE contributes one expression and every UPDATE two.
+      expect(predicates.length, "every new policy must carry a predicate").toBe(28);
+
+      let insertShaped = 0;
+      for (const line of predicates) {
+        const [head] = line.split("::");
+        const expr = line.split("::").slice(1).join("::");
+        const policy = head!.replace(/@(using|check)$/, "");
+        // TWO SHAPES SINCE ROUND 2 (see the constants at the head of this file): the five INSERT
+        // predicates carry `and case_id is null`, because on INSERT the client CHOOSES the
+        // case_id and the bare form admitted a row into any case at all. Everything else keeps
+        // the bare form, which is what holds a not-yet-backfilled row visible to its owner.
+        const isInsertPolicy = INSERT_POLICIES.has(policy) && head!.endsWith("@check");
+        const expected = isInsertPolicy ? TRANSITIONAL_DISJUNCT_INSERT : TRANSITIONAL_DISJUNCT;
+        if (isInsertPolicy) insertShaped++;
+
+        expect(expr, `${line}: the transitional disjunct is missing or reshaped`).toContain(expected);
+        expect(expr, `${line}: the case branch is missing or reshaped`).toContain(CASE_BRANCH);
+        // A non-INSERT predicate must NOT have acquired the tighter form: that would hide a
+        // case-bearing row from its owner, which is the regression the disjunct exists to avoid.
+        if (!isInsertPolicy) {
+          expect(expr, `${line}: a non-INSERT predicate carries the INSERT-only narrowing`).not.toContain(
+            TRANSITIONAL_DISJUNCT_INSERT,
+          );
+        }
+        // Exactly once. A second copy would mean the disjunct was woven into the case branch,
+        // and MV-160's edit would have to restructure rather than delete.
+        expect(
+          expr.split(TRANSITIONAL_DISJUNCT).length - 1,
+          `${line}: the owner disjunct appears more than once`,
+        ).toBe(1);
+        // And it is the LEFT operand of the outermost OR: everything before it is opening
+        // parentheses. A predicate MV-160 has to restructure is a predicate MV-160 will get wrong.
+        const prefix = expr.slice(0, expr.indexOf(expected));
+        expect(prefix.replace(/[\s(]/g, ""), `${line}: the owner disjunct is not the outermost OR`).toBe("");
+      }
+      expect(insertShaped, "all five INSERT predicates must carry the narrowed disjunct").toBe(5);
+    });
+
     it("keeps a case-less row visible and updatable to its legacy owner, and to nobody else", async () => {
       const owner = actor("studentA");
       await proveExists("plan_items", caseless.planItem);
