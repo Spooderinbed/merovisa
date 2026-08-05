@@ -7,24 +7,40 @@
  * MATCH SIMPLE composite key actually bites, and whether a policy still fails closed once the column
  * it keys on can be NULL. `npm test` cannot observe any of them — jsdom has no database.
  *
- * FIVE PROPERTIES ARE LOAD-BEARING AND EACH HAS A NAMED FAILURE MODE:
+ * ---------------------------------------------------------------------------------------------
+ * MV-160 NARROWED THIS SUITE, AND THE NARROWING IS ITSELF THE RECORD OF WHAT MV-156 OWNED ONLY
+ * FOR THE DURATION OF THE NULLABLE-`case_id` WINDOW.
  *
- *  1. **The compensating check is the DISJUNCT, not `check (case_id is not null)`.** The flat form
- *     is role-independent, so it would raise 23514 on every live owner-only outcomes insert —
- *     `service_role` included — for the whole MV-156 → MV-157 window. §E asserts the pre-MV-157
- *     write shape still SUCCEEDS, as both roles. That is the assertion that would have caught it.
- *  2. **The MATCH SIMPLE hole is real and is covered by two things, not one.** §F removes both
- *     covers in a rolled-back transaction and shows the database then ACCEPTS a cross-case attempt.
- *     A comment saying "do not remove this check" is advisory; a test that goes red is not.
- *  3. **The legacy owner chain is RETAINED and load-bearing.** It is the only cover for owner-set /
- *     case-less rows, which is every row a pre-MV-157 writer produces. §C pins it as present.
- *  4. **The two replacement uniques must be FULL, never partial.** A partial unique is not
- *     inferrable from PostgREST's bare `on_conflict=`, so the partial form the card and spec §4.4 /
- *     §4.6 prescribe takes the LIVE document checklist and shortlist down with 42P10. §J pins the
- *     positive against the real tables AND the counterfactual on a scratch table.
- *  5. **Relaxing `owner` must not open a read path.** §G seeds a NULL-owner row on each of the eight
- *     and asserts every authenticated and anonymous read returns zero. Case-aware access is MV-159;
- *     the interim posture is fail-closed and that is correct, not a bug to "fix" here.
+ * MV-156 relaxed `owner` and rebased the chain onto `case_id` while `case_id` was still NULLABLE.
+ * Four of this suite's original five headline properties were properties OF THAT WINDOW, and
+ * `20260805140000_stage2_tighten_case_mandatory.sql` closes it: `case_id` is NOT NULL on all
+ * eight, all eight `_ownership_axis_present` checks are gone, the legacy owner chain
+ * (`*_id_owner_key` + the two `*_owner_fkey` composites) is gone, and the seven superseded
+ * owner-keyed uniques are gone. Blocks §D (the compensating check), §F (the MATCH SIMPLE
+ * demonstration), §C's "legacy chain retained" and §J's owner-keyed arbiter positives asserted
+ * exactly those objects, so they were RETIRED here rather than rewritten — MV-160's own suite
+ * (`stage2-tighten.itest.ts`) asserts each of them is ABSENT, and `case-backfill.itest.ts` §E
+ * carries the surviving FULL-arbiter rule on the case axis, which is the axis live code now uses
+ * (`onConflict: "case_id,kind"` / `"case_id,program_id"`).
+ *
+ * WHAT REMAINS IS MV-156'S OWN, AND MOST OF IT IS NOW *MORE* TRUE THAN WHEN IT WAS WRITTEN:
+ *
+ *  1. **`owner` IS STILL NULLABLE on the eight.** MV-160 dropped no column and relaxed nothing
+ *     back. §A reads it from `information_schema`, per table.
+ *  2. **The surrogate-`id` PRIMARY KEYs stand.** §B — `owner` is not a key column of any PK, and
+ *     nothing ever pointed at the composite PKs that were replaced.
+ *  3. **The case-side composite FKs `(prediction_id, case_id)` / `(attempt_id, case_id)` NOW
+ *     ACTUALLY BITE.** They were MATCH-SIMPLE-skippable for any case-less row throughout the
+ *     window; with `case_id` NOT NULL no row can skip them, so §C's two cross-case rejections are
+ *     the only remaining cover for the chain and are strictly stronger than before.
+ *  4. **Relaxing `owner` opens no read path.** §G seeds a NULL-owner row on each of the eight,
+ *     inside a case NO ACTOR IS LINKED TO, and asserts every authenticated and anonymous read
+ *     returns zero. Under MV-159/MV-160 this is a cross-tenant denial cell of the canonical
+ *     access matrix, not the interim fail-closed posture it was written as.
+ *  5. **The Auth cascade shrank deliberately** (§H) and **`program_predictions` is still
+ *     immutable to `postgres` AND `service_role`** (§I — MV-160 step (i) restored the trigger's
+ *     unconditional body, so this is now the guarantee's only live cover in this file).
+ * ---------------------------------------------------------------------------------------------
  *
  * Naming: `*.itest.ts` marks a real-DB integration test. Excluded from `npm test`; run only by
  * `npm run test:integration`.
@@ -200,11 +216,22 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
   };
 
   /**
-   * Seed the PRE-MIGRATION row shape — `owner` set, `case_id` untouched — in each of the nine.
+   * Seed the CURRENT row shape — `owner` set AND `case_id` set — in each of the nine.
    * Service-role, because four of the nine hold no authenticated INSERT grant and this is fixture
    * construction, never an assertion.
+   *
+   * MV-160 CHANGED THIS FIXTURE, AND ONLY THIS FIXTURE. It used to seed the PRE-MIGRATION shape —
+   * `owner` set, `case_id` UNTOUCHED — which is the shape MV-160 step (b) makes unrepresentable on
+   * the eight (23502) and step (c) makes unrepresentable on an OWNED `assessments` row (23514, via
+   * `assessments_case_required_when_owned`). The caller therefore mints the personal case FIRST
+   * (`private.mv155_backfill_personal_cases()`) and passes it in.
+   *
+   * `user_program_state` and `document_status` would derive it anyway — MV-155 §6a's seam trigger
+   * fires `when (new.owner is not null)` and OVERWRITES whatever the statement supplied — but the
+   * derivation only works once the personal case exists, which is the same precondition. Passing it
+   * on all nine keeps one rule rather than two.
    */
-  const seedNine = async (owner: string, programId: string): Promise<Seed> => {
+  const seedNine = async (owner: string, caseId: string, programId: string): Promise<Seed> => {
     const svc = async <T>(
       what: string,
       p: PromiseLike<{ data: T; error: { message: string } | null }>,
@@ -215,7 +242,10 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       return data as NonNullable<T>;
     };
 
-    await svc("profiles", admin.from("profiles").insert({ owner, sections: {}, completeness: 10 }).select("id").single());
+    await svc(
+      "profiles",
+      admin.from("profiles").insert({ owner, case_id: caseId, sections: {}, completeness: 10 }).select("id").single(),
+    );
 
     const assessment = await svc(
       "assessments",
@@ -223,6 +253,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
         .from("assessments")
         .insert({
           owner,
+          case_id: caseId,
           result: { verdict: "possible" },
           rule_version: "v0.5.0-mv156",
           expires_at: new Date(Date.now() + 3 * MS_PER_DAY).toISOString(),
@@ -239,25 +270,36 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       "plan_items",
       admin
         .from("plan_items")
-        .insert({ owner, kind: "english", impact: "high", title: "Sit IELTS", status: "todo" })
+        .insert({ owner, case_id: caseId, kind: "english", impact: "high", title: "Sit IELTS", status: "todo" })
         .select("id")
         .single(),
     );
     await svc(
       "user_program_state",
-      admin.from("user_program_state").insert({ owner, program_id: programId, status: "shortlisted" }).select("id").single(),
+      admin
+        .from("user_program_state")
+        .insert({ owner, case_id: caseId, program_id: programId, status: "shortlisted" })
+        .select("id")
+        .single(),
     );
     await svc(
       "documents",
       admin
         .from("documents")
-        .insert({ owner, kind: "passport", file_path: `${owner}/passport/p.pdf`, file_size: 10, original_name: "p.pdf" })
+        .insert({
+          owner,
+          case_id: caseId,
+          kind: "passport",
+          file_path: `${owner}/passport/p.pdf`,
+          file_size: 10,
+          original_name: "p.pdf",
+        })
         .select("id")
         .single(),
     );
     await svc(
       "document_status",
-      admin.from("document_status").insert({ owner, kind: "passport", obtained: true }).select("id").single(),
+      admin.from("document_status").insert({ owner, case_id: caseId, kind: "passport", obtained: true }).select("id").single(),
     );
 
     const prediction = await svc(
@@ -266,6 +308,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
         .from("program_predictions")
         .insert({
           owner,
+          case_id: caseId,
           assessment_id: assessment.id,
           program_id: programId,
           verdict: "possible",
@@ -279,7 +322,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       "application_attempts",
       admin
         .from("application_attempts")
-        .insert({ owner, prediction_id: prediction.id, program_id: programId })
+        .insert({ owner, case_id: caseId, prediction_id: prediction.id, program_id: programId })
         .select("id")
         .single(),
     );
@@ -289,6 +332,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
         .from("outcome_events")
         .insert({
           owner,
+          case_id: caseId,
           attempt_id: attempt.id,
           event_type: "applied",
           gate: "admission",
@@ -319,12 +363,19 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
 
     userA = await mint("a");
     userB = await mint("b");
-    seeds.set(userA.id, await seedNine(userA.id, programA));
-    seeds.set(userB.id, await seedNine(userB.id, programA));
 
-    // Mint the personal cases and populate `case_id`. MV-156's chain rebase is only observable
-    // against cased rows, and MV-155's backfill is the only path that produces them.
+    // MV-160 INVERTED THIS ORDER, and the inversion is the whole fixture change in this file.
+    // The backfill used to run AFTER `seedNine`, because the pre-tighten shape was "seed owner-only
+    // rows, then watch MV-155 attach a case to them". Post-MV-160 that shape cannot be written at
+    // all — `case_id` is NOT NULL on the eight and `assessments_case_required_when_owned` refuses an
+    // OWNED case-less assessment — so the case has to exist BEFORE the first insert.
+    //
+    // `private.mv155_backfill_personal_cases()` mints one personal case per Auth user regardless of
+    // whether that user owns any rows yet, so calling it here (rather than a hand-rolled
+    // `insert into public.cases`) keeps the fixture on the same code path production uses.
     backfill();
+    seeds.set(userA.id, await seedNine(userA.id, personalCaseOf(userA.id), programA));
+    seeds.set(userB.id, await seedNine(userB.id, personalCaseOf(userB.id), programA));
   });
 
   afterAll(async () => {
@@ -491,6 +542,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       // the other key column WITHIN one case are still correctly rejected. Only the OWNER-keyed
       // rule has stopped binding — which is precisely the claim, and putting both rows in one case
       // would have tested MV-155's index instead of MV-156's relaxation.
+      //
+      // MV-160 WEAKENED THE FIRST HALF AND LEFT THE SECOND INTACT. `<table>_owner_<other>_idx` is
+      // dropped outright by step (h), so "the owner-keyed rule has stopped binding" is now vacuous
+      // rather than a NULL-distinctness result. It is kept because the COMPLEMENT below is not
+      // vacuous: it is the live assertion that MV-155's case-keyed unique — the arbiter the current
+      // `onConflict: "case_id,<other>"` call sites infer — still binds on `owner IS NULL` rows,
+      // which are the Stage 3 consultancy shape this whole card exists to make storable.
       const caseA = personalCaseOf(userA.id);
       const caseB = personalCaseOf(userB.id);
       const value = table === "user_program_state" ? programB : "medical";
@@ -526,6 +584,14 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
     it("both new composite FKs exist and reference unique (id, case_id) — asserted from confkey, not by name", () => {
       // By column pair rather than by constraint name: a rename would not change the guarantee, and
       // a key pointing at the WRONG pair would keep the name while losing it entirely.
+      //
+      // NARROWED BY MV-160, NOT WEAKENED. This used to expect FOUR rows — the two case-side keys
+      // below plus `application_attempts (prediction_id,owner) -> program_predictions (id,owner)`
+      // and `outcome_events (attempt_id,owner) -> application_attempts (id,owner)`. Those two are
+      // the LEGACY owner chain, dropped by MV-160 step (f) once step (b) made `case_id` NOT NULL,
+      // and their absence is asserted by `stage2-tighten.itest.ts`. The pair that remains is the
+      // pair MV-156 added, and it is now the chain's ONLY cover — which is why this list is exact
+      // rather than a `toContain`: a third key reappearing here is a finding.
       const shape = sql(`
         select c.conrelid::regclass::text || ' (' ||
                (select string_agg(a.attname, ',' order by x.ord)
@@ -542,9 +608,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       `);
       expect(shape).toEqual([
         "application_attempts (prediction_id,case_id) -> program_predictions (id,case_id)",
-        "application_attempts (prediction_id,owner) -> program_predictions (id,owner)",
         "outcome_events (attempt_id,case_id) -> application_attempts (id,case_id)",
-        "outcome_events (attempt_id,owner) -> application_attempts (id,owner)",
       ]);
     });
 
@@ -574,20 +638,17 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       ).toContain("USING btree (attempt_id, case_id)");
     });
 
-    it("the LEGACY owner chain is retained — it is the only cover for owner-set / case-less rows", () => {
-      // Load-bearing, not vestigial: every row a pre-MV-157 writer produces has `case_id` NULL, and
-      // under MATCH SIMPLE the case chain enforces nothing for those. MV-160 drops these, AFTER
-      // `case_id NOT NULL`, and not before.
-      for (const name of [
-        "program_predictions_id_owner_key",
-        "application_attempts_id_owner_key",
-        "outcome_events_id_owner_key",
-        "application_attempts_prediction_id_owner_fkey",
-        "outcome_events_attempt_id_owner_fkey",
-      ]) {
-        expect(sql(`select 1 from pg_constraint where conname='${name}';`), `${name} must survive MV-156`).toEqual(["1"]);
-      }
-    });
+    // RETIRED BY MV-160 — "the LEGACY owner chain is retained — it is the only cover for owner-set /
+    // case-less rows". It pinned `program_predictions_id_owner_key`,
+    // `application_attempts_id_owner_key`, `outcome_events_id_owner_key`,
+    // `application_attempts_prediction_id_owner_fkey` and `outcome_events_attempt_id_owner_fkey` as
+    // PRESENT, and its own comment named the condition on which it expires: "MV-160 drops these,
+    // AFTER `case_id NOT NULL`, and not before." Steps (b), (f) and (g) of
+    // `20260805140000_stage2_tighten_case_mandatory.sql` are exactly that, in exactly that order.
+    // The population it covered — owner-set / case-less rows — is now unrepresentable, so this is a
+    // property of the closed window and not an access-control cell. Its inverse (all five ABSENT)
+    // is asserted by `stage2-tighten.itest.ts`; the guarantee it stood in for is asserted by the two
+    // cross-case rejections below, which no longer have a MATCH SIMPLE escape.
 
     it("the single-column CASCADE FKs survive — they carry the delete semantics the composites do not", () => {
       expect(
@@ -605,6 +666,11 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       // `owner` is left NULL deliberately, so the LEGACY owner chain is trivially satisfied under
       // MATCH SIMPLE and the only constraint that can refuse this is the NEW case chain. Without
       // that isolation the test would pass just as happily against the pre-MV-156 schema.
+      //
+      // POST-MV-160 THE ISOLATION IS FREE — the legacy chain is gone entirely — but the NULL `owner`
+      // is kept because it is now the interesting shape rather than the neutral one: a Stage 3
+      // consultancy row carries no owner at all, and this is the assertion that the case chain, on
+      // its own, refuses to hang such a row off another case's prediction.
       const caseB = personalCaseOf(userB.id);
       const predictionOfA = seedOf(userA.id).predictionId;
       const err = sqlError(
@@ -649,98 +715,43 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
   });
 
   // =====================================================================
-  // D — the compensating check bites on exactly the shape it targets
+  // D — RETIRED IN FULL BY MV-160
   // =====================================================================
-  describe("_ownership_axis_present", () => {
-    it("exists, is VALIDATED, and is the DISJUNCT on all eight — never `case_id is not null`", () => {
-      // board.json's MV-156 summary still states the rejected flat form (spec §9.5). Asserting the
-      // predicate text is what stops a future migration from being written against a name that will
-      // never be in the database — or, worse, from shipping the flat form.
-      const rows = sql(`
-        select conrelid::regclass::text || '|' || convalidated::text || '|' || pg_get_constraintdef(oid)
-          from pg_constraint where conname like '%_ownership_axis_present' order by 1;
-      `);
-      expect(rows).toEqual(
-        [...EIGHT]
-          .sort()
-          .map((t) => `${t}|true|CHECK (((owner IS NOT NULL) OR (case_id IS NOT NULL)))`),
-      );
-    });
-
-    it.each(EIGHT)("%s: a row with BOTH axes null raises 23514", (table) => {
-      const { assessmentId, predictionId, attemptId } = seedOf(userA.id);
-      const payload: Record<(typeof EIGHT)[number], string> = {
-        profiles: "(owner, case_id) values (null, null)",
-        plan_items: "(owner, case_id, kind, impact, title) values (null, null, 'finance', 'high', 'x')",
-        user_program_state: `(owner, case_id, program_id, status) values (null, null, '${programA}', 'shortlisted')`,
-        documents: "(owner, case_id, kind, file_path, file_size, original_name) values (null, null, 'other', 'x/o.pdf', 1, 'o.pdf')",
-        document_status: "(owner, case_id, kind, obtained) values (null, null, 'other', true)",
-        program_predictions: `(owner, case_id, assessment_id, program_id, verdict, rule_version, score_snapshot) values (null, null, '${assessmentId}', '${programA}', 'possible', 'v-axis', '{}'::jsonb)`,
-        application_attempts: `(owner, case_id, prediction_id, program_id) values (null, null, '${predictionId}', '${programA}')`,
-        outcome_events: `(owner, case_id, attempt_id, event_type, source, occurred_at) values (null, null, '${attemptId}', 'applied', 'self_reported', now())`,
-      };
-      const err = sqlError(`insert into public.${table} ${payload[table]};`);
-      expect(err, `${table}: a row owned by nothing must be refused`).toMatch(/violates check constraint/i);
-      expect(err).toContain(`${table}_ownership_axis_present`);
-    });
-  });
+  // The block was `describe("_ownership_axis_present")` and held two tests:
+  //
+  //   * "exists, is VALIDATED, and is the DISJUNCT on all eight — never `case_id is not null`"
+  //   * `it.each(EIGHT)("%s: a row with BOTH axes null raises 23514")`
+  //
+  // Both named `<table>_ownership_axis_present` directly. MV-160 step (e) DROPS all eight, and its
+  // own header states why the drop is safe rather than convenient: step (b) has just made
+  // `case_id NOT NULL` on exactly those eight, so the disjunct's right branch is unconditionally
+  // true and a check that can never fire is a constraint the next author plans around. This is the
+  // definition of a property of the nullable window.
+  //
+  // NEITHER ASSERTION LOSES A GUARANTEE, and both replacements are stronger:
+  //   * the constraint's absence is asserted by `stage2-tighten.itest.ts`, which also names any
+  //     survivor rather than just counting;
+  //   * "a row owned by nothing must be refused" is now enforced by the column itself — a both-axes-
+  //     null insert raises 23502 on `case_id`, role-independently and with no CHECK to drop — and
+  //     that is asserted table-by-table by MV-160's own suite. A 23514-and-this-constraint-name
+  //     assertion here would now be testing an object that does not exist.
 
   // =====================================================================
-  // E — the pre-MV-157 write shape still succeeds, as BOTH roles
+  // E — the owner-only write path, after MV-160 closed the window
   // =====================================================================
-  describe("the live owner-only write path survives the window", () => {
-    /**
-     * THIS IS THE ASSERTION THAT WOULD HAVE CAUGHT A FLAT `check (case_id is not null)`.
-     *
-     * The shape below — `owner` set, `case_id` absent — is what `lib/outcomes/on-apply.ts`
-     * captureApplication, `lib/outcomes/freeze.ts` and `app/api/outcomes/{prediction,attempt,event}`
-     * produce TODAY, and will keep producing until MV-157 deploys. A CHECK is role-independent, so
-     * the `service_role` pass is not redundant with the `authenticated` one: it is the pass that
-     * proves the outcomes API routes, which run through the admin client, survive this window.
-     */
-    it("service_role can still write owner-only rows on all three chain tables", async () => {
-      const { assessmentId } = seedOf(userB.id);
-      const prediction = await admin
-        .from("program_predictions")
-        .insert({
-          owner: userB.id,
-          assessment_id: assessmentId,
-          program_id: programB,
-          verdict: "reach",
-          rule_version: "v-svc-only",
-          score_snapshot: { total: 20 },
-        })
-        .select("id")
-        .single();
-      expect(prediction.error, "program_predictions owner-only insert").toBeNull();
-
-      const attempt = await admin
-        .from("application_attempts")
-        .insert({ owner: userB.id, prediction_id: prediction.data!.id, program_id: programB })
-        .select("id")
-        .single();
-      expect(attempt.error, "application_attempts owner-only insert").toBeNull();
-
-      const event = await admin
-        .from("outcome_events")
-        .insert({
-          owner: userB.id,
-          attempt_id: attempt.data!.id,
-          event_type: "applied",
-          source: "self_reported",
-          occurred_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-      expect(event.error, "outcome_events owner-only insert").toBeNull();
-
-      // And the rows really did land case-less — the shape the disjunct must tolerate.
-      expect(sqlOne(`select case_id is null from public.program_predictions where id='${prediction.data!.id}';`)).toBe("t");
-
-      sql(`delete from public.outcome_events where id='${event.data!.id}';`);
-      sql(`delete from public.application_attempts where id='${attempt.data!.id}';`);
-      sql(`delete from public.program_predictions where id='${prediction.data!.id}';`);
-    });
+  describe("the owner-only chain write path", () => {
+    // RETIRED BY MV-160 — "service_role can still write owner-only rows on all three chain tables".
+    // It inserted `owner` set / `case_id` ABSENT into program_predictions, application_attempts and
+    // outcome_events as `service_role` and asserted all three SUCCEED, then asserted the prediction
+    // "really did land case-less — the shape the disjunct must tolerate". Every one of those inserts
+    // now raises 23502 by construction: MV-160 step (b) made `case_id` NOT NULL on all three.
+    //
+    // It is a window property in the most literal sense available — its own docblock scopes it
+    // ("what … produce TODAY, and will keep producing until MV-157 deploys") and MV-157 has since
+    // routed all three writers through `lib/cases/dual-write.ts`, which writes `case_id`
+    // unconditionally and has no owner-only fallback. It is NOT an access-control cell: it asserted
+    // a SCHEMA tolerance for a row shape, as the one role that bypasses RLS entirely, and the
+    // service-role write path itself is unchanged — only the shape it must send is.
 
     /**
      * INVERTED BY MV-159, AND THE INVERSION IS THE POINT OF THE TEST NOW.
@@ -763,10 +774,17 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
      * comparison would let any signed-in client hang a prediction-of-record off a stranger's
      * assessment.
      *
-     * WHAT MV-156 ACTUALLY OWNS IS UNTOUCHED, AND THE TEST ABOVE STILL PROVES IT: the SCHEMA
-     * still permits an owner-only chain row — `_ownership_axis_present` is a disjunct, not
-     * `check (case_id is not null)` — which is what keeps the service-role and backfill paths
-     * working. What tightened is the authenticated POLICY path, on a card that owns policies.
+     * WHAT MV-156 ACTUALLY OWNED HERE WAS THE SCHEMA'S TOLERANCE OF AN OWNER-ONLY CHAIN ROW, and
+     * MV-160 step (b) has now withdrawn it: `case_id` is NOT NULL on all three chain tables, so the
+     * refusal below is over-determined — the policy refuses it first (PostgreSQL evaluates RLS
+     * `WITH CHECK` before `ExecConstraints`), and the column would refuse it anyway.
+     *
+     * THE TEST IS KEPT BECAUSE ITS SECOND HALF IS AN ACCESS-CONTROL CELL, NOT A WINDOW PROPERTY:
+     * the same actor, on the same three tables, CAN still write the case-scoped shape. That is the
+     * positive control which stops the refusal above from being satisfied by a dead policy, a
+     * missing grant, or MV-160 having over-tightened the chain — and it is the one assertion in
+     * this file that exercises MV-160's re-created `pp_insert_case` / `aa_insert_case` /
+     * `oe_insert_case` end to end as a real authenticated student.
      */
     it("no longer lets an AUTHENTICATED client write an owner-only chain row — MV-159's case parentage", async () => {
       const { assessmentId } = seedOf(userA.id);
@@ -830,63 +848,59 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
   });
 
   // =====================================================================
-  // F — the MATCH SIMPLE hole, DEMONSTRATED
+  // F — RETIRED IN FULL BY MV-160
   // =====================================================================
-  describe("the MATCH SIMPLE hole", () => {
-    /**
-     * The card's headline risk, shown rather than described. Postgres composite FKs default to
-     * MATCH SIMPLE: a multi-column key is satisfied WITHOUT ANY LOOKUP when any referencing column
-     * is NULL. So with `case_id` nullable the case chain enforces nothing for case-less rows, and
-     * the constraint sits in `pg_constraint` looking healthy.
-     *
-     * Both covers are removed inside a transaction that is ROLLED BACK, following MV-153's
-     * precedent that a surprise success must not take the fixture down with it. Two coupled facts
-     * fall out, and both belong in the PR body: removing the check re-opens the hole, and the ONLY
-     * thing covering owner-set / case-less rows meanwhile is the retained owner chain — which is
-     * why MV-160 may not drop that chain before `case_id` is NOT NULL.
-     */
-    it("accepts a cross-case attempt once BOTH the check and the legacy owner FK are gone", () => {
-      const predictionOfA = seedOf(userA.id).predictionId;
-      const out = sql(`
-        begin;
-        alter table public.application_attempts drop constraint application_attempts_ownership_axis_present;
-        alter table public.application_attempts drop constraint application_attempts_prediction_id_owner_fkey;
-        insert into public.application_attempts (owner, case_id, prediction_id, program_id)
-        values (null, null, '${predictionOfA}', '${programA}');
-        select 'HOLE-OPEN:' || count(*)::text
-          from public.application_attempts
-         where owner is null and case_id is null and prediction_id = '${predictionOfA}';
-        rollback;
-      `);
-      // The database ACCEPTED a row owned by nothing, pointing across cases, with no error.
-      expect(out, "with both covers removed the hole is wide open").toContain("HOLE-OPEN:1");
-    });
-
-    it("and the rollback restored both covers — the fixture is intact", () => {
-      // "The demonstration ran" and "the demonstration cleaned up after itself" are different
-      // claims. Only this one proves the second, and every later test depends on it.
-      for (const name of ["application_attempts_ownership_axis_present", "application_attempts_prediction_id_owner_fkey"]) {
-        expect(sql(`select 1 from pg_constraint where conname='${name}';`), `${name} must be back`).toEqual(["1"]);
-      }
-      // And the hole is shut again, by the check this time.
-      const predictionOfA = seedOf(userA.id).predictionId;
-      expect(
-        sqlError(`insert into public.application_attempts (owner, case_id, prediction_id, program_id)
-                  values (null, null, '${predictionOfA}', '${programA}');`),
-      ).toContain("application_attempts_ownership_axis_present");
-    });
-  });
+  // The block was `describe("the MATCH SIMPLE hole")` and held two tests:
+  //
+  //   * "accepts a cross-case attempt once BOTH the check and the legacy owner FK are gone"
+  //   * "and the rollback restored both covers — the fixture is intact"
+  //
+  // It DEMONSTRATED the hole rather than describing it: inside a rolled-back transaction it dropped
+  // `application_attempts_ownership_axis_present` and
+  // `application_attempts_prediction_id_owner_fkey`, inserted `(owner null, case_id null,
+  // prediction_id <A's>)`, and showed the database accepted a row owned by nothing that pointed
+  // across cases.
+  //
+  // THE HOLE IT DEMONSTRATED NO LONGER EXISTS, and neither do the two objects it dropped — MV-160
+  // step (e) drops the check and step (f) drops the FK, so both `alter table` statements now raise
+  // 42704 and take the fixture with them. MATCH SIMPLE only skips a composite key when a REFERENCING
+  // COLUMN IS NULL; `case_id` is NOT NULL on all three chain tables after step (b), so
+  // `(prediction_id, case_id)` and `(attempt_id, case_id)` can no longer be skipped by any row that
+  // can be written. That is a property of the closed window in both directions: the hole was real
+  // ONLY while `case_id` was nullable, and this is the migration that made it nullable no longer.
+  //
+  // WHAT REPLACES IT IS STRICTLY STRONGER AND IS ALREADY IN THIS FILE — §C's two cross-case
+  // rejections ("REJECTS an attempt whose case_id diverges from its prediction's" and its
+  // outcome_events twin). Those used to be the weak half of this pair, provable only because the
+  // test hand-picked a non-NULL `case_id`; they are now the general case. `stage2-tighten.itest.ts`
+  // additionally pins that the case-side FKs BITE, which is the claim this block existed to make
+  // conditional.
 
   // =====================================================================
   // G — RLS still fails closed on NULL-owner rows
   // =====================================================================
   describe("relaxing owner opens no read path", () => {
     /**
-     * Every policy on these tables is `(select auth.uid()) = owner`. Against a NULL owner that
-     * predicate evaluates to NULL, which Postgres refuses exactly like FALSE — so a consultancy-
-     * shaped row is invisible to every authenticated client, INCLUDING the student whose personal
-     * case it names. That is the intended fail-closed interim posture, not a bug: case-aware access
-     * is MV-159's, and a policy written here would be written against no canonical matrix cell.
+     * THE MECHANISM CHANGED UNDER THIS BLOCK TWICE; THE ASSERTIONS DID NOT, AND THEY ARE NOT
+     * TOUCHED HERE. Recording both readings because the difference is what makes this a matrix cell
+     * rather than a window property.
+     *
+     * AS WRITTEN (MV-156): every policy on these tables was `(select auth.uid()) = owner`. Against
+     * a NULL owner that predicate evaluates to NULL, which Postgres refuses exactly like FALSE, so
+     * the row was invisible to everyone — the intended fail-closed INTERIM posture.
+     *
+     * AS IT READS NOW (MV-159 + MV-160): every policy is
+     * `case_id is not null and case_id = any (private.actor_case_ids())`, with the transitional
+     * `owner = (select auth.uid())` disjunct removed by MV-160 step (d). The probe case below is
+     * minted with `student_user_id` NULL and NO assignment, so it is in no actor's
+     * `actor_case_ids()` and the eight rows stay invisible — now by CASE-TENANCY, which is the
+     * canonical access matrix's cross-tenant denial cell, and no longer by an interim accident of
+     * NULL comparison. `anon`, which holds no grant on any of the eight, is refused before any
+     * policy is consulted, exactly as before.
+     *
+     * So the emptiness this block asserts is load-bearing under BOTH regimes, and it is precisely
+     * the assertion that would go red if MV-160's policy rewrite had widened a USING clause. It
+     * stays as it is.
      */
     it("a NULL-owner row on each of the eight is invisible to authenticated and to anon", async () => {
       const { assessmentId } = seedOf(userA.id);
@@ -1014,8 +1028,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
         // its seven siblings is a finding, not a detail, and this is what surfaces it in the log.
         expect(anonMechanism, "anon fail-closed mechanism, per table").toHaveLength(targets.length);
 
-        // And it cannot be created through an authenticated client either: `with check` on the
-        // insert-granted tables refuses a NULL owner for the same reason (NULL is not TRUE).
+        // And it cannot be created through an authenticated client either. As written the reason was
+        // "`with check` refuses a NULL owner, NULL is not TRUE"; under MV-160's `ups_insert_case` the
+        // reason is the CASE axis — `case_id = any (private.actor_case_ids())` is FALSE for a case
+        // this actor has no link to — and MV-160's retained owner-axis bound
+        // (`owner is null or owner = private.case_student_id(case_id)`) is a second, independent
+        // refusal. The assertion is unchanged because it is the same cell either way: an
+        // authenticated client may not mint a row into a case that is not theirs.
         const attempted = await userA.client
           .from("user_program_state")
           .insert({ owner: null, case_id: theCase, program_id: programB, status: "shortlisted" });
@@ -1045,9 +1064,11 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
       // consultancy case's data. The consequence — MV-05's right-to-delete and Stage 6's case
       // deletion can no longer use the Auth cascade as their sweep — is recorded on the card.
       const userC = await mint("c");
-      seeds.set(userC.id, await seedNine(userC.id, programA));
+      // MV-160: same inversion as the shared `beforeAll` — the personal case must exist BEFORE the
+      // first insert, because `case_id` is NOT NULL on the eight from step (b).
       backfill();
       const theCase = personalCaseOf(userC.id);
+      seeds.set(userC.id, await seedNine(userC.id, theCase, programA));
 
       const ownedPlanId = sqlOne(`select id from public.plan_items where owner='${userC.id}' limit 1;`);
       const orphanPlanId = insertReturningId(
@@ -1100,78 +1121,42 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-156 owner nullable + compos
   });
 
   // =====================================================================
-  // J — the replacement uniques are FULL, and the live upserts still infer them
+  // J — the "a partial arbiter is not inferrable" rule, on a scratch table
   // =====================================================================
-  describe("ON CONFLICT inference on the replaced primary keys", () => {
+  describe("ON CONFLICT inference", () => {
     /**
-     * THE FINDING THIS CARD SHIPPED A CORRECTION FOR. The card and spec §4.4/§4.6 both prescribe
+     * THE FINDING THIS CARD SHIPPED A CORRECTION FOR. The card and spec §4.4/§4.6 both prescribed
      * `unique index … where owner is not null` as the replacement for the dropped composite PKs.
-     * That form is UNEXECUTABLE against the live code: Postgres infers a PARTIAL unique index as an
+     * That form is UNEXECUTABLE against live code: Postgres infers a PARTIAL unique index as an
      * `ON CONFLICT` arbiter only when the statement supplies the index predicate, and PostgREST's
      * `on_conflict=` emits a bare column list. It is the same failure spec §4 rule 1 already records
      * for the case-keyed indexes, arriving on the owner axis.
      *
-     * The predicate was never load-bearing — NULLs are distinct in a unique index, so the FULL form
-     * permits unlimited NULL-owner rows anyway (proved in §B above).
+     * THREE OWNER-AXIS TESTS WERE RETIRED FROM THIS BLOCK BY MV-160, and the rule they enforced is
+     * NOT retired with them — it moved axes along with the live code:
+     *
+     *   * "neither replacement unique carries a predicate" — read `indexdef` for
+     *     `user_program_state_owner_program_idx` and `document_status_owner_kind_idx`. MV-160 step
+     *     (h) DROPS both by name (each superseded by MV-155's case-keyed mirror), so `sqlOne` now
+     *     finds no row and throws.
+     *   * "setObtained's bare on_conflict still resolves — the LIVE authenticated path" and
+     *     "upsertProgramState's bare on_conflict still resolves" — both drove
+     *     `{ onConflict: "owner,kind" }` / `{ onConflict: "owner,program_id" }`. Those arbiters no
+     *     longer exist, so both would raise the very 42P10 they were written to exclude. Crucially
+     *     they no longer describe live code either: `lib/documents/status-repo.ts` now sends
+     *     `{ onConflict: "case_id,kind" }` and `lib/matches/repo.ts` `{ onConflict:
+     *     "case_id,program_id" }` (MV-157). Their replacements — the same two upserts, against the
+     *     case-keyed FULL arbiters, executed twice so the INSERT and DO UPDATE branches are both
+     *     reached — live in `case-backfill.itest.ts` §E and `case-data-access.itest.ts`.
+     *
+     * What is KEPT below is the counterfactual, because it is the half that is axis-independent: it
+     * proves on a scratch table that the PARTIAL shape genuinely fails and the FULL shape genuinely
+     * succeeds, which is the rule that governs the case-keyed arbiters live code now infers. It
+     * touches none of the nine tables and nothing MV-160 changed.
      */
-    it("neither replacement unique carries a predicate", () => {
-      for (const name of ["user_program_state_owner_program_idx", "document_status_owner_kind_idx"]) {
-        const def = sqlOne(`select indexdef from pg_indexes where schemaname='public' and indexname='${name}';`);
-        expect(def, `${name} must be UNIQUE`).toContain("CREATE UNIQUE INDEX");
-        expect(def, `${name} is an ON CONFLICT arbiter for live pre-MV-157 code and MUST NOT be partial`).not.toContain(
-          "WHERE",
-        );
-      }
-    });
-
-    it("setObtained's bare on_conflict still resolves — the LIVE authenticated path", async () => {
-      // `app/api/documents/status/route.ts` → `lib/documents/status-repo.ts:36` drives exactly this
-      // through the AUTHENTICATED client today. A partial replacement index takes the document
-      // checklist down with 42P10 the day MV-156 applies — not at some future flip.
-      // `oshc` rather than the seeded `passport`, so the first call genuinely exercises the INSERT
-      // branch — the branch that raises 42P10 at PLAN time with no row present.
-      const first = await userA.client
-        .from("document_status")
-        .upsert({ owner: userA.id, kind: "oshc", obtained: true }, { onConflict: "owner,kind" });
-      expect(first.error?.code, "first call — the INSERT branch must not raise 42P10").not.toBe("42P10");
-      expect(first.error, "first call must succeed outright").toBeNull();
-
-      const second = await userA.client
-        .from("document_status")
-        .upsert({ owner: userA.id, kind: "oshc", obtained: false }, { onConflict: "owner,kind" });
-      expect(second.error, "second call — the DO UPDATE branch").toBeNull();
-
-      expect(
-        sqlOne(`select count(*) from public.document_status where owner='${userA.id}' and kind='oshc';`),
-        "the upsert must have merged, not duplicated",
-      ).toBe("1");
-      sql(`delete from public.document_status where owner='${userA.id}' and kind='oshc';`);
-    });
-
-    it("upsertProgramState's bare on_conflict still resolves", async () => {
-      // `lib/matches/repo.ts:28`. Driven through the service-role client here because
-      // `app/api/shortlist/route.ts` still does (spec §4.4, corrected 2026-08-03); MV-157 flips it.
-      //
-      // Cleared first so the first call is genuinely the INSERT branch regardless of what earlier
-      // blocks in this file left behind — that is the branch 42P10 fires on.
-      sql(`delete from public.user_program_state where owner='${userB.id}' and program_id='${programB}';`);
-      const first = await admin
-        .from("user_program_state")
-        .upsert({ owner: userB.id, program_id: programB, status: "shortlisted" }, { onConflict: "owner,program_id" });
-      expect(first.error, "first call").toBeNull();
-      const second = await admin
-        .from("user_program_state")
-        .upsert({ owner: userB.id, program_id: programB, status: "applied" }, { onConflict: "owner,program_id" });
-      expect(second.error, "second call").toBeNull();
-      expect(
-        sqlOne(`select count(*) from public.user_program_state where owner='${userB.id}' and program_id='${programB}';`),
-      ).toBe("1");
-      sql(`delete from public.user_program_state where owner='${userB.id}' and program_id='${programB}';`);
-    });
-
     it("COUNTERFACTUAL: the partial form really does raise 42P10 against a bare column list", () => {
-      // The positive tests above are green against BOTH designs if the live code happens not to run,
-      // so they are paired with the counterfactual that shows the rejected shape genuinely fails.
+      // A positive test is green against BOTH designs if the live code happens not to run, so it is
+      // paired with the counterfactual that shows the rejected shape genuinely fails.
       // Same idiom as MV-155's 42P10 block. Scratch table, dropped in `finally`.
       const scratch = `mv156_arbiter_${stamp}`;
       try {

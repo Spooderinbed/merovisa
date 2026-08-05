@@ -273,18 +273,17 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-157 case-aware data access"
       }
     });
 
-    it("BOTH index generations are live — the legacy owner-scoped uniques survive to MV-160", () => {
-      for (const idx of [
-        "assessments_primary_idx",
-        "plan_items_kind_open_idx",
-        "profiles_owner_key",
-        "documents_owner_kind_key",
-        "user_program_state_owner_program_idx",
-        "document_status_owner_kind_idx",
-      ]) {
-        expect(sql(`select 1 from pg_class where relname = '${idx}';`)).toEqual(["1"]);
-      }
-    });
+    // RETIRED BY MV-160 — `it("BOTH index generations are live — the legacy owner-scoped
+    // uniques survive to MV-160")`. The test named this card as its own expiry date and
+    // meant it: `20260805140000_stage2_tighten_case_mandatory.sql` §(h) drops all six of
+    // the indexes it listed (`assessments_primary_idx`, `plan_items_kind_open_idx`,
+    // `profiles_owner_key`, `documents_owner_kind_key`, `user_program_state_owner_program_idx`,
+    // `document_status_owner_kind_idx`) plus `program_predictions`'. The assertion is now
+    // false BY DESIGN. It asserted a property of the transitional DOUBLE-INDEXING window —
+    // both generations live at once so a case-less row still collided the old way — and not
+    // an access-control cell; no cell of
+    // `docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md` reads an index
+    // name. The case-keyed successors are still asserted by the two preconditions above.
 
     it("Stage 2 grants NO UPDATE(case_id) on either upsert-seam table", () => {
       // This is the whole reason `case_id` must stay OUT of those two payloads.
@@ -702,13 +701,24 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-157 case-aware data access"
       reconcile();
     });
 
-    it("an OWNED row with a null case_id survives the purge", async () => {
-      // The exact residue of a partially-applied claim. It must not be deletable.
+    it("an OWNED row survives the purge, however far past expiry and cutoff", async () => {
+      // NARROWED BY MV-160, not retired. This used to seed the row with `case_id null` —
+      // "the exact residue of a partially-applied claim" — and that SHAPE is a property of
+      // the nullable window this card closes: `assessments_case_required_when_owned`
+      // (`case_id is not null or (owner is null and claimed_at is null)`) now refuses an
+      // owned-or-claimed case-less assessment outright, so the seed 23514s and the row can
+      // no longer exist to be purged.
+      //
+      // The RULE the test exists for is untouched and kept verbatim: MV-135's predicate
+      // keys on `owner IS NULL` (spec §3), so a CLAIMED assessment is never a purge
+      // candidate no matter how far past `expires_at` and the retention cutoff it sits.
+      // That is the assertion below; only the row's case_id changed, from null to the
+      // case MV-160 now requires it to carry.
       const expired = new Date(Date.now() - (ANON_RETENTION_DAYS + 1) * MS_PER_DAY).toISOString();
       const id = sqlOne(
         `with ins as (insert into public.assessments ` +
           `(owner, case_id, result, profile_snapshot, rule_version, created_at, expires_at, is_primary, destination_id, claimed_at) ` +
-          `values ('${userA.id}', null, '{}'::jsonb, '{}'::jsonb, 'v1', '${expired}', '${expired}', false, 'australia', now()) ` +
+          `values ('${userA.id}', '${userA.caseId}', '{}'::jsonb, '{}'::jsonb, 'v1', '${expired}', '${expired}', false, 'australia', now()) ` +
           `returning id) select id from ins;`,
       );
       try {
@@ -735,119 +745,52 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-157 case-aware data access"
   // user first, asserting the adopt did not fire and nothing changed. The
   // hardening must be invisible to a healthy account, and "invisible" is only a
   // claim if something checks it.
+  //
+  // MV-160 ENDED THE CLASS. `case_id` is NOT NULL on the seven non-assessment
+  // tables and `assessments_case_required_when_owned` covers the eighth, so a row
+  // carrying `owner` and no `case_id` can no longer be written — nor manufactured
+  // by a test. The three POSITIVE adopt cases are retired for that reason (the
+  // note where they stood records each one and why); the two NEGATIVE ones below
+  // survive unchanged, because "the adopt does nothing to a healthy account" and
+  // "the adopt can never re-point another case's row" are still true and still
+  // falsifiable.
   // ------------------------------------------------------------------
   describe("MV-155 residue is adopted, not collided with (spec §4 rule 3)", () => {
-    /** Strip a table's `case_id` for this actor — manufacture the residue. */
-    const orphan = (table: string, actor: Actor, extra = ""): void => {
-      sql(`update public.${table} set case_id = null where owner = '${actor.id}'${extra};`);
-    };
-
-    it("profile save adopts an owner-keyed, case-less profile instead of 23505ing on profiles_owner_key", async () => {
-      const actor = await mint("residue-profile");
-
-      // Healthy first: the adopt must not fire, and the write must behave exactly
-      // as it does today.
-      const first = await upsertProfileForCase(admin, {
-        caseId: actor.caseId,
-        sections: { personal: { name: "Before" } },
-        completeness: 5,
-      });
-      expect(first).not.toBeNull();
-      expect(sqlOne(`select count(*) from public.profiles where owner = '${actor.id}';`)).toBe("1");
-
-      // Now the residue: the row exists, is owned, and has lost its case. The
-      // case-scoped read cannot see it — which is exactly why the claim path's
-      // STEP 3 decides to bootstrap and collides.
-      orphan("profiles", actor);
-      expect(await getProfileForCase(admin, actor.caseId)).toBeNull();
-
-      const healed = await upsertProfileForCase(admin, {
-        caseId: actor.caseId,
-        sections: { personal: { name: "After" } },
-        completeness: 9,
-      });
-
-      // Not null — this is the assertion that goes red without the adopt, because
-      // the upsert takes the INSERT branch and trips `profiles_owner_key`.
-      expect(healed).not.toBeNull();
-      // ONE row: the residue was adopted and UPDATED, never duplicated.
-      expect(sqlOne(`select count(*) from public.profiles where owner = '${actor.id}';`)).toBe("1");
-      expect(sqlOne(`select case_id from public.profiles where owner = '${actor.id}';`)).toBe(actor.caseId);
-      expect((await getProfileForCase(admin, actor.caseId))?.completeness).toBe(9);
-      reconcile();
-    });
-
-    it("document upload adopts a case-less document of the SAME kind, and leaves other kinds alone", async () => {
-      const actor = await mint("residue-doc");
-      await upsertDocument(admin, {
-        caseId: actor.caseId,
-        kind: "passport",
-        filePath: `${actor.id}/passport/a.png`,
-        fileSize: 10,
-        originalName: "a.png",
-      });
-      await upsertDocument(admin, {
-        caseId: actor.caseId,
-        kind: "ielts",
-        filePath: `${actor.id}/ielts/b.png`,
-        fileSize: 10,
-        originalName: "b.png",
-      });
-
-      // Only the passport row loses its case.
-      orphan("documents", actor, " and kind = 'passport'");
-
-      const replaced = await upsertDocument(admin, {
-        caseId: actor.caseId,
-        kind: "passport",
-        filePath: `${actor.id}/passport/c.png`,
-        fileSize: 20,
-        originalName: "c.png",
-      });
-
-      expect(replaced).not.toBeNull();
-      // Still exactly two documents — the re-upload REPLACED the adopted row
-      // rather than inserting a second passport beside it.
-      const docs = await listDocumentsForCase(admin, actor.caseId);
-      expect(docs).toHaveLength(2);
-      expect(docs.find((d) => d.kind === "passport")?.original_name).toBe("c.png");
-      reconcile();
-    });
-
-    it("the assessment persist recomputes is_primary after adopting a legacy primary", async () => {
-      // The subtlest of the four: `is_primary` is computed from a CASE-scoped
-      // lookup, which cannot see a legacy primary. It computes `true`, and
-      // `assessments_primary_idx (owner) WHERE is_primary` — live until MV-160 —
-      // raises 23505. The route adopts, RE-computes, and inserts with
-      // `is_primary: false`, which is what the pre-card owner-keyed lookup did.
-      const actor = await mint("residue-primary");
-      const legacy = sqlOne(
-        `with ins as (insert into public.assessments ` +
-          `(owner, case_id, result, profile_snapshot, rule_version, expires_at, is_primary, destination_id, claimed_at) ` +
-          `values ('${actor.id}', null, '{}'::jsonb, '{}'::jsonb, 'v1', '9999-12-31', true, 'australia', now()) ` +
-          `returning id) select id from ins;`,
-      );
-      seededAssessmentIds.push(legacy);
-
-      // The case-scoped lookup is blind to it, which is the whole defect.
-      expect(await getPrimaryAssessmentForCase(admin, actor.caseId)).toBeNull();
-
-      // Drive the same adopt-then-recompute the route performs.
-      const { adoptOwnerKeyedResidue } = await import("@/lib/cases/residue");
-      const adopted = await adoptOwnerKeyedResidue(admin, "assessments", actor.caseId);
-      expect(adopted).toBe(1);
-      expect((await getPrimaryAssessmentForCase(admin, actor.caseId))?.id).toBe(legacy);
-
-      // Exactly one primary under BOTH keys — the adopt must not have created a
-      // second one, which is the failure MV-16 was.
-      expect(
-        sqlOne(`select count(*) from public.assessments where owner = '${actor.id}' and is_primary;`),
-      ).toBe("1");
-      expect(
-        sqlOne(`select count(*) from public.assessments where case_id = '${actor.caseId}' and is_primary;`),
-      ).toBe("1");
-      reconcile();
-    });
+    // RETIRED BY MV-160 — the three POSITIVE adopt cases, each of which had to MANUFACTURE
+    // its own fixture with `update public.<table> set case_id = null where owner = …`:
+    //
+    //   · it("profile save adopts an owner-keyed, case-less profile instead of 23505ing on
+    //     profiles_owner_key")
+    //   · it("document upload adopts a case-less document of the SAME kind, and leaves other
+    //     kinds alone")
+    //   · it("the assessment persist recomputes is_primary after adopting a legacy primary")
+    //
+    // …together with the `orphan()` helper that existed only to serve them.
+    //
+    // WHY THESE ARE WINDOW PROPERTIES AND NOT MATRIX CELLS. Every one of them asserts
+    // behaviour in a state MV-160 makes UNREPRESENTABLE, and each fails at its own SEED, not
+    // at its assertion:
+    //   · `profiles.case_id` and `documents.case_id` are now NOT NULL (§b), so the two
+    //     `orphan()` writes raise 23502 — the residue class cannot be created any more.
+    //   · the third seeds `owner = <student>, case_id = null, claimed_at = now()`, which
+    //     `assessments_case_required_when_owned` (§c) now refuses with 23514.
+    //   · the collision they exist to survive was `profiles_owner_key` /
+    //     `documents_owner_kind_key` / `assessments_primary_idx` — all dropped by §(h).
+    // None of them says anything about who may READ or WRITE another tenant's row: no
+    // cross-tenant denial, no dual-role cell, no revocation immediacy, no anonymous
+    // invisibility. Not one cell of
+    // `docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md` is touched.
+    //
+    // WHAT SURVIVES AND IS DELIBERATELY KEPT BELOW: the two NEGATIVE properties, which are
+    // still true and still worth asserting — the adopt is a no-op for a healthy account, and
+    // it can never re-point a row already bound to another case. The second is the closest
+    // thing here to an access-control claim (a cross-case write bound), so it stays.
+    //
+    // FOLLOW-UP, NOT DELETED HERE: with `case_id` mandatory, `adoptOwnerKeyedResidue`
+    // (`lib/cases/residue.ts`) can no longer match a row on ANY of its four tables, so the
+    // four call sites in `lib/profiles/repo.ts`, `lib/documents/repo.ts`,
+    // `lib/plan/invalidate.ts` and `app/api/assess/route.ts` are now unreachable recovery
+    // paths. Removing them is a separate card — this one may not touch production code.
 
     it("the adopt is a NO-OP for a fully-backfilled user — the hardening changes nothing", async () => {
       // The property the review demands, asserted directly rather than inferred
