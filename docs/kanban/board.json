@@ -1990,14 +1990,14 @@
     },
     {
       "id": "MV-161",
-      "col": "ready",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-161-unbounded-insert-columns.md",
       "title": "Unbounded client-writable columns on the five case INSERT surfaces (supersedes_prediction_id is a live P0)",
       "summary": "READY, and it BLOCKS MV-160. A measured, currently-LIVE path: any signed-in user inserts a prediction in their OWN case, on their OWN assessment, owned by themselves — satisfying every axis MV-159 bounds — with supersedes_prediction_id pointing at a victim's prediction. ON DELETE SET NULL then fires an UPDATE that program_predictions_no_update refuses unconditionally (SECURITY INVOKER, so service_role too), permanently blocking the victim's /api/account/delete, their parent assessment delete, and their auth.users deletion — and the victim cannot see the blocking row to clear it. NOT a Stage 2 regression: measured admitting under the legacy pp_insert_own policy, so it predates every slice. Fix is one conjunct per table in an idiom already in the file, against columns nothing in lib/ or app/ ever writes. The larger half is the ENUMERATION PASS over every client-writable column on the five INSERT surfaces (supersedes_*, id, created_at/recorded_at, verified_at, decision_authority), plus a column-axis dimension on the completeness guard so an unbounded, unexempted column fails CI. Sequenced before MV-160, which keeps the pointer and restores the unconditional trigger.",
       "created": "2026-08-04",
-      "entered": "2026-08-04"
+      "entered": "2026-08-05"
     }
   ]
 }
