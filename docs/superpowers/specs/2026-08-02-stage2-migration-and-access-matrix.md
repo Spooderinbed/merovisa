@@ -364,9 +364,10 @@ never widens.
 - **S2** = in Stage 2 · **S3** = deferred to Stage 3 · **—** = never
 - A cell marked **S3 (grant)** is blocked by the absent `authenticated` grant, not by policy. See §7.
 
-**Four rules that apply across every table below, recorded once here so nine cells do not each state
+**Five rules that apply across every table below, recorded once here so nine cells do not each state
 them differently.** Rules 1, 2 and 4 were added 2026-08-02; **rule 3 was added 2026-08-03** from the
-MV-157/MV-158 review, which found a residue class the cards had not named.
+MV-157/MV-158 review, which found a residue class the cards had not named; **rule 5 was added
+2026-08-05 by MV-161**, which found a column class no policy this project has ever shipped examined.
 
 1. **The case-keyed uniqueness indexes are FULL, not partial.** MV-155 §E originally created each of
    them with `where case_id is not null`. Postgres infers a **partial** unique index for `ON CONFLICT`
@@ -525,6 +526,51 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
    yields NULL, which a WITH CHECK refuses), and on the two upsert-seam tables it admits only a
    residue insert that MV-160's `SET NOT NULL` refuses with 23502 anyway. MV-160 still deletes
    **one marked line per predicate** — the shape differs, the edit does not.
+5. **EVERY CLIENT-WRITABLE COLUMN ON AN INSERT SURFACE IS BOUNDED BY A CLAUSE OR RECORDED AS
+   DELIBERATELY FREE — added 2026-08-05 (MV-161).** Rules 2 and 4 bound the two OWNERSHIP axes.
+   They say nothing about the columns that POINT AT ANOTHER ROW, and neither did any predicate this
+   project has ever shipped — including the legacy owner-only set.
+
+   **What was measured** (`supabase/rehearsal/MV-161-supersedes.sql`, local stack, today's
+   production shape). An attacker inserted a prediction **in their own case, on their own
+   assessment, owned by themselves** — satisfying every axis rules 2 and 4 bound — carrying
+   `supersedes_prediction_id = <a victim's prediction>`. **ADMITTED.** The column is
+   `ON DELETE SET NULL`, so deleting the victim's prediction fires an **UPDATE** on the attacker's
+   row, and `program_predictions_no_update` is SECURITY INVOKER and unconditional: `P0001`, for
+   `service_role` too. The victim's `/api/account/delete` step 2, their parent assessment delete and
+   their `auth.users` delete are all **permanently blocked, by a row they cannot see**. Re-creating
+   legacy `pp_insert_own` admits the identical insert, so this is **not a Stage 2 regression** — it
+   is a live pre-existing exposure that Stage 2 neither introduced nor widened.
+
+   **The rule as it now stands.** A pointer column is bounded exactly as a parent column is:
+
+   ```
+   and (<pointer> is null or private.<target>_case_id(<pointer>) = case_id)
+   ```
+
+   `is null or …` because the pointer is nullable and NULL is what every legitimate insert carries;
+   plain `=` for §4.7's recorded reason, so a NULL `case_id` yields NULL and is refused. **It goes at
+   TOP LEVEL, `AND`ed after the ownership group — not inside the case arm.** Rules 2/4 put the OWNER
+   bound inside the case arm because the two arms say different things about `owner`; a pointer bound
+   is one sentence that must hold on every arm, so it belongs beside `private.assessment_case_id(...)
+   = case_id` and `source = 'self_reported'`. The placements are provably equivalent today — the
+   transitional arm requires `case_id IS NULL`, against which the parentage clause already yields
+   NULL — and top level is preferred precisely because that equivalence is an argument about a
+   NEIGHBOURING clause, which is the "protected by an accident" shape rounds 2 and 3 both found.
+
+   **The enumeration is the rule, not the two conjuncts.** The pointer was never a missing probe; it
+   was a column nobody had listed, so no probe had a reason to aim at it. Verb-aware and branch-aware
+   completeness guards both enumerate the PREDICATE, and an unexamined column leaves no trace there.
+   `tests/integration/student-data-rls.itest.ts` therefore carries a **column-axis** guard that
+   enumerates the GRANT (`information_schema.column_privileges`) against the catalogue predicate, and
+   fails CI on any client-writable column that is neither mentioned by its policy nor listed in
+   `CLIENT_WRITABLE_EXEMPTIONS` with a reason. A stale exemption fails just as loudly.
+   **44 client-writable INSERT columns across the five surfaces: 17 bounded, 27 recorded free.**
+
+   Two exemptions are flagged **REVISIT WITH STAGE 3**: `outcome_events.decision_authority` and
+   `outcome_events.verified_at` are client-settable and carry no authority **only because the same
+   predicate pins `source = 'self_reported'` and `verified_by IS NULL`**. The day §6's verification
+   path lets `source` be anything else, both become load-bearing.
 
 ---
 
@@ -670,7 +716,7 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), DELETE. **No UPDATE — and there must never be one.** |
 | **Grants after** | SELECT(all) · **INSERT (id, owner, assessment_id, program_id, verdict, rule_version, score_snapshot, supersedes_prediction_id, case_id)** · DELETE. **No UPDATE grant, ever.** |
 | **Role × verb** | SELECT / INSERT / DELETE: O/A/C/S = **S2** · **UPDATE: — for every role, permanently** (immutability is the point of `20260620000000`) · anon = — |
-| **Policy form** | `pp_select_case` / `pp_insert_case` / `pp_delete_case`. The INSERT `WITH CHECK` is ~~TWO~~ **THREE** clauses (amended 2026-08-04, round 3): the ownership disjunct in its **INSERT shape**, `(owner = (select auth.uid()) and case_id is null)` (§4 rule 4), whose case arm now also carries the **owner-axis bound** `owner is null or owner = private.case_student_id(case_id)` — this table carries NO derive trigger, so that clause is the only thing bounding the owner axis on insert — **AND** `private.assessment_case_id(assessment_id) = <the case being written>` — the inline subquery it replaces is both an anti-recursion violation and a silent-denial hazard once `assessments` gains its own policy. **BOTH CLAUSES ARE LOAD-BEARING AND ROUND 2 MEASURED WHY (2026-08-04):** the parentage clause tests only that parent and child AGREE, never that the actor can REACH the case, so under the bare disjunct naming yourself as owner admitted a prediction into any case at all — a regression against legacy `pp_insert_own`'s `exists (… a.owner = auth.uid())`. **No UPDATE policy.** **CONSEQUENCE MADE EXPLICIT 2026-08-04 (MV-159), because it retires a property MV-156's suite asserted: the comparison is plain `=`, so a child carrying `case_id IS NULL` yields NULL and a WITH CHECK admits a row only on TRUE — an AUTHENTICATED client can therefore no longer create an owner-only, case-less chain row.** `=` rather than `is not distinct from` is deliberate and closes a hole the legacy `a.owner = uid` closed: an unclaimed anonymous assessment is `owner NULL, case_id NULL` and its id travels in a shareable URL, so a NULL-tolerant comparison would let any signed-in client hang a prediction-of-record off a stranger's assessment. Nothing live is affected — MV-157 routed every chain insert through `lib/cases/dual-write.ts`, which writes `case_id` unconditionally with no owner-only fallback — and the SCHEMA still permits the shape (`_ownership_axis_present` is a disjunct), so the service-role and backfill paths are untouched. `tests/integration/owner-nullable-rebase.itest.ts` asserts the new boundary in both directions. |
+| **Policy form** | `pp_select_case` / `pp_insert_case` / `pp_delete_case`. The INSERT `WITH CHECK` is ~~TWO~~ ~~THREE~~ **FOUR** clauses (amended 2026-08-04 round 3; **amended again 2026-08-05 by MV-161, which adds the fourth — the PARENT-POINTER bound `supersedes_prediction_id is null or private.prediction_case_id(supersedes_prediction_id) = case_id`, at TOP LEVEL beside the parentage clause, per §4 rule 5**). THE POINTER CLAUSE IS THE ONE THIS TABLE NEEDED MOST AND HAD NEVER HAD: `supersedes_prediction_id` is `ON DELETE SET NULL`, so a planted cross-case pointer turns the victim's own row-delete into an UPDATE that `program_predictions_no_update` refuses with `P0001` forever — permanently blocking their `/api/account/delete`, on a row they cannot see. Measured ADMITTED under both `pp_insert_case` and legacy `pp_insert_own`, so it predates Stage 2. The remaining three clauses are: the ownership disjunct in its **INSERT shape**, `(owner = (select auth.uid()) and case_id is null)` (§4 rule 4), whose case arm now also carries the **owner-axis bound** `owner is null or owner = private.case_student_id(case_id)` — this table carries NO derive trigger, so that clause is the only thing bounding the owner axis on insert — **AND** `private.assessment_case_id(assessment_id) = <the case being written>` — the inline subquery it replaces is both an anti-recursion violation and a silent-denial hazard once `assessments` gains its own policy. **BOTH CLAUSES ARE LOAD-BEARING AND ROUND 2 MEASURED WHY (2026-08-04):** the parentage clause tests only that parent and child AGREE, never that the actor can REACH the case, so under the bare disjunct naming yourself as owner admitted a prediction into any case at all — a regression against legacy `pp_insert_own`'s `exists (… a.owner = auth.uid())`. **No UPDATE policy.** **CONSEQUENCE MADE EXPLICIT 2026-08-04 (MV-159), because it retires a property MV-156's suite asserted: the comparison is plain `=`, so a child carrying `case_id IS NULL` yields NULL and a WITH CHECK admits a row only on TRUE — an AUTHENTICATED client can therefore no longer create an owner-only, case-less chain row.** `=` rather than `is not distinct from` is deliberate and closes a hole the legacy `a.owner = uid` closed: an unclaimed anonymous assessment is `owner NULL, case_id NULL` and its id travels in a shareable URL, so a NULL-tolerant comparison would let any signed-in client hang a prediction-of-record off a stranger's assessment. Nothing live is affected — MV-157 routed every chain insert through `lib/cases/dual-write.ts`, which writes `case_id` unconditionally with no owner-only fallback — and the SCHEMA still permits the shape (`_ownership_axis_present` is a disjunct), so the service-role and backfill paths are untouched. `tests/integration/owner-nullable-rebase.itest.ts` asserts the new boundary in both directions. |
 | **Service-role disposition** | `captureApplication` in `lib/outcomes/on-apply.ts` already runs RLS-scoped. Nothing to move. |
 | **Storage path** | none |
 | **Rollback** | Restore the unconditional `private.reject_prediction_update()` body **first**; then drop the FK/uniques; then drop `case_id`. Reverse of the apply order. |
@@ -710,7 +756,7 @@ MV-157/MV-158 review, which found a residue class the cards had not named.
 | **Grants before** | `authenticated`: SELECT(all), INSERT(all), DELETE. No UPDATE. |
 | **Grants after** | SELECT(all) · INSERT(all cols **+ `case_id`**) · DELETE. No UPDATE. |
 | **Role × verb** | SELECT / INSERT / DELETE: O/A/C/S = **S2** · UPDATE: — permanently (corrections are a new row + `supersedes_event_id`) · anon = — |
-| **Policy form** | `oe_select_case` / `oe_insert_case` / `oe_delete_case`. The INSERT `WITH CHECK` **must retain the two integrity clauses that are not about ownership** — `source = 'self_reported'` and `verified_by IS NULL` — while replacing the inline `EXISTS` with `private.attempt_case_id(attempt_id) = case_id`. **The owner equality is REPLACED, not dropped (amended 2026-08-04, round 3):** the case arm carries `owner is null or owner = private.case_student_id(case_id)`, which is the legacy `a.owner = auth.uid()` generalised to a case that may have a student who is not the actor — without it, `owner = <victim>, case_id = <the actor's own case>` planted a fabricated `visa_granted` **outcome event of record** in the victim's data. Dropping them while "making it case-aware" would let a client self-certify an `official_verified` outcome; both are retained and both are asserted in `tests/integration/student-data-rls.itest.ts` (added 2026-08-04). Same plain-`=` consequence as §4.7. The ownership disjunct is in its **INSERT shape** (§4 rule 4); **ROUND 2 (2026-08-04):** as with §4.8, the bare form's cross-case INSERT was refused here only by the legacy composite FK `outcome_events_attempt_id_owner_fkey`, which MV-160 drops. |
+| **Policy form** | `oe_select_case` / `oe_insert_case` / `oe_delete_case`. The INSERT `WITH CHECK` **must retain the two integrity clauses that are not about ownership** — `source = 'self_reported'` and `verified_by IS NULL` — while replacing the inline `EXISTS` with `private.attempt_case_id(attempt_id) = case_id`. **AMENDED 2026-08-05 (MV-161): it also carries the PARENT-POINTER bound `supersedes_event_id is null or private.outcome_event_case_id(supersedes_event_id) = case_id`, at TOP LEVEL, per §4 rule 5 — which is what `private.outcome_event_case_id(uuid)`, the fourth parent-case helper, exists for (the pointer is self-referential, so §4.7's `prediction_case_id` had no equivalent here).** Plantable on identical terms to §4.7's and **harmless today** — this table has no no-update trigger, so its `ON DELETE SET NULL` succeeds and nothing locks. Bounded anyway: being harmless is a property of a trigger that does not exist yet, not of the predicate. **The owner equality is REPLACED, not dropped (amended 2026-08-04, round 3):** the case arm carries `owner is null or owner = private.case_student_id(case_id)`, which is the legacy `a.owner = auth.uid()` generalised to a case that may have a student who is not the actor — without it, `owner = <victim>, case_id = <the actor's own case>` planted a fabricated `visa_granted` **outcome event of record** in the victim's data. Dropping them while "making it case-aware" would let a client self-certify an `official_verified` outcome; both are retained and both are asserted in `tests/integration/student-data-rls.itest.ts` (added 2026-08-04). Same plain-`=` consequence as §4.7. The ownership disjunct is in its **INSERT shape** (§4 rule 4); **ROUND 2 (2026-08-04):** as with §4.8, the bare form's cross-case INSERT was refused here only by the legacy composite FK `outcome_events_attempt_id_owner_fkey`, which MV-160 drops. |
 | **Service-role disposition** | RLS-scoped already. |
 | **Storage path** | none |
 | **Rollback** | Drop new composite FK → drop `UNIQUE (id, case_id)` → drop `case_id`. |

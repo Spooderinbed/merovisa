@@ -74,6 +74,11 @@ const NEW_HELPERS: ReadonlyArray<readonly [name: string, identityArgs: string, s
   ["prediction_case_id", "p_prediction_id uuid", "private.prediction_case_id(uuid)"],
   ["attempt_case_id", "p_attempt_id uuid", "private.attempt_case_id(uuid)"],
   ["case_student_id", "p_case_id uuid", "private.case_student_id(uuid)"],
+  // MV-161's fourth parent-case helper. The three above answer "which case is my PARENT in";
+  // `outcome_events.supersedes_event_id` points at the same table, so it needs the self-referential
+  // one. `prediction_case_id` already served that role for the prediction pointer, which is why
+  // MV-161 adds one helper and not two.
+  ["outcome_event_case_id", "p_event_id uuid", "private.outcome_event_case_id(uuid)"],
 ];
 
 /**
@@ -82,6 +87,116 @@ const NEW_HELPERS: ReadonlyArray<readonly [name: string, identityArgs: string, s
  * property at APPLY time, so a re-creation that drops it cannot even land.
  */
 const OWNER_BOUND_INSERT = "(owner IS NULL) OR (owner = private.case_student_id(case_id))";
+
+/**
+ * MV-161 — the PARENT-POINTER axis, byte-exact, on the two INSERT surfaces that carry a pointer.
+ *
+ * WHY THIS ONE NEEDS A STRUCTURAL ASSERTION MORE THAN THE OTHER TWO AXES DO. The case axis is
+ * self-announcing: drop it and the counsellor suite goes red immediately. The owner axis is quieter
+ * — MV-159 §13 (4) records that every legitimate writer derives `owner` from the case, so only an
+ * attacker notices. THE POINTER AXIS IS QUIETER STILL: `grep -rn supersedes lib/ app/` finds NO
+ * WRITER AT ALL, so dropping this conjunct breaks no live path and no positive test anywhere in the
+ * suite. Behaviourally it is invisible except to the two probes in §H that aim at it deliberately.
+ * MV-160 §D re-creates both policies; the migration asserts this at apply time and this asserts it
+ * in CI, because a clause with no legitimate caller is the exact clause a later refactor deletes.
+ */
+const POINTER_BOUND_INSERT: ReadonlyArray<readonly [policy: string, clause: string]> = [
+  [
+    "program_predictions.pp_insert_case",
+    "(supersedes_prediction_id IS NULL) OR (private.prediction_case_id(supersedes_prediction_id) = case_id)",
+  ],
+  [
+    "outcome_events.oe_insert_case",
+    "(supersedes_event_id IS NULL) OR (private.outcome_event_case_id(supersedes_event_id) = case_id)",
+  ],
+];
+
+/**
+ * MV-161's ENUMERATION PASS, and the larger half of that card: every column a client may WRITE on
+ * an INSERT surface, that NO policy clause mentions, recorded here with the reason it is free.
+ *
+ * WHY A LIST AND NOT A DOCUMENT. The card's finding was not "this one pointer is unbounded" — it
+ * was that nobody had ever enumerated the write surface COLUMN BY COLUMN, so the pointer had been
+ * unexamined by every policy this project has shipped, including the legacy ones. A document
+ * records that once; this list makes the omission FAIL CI the next time a column appears.
+ *
+ * THE GUARD IS A CHANGE DETECTOR, NOT A PROOF OF SAFETY, and the distinction matters. "Mentioned by
+ * the WITH CHECK" is necessary, not sufficient — a clause could name a column and bound it badly.
+ * Sufficiency comes from the behavioural probes (§F, §H); what this adds is that a client-writable
+ * column can never again be BOTH unbounded AND unnoticed. Every entry below is a decision somebody
+ * has to re-take when it stops being true, not a column somebody forgot.
+ */
+const CLIENT_WRITABLE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  // ---- the client-chosen primary keys. PostgREST's upsert compilation sends the key column, so
+  // the grant is forced rather than chosen. Free is SAFE here for a reason that is about the verb:
+  // an INSERT naming an EXISTING id is 23505 on the primary key, never an overwrite, because there
+  // is no UPDATE grant and no UPDATE policy on any of these three tables. So the worst a chosen id
+  // buys is a self-inflicted collision on a value the victim's rows draw from gen_random_uuid().
+  "program_predictions.id": "client-chosen PK; a collision is 23505 and there is no UPDATE path to overwrite through",
+  "application_attempts.id": "client-chosen PK; same reasoning as program_predictions.id",
+  "outcome_events.id": "client-chosen PK; same reasoning as program_predictions.id",
+
+  // ---- CLIENT-SETTABLE TIMESTAMPS. Named by the card as the same "unbounded because
+  // unenumerated" family as the pointer, and deliberately left free rather than closed: both are
+  // self-scoped (the row is already bound to a reachable case and that case's own student), so the
+  // worst they buy is a mis-ordered ledger inside the actor's OWN case. Recorded because "cosmetic
+  // today" is a fact about the surfaces that read them, not about the grant.
+  "application_attempts.created_at": "client-settable timestamp; self-scoped, orders only the actor's own case",
+  "outcome_events.recorded_at": "client-settable ledger timestamp; self-scoped, same family as application_attempts.created_at",
+
+  // ---- THE TWO VERIFICATION-ADJACENT COLUMNS, and they are the sharpest entries in this list.
+  // Both are free, and both are harmless ONLY because the same predicate pins `source =
+  // 'self_reported'` and `verified_by IS NULL` two conjuncts above them. A row that names
+  // `decision_authority = 'dha'` and a `verified_at` is still, on its face, a STUDENT'S CLAIM —
+  // that is what `source` says and no client can change it. THE DAY STAGE 3 LETS `source` BE
+  // ANYTHING ELSE, BOTH OF THESE BECOME LOAD-BEARING AND MUST BE RE-DECIDED HERE.
+  "outcome_events.decision_authority": "CHECK-constrained but free; carries no authority while source is pinned self_reported — REVISIT WITH STAGE 3 VERIFICATION",
+  "outcome_events.verified_at": "settable while verified_by is pinned NULL; carries no authority while source is pinned self_reported — REVISIT WITH STAGE 3 VERIFICATION",
+
+  // ---- the payload columns. What the row SAYS, as opposed to whose row it is and what it points
+  // at. Free by design on every one of the five: a student's own record is theirs to write, the
+  // domain CHECK constraints bound the values, and no policy has ever examined them.
+  "program_predictions.program_id": "payload: FK to the public programs catalogue",
+  "program_predictions.rule_version": "payload: which scoring version produced the row",
+  "program_predictions.score_snapshot": "payload: the scoring breakdown this row records",
+  "program_predictions.verdict": "payload; CHECK-constrained to strong/possible/reach",
+  "user_program_state.notes": "payload: the student's own note on a shortlisted program",
+  "user_program_state.program_id": "payload: FK to the public programs catalogue",
+  "user_program_state.status": "payload: the student's own shortlist status for a program",
+  // `kind` is half of the `(owner, kind)` unique index round 3 weaponised — closed by the OWNER
+  // bound, which is why bounding `kind` itself buys nothing.
+  "document_status.kind": "payload; the (owner, kind) collision it enabled is closed by the owner bound, not by bounding kind",
+  "document_status.obtained": "payload: the student's own checklist tick for a document kind",
+  "application_attempts.destination": "payload: which destination country the attempt targets",
+  "application_attempts.external_ref": "payload: the student's own reference for the application",
+  "application_attempts.institution_id": "payload: which institution the attempt targets",
+  "application_attempts.intake": "payload: which intake the attempt targets",
+  "application_attempts.program_id": "payload: FK to the public programs catalogue",
+  "outcome_events.detail": "payload: the free-form jsonb body of the student's self-report",
+  "outcome_events.event_type": "payload; CHECK-constrained to the eleven ledger events",
+  "outcome_events.gate": "payload; CHECK-constrained to admission/visa",
+  "outcome_events.occurred_at": "payload: the student's report of when it happened",
+  "outcome_events.occurred_on": "payload: the student's report of the date it happened",
+  "outcome_events.reason_code": "payload: the student's stated reason on a refusal or withdrawal",
+};
+
+/** The five tables the enumeration pass covers — the ones `authenticated` may INSERT into. */
+const INSERT_SURFACES = [
+  "user_program_state",
+  "document_status",
+  "program_predictions",
+  "application_attempts",
+  "outcome_events",
+] as const;
+
+/**
+ * Does `expr` mention `col` as a WHOLE identifier? The boundary class is what stops `id` matching
+ * inside `case_id` and `prediction_id` matching inside `supersedes_prediction_id` — both of which
+ * are live in these predicates, and either false positive would report an unbounded column as
+ * bounded, which is the one failure mode this guard must not have.
+ */
+const mentionsColumn = (expr: string, col: string): boolean =>
+  new RegExp(`(^|[^A-Za-z0-9_])${col}([^A-Za-z0-9_]|$)`).test(expr);
 
 /** Every policy this card ships, by table. MV-160 §D re-creates this exact list. */
 const EXPECTED_POLICIES: Record<StudentDataTable, ReadonlyArray<readonly [name: string, cmd: string]>> = {
@@ -1152,6 +1267,47 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       }
     });
 
+    // MV-161 — the same structural argument for the THIRD axis. See POINTER_BOUND_INSERT's comment
+    // for why this one needs the assertion most: no legitimate writer touches either column, so
+    // deleting the conjunct leaves every other test in this file green.
+    it("carries the POINTER-axis bound in the two INSERT predicates that have a pointer — what MV-160 §D must keep", () => {
+      const withChecks = sqlLines(`
+        select c.relname || '.' || p.polname || '|' ||
+               replace(replace(pg_get_expr(p.polwithcheck, p.polrelid), e'\\n', ' '), '  ', ' ')
+          from pg_policy p
+          join pg_class c on c.oid = p.polrelid
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and c.relname || '.' || p.polname in (${POINTER_BOUND_INSERT.map(([p]) => `'${p}'`).join(",")})
+         order by 1;
+      `);
+      expect(withChecks.length, "both pointer-carrying INSERT policies must exist").toBe(2);
+
+      for (const [policy, clause] of POINTER_BOUND_INSERT) {
+        const line = withChecks.find((l) => l.startsWith(`${policy}|`));
+        expect(line, `${policy}: no WITH CHECK found`).toBeDefined();
+        expect(line!.split("|").slice(1).join("|"), `${policy}: the pointer-axis bound is missing or reshaped`).toContain(
+          clause,
+        );
+      }
+
+      // And the OTHER three INSERT policies must NOT have grown one — not tidiness, but the
+      // statement that this card touched exactly the two predicates whose tables carry a pointer
+      // column. `application_attempts.prediction_id` is a PARENT pointer MV-159 §10 already bounds;
+      // `user_program_state` and `document_status` have no self-reference at all.
+      const others = sqlLines(`
+        select c.relname || '.' || p.polname
+          from pg_policy p
+          join pg_class c on c.oid = p.polrelid
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public'
+           and p.polname in ('ups_insert_case', 'ds_insert_case', 'aa_insert_case')
+           and pg_get_expr(p.polwithcheck, p.polrelid) like '%supersedes%'
+         order by 1;
+      `);
+      expect(others, "only the two pointer-carrying tables may name a supersedes column").toEqual([]);
+    });
+
     // The two UPDATE-granted tables whose grant does NOT include `owner`. Their WITH CHECK
     // carries the same two arms, but the OWNER arm is unreachable because the COLUMN is
     // ungranted — which is a fact about the grant set that can change, so it is probed rather
@@ -1268,6 +1424,119 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         probedBranches,
         "every OR arm of every client-supplied predicate must have a cross-boundary probe aimed at it",
       ).toEqual([...requiredBranches].sort());
+    });
+
+    // ===============================================================================
+    // MV-161 — THE COLUMN AXIS. The third dimension of this guard, and the card's larger half.
+    // ===============================================================================
+    // THE PROGRESSION THIS COMPLETES, because each step exists only because the previous one was
+    // green while something was wrong:
+    //
+    //   round 1  VERB-aware      — "every write verb `authenticated` holds is probed".  Green while
+    //                              five WITH CHECKs had an unprobed OR arm admitting cross-case rows.
+    //   round 2  BRANCH-aware    — "every ARM of every client-steerable predicate is probed".  Green
+    //                              while `supersedes_prediction_id` let any signed-in user
+    //                              permanently break an arbitrary victim's account deletion.
+    //   MV-161   COLUMN-aware    — "every COLUMN a client may WRITE is bounded, or recorded free".
+    //
+    // The pointer was never a MISSING PROBE. It was a column no probe had a reason to aim at,
+    // because nobody had ever listed the columns. A verb-aware guard cannot see that; a branch-aware
+    // guard cannot either — both enumerate the PREDICATE, and the predicate is exactly where an
+    // unexamined column leaves no trace. This one enumerates the GRANT, which is the side of the
+    // question a client actually acts on.
+    //
+    // BOTH SIDES DERIVED, the mechanism this file uses everywhere: the columns come from
+    // `information_schema.column_privileges` at run time and the clauses from `pg_policy` at run
+    // time. Nothing here is a hand-written list of what the schema is believed to contain — the only
+    // hand-written thing is the EXEMPTIONS, and the assertions below make a stale exemption fail
+    // just as loudly as a missing one, so the list cannot rot into a rubber stamp.
+    it("bounds or explicitly exempts every CLIENT-WRITABLE column on all five INSERT surfaces", () => {
+      const rows = sqlLines(`
+        with pol as (
+          select c.relname as tbl,
+                 replace(replace(pg_get_expr(p.polwithcheck, p.polrelid), e'\\n', ' '), '  ', ' ') as expr
+            from pg_policy p
+            join pg_class c on c.oid = p.polrelid
+            join pg_namespace n on n.oid = c.relnamespace
+           where n.nspname = 'public'
+             and p.polcmd = 'a'
+             and p.polname <> 'Service inserts documents'
+             and c.relname in (${INSERT_SURFACES.map((t) => `'${t}'`).join(",")})
+        )
+        select cp.table_name || '|' || cp.column_name || '|' || pol.expr
+          from information_schema.column_privileges cp
+          join pol on pol.tbl = cp.table_name
+         where cp.table_schema = 'public'
+           and cp.grantee = 'authenticated'
+           and cp.privilege_type = 'INSERT'
+         order by 1;
+      `);
+
+      // Non-vacuity first. An empty or short result set would make every assertion below pass
+      // silently, which is the failure mode a guard about unnoticed columns cannot afford —
+      // `readGrantedWriteSurface`'s own history is that INSERT was read from the wrong catalogue
+      // and five tables reported "no grant" while holding one.
+      expect(rows.length, "HARNESS DEFECT: the column-grant catalogue query returned nothing").toBeGreaterThan(0);
+      const tablesSeen = new Set(rows.map((r) => r.split("|")[0]));
+      expect(
+        [...tablesSeen].sort(),
+        "every one of the five INSERT surfaces must contribute columns",
+      ).toEqual([...INSERT_SURFACES].sort());
+
+      const bound: string[] = [];
+      const unbounded: string[] = [];
+      for (const row of rows) {
+        const [table, column, ...rest] = row.split("|");
+        const key = `${table}.${column}`;
+        if (mentionsColumn(rest.join("|"), column!)) bound.push(key);
+        else unbounded.push(key);
+      }
+
+      // (1) THE GUARD. Every client-writable column is either named by its policy or recorded free.
+      const unaccounted = unbounded.filter((k) => !(k in CLIENT_WRITABLE_EXEMPTIONS)).sort();
+      expect(
+        unaccounted,
+        "a client may write these columns and NO policy clause mentions them, and no exemption " +
+          "records why that is safe. This is the MV-161 shape: add the bound, or add an exemption " +
+          "with the reason it is deliberately free. Do not delete this assertion.",
+      ).toEqual([]);
+
+      // (2) NO STALE EXEMPTIONS — the half that stops the list becoming a rubber stamp. An entry
+      //     for a column that is no longer client-writable, or that a policy has since started
+      //     bounding, is a decision nobody re-took; both fail here rather than lingering.
+      const live = new Set([...bound, ...unbounded]);
+      const stale = Object.keys(CLIENT_WRITABLE_EXEMPTIONS)
+        .filter((k) => !live.has(k) || bound.includes(k))
+        .sort();
+      expect(
+        stale,
+        "these exemptions no longer describe reality — the column is either no longer client-writable " +
+          "or is now bounded by a policy clause. Delete the entry.",
+      ).toEqual([]);
+
+      // (3) NON-VACUITY of the exemption list itself: every reason is a real sentence, not "".
+      //     A guard whose escape hatch accepts an empty reason is a guard with no escape hatch cost.
+      const reasonless = Object.entries(CLIENT_WRITABLE_EXEMPTIONS)
+        .filter(([, why]) => why.trim().length < 10)
+        .map(([k]) => k);
+      expect(reasonless, "an exemption must carry a reason, not a placeholder").toEqual([]);
+
+      // (4) THE THREE OWNERSHIP/POINTER AXES ARE ON THE BOUND SIDE, ASSERTED POSITIVELY. Without
+      //     this, the whole test would still pass if somebody "fixed" a failure by moving
+      //     `case_id`, `owner` or a pointer into the exemption list.
+      for (const table of INSERT_SURFACES) {
+        expect(bound, `${table}.case_id must be bounded, never exempted`).toContain(`${table}.case_id`);
+        expect(bound, `${table}.owner must be bounded, never exempted`).toContain(`${table}.owner`);
+      }
+      expect(bound, "the MV-161 pointer bound must be live").toContain("program_predictions.supersedes_prediction_id");
+      expect(bound, "the MV-161 pointer bound must be live").toContain("outcome_events.supersedes_event_id");
+      // The parentage clauses MV-159 shipped, restated on the column axis they actually bound.
+      expect(bound).toContain("program_predictions.assessment_id");
+      expect(bound).toContain("application_attempts.prediction_id");
+      expect(bound).toContain("outcome_events.attempt_id");
+      // `outcome_events`' two non-ownership integrity clauses (spec §4.9) are column bounds too.
+      expect(bound).toContain("outcome_events.source");
+      expect(bound).toContain("outcome_events.verified_by");
     });
   });
 
@@ -1458,6 +1727,18 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       for (const [table, id] of created.reverse()) await fixture.admin.from(table).delete().eq("id", id);
     });
 
+    /**
+     * Service-role presence check. §F's `rowStill` asserts the row IS there and is the right tool
+     * for a denial probe; MV-161's delete probe needs to assert BOTH directions on the same row, so
+     * it needs a reader that treats absence as an answer rather than as a harness defect. A failed
+     * READ is still loud — that is the part neither version may drop.
+     */
+    const rowExists = async (table: StudentDataTable, id: string): Promise<boolean> => {
+      const { data: row, error } = await fixture.admin.from(table).select("id").eq("id", id).maybeSingle();
+      expect(error, `HARNESS DEFECT: service-role read of ${table} failed — that is not an absence`).toBeNull();
+      return row !== null;
+    };
+
     it("lets an assigned counsellor insert a CONSULTANCY-shaped chain: case_id set, owner NULL", async () => {
       // This is spec §7.2's "write half" on the three chain tables, and the property Stage 3
       // depends on: a write path that needs no Auth user at all.
@@ -1588,6 +1869,173 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         .from("outcome_events")
         .insert({ ...base, source: "self_reported", verified_by: student.id } as never);
       expect(preVerified.error?.code, "a client may not stamp its own verifier").toBe("42501");
+    });
+
+    // ===============================================================================
+    // MV-161 — the PARENT-POINTER axis. The same sentence as this block's title, about the
+    // column nobody had enumerated.
+    // ===============================================================================
+    // WHAT MAKES THIS DIFFERENT FROM EVERY OTHER PROBE IN THE BLOCK, and why it was live on
+    // production rather than a Stage 2 regression: the attacker satisfies EVERY axis MV-159 bounds.
+    // Own case, own assessment, owned by themselves. The tests above all move a row across a case
+    // boundary somewhere; this one does not. The row is entirely legitimate except for a pointer at
+    // a stranger, and no predicate this project ever shipped — including legacy `pp_insert_own`,
+    // whose `a.owner = auth.uid()` the attacker also satisfies — looked at it.
+    it("refuses a row that supersedes a row in ANOTHER case — the pointer axis (MV-161)", async () => {
+      const attacker = actor("studentA");
+      const own = data.personalA;
+      const victim = data.orgAssignedB;
+      await proveExists("program_predictions", victim.prediction);
+      await proveExists("outcome_events", victim.outcomeEvent);
+
+      // Every bounded axis satisfied. The ONLY hostile column is `supersedes_prediction_id`.
+      const plantPrediction = await attacker.client.from("program_predictions").insert({
+        owner: attacker.id,
+        case_id: own.caseId,
+        assessment_id: own.primaryAssessment,
+        program_id: spareProgram,
+        verdict: "possible",
+        rule_version: "mv161-plant",
+        score_snapshot: {},
+        supersedes_prediction_id: victim.prediction,
+      } as never);
+      expect(
+        plantPrediction.error?.code,
+        "a prediction may not supersede a prediction in a case the actor cannot reach — this is the " +
+          "live P0: ON DELETE SET NULL makes it an UPDATE, which program_predictions_no_update " +
+          "refuses forever, on a row the victim cannot see",
+      ).toBe("42501");
+
+      const plantEvent = await attacker.client.from("outcome_events").insert({
+        owner: attacker.id,
+        case_id: own.caseId,
+        attempt_id: own.attempt,
+        event_type: "offer_received",
+        gate: "admission",
+        source: "self_reported",
+        occurred_at: new Date().toISOString(),
+        supersedes_event_id: victim.outcomeEvent,
+      } as never);
+      expect(plantEvent.error?.code, "the same bound on outcome_events' pointer").toBe("42501");
+
+      // Neither refusal may be an FK's. `supersedes_*` carries only a simple self-FK, so a
+      // violation would be 23503 and NOT 42501 — the codes above already separate them, and this
+      // asserts the row is genuinely absent rather than merely unreported.
+      const { count } = await fixture.admin
+        .from("program_predictions")
+        .select("id", { count: "exact", head: true })
+        .eq("supersedes_prediction_id", victim.prediction);
+      expect(count, "nothing was written").toBe(0);
+    });
+
+    // THE CONTROL, and it is what stops the bound being satisfied by refusing the pointer outright.
+    // `supersedes_*` exists FOR the correction path (spec §4.9: "a correction is a NEW row plus
+    // supersedes_event_id"). A fix that closed the column would close the feature.
+    it("lets a row supersede a row in its OWN case — the pointer bound is not a blanket refusal", async () => {
+      const student = actor("studentA");
+      const own = data.personalA;
+
+      const { data: pred, error: predError } = await student.client
+        .from("program_predictions")
+        .insert({
+          owner: student.id,
+          case_id: own.caseId,
+          assessment_id: own.primaryAssessment,
+          program_id: spareProgram2,
+          verdict: "reach",
+          rule_version: "mv161-in-case-correction",
+          score_snapshot: {},
+          supersedes_prediction_id: own.prediction,
+        } as never)
+        .select("id, supersedes_prediction_id")
+        .single();
+      expect(predError, `the in-case correction shape must survive: ${predError?.message}`).toBeNull();
+      created.push(["program_predictions", pred!.id]);
+      expect(pred!.supersedes_prediction_id, "and it really carries the pointer").toBe(own.prediction);
+
+      const { data: evt, error: evtError } = await student.client
+        .from("outcome_events")
+        .insert({
+          owner: student.id,
+          case_id: own.caseId,
+          attempt_id: own.attempt,
+          event_type: "offer_accepted",
+          gate: "admission",
+          source: "self_reported",
+          occurred_at: new Date().toISOString(),
+          supersedes_event_id: own.outcomeEvent,
+        } as never)
+        .select("id, supersedes_event_id")
+        .single();
+      expect(evtError, `the in-case correction shape must survive: ${evtError?.message}`).toBeNull();
+      created.push(["outcome_events", evt!.id]);
+      expect(evt!.supersedes_event_id).toBe(own.outcomeEvent);
+    });
+
+    // THE CONSEQUENCE, PROVED IN BOTH DIRECTIONS. "The victim can delete their account" is worth
+    // nothing on its own — it passes just as happily when the lock mechanism does not exist at all.
+    // So the counterfactual runs first: a planted pointer is written through `service_role` (which
+    // bypasses RLS, and is the only way to reach the pre-fix state now that the policy refuses it),
+    // and the victim's delete is measured BLOCKED. Then the plant is removed and the same delete is
+    // measured OK. Without the first half this is an inert assertion; without the second it is not
+    // the property the card asks for.
+    it("lets the victim's account-delete complete once no cross-case pointer survives — and not before", async () => {
+      const victim = data.personalA;
+
+      // A disposable prediction standing in for the victim's row that /api/account/delete step 2
+      // would remove. Nothing in the fixture points at it.
+      const { data: target, error: targetError } = await fixture.admin
+        .from("program_predictions")
+        .insert({
+          owner: victim.owner,
+          case_id: victim.caseId,
+          assessment_id: victim.primaryAssessment,
+          program_id: spareProgram,
+          verdict: "strong",
+          rule_version: "mv161-delete-target",
+          score_snapshot: {},
+        } as never)
+        .select("id")
+        .single();
+      expect(targetError, `seed failed: ${targetError?.message}`).toBeNull();
+
+      // (a) THE COUNTERFACTUAL. A planted row in the ATTACKER'S case pointing at it — exactly what
+      //     the policy now refuses, forced in past RLS so the lock can be observed at all.
+      const attackerCase = data.orgAssignedB;
+      const { data: plant, error: plantError } = await fixture.admin
+        .from("program_predictions")
+        .insert({
+          owner: null,
+          case_id: attackerCase.caseId,
+          assessment_id: attackerCase.primaryAssessment,
+          program_id: spareProgram2,
+          verdict: "possible",
+          rule_version: "mv161-forced-plant",
+          score_snapshot: {},
+          supersedes_prediction_id: target!.id,
+        } as never)
+        .select("id")
+        .single();
+      expect(plantError, `forced plant failed: ${plantError?.message}`).toBeNull();
+
+      // The victim's own delete — step 2 of `app/api/account/delete/route.ts`, same predicate.
+      const blocked = await fixture.admin.from("program_predictions").delete().eq("id", target!.id);
+      expect(
+        blocked.error?.code,
+        "THE LOCK MUST BE REAL, or the assertion below proves nothing: ON DELETE SET NULL fires an " +
+          "UPDATE on the pointing row and private.reject_prediction_update() is SECURITY INVOKER, " +
+          "so it raises for service_role too",
+      ).toBe("P0001");
+      expect(await rowExists("program_predictions", target!.id), "and the row survived").toBe(true);
+
+      // (b) remove the plant — the shape the policy now refuses to create in the first place — and
+      //     the identical delete completes.
+      const unplant = await fixture.admin.from("program_predictions").delete().eq("id", plant!.id);
+      expect(unplant.error, `removing the plant failed: ${unplant.error?.message}`).toBeNull();
+
+      const allowed = await fixture.admin.from("program_predictions").delete().eq("id", target!.id);
+      expect(allowed.error, `the victim's account-delete must complete: ${allowed.error?.message}`).toBeNull();
+      expect(await rowExists("program_predictions", target!.id), "and the row is gone").toBe(false);
     });
   });
 
