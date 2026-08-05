@@ -35,7 +35,7 @@ export default async function DocumentsPage() {
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 px-5 py-10">
       <header className="flex flex-col gap-2">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Documents</span>
+        <span className="text-caption uppercase tracking-wide text-ink-faint">Documents</span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">Upload your documents</h1>
         <p className="max-w-[64ch] text-control text-ink-soft">
           Keep your visa-ready documents in one place. Upload photos so you can pull them up

@@ -10,9 +10,9 @@ import { SourceLine } from "@/components/results/source-line";
 import { ImpactPill } from "./impact-pill";
 import { track } from "@/lib/analytics/events";
 
-/** Mono-uppercase state pill, shared by In progress / Done / Dismissed. */
+/** Uppercase state pill, shared by In progress / Done / Dismissed. */
 const statePill =
-  "rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 font-mono text-caption uppercase tracking-wide text-ink-soft";
+  "rounded-pill border border-line-2 bg-bg-tint px-2.5 py-0.5 text-caption uppercase tracking-wide text-ink-soft";
 
 export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged?: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -164,7 +164,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
       {sourcesFor(item.kind).map((src) => (
         <SourceLine key={src.url} url={src.url} lastVerified={src.lastVerified} surface="plan" />
       ))}
-      <footer className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-small text-ink-faint">
+      <footer className="flex flex-wrap gap-x-5 gap-y-1 text-small text-ink-faint">
         {item.liftEstimate ? <span>&uarr; {item.liftEstimate}</span> : null}
         {item.timeEstimate ? <span>&#8987; {item.timeEstimate}</span> : null}
       </footer>

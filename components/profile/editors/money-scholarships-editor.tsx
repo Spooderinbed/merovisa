@@ -84,11 +84,11 @@ export function MoneyScholarshipsEditor({ initial }: { initial: MoneyScholarship
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="fe-total" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Total funds available</label>
+        <label htmlFor="fe-total" className="text-caption uppercase tracking-wide text-ink-faint">Total funds available</label>
         <Input id="fe-total" type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)} />
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="fe-currency" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Currency</label>
+        <label htmlFor="fe-currency" className="text-caption uppercase tracking-wide text-ink-faint">Currency</label>
         <Select id="fe-currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
           <option value="">Select a currency</option>
           {CURRENCIES.map((c) => (
@@ -97,7 +97,7 @@ export function MoneyScholarshipsEditor({ initial }: { initial: MoneyScholarship
         </Select>
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="fe-source" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Source of funds</label>
+        <label htmlFor="fe-source" className="text-caption uppercase tracking-wide text-ink-faint">Source of funds</label>
         <Select id="fe-source" value={source} onChange={(e) => setSource(e.target.value)}>
           <option value="">Select a source</option>
           {SOURCES.map((s) => (
@@ -123,7 +123,7 @@ export function MoneyScholarshipsEditor({ initial }: { initial: MoneyScholarship
         .
       </p>
       <div className="flex flex-col gap-2 border-t border-line pt-4">
-        <label htmlFor="se-profile" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Scholarship profile</label>
+        <label htmlFor="se-profile" className="text-caption uppercase tracking-wide text-ink-faint">Scholarship profile</label>
         <ChipInput id="se-profile" value={profile} onChange={setProfile}
           placeholder="e.g. merit, minority, regional" />
         <span className="text-small text-ink-soft">Tags help match you to scholarship opportunities. Press Enter to add each one.</span>

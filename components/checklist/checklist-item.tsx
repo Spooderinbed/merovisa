@@ -41,11 +41,11 @@ export function ChecklistItem({ item, planState }: { item: Item; planState?: Lin
         </span>
         <div className="flex items-center gap-2">
           {item.kind !== null && item.requirement === "recommended" && (
-            <span className="rounded-pill border border-line px-2 py-0.5 font-mono text-caption uppercase tracking-wide text-ink-faint">
+            <span className="rounded-pill border border-line px-2 py-0.5 text-caption uppercase tracking-wide text-ink-faint">
               Recommended
             </span>
           )}
-          <span className={`font-mono text-caption uppercase tracking-wide ${isDone ? "text-strong" : "text-ink-faint"}`}>
+          <span className={`text-caption uppercase tracking-wide ${isDone ? "text-strong" : "text-ink-faint"}`}>
             {chip}
           </span>
         </div>

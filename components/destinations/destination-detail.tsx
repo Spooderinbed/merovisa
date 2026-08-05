@@ -30,7 +30,7 @@ export function DestinationDetail({ destination: c }: { destination: MarketingDe
         {c.supported ? (
           <VerdictPill verdict={c.match} size="lg" className="text-small" />
         ) : (
-          <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-3 py-1 font-mono text-small text-ink-soft">
+          <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-3 py-1 text-small text-ink-soft">
             Not yet available
           </span>
         )}

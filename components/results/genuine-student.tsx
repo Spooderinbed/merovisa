@@ -22,7 +22,7 @@ const DISCLAIMER = "General context for the Australian Genuine Student requireme
 export function GenuineStudent() {
   return (
     <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-meta text-ink-soft">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <span className="text-caption uppercase tracking-wide text-ink-faint">
         The Genuine Student test (Australia)
       </span>
 
@@ -33,7 +33,7 @@ export function GenuineStudent() {
             open={i === 0 || section.id === "the-questions"}
             className="group border-t border-line pt-2 first:border-t-0 first:pt-0"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between font-mono text-caption uppercase tracking-wide text-ink-faint marker:content-['']">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-caption uppercase tracking-wide text-ink-faint marker:content-['']">
               {section.heading}
               <span className="transition-transform duration-medium ease-calm group-open:rotate-90" aria-hidden>
                 &rsaquo;
@@ -54,7 +54,7 @@ export function GenuineStudent() {
                     surface="genuine-student"
                     href={r.source}
                     title={r.lastVerified ? `verified ${r.lastVerified}` : undefined}
-                    className="shrink-0 font-mono text-ink hover:text-primary hover:underline"
+                    className="shrink-0 text-ink hover:text-primary hover:underline"
                   >
                     {r.label}
                   </SourceAnchor>

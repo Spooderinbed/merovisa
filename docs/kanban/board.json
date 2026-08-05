@@ -1990,7 +1990,7 @@
     },
     {
       "id": "MV-162",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P2",
       "owner": "agent",
       "file": "cards/MV-162-aesthetics-report-polish.md",

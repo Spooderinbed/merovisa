@@ -95,7 +95,7 @@ export function DocumentCard({
         <div className="flex items-center justify-between gap-2">
           <span className="text-body text-ink">{meta.label}</span>
           {doc && (
-            <span className="rounded-pill bg-strong/10 px-2 py-0.5 font-mono text-caption uppercase tracking-wide text-strong">
+            <span className="rounded-pill bg-strong/10 px-2 py-0.5 text-caption uppercase tracking-wide text-strong">
               Uploaded
             </span>
           )}

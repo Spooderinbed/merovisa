@@ -29,7 +29,7 @@ export function IntakeTimingCard({
   const timeline = timelineProp ?? buildIntakeTimeline(intake);
   return (
     <Card as="section" padding="lg">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Intake timing</span>
+      <span className="text-caption uppercase tracking-wide text-ink-faint">Intake timing</span>
       {/* A calendar-proportioned tick-timeline: `now` anchors the start, intake ticks
           sit at their real distance ahead, coloured by how open the window is. The
           nearest + alternatives text below carries the same intakes accessibly, so the
@@ -39,7 +39,7 @@ export function IntakeTimingCard({
           <div className="absolute inset-x-0 top-4 h-px bg-line" />
           <div className="absolute top-2 flex -translate-x-1/2 flex-col items-center" style={{ left: "0%" }}>
             <span className="block h-4 w-px bg-ink-faint" />
-            <span className="mt-1 font-mono text-caption uppercase tracking-wide text-ink-faint">Now</span>
+            <span className="mt-1 text-caption uppercase tracking-wide text-ink-faint">Now</span>
           </div>
           {timeline.map((p) => (
             <div
@@ -49,7 +49,7 @@ export function IntakeTimingCard({
               title={p.note}
             >
               <span className={`block h-2.5 w-2.5 rounded-full ${TICK_CLS[p.status]}`} />
-              <span className="mt-1 whitespace-nowrap font-mono text-caption uppercase tracking-wide text-ink-soft">
+              <span className="mt-1 whitespace-nowrap text-caption uppercase tracking-wide text-ink-soft">
                 {p.name.slice(0, 3)} {p.year}
               </span>
             </div>

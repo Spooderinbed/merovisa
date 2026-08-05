@@ -39,7 +39,7 @@ export function SecondaryVerdicts({
 
   return (
     <Card as="aside" radius="card" className="px-4 py-3">
-      <p className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <p className="text-caption uppercase tracking-wide text-ink-faint">
         Your standing if you applied under a different field
       </p>
       <ul className="mt-2 flex flex-col gap-2">
@@ -49,7 +49,7 @@ export function SecondaryVerdicts({
               If you applied under {item.label} instead
             </span>
             <span
-              className={`inline-flex shrink-0 items-center rounded-pill px-3 py-1 font-mono text-small ${VERDICT_CLS[item.verdict]}`}
+              className={`inline-flex shrink-0 items-center rounded-pill px-3 py-1 text-small ${VERDICT_CLS[item.verdict]}`}
             >
               {VERDICT_LABELS[item.verdict].label}
             </span>

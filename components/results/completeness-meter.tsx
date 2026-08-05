@@ -9,8 +9,8 @@ export function CompletenessMeter({ completeness }: { completeness: ProfileCompl
   return (
     <Card as="section" padding="lg">
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Profile completeness</span>
-        <span className="font-mono text-small text-ink-soft">{completeness.level}</span>
+        <span className="text-caption uppercase tracking-wide text-ink-faint">Profile completeness</span>
+        <span className="text-small text-ink-soft">{completeness.level}</span>
       </div>
       <span className="mt-3 block h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
         <span

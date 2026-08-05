@@ -84,7 +84,7 @@ export function OutcomeSelfReport({
 
   return (
     <div className="mt-3 flex flex-col gap-1.5 border-t border-line pt-3">
-      <span className="flex items-center gap-2 font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <span className="flex items-center gap-2 text-caption uppercase tracking-wide text-ink-faint">
         Report an update
         {confirmed ? (
           // Eases in promptly (no front hold) so a fast router.refresh can't clear

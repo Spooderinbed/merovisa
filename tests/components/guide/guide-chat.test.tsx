@@ -78,7 +78,7 @@ describe("GuideChat", () => {
     expect(question.closest("li")!.className).toMatch(/\banimate-fade\b/);
   });
 
-  it("shows a calm mono typing indicator, not bouncing dots (MV-100)", async () => {
+  it("shows a calm typing indicator, not bouncing dots (MV-100)", async () => {
     let resolveFetch: (r: Response) => void = () => {};
     vi.spyOn(globalThis, "fetch").mockReturnValue(
       new Promise<Response>((resolve) => {
@@ -92,8 +92,9 @@ describe("GuideChat", () => {
 
     // indicator is visible while the request is in flight
     const indicator = await screen.findByText(/the guide is thinking/i);
-    // calm mono treatment — IBM Plex Mono, no bouncing/pulsing dots, no raw duration
-    expect(indicator.className).toMatch(/\bfont-mono\b/);
+    // calm treatment — sans prose (MV-162: mono is for data tokens only), no
+    // bouncing/pulsing dots, no raw duration
+    expect(indicator.className).not.toMatch(/\bfont-mono\b/);
     expect(indicator.className).not.toMatch(/animate-bounce|animate-ping|animate-pulse/);
     expect(indicator.className).not.toMatch(/duration-\d/);
 

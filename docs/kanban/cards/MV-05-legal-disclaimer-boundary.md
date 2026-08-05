@@ -13,7 +13,7 @@ appropriate to a product that stores passports + bank statements and advises (of
 ## Acceptance criteria
 - [x] A clear, persistent "**This is a rules-based estimate, not immigration advice**" disclaimer near every verdict and on results/plan. — **DONE** (`VerdictDisclaimer` on VerdictCard → results + dashboard snapshot; tailored copy on matches + plan pages).
 - [ ] Consent language at the point we collect sensitive documents (passport, bank statement). — **DEFERRED** (entangled: the consent text must reference a Privacy Policy that does not exist yet, and recording `consented_at` needs a prod migration. Rides with the founder's retention-policy decision below.)
-- [~] A stated data-retention + deletion policy, and a working deletion path (user can delete their data). — **deletion path DONE** (`POST /api/account/delete` + profile "Delete your account" control); **retention/deletion POLICY TEXT = founder/lawyer.**
+- [~] A stated data-retention + deletion policy, and a working deletion path (user can delete their data). — **deletion path DONE** (`POST /api/account/delete` + settings-page "Delete your account" control); **retention/deletion POLICY TEXT = founder/lawyer.**
 - [ ] An under-18 handling decision (we advise minors) — documented, lawyer-reviewable. — **FOUNDER/LAWYER** (parked; no code can decide this).
 - [x] Copy stays honest about the cold-start limit: verdicts are estimates, not validated outcomes (until MV-08 exists). — **DONE** (disclaimer copy: "not a guarantee of any visa or admission outcome").
 
@@ -145,7 +145,7 @@ founder DB approval for the `consented_at`/`consent_version`/DOB migration).
    - `app/(app)/plan/page.tsx` (tailored: "ranked by rules-based impact estimates, not immigration advice").
    - Tests: `tests/components/ui/verdict-disclaimer.test.tsx` (3), + assertions added to `verdict-card`, `matches-page`, `plan-page` tests.
 2. **Right-to-delete path** — `app/api/account/delete/route.ts` (`POST`): same-origin CSRF check (mirrors `/auth/signout`) → removes Storage objects from the private `documents` bucket → deletes every owned row (`plan_items`, `user_program_state`, `documents`, `profiles`, `assessments`; `leads` cascades via assessments) → deletes the auth identity (`admin.auth.admin.deleteUser`) → signs out. Idempotent (scoped by `owner`), so retry-safe; **surfaces partial failure as 500 with `failedSteps`, never `ok:true` on a partial delete** (honors the MV-02 no-silent-failure principle).
-   - UI: `components/account/delete-account-section.tsx` — type-"DELETE"-to-confirm control, mounted in `app/(app)/profile/page.tsx` ("Delete your account").
+   - UI: `components/account/delete-account-section.tsx` — type-"DELETE"-to-confirm control, mounted in `app/(app)/settings/page.tsx` ("Delete your account"). **MV-162 moved it here** from `app/(app)/profile/page.tsx`; the settings route is now the only mount.
    - Tests: `tests/api/account/delete.test.ts` (5: full delete, no-docs, partial-failure→500-no-signout, cross-origin→403, 401) + `tests/components/account/delete-account-section.test.tsx` (3: confirm-gating, posts when armed, surfaces error).
 
 **PARKED — founder/lawyer (card cannot reach Done until these land):**

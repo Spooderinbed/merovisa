@@ -83,7 +83,7 @@ export function ProfileRecap({
   return (
     <div className="grid min-h-[70vh] place-items-center px-5">
       <div className="flex w-full max-w-narrow flex-col items-center gap-3 text-center">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+        <span className="text-caption uppercase tracking-wide text-ink-faint">
           Your answers
         </span>
         {lines.map((line, i) => {

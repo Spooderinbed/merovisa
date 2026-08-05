@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { AppBar } from "@/components/layout/app-bar";
 
 describe("AppBar — marketing variant", () => {
@@ -34,5 +34,29 @@ describe("AppBar — app variant", () => {
     expect(screen.getByRole("link", { name: /Guide/i })).toHaveAttribute("href", "/guide");
     expect(screen.queryByRole("link", { name: /Destinations/i })).toBeNull();
     expect(screen.getByTestId("user-pill")).toBeInTheDocument();
+  });
+
+  // MV-162 items 14 + 15: Guide is second (last "makes no sense" — it is the
+  // thing a student reaches for at every stage), Settings is last because it is
+  // a utility destination, not a step in the journey.
+  it("orders the nav Home / Guide / … / Settings, by index", () => {
+    render(<AppBar variant="app" user={{ email: "a@b.com", user_metadata: {} } as never} />);
+    const labels = within(screen.getByRole("navigation"))
+      .getAllByRole("link")
+      .map((a) => a.textContent);
+    expect(labels).toEqual([
+      "Home",
+      "Guide",
+      "Matches",
+      "My plan",
+      "Profile",
+      "Documents",
+      "Settings",
+    ]);
+  });
+
+  it("points Settings at the route that owns account deletion", () => {
+    render(<AppBar variant="app" user={{ email: "a@b.com", user_metadata: {} } as never} />);
+    expect(screen.getByRole("link", { name: /^Settings$/i })).toHaveAttribute("href", "/settings");
   });
 });

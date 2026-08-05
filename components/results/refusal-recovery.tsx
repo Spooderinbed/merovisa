@@ -31,14 +31,14 @@ function rowClass(r: NepalRefusalRecovery): string {
 export function RefusalRecovery() {
   return (
     <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-meta text-ink-soft">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <span className="text-caption uppercase tracking-wide text-ink-faint">
         Refusal risk &amp; recovery (Nepal &rarr; Australia)
       </span>
 
       <div className="flex flex-col gap-3">
         {SECTIONS.map((section) => (
           <div key={section.kind} className="flex flex-col gap-1.5">
-            <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+            <span className="text-caption uppercase tracking-wide text-ink-faint">
               {section.heading}
             </span>
             <ul className="flex flex-col gap-1">
@@ -49,7 +49,7 @@ export function RefusalRecovery() {
                     surface="refusal-recovery"
                     href={r.source}
                     title={r.lastVerified ? `verified ${r.lastVerified}` : undefined}
-                    className="shrink-0 font-mono text-ink hover:text-primary hover:underline"
+                    className="shrink-0 text-ink hover:text-primary hover:underline"
                   >
                     {r.label}
                   </SourceAnchor>

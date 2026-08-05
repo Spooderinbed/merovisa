@@ -28,7 +28,7 @@ export function CostEstimatePanel() {
 
   return (
     <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-meta text-ink-soft">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <span className="text-caption uppercase tracking-wide text-ink-faint">
         First-year cost estimate (Nepal &rarr; Australia)
       </span>
 
@@ -68,7 +68,7 @@ export function CostEstimatePanel() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+        <span className="text-caption uppercase tracking-wide text-ink-faint">
           OSHC by provider (single cover, per year)
         </span>
         <ul className="flex flex-col gap-1">

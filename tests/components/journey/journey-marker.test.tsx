@@ -66,4 +66,46 @@ describe("JourneyMarker", () => {
     expect(dots.className).toContain("hidden");
     expect(dots.className).toContain("md:flex");
   });
+
+  // MV-162 item 10 — the reviewer could not register the strip at all ("make this
+  // bigger"). The origin/master baseline was link `text-small` (13px), counter
+  // `text-caption` (11px), dots `h-1.5 w-1.5`. All three step up together so the
+  // proportions hold. jsdom has no layout engine, so this is a class contract, not
+  // a pixel measurement — it needs a live visual pass to be called done.
+  it("scales the strip up from the too-small baseline — label, counter and dots together", () => {
+    render(<JourneyMarker journey={buildJourney(freshUser)} />);
+
+    const link = screen.getByRole("link");
+    expect(link.className).toContain("text-body");
+    expect(link.className).not.toContain("text-small");
+
+    const step = screen.getByTestId("journey-marker-step");
+    expect(step.className).toContain("text-small");
+    expect(step.className).not.toContain("text-caption");
+
+    const dot = screen.getByTestId("journey-marker-dots").firstElementChild as HTMLElement;
+    expect(dot.className).toContain("h-2");
+    expect(dot.className).toContain("w-2");
+    expect(dot.className).not.toContain("h-1.5");
+  });
+
+  // The size bump must not smuggle the mono face back in: "Profile" is a label and
+  // the step counter's line carries `uppercase`, which the repo-wide guard forbids
+  // pairing with `font-mono`.
+  it("keeps the sans face — the stage label is a label, and the counter line stays uppercase-without-mono", () => {
+    render(<JourneyMarker journey={buildJourney(freshUser)} />);
+    expect(screen.getByText("Profile").className).not.toContain("font-mono");
+    const step = screen.getByTestId("journey-marker-step");
+    expect(step.className).toContain("uppercase");
+    expect(step.className).toContain("tracking-wide");
+    expect(step.className).not.toContain("font-mono");
+  });
+
+  it("stays chrome — bigger, not louder: flat, thin-bordered, no shadow or gradient", () => {
+    const { container } = render(<JourneyMarker journey={buildJourney(freshUser)} />);
+    const strip = screen.getByTestId("journey-marker");
+    expect(strip.className).toContain("border-b");
+    expect(strip.className).toContain("border-line");
+    expect(container.querySelector('[class*="shadow"], [class*="gradient"]')).toBeNull();
+  });
 });

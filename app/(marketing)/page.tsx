@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { HeroMarker } from "@/components/marketing/hero-marker";
 import { Reveal } from "@/components/marketing/reveal";
 import { VerdictPanel } from "@/components/marketing/verdict-panel";
 import { PlanSteps } from "@/components/marketing/plan-steps";
@@ -19,25 +18,15 @@ export default async function HomePage() {
 
   return (
     <div className="mv-landing">
-      {/* hidden SVG filter for the hand-drawn hero marker (§4.1) */}
-      <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden focusable="false">
-        <filter id="hero-rough" x="-10%" y="-10%" width="120%" height="130%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="7" result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </svg>
-
       {/* HERO */}
       <section className="hero">
         <div className="wrap">
           <div className="hero-top">
-            <div className="eyebrow">For students applying abroad</div>
-            <h1>An honest answer before you <HeroMarker>pay anyone.</HeroMarker></h1>
+            <h1>An honest answer before you <strong>pay anyone</strong>.</h1>
             <p className="sub">Where do you actually stand academically, financially, and on visa risk?</p>
             <p className="prov">Built on official Home Affairs and university data. Every figure shows its source and date.</p>
             <div className="cta-row">
               <Link className="cta" href="/assess">Check your eligibility <span className="arw">→</span></Link>
-              <span className="meta">9 quick questions · no account needed</span>
             </div>
           </div>
 

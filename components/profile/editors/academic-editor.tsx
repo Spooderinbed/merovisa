@@ -40,11 +40,11 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="ae-inst" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Institution</label>
+        <label htmlFor="ae-inst" className="text-caption uppercase tracking-wide text-ink-faint">Institution</label>
         <Input id="ae-inst" value={institution} onChange={(e) => setInstitution(e.target.value)} />
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="ae-degree" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Degree</label>
+        <label htmlFor="ae-degree" className="text-caption uppercase tracking-wide text-ink-faint">Degree</label>
         <Select id="ae-degree" value={degree} onChange={(e) => setDegree(e.target.value)}>
           <option value="">Select a degree</option>
           {DEGREES.map((d) => (
@@ -54,11 +54,11 @@ export function AcademicEditor({ initial }: { initial: AcademicInitial }) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <label htmlFor="ae-grade" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Grade percent</label>
+          <label htmlFor="ae-grade" className="text-caption uppercase tracking-wide text-ink-faint">Grade percent</label>
           <Input id="ae-grade" type="number" min={0} max={100} value={gradePercent} onChange={(e) => setGradePercent(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="ae-system" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Grade system</label>
+          <label htmlFor="ae-system" className="text-caption uppercase tracking-wide text-ink-faint">Grade system</label>
           <Select id="ae-system" value={gradeSystem} onChange={(e) => setGradeSystem(e.target.value)}>
             <option value="">Select a system</option>
             {GRADE_SYSTEMS.map((g) => (

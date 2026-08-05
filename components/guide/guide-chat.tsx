@@ -80,7 +80,7 @@ export function GuideChat() {
         </ol>
       )}
 
-      {pending ? <span className="font-mono text-small text-ink-faint">The guide is thinking…</span> : null}
+      {pending ? <span className="text-small text-ink-faint">The guide is thinking…</span> : null}
       {error ? (
         <span role="alert" className="text-small text-reach">
           {error}

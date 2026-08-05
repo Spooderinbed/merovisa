@@ -4,7 +4,8 @@ import type { SourceSurface } from "@/lib/analytics/events";
 /**
  * Trust attribution under a verdict factor: "verified <date> · <host>" with the
  * host linking out to the primary source. Matches the source-meta style used in
- * verdict-card and destination-detail (mono, faint, teal link).
+ * destination-detail (mono, faint, primary link) — the stamp is a date plus a
+ * host, so it stays mono under the MV-162 data-token rule.
  */
 const hostOf = (url: string) => url.replace(/^https?:\/\//, "").split("/")[0];
 

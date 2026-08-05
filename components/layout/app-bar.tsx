@@ -11,16 +11,20 @@ const NAV_MARKETING = [
   { label: "Why trust us", href: "/trust" },
 ];
 
-// Canonical app nav (post-2026-06-05 reconciliation): Home / Matches /
-// My plan / Profile / Documents / Guide. "Destinations" is a marketing
+// Canonical app nav (post-2026-06-05 reconciliation): Home / Guide / Matches /
+// My plan / Profile / Documents / Settings. "Destinations" is a marketing
 // browse concept — signed-in users have personalized /matches instead.
+// MV-162: Guide sits second, not last — a student reaches for it at every stage,
+// so it belongs beside Home rather than at the end of the journey. Settings is
+// last because it is a utility destination, not a step.
 const NAV_APP = [
   { label: "Home", href: "/dashboard" },
+  { label: "Guide", href: "/guide" },
   { label: "Matches", href: "/matches" },
   { label: "My plan", href: "/plan" },
   { label: "Profile", href: "/profile" },
   { label: "Documents", href: "/documents" },
-  { label: "Guide", href: "/guide" },
+  { label: "Settings", href: "/settings" },
 ];
 
 export function AppBar({ variant, user }: { variant: Variant; user?: User | null }) {

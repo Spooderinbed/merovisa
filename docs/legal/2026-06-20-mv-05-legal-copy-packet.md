@@ -131,7 +131,7 @@ protect your information.
 **7. Retention & deletion (APP 11.2).** We keep your information for as long as your
 account is active, so your assessment, checklist, and uploaded documents are there when
 you return. **You can delete your uploaded documents, or your whole account and all
-associated data, at any time** from your profile ("Delete your account") — this removes
+associated data, at any time** from your account settings ("Delete your account") — this removes
 your uploaded documents, your profile and assessments, and your sign-in identity — when you
 delete something, we remove it from our systems.
 

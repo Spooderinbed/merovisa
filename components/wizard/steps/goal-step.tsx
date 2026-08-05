@@ -55,7 +55,7 @@ export function GoalStep({ profile, setField, callouts, eyebrow }: StepProps) {
       {primary ? (
         <div className="mt-8 flex animate-rise flex-col gap-3 border-t border-line pt-6">
           <div className="flex flex-col gap-1">
-            <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+            <span className="text-caption uppercase tracking-wide text-ink-faint">
               Also aiming for? (optional — up to {SECONDARY_GOALS_CAP})
             </span>
             <p className="text-body text-ink-soft">

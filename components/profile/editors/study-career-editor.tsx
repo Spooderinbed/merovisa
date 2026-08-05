@@ -151,7 +151,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
   return (
     <form onSubmit={onSave} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="ise-level" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Level</label>
+        <label htmlFor="ise-level" className="text-caption uppercase tracking-wide text-ink-faint">Level</label>
         <Select id="ise-level" value={level} onChange={(e) => setLevel(e.target.value)}>
           <option value="">Select a level</option>
           {LEVELS.map((l) => (
@@ -160,7 +160,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
         </Select>
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="ise-field" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Field</label>
+        <label htmlFor="ise-field" className="text-caption uppercase tracking-wide text-ink-faint">Field</label>
         <Select id="ise-field" value={field} onChange={(e) => chooseField(e.target.value)}>
           <option value="">Select a field</option>
           {FIELDS.map((f) => (
@@ -170,7 +170,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
       </div>
       {field ? (
         <fieldset className="flex flex-col gap-2">
-          <legend className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+          <legend className="text-caption uppercase tracking-wide text-ink-faint">
             Also considering (optional — up to {ALSO_CONSIDERING_CAP})
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -199,12 +199,12 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
         </fieldset>
       ) : null}
       <div className="flex flex-col gap-2">
-        <label htmlFor="ise-spec" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Specialisation</label>
+        <label htmlFor="ise-spec" className="text-caption uppercase tracking-wide text-ink-faint">Specialisation</label>
         <Input id="ise-spec" value={specialisation} onChange={(e) => setSpecialisation(e.target.value)} />
       </div>
       <div className="flex flex-col gap-4 border-t border-line pt-4">
         <div className="flex flex-col gap-2">
-          <label htmlFor="ce-goal" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Career goal</label>
+          <label htmlFor="ce-goal" className="text-caption uppercase tracking-wide text-ink-faint">Career goal</label>
           <Select id="ce-goal" value={goal} onChange={(e) => chooseGoal(e.target.value)}>
             <option value="">Select a goal</option>
             {GOALS.map((g) => (
@@ -214,7 +214,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
         </div>
         {goal ? (
           <fieldset className="flex flex-col gap-2">
-            <legend className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+            <legend className="text-caption uppercase tracking-wide text-ink-faint">
               Also aiming for (optional — up to {SECONDARY_GOALS_CAP})
             </legend>
             <p className="text-meta text-ink-soft">
@@ -247,7 +247,7 @@ export function StudyCareerEditor({ initial }: { initial: StudyCareerInitial }) 
           </fieldset>
         ) : null}
         <div className="flex flex-col gap-2">
-          <label htmlFor="ce-target-role" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Target role</label>
+          <label htmlFor="ce-target-role" className="text-caption uppercase tracking-wide text-ink-faint">Target role</label>
           <Input id="ce-target-role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
         </div>
       </div>

@@ -17,7 +17,7 @@ export function BankLoanPanel() {
   const banks = getEducationLoanBanks();
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4">
-      <h3 className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <h3 className="text-caption uppercase tracking-wide text-ink-faint">
         Class-A banks with education loans
       </h3>
       <ul className="flex flex-col divide-y divide-line-2">

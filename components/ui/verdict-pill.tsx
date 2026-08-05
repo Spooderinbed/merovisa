@@ -28,7 +28,7 @@ export function VerdictPill({
   className?: string;
 }) {
   return (
-    <span className={cn("inline-flex items-center rounded-pill font-mono", sizes[size], verdictCls[verdict], className)}>
+    <span className={cn("inline-flex items-center rounded-pill", sizes[size], verdictCls[verdict], className)}>
       {VERDICT_LABELS[verdict].label}
     </span>
   );

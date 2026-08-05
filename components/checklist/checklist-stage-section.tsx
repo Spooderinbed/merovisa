@@ -17,7 +17,7 @@ export function ChecklistStageSection({ title, subtitle, blocks, planStates, rea
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-title font-medium text-ink">{title}</h2>
           {readiness && readiness.total > 0 && (
-            <span className="whitespace-nowrap font-mono text-caption uppercase tracking-wide text-ink-faint">
+            <span className="whitespace-nowrap text-caption uppercase tracking-wide text-ink-faint">
               {readiness.ready} of {readiness.total} ready
             </span>
           )}
@@ -26,7 +26,7 @@ export function ChecklistStageSection({ title, subtitle, blocks, planStates, rea
       </div>
       {present.map((b) => (
         <div key={b.label} className="flex flex-col gap-2">
-          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">{b.label}</span>
+          <span className="text-caption uppercase tracking-wide text-ink-faint">{b.label}</span>
           <ul className="flex flex-col gap-2">
             {b.items.map((i) => <ChecklistItem key={i.key} item={i} planState={planStates?.[i.key]} />)}
           </ul>

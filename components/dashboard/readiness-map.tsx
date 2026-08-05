@@ -58,7 +58,7 @@ export function ReadinessMap({ signals }: { signals: ReadinessSignals }) {
               </span>
               <span
                 aria-hidden="true"
-                className={`shrink-0 rounded-pill px-2.5 py-1 font-mono text-caption uppercase tracking-wide ${BAND_PILL[row.band]}`}
+                className={`shrink-0 rounded-pill px-2.5 py-1 text-caption uppercase tracking-wide ${BAND_PILL[row.band]}`}
               >
                 {BAND_WORD[row.band]}
               </span>

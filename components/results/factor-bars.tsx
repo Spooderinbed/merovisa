@@ -39,7 +39,7 @@ export function FactorBars({ dimensions }: { dimensions: AssessmentResult["dimen
           <>
             <span className="flex items-center justify-between">
               <span className="text-ink">{label}</span>
-              <span className="font-mono text-small text-ink-faint">{bandLabel(dim.value)}</span>
+              <span className="text-small text-ink-faint">{bandLabel(dim.value)}</span>
             </span>
             <span className="h-2 w-full overflow-hidden rounded-pill bg-bg-tint">
               <span
