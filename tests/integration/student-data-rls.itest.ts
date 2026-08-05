@@ -45,9 +45,7 @@ import {
   seedTenancyFixture,
   type Actor,
   type ActorKey,
-  type CaseKey,
-  type CaselessRows,
-  type StudentCaseRows,
+  type CaseKey,  type StudentCaseRows,
   type StudentDataSeeder,
   type StudentDataTable,
   type TenancyFixture,
@@ -347,7 +345,6 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
     StudentCaseRows
   >;
   let anonymousAssessment: string;
-  let caseless: CaselessRows;
   let spareProgram: string;
   let spareProgram2: string;
 
@@ -540,7 +537,6 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
     });
 
     anonymousAssessment = await seeder.seedAnonymousAssessment();
-    caseless = await seeder.seedCaselessRows({ owner: actor("studentA").id, documentKind: "pte" });
   }, 180_000);
 
   afterAll(async () => {
@@ -2392,115 +2388,4 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
   //     is both MV-160-durable and a strictly stronger statement of the property.
   //
   // So the inherited work is once again exactly this block, deleted whole.
-  describe("transitional owner disjunct — retired by MV-160", () => {
-    // MOVED HERE IN ROUND 2 from its own block near the top of the file, because it belongs to
-    // exactly this retirement: it asserts every predicate CONTAINS the clause MV-160 deletes, so
-    // leaving it outside made the "one block, nothing else" promise false on the card's own
-    // terms. It is the FIRST test MV-160 should read and the first it should delete.
-    it("writes the disjunct on ONE line in every predicate, as the outermost OR", () => {
-      const predicates = sqlLines(`
-        select c.relname || '.' || p.polname || '@' || kind || '::' ||
-               replace(replace(expr, e'\\n', ' '), '  ', ' ')
-          from pg_policy p
-          join pg_class c on c.oid = p.polrelid
-          join pg_namespace n on n.oid = c.relnamespace
-          cross join lateral (
-            values ('using', pg_get_expr(p.polqual, p.polrelid)),
-                   ('check', pg_get_expr(p.polwithcheck, p.polrelid))
-          ) as v(kind, expr)
-         where n.nspname = 'public'
-           and c.relname in (${STUDENT_DATA_TABLES.map((t) => `'${t}'`).join(",")})
-           and p.polname <> 'Service inserts documents'
-           and v.expr is not null
-         order by 1;
-      `);
-
-      // 24 policies; every SELECT/INSERT/DELETE contributes one expression and every UPDATE two.
-      expect(predicates.length, "every new policy must carry a predicate").toBe(28);
-
-      let insertShaped = 0;
-      for (const line of predicates) {
-        const [head] = line.split("::");
-        const expr = line.split("::").slice(1).join("::");
-        const policy = head!.replace(/@(using|check)$/, "");
-        // TWO SHAPES SINCE ROUND 2 (see the constants at the head of this file): the five INSERT
-        // predicates carry `and case_id is null`, because on INSERT the client CHOOSES the
-        // case_id and the bare form admitted a row into any case at all. Everything else keeps
-        // the bare form, which is what holds a not-yet-backfilled row visible to its owner.
-        const isInsertPolicy = INSERT_POLICIES.has(policy) && head!.endsWith("@check");
-        const expected = isInsertPolicy ? TRANSITIONAL_DISJUNCT_INSERT : TRANSITIONAL_DISJUNCT;
-        if (isInsertPolicy) insertShaped++;
-
-        expect(expr, `${line}: the transitional disjunct is missing or reshaped`).toContain(expected);
-        expect(expr, `${line}: the case branch is missing or reshaped`).toContain(CASE_BRANCH);
-        // A non-INSERT predicate must NOT have acquired the tighter form: that would hide a
-        // case-bearing row from its owner, which is the regression the disjunct exists to avoid.
-        if (!isInsertPolicy) {
-          expect(expr, `${line}: a non-INSERT predicate carries the INSERT-only narrowing`).not.toContain(
-            TRANSITIONAL_DISJUNCT_INSERT,
-          );
-        }
-        // Exactly once. A second copy would mean the disjunct was woven into the case branch,
-        // and MV-160's edit would have to restructure rather than delete.
-        expect(
-          expr.split(TRANSITIONAL_DISJUNCT).length - 1,
-          `${line}: the owner disjunct appears more than once`,
-        ).toBe(1);
-        // And it is the LEFT operand of the outermost OR: everything before it is opening
-        // parentheses. A predicate MV-160 has to restructure is a predicate MV-160 will get wrong.
-        const prefix = expr.slice(0, expr.indexOf(expected));
-        expect(prefix.replace(/[\s(]/g, ""), `${line}: the owner disjunct is not the outermost OR`).toBe("");
-      }
-      expect(insertShaped, "all five INSERT predicates must carry the narrowed disjunct").toBe(5);
-    });
-
-    it("keeps a case-less row visible and updatable to its legacy owner, and to nobody else", async () => {
-      const owner = actor("studentA");
-      await proveExists("plan_items", caseless.planItem);
-
-      const seen = await visible(owner, "plan_items");
-      expect(seen, "a not-yet-backfilled row must stay visible to its owner").toContain(caseless.planItem);
-
-      // …and updatable, through the grant the student actually holds.
-      const { error } = await owner.client
-        .from("plan_items")
-        .update({ status: "dismissed" } as never)
-        .eq("id", planId(caseless.planItem));
-      expect(error, `the owner must still be able to act on it: ${error?.message}`).toBeNull();
-      await fixture.admin.from("plan_items").update({ status: "todo" }).eq("id", planId(caseless.planItem));
-
-      // Invisible to a cross-tenant admin AND to a case-scoped actor on the owner's own org case.
-      for (const key of ["adminB", "ownerB", "adminA", "counsellorAssignedA", "outsider"] as const) {
-        const other = await visible(actor(key), "plan_items");
-        expect(other, `${key} must not see a case-less row`).not.toContain(caseless.planItem);
-      }
-    });
-
-    it("hands the row to the case-scoped actor once its case_id is backfilled, and the owner keeps it", async () => {
-      const owner = actor("studentA");
-      const counsellor = actor("counsellorAssignedA");
-      const target = caseId("orgAssignedA");
-
-      expect(await visible(counsellor, "documents"), "precondition").not.toContain(caseless.document);
-
-      const { error } = await fixture.admin.from("documents").update({ case_id: target }).eq("id", caseless.document);
-      expect(error, `backfill failed: ${error?.message}`).toBeNull();
-
-      expect(await visible(counsellor, "documents"), "the case branch must pick it up").toContain(caseless.document);
-      expect(await visible(owner, "documents"), "and the owner must not lose it").toContain(caseless.document);
-
-      await fixture.admin.from("documents").update({ case_id: null }).eq("id", caseless.document);
-    });
-
-    it("shows the case-less assessment to its owner and to no case-scoped actor", async () => {
-      const owner = actor("studentA");
-      await proveExists("assessments", caseless.assessment);
-      expect(await visible(owner, "assessments")).toContain(caseless.assessment);
-      for (const key of ["adminA", "counsellorAssignedA", "adminB"] as const) {
-        expect(await visible(actor(key), "assessments"), `${key} must not see a case-less assessment`).not.toContain(
-          caseless.assessment,
-        );
-      }
-    });
-  });
 });
