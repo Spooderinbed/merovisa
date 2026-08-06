@@ -123,7 +123,8 @@ describe("PlanItemCard", () => {
     render(<PlanItemCard item={{ ...item, status: "done" }} />);
     const chip = screen.getByText(/^Done$/);
     expect(chip).toBeInTheDocument();
-    expect(chip).toHaveClass("font-mono", "uppercase");
+    expect(chip).toHaveClass("uppercase", "tracking-wide");
+    expect(chip).not.toHaveClass("font-mono"); // MV-162: status chips are sans
     expect(screen.getByText("Upload IELTS")).toHaveClass("line-through");
     expect(screen.queryByText(/^Dismissed$/)).toBeNull();
   });
@@ -132,7 +133,8 @@ describe("PlanItemCard", () => {
     render(<PlanItemCard item={{ ...item, status: "dismissed" }} />);
     const chip = screen.getByText(/^Dismissed$/);
     expect(chip).toBeInTheDocument();
-    expect(chip).toHaveClass("font-mono", "uppercase");
+    expect(chip).toHaveClass("uppercase", "tracking-wide");
+    expect(chip).not.toHaveClass("font-mono"); // MV-162: status chips are sans
     expect(screen.getByText("Upload IELTS")).not.toHaveClass("line-through");
     expect(screen.queryByText(/^Done$/)).toBeNull();
     expect(screen.getByRole("button", { name: /Undo/i })).toBeInTheDocument();

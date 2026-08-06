@@ -83,16 +83,16 @@ export function WorkGapEditor({ initial }: { initial: WorkGapInitial }) {
         Optional. Your role helps tailor your document checklist — it doesn&apos;t change your verdict.
       </p>
       <div className="flex flex-col gap-2">
-        <label htmlFor="we-title" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Title</label>
+        <label htmlFor="we-title" className="text-caption uppercase tracking-wide text-ink-faint">Title</label>
         <Input id="we-title" value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <label htmlFor="we-years" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Years</label>
+          <label htmlFor="we-years" className="text-caption uppercase tracking-wide text-ink-faint">Years</label>
           <Input id="we-years" type="number" min={0} max={40} value={workYears} onChange={(e) => setWorkYears(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="we-relevance" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Relevance</label>
+          <label htmlFor="we-relevance" className="text-caption uppercase tracking-wide text-ink-faint">Relevance</label>
           <Select id="we-relevance" value={relevance} onChange={(e) => setRelevance(e.target.value)}>
             <option value="">Select relevance</option>
             {RELEVANCE.map((r) => (
@@ -110,11 +110,11 @@ export function WorkGapEditor({ initial }: { initial: WorkGapInitial }) {
       </p>
       <div className="flex flex-col gap-4 border-t border-line pt-4">
         <div className="flex flex-col gap-2">
-          <label htmlFor="ge-years" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Years of gap</label>
+          <label htmlFor="ge-years" className="text-caption uppercase tracking-wide text-ink-faint">Years of gap</label>
           <Input id="ge-years" type="number" min={0} max={20} value={gapYears} onChange={(e) => setGapYears(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
-          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Reasons</span>
+          <span className="text-caption uppercase tracking-wide text-ink-faint">Reasons</span>
           <div className="flex flex-col gap-2">
             {REASONS.map((r) => (
               <label key={r.value} className="flex items-center gap-2 text-meta text-ink">
@@ -125,7 +125,7 @@ export function WorkGapEditor({ initial }: { initial: WorkGapInitial }) {
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="ge-evidence" className="font-mono text-caption uppercase tracking-wide text-ink-faint">Evidence</label>
+          <label htmlFor="ge-evidence" className="text-caption uppercase tracking-wide text-ink-faint">Evidence</label>
           <ChipInput id="ge-evidence" value={evidence} onChange={setEvidence}
             placeholder="e.g. pay slips, experience letter" />
           <span className="text-small text-ink-soft">Documents that back up the gap. Press Enter to add each one.</span>

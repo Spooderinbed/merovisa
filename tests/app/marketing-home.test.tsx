@@ -13,7 +13,7 @@ describe("Marketing homepage (v7)", () => {
   it("renders the hero H1, sub-line, provenance line, and the three proof claims", async () => {
     render(await HomePage());
     expect(screen.getByText(/An honest answer before you/i)).toBeInTheDocument();
-    expect(screen.getByText(/pay anyone\./i)).toBeInTheDocument();
+    expect(screen.getByText(/^pay anyone$/i)).toBeInTheDocument();
     expect(screen.getByText(/Where do you actually stand academically/i)).toBeInTheDocument();
     expect(screen.getByText(/Built on official Home Affairs and university data/i)).toBeInTheDocument();
     expect(screen.getByText(/Official Home Affairs & university data/i)).toBeInTheDocument();
@@ -53,6 +53,50 @@ describe("Marketing homepage (v7)", () => {
     render(await HomePage());
     expect(screen.queryByText(/Three quiet tools, no clutter/i)).toBeNull();
     expect(screen.queryByText(/A preview of your feed/i)).toBeNull();
+  });
+
+  // MV-162 item 3 — declutter the hero. The reviewer counted six competing
+  // elements above the fold and asked for weight on "pay anyone" alone instead
+  // of a highlight band across the whole second line.
+  it("emphasises the two words 'pay anyone' alone, with no highlight band", async () => {
+    const { container } = render(await HomePage());
+    const h1 = container.querySelector("h1")!;
+    expect(h1.textContent).toBe("An honest answer before you pay anyone.");
+    // the band (.accent.hand, the hand-drawn marker) is gone
+    expect(h1.querySelector(".accent")).toBeNull();
+    // weight carries the emphasis, and only over the two words
+    const emphasis = Array.from(h1.querySelectorAll("strong"));
+    expect(emphasis.map((n) => n.textContent)).toEqual(["pay anyone"]);
+  });
+
+  it("keeps at most four elements in the hero: headline, sub, sourcing line, CTA", async () => {
+    const { container } = render(await HomePage());
+    const heroTop = container.querySelector(".hero-top")!;
+    expect(heroTop.children).toHaveLength(4);
+    expect(heroTop.querySelector("h1")).not.toBeNull();
+    expect(heroTop.querySelector(".sub")).not.toBeNull();
+    expect(heroTop.querySelector(".prov")).not.toBeNull();
+    expect(heroTop.querySelector("a.cta")).toHaveAttribute("href", "/assess");
+  });
+
+  it("drops the hero eyebrow and the CTA caption (the two weakest earners)", async () => {
+    const { container } = render(await HomePage());
+    const heroTop = container.querySelector(".hero-top")!;
+    expect(screen.queryByText(/For students applying abroad/i)).toBeNull();
+    expect(heroTop.querySelector(".eyebrow")).toBeNull();
+    expect(heroTop.querySelector(".meta")).toBeNull();
+    expect(heroTop.textContent).not.toMatch(/9 quick questions/i);
+  });
+
+  it("keeps the sourcing claim in the hero and echoes it in the proof strip", async () => {
+    const { container } = render(await HomePage());
+    const hero = container.querySelector("section.hero")!;
+    expect(hero.querySelector(".prov")!.textContent).toMatch(
+      /Built on official Home Affairs and university data\. Every figure shows its source and date\./i,
+    );
+    const proof = Array.from(hero.querySelectorAll(".pf")).map((n) => n.textContent);
+    expect(proof).toContain("Official Home Affairs & university data");
+    expect(proof).toContain("Every figure sourced and dated");
   });
 
   it("redirects signed-in users to /dashboard before rendering", async () => {

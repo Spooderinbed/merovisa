@@ -14,7 +14,7 @@ export default function HowItWorksPage() {
         documents.
       </p>
 
-      <div className="mt-12 space-y-10">
+      <div className="mt-12 space-y-12">
         {/* Section 1 */}
         <div>
           <h2 className="text-title font-medium leading-snug">
@@ -30,8 +30,6 @@ export default function HowItWorksPage() {
             staleness.
           </p>
         </div>
-
-        <hr className="border-line-1" />
 
         {/* Section 2 */}
         <div>
@@ -49,8 +47,6 @@ export default function HowItWorksPage() {
           </p>
         </div>
 
-        <hr className="border-line-1" />
-
         {/* Section 3 */}
         <div>
           <h2 className="text-title font-medium leading-snug">
@@ -65,8 +61,6 @@ export default function HowItWorksPage() {
             requirement yourself.
           </p>
         </div>
-
-        <hr className="border-line-1" />
 
         {/* Section 4 */}
         <div>

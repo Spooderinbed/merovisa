@@ -15,7 +15,7 @@ export function SnapshotCard({
   if (!primary) {
     return (
       <Card padding="lg" className="animate-rise flex flex-col gap-3">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Snapshot</span>
+        <span className="text-caption uppercase tracking-wide text-ink-faint">Snapshot</span>
         <h2 className="text-display">Run your first assessment</h2>
         <p className="text-body text-ink-soft">9 quick questions, no questions skipped. We&apos;ll show where you stand.</p>
         <Link
@@ -29,7 +29,7 @@ export function SnapshotCard({
   }
   return (
     <Card padding="lg" className="animate-rise flex flex-col gap-4">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <span className="text-caption uppercase tracking-wide text-ink-faint">
         Your standing for {destinationLabel ?? "your destination"}
       </span>
       {/* Recompute staleness live (server component): a stored verdict can age past

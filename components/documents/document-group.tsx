@@ -21,7 +21,7 @@ export function DocumentGroup({
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-mono text-caption uppercase tracking-wide text-ink-faint">{label}</h2>
+      <h2 className="text-caption uppercase tracking-wide text-ink-faint">{label}</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {kinds.map((meta) => {
           const existing = docByKind.get(meta.kind);

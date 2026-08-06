@@ -13,7 +13,7 @@ export default function DestinationsPage() {
         Visa rules, real costs, and what you&apos;ll need. Every page shows where the data came from and when we last
         checked.
       </p>
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {MARKETING_DESTINATIONS.map((d) => (
           <DestinationCard key={d.id} destination={d} />
         ))}

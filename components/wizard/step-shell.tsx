@@ -13,7 +13,7 @@ export function StepShell({ eyebrow, title, subtext, children, callouts }: StepS
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <span
-          className="animate-rise font-mono text-caption uppercase tracking-wide text-ink-faint"
+          className="animate-rise text-caption uppercase tracking-wide text-ink-faint"
           style={{ animationDelay: "0s" }}
         >
           {eyebrow}

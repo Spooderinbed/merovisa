@@ -55,7 +55,7 @@ export function AuthCard({ nextPath, claimToken }: AuthCardProps) {
             who can't use the primary button, a hidden alternative is still a wall. */}
         <div className="mt-2 flex items-center gap-3" aria-hidden>
           <span className="h-px flex-1 bg-line" />
-          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">or</span>
+          <span className="text-caption uppercase tracking-wide text-ink-faint">or</span>
           <span className="h-px flex-1 bg-line" />
         </div>
 

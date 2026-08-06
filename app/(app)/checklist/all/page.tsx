@@ -37,7 +37,7 @@ export default async function GlobalChecklistPage() {
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">
       <header className="flex flex-col gap-2">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Document checklist</span>
+        <span className="text-caption uppercase tracking-wide text-ink-faint">Document checklist</span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">Your documents, all in one list</h1>
         <p className="max-w-[64ch] text-control text-ink-soft">
           Tick off each document as you obtain it — this is your own running checklist, separate
@@ -49,7 +49,7 @@ export default async function GlobalChecklistPage() {
         const kinds = DOCUMENT_META.filter((m) => m.group === group);
         return (
           <section key={group} className="flex flex-col gap-3">
-            <h2 className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+            <h2 className="text-caption uppercase tracking-wide text-ink-faint">
               {GROUP_LABELS[group]}
             </h2>
             <div className="flex flex-col gap-2">

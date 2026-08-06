@@ -23,7 +23,7 @@ const DISCLAIMER =
 export function WorkingWithAgents() {
   return (
     <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-3 text-meta text-ink-soft">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <span className="text-caption uppercase tracking-wide text-ink-faint">
         Working with an agent (Australia)
       </span>
 
@@ -34,7 +34,7 @@ export function WorkingWithAgents() {
             open={i === 0}
             className="group border-t border-line pt-2 first:border-t-0 first:pt-0"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between font-mono text-caption uppercase tracking-wide text-ink-faint marker:content-['']">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-caption uppercase tracking-wide text-ink-faint marker:content-['']">
               {section.heading}
               <span className="transition-transform duration-medium ease-calm group-open:rotate-90" aria-hidden>
                 &rsaquo;
@@ -48,7 +48,7 @@ export function WorkingWithAgents() {
                     surface="working-with-agents"
                     href={r.source}
                     title={r.lastVerified ? `verified ${r.lastVerified}` : undefined}
-                    className="shrink-0 font-mono text-ink hover:text-primary hover:underline"
+                    className="shrink-0 text-ink hover:text-primary hover:underline"
                   >
                     {r.label}
                   </SourceAnchor>

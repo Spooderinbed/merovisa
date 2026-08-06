@@ -16,7 +16,7 @@ describe("VerdictPill", () => {
   it("renders the md pill string exactly (the census-dominant tier)", () => {
     render(<VerdictPill verdict="strong" />);
     expect(screen.getByText("Strong match").className).toBe(
-      "inline-flex items-center rounded-pill font-mono px-2.5 py-0.5 text-caption bg-strong-tint text-strong",
+      "inline-flex items-center rounded-pill px-2.5 py-0.5 text-caption bg-strong-tint text-strong",
     );
   });
 

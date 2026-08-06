@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 function dotCls(stage: JourneyStage): string {
   const reached = stage.status === "done" || stage.status === "in-progress";
   return cn(
-    "h-1.5 w-1.5 rounded-full",
+    "h-2 w-2 rounded-full",
     reached ? "border border-strong bg-strong" : "border border-line bg-surface",
     stage.current && "ring-2 ring-strong/30",
   );
@@ -41,12 +41,12 @@ export function JourneyMarker({ journey }: { journey: Journey }) {
       <Link
         href="/dashboard"
         aria-label={`${journey.ariaLabel} Step ${stepN} of ${total}. Open your journey.`}
-        className="mx-auto flex w-full max-w-[1120px] items-center gap-3 px-5 py-2 text-small transition-colors ease-calm hover:bg-bg-tint"
+        className="mx-auto flex w-full max-w-[1120px] items-center gap-3 px-5 py-2.5 text-body transition-colors ease-calm hover:bg-bg-tint"
       >
         <span
           data-testid="journey-marker-dots"
           aria-hidden
-          className="hidden items-center gap-1.5 md:flex"
+          className="hidden items-center gap-2 md:flex"
         >
           {journey.stages.map((stage) => (
             <span key={stage.key} className={dotCls(stage)} />
@@ -55,7 +55,10 @@ export function JourneyMarker({ journey }: { journey: Journey }) {
         <span aria-hidden className="text-ink-soft">
           <span className="font-medium text-ink">{current?.label}</span>
           {" · "}
-          <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+          <span
+            data-testid="journey-marker-step"
+            className="text-small uppercase tracking-wide text-ink-faint"
+          >
             step {stepN} of {total}
           </span>
         </span>

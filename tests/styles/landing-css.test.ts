@@ -37,8 +37,10 @@ describe("app/(marketing)/landing.css", () => {
     expect(css).toMatch(/--mono:\s*var\(--font-ibm-plex-mono\)/);
   });
 
-  it("ports the three approved flourishes: hero marker filter, sparkle keyframes, paper grain", () => {
-    expect(css).toMatch(/filter:\s*url\(#hero-rough\)/);
+  it("ports the two remaining flourishes: sparkle keyframes, paper grain", () => {
+    // MV-162 item 3 decluttered the hero: the hand-drawn .accent.hand marker and
+    // its #hero-rough displacement filter are gone, so nothing may reference it.
+    expect(css).not.toMatch(/hero-rough/);
     expect(css).toMatch(/@keyframes\s+cta-flip/);
     expect(css).toMatch(/@keyframes\s+cta-rotate/);
     expect(css).toMatch(/feTurbulence/); // grain data-URI

@@ -9,7 +9,7 @@ export function CompletenessRing({
   const offset = circumference * (1 - Math.min(100, Math.max(0, pct)) / 100);
   return (
     <Card as="aside" padding="lg" className="animate-rise flex flex-col gap-3">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Completeness</span>
+      <span className="text-caption uppercase tracking-wide text-ink-faint">Completeness</span>
       <div className="flex items-center gap-4">
         <svg viewBox="0 0 100 100" width="96" height="96" aria-hidden>
           <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="6" fill="none" className="text-line-2" />

@@ -5,7 +5,7 @@ export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; n
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">
       <header className="flex flex-col gap-2">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">Document checklist</span>
+        <span className="text-caption uppercase tracking-wide text-ink-faint">Document checklist</span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">Pick a program to see its checklist</h1>
         <p className="max-w-[64ch] text-control text-ink-soft">
           Each program has its own checklist — what you need now, and what comes after your offer.

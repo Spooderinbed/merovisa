@@ -38,7 +38,7 @@ export function DeleteAccountSection() {
   }
 
   return (
-    <Card as="section" padding="lg" className="flex flex-col gap-3 lg:col-span-2">
+    <Card as="section" padding="lg" className="flex flex-col gap-3">
       <h2 className="text-title font-medium text-reach">Delete your account</h2>
       <p className="max-w-[64ch] text-body text-ink-soft">
         This permanently removes your profile, assessments, plan, and every uploaded

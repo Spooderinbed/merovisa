@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 // Calm flat dots, reusing the MV-73 funnel-rail language: a reached stage fills
 // teal, the "you are here" stage adds a thin ring, an unreached stage is a hollow
-// dot. Wayfinding — never reach-red. Shape + the mono word carry state, not colour.
+// dot. Wayfinding — never reach-red. Shape + the uppercase word carry state, not colour.
 function dotCls(stage: JourneyStage): string {
   const reached = stage.status === "done" || stage.status === "in-progress";
   return cn(
@@ -53,7 +53,7 @@ export function JourneyRail({ signals }: { signals: JourneySignals }) {
               <span aria-hidden className={cn("text-center text-small", labelCls(stage))}>{stage.label}</span>
               <span
                 aria-hidden
-                className={cn("text-center font-mono text-caption uppercase tracking-wide", labelCls(stage))}
+                className={cn("text-center text-caption uppercase tracking-wide", labelCls(stage))}
               >
                 {stage.word}
               </span>

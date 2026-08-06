@@ -65,7 +65,7 @@ function OutcomeRailView({ events }: { events: EventType[] }) {
         {rail.steps.map((step) => (
           <div key={step.key} className="flex flex-1 flex-col items-center gap-1.5">
             <span aria-hidden className={cn("h-2.5 w-2.5 rounded-full", railDotCls(step))} />
-            <span className={cn("text-center font-mono text-caption uppercase tracking-wide", railLabelCls(step))}>
+            <span className={cn("text-center text-caption uppercase tracking-wide", railLabelCls(step))}>
               {step.label}
             </span>
           </div>
@@ -82,13 +82,13 @@ function OutcomeRow({ row }: { row: OutcomeFunnelRow }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
           {row.universityName ? (
-            <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+            <span className="text-caption uppercase tracking-wide text-ink-faint">
               {row.universityName}
             </span>
           ) : null}
           <span className="text-ink">{row.programName}</span>
         </div>
-        <span className={cn("shrink-0 rounded-pill px-2.5 py-0.5 font-mono text-caption", stage.cls)}>
+        <span className={cn("shrink-0 rounded-pill px-2.5 py-0.5 text-caption", stage.cls)}>
           {stage.label}
         </span>
       </div>

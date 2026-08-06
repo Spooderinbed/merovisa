@@ -26,7 +26,7 @@ describe("Button loading contract (MV-91)", () => {
     expect(btn).toHaveAttribute("aria-busy", "true");
   });
 
-  it("loading: renders loadingLabel + a font-mono aria-hidden ellipsis", () => {
+  it("loading: renders loadingLabel + an aria-hidden ellipsis", () => {
     render(
       <Button loading loadingLabel="Uploading">
         Upload
@@ -39,7 +39,8 @@ describe("Button loading contract (MV-91)", () => {
     expect(btn.textContent).toBe("Uploading…");
     const ellipsis = btn.querySelector('[aria-hidden="true"]');
     expect(ellipsis).not.toBeNull();
-    expect(ellipsis).toHaveClass("font-mono");
+    // MV-162: the ellipsis is button chrome, not a data token — it stays sans.
+    expect(ellipsis).not.toHaveClass("font-mono");
     expect(ellipsis?.textContent).toBe("…");
   });
 

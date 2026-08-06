@@ -14,7 +14,7 @@ export default function TrustPage() {
         delete it.
       </p>
 
-      <div className="mt-12 space-y-10">
+      <div className="mt-12 space-y-12">
         {/* Section 1 */}
         <div>
           <h2 className="text-title font-medium leading-snug">
@@ -28,8 +28,6 @@ export default function TrustPage() {
             not buried in terms. Right now there are no such arrangements.
           </p>
         </div>
-
-        <hr className="border-line-1" />
 
         {/* Section 2 */}
         <div>
@@ -48,8 +46,6 @@ export default function TrustPage() {
           </p>
         </div>
 
-        <hr className="border-line-1" />
-
         {/* Section 3 */}
         <div>
           <h2 className="text-title font-medium leading-snug">
@@ -64,15 +60,13 @@ export default function TrustPage() {
           </p>
         </div>
 
-        <hr className="border-line-1" />
-
         {/* Section 4 */}
         <div>
           <h2 className="text-title font-medium leading-snug">
             When we delete your data
           </h2>
           <p className="mt-3 text-lead text-ink-soft">
-            You can delete your account at any time from your profile page. Account deletion is real deletion —
+            You can delete your account at any time from your settings page. Account deletion is real deletion —
             your profile, your assessments, and your uploaded documents are removed straight away. There is no
             soft-delete and no indefinite &ldquo;deactivation&rdquo; state, and we do not keep your records for a
             retention period afterwards.
@@ -88,8 +82,6 @@ export default function TrustPage() {
             and we will confirm within seven days.
           </p>
         </div>
-
-        <hr className="border-line-1" />
 
         {/* Section 5 */}
         <div>

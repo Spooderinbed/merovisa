@@ -1,4 +1,5 @@
 import type * as React from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -21,7 +22,6 @@ import { EnglishEditor } from "@/components/profile/editors/english-editor";
 import { WorkGapEditor } from "@/components/profile/editors/work-gap-editor";
 import { MoneyScholarshipsEditor } from "@/components/profile/editors/money-scholarships-editor";
 import { ImmigrationEditor } from "@/components/profile/editors/immigration-editor";
-import { DeleteAccountSection } from "@/components/account/delete-account-section";
 
 /**
  * One editor per presentation group; multi-section groups receive the
@@ -117,7 +117,16 @@ export default async function ProfilePage() {
           </SectionAccordion>
         ))}
       </div>
-      <DeleteAccountSection />
+      {/* Account controls (deletion included) live on /settings — an exposed
+          delete panel here planted the idea. The app bar's nav is hidden below
+          md and the mobile tab bar has no settings tab, so this link is the
+          mobile route to them. */}
+      <Link
+        href="/settings"
+        className="justify-self-start text-meta text-ink-soft underline-offset-2 hover:text-ink hover:underline lg:col-span-2"
+      >
+        Settings
+      </Link>
     </div>
   );
 }

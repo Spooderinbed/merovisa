@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 const { usePathname } = vi.hoisted(() => ({
   usePathname: vi.fn<() => string>(() => "/dashboard"),
@@ -21,6 +21,17 @@ describe("MobileTabBar", () => {
     expect(screen.getByRole("link", { name: /^Documents$/i })).toHaveAttribute("href", "/documents");
     expect(screen.getByRole("link", { name: /^Guide$/i })).toHaveAttribute("href", "/guide");
     expect(screen.getAllByRole("link")).toHaveLength(5);
+  });
+
+  // MV-162 item 15: Guide moves to index 1 here too, so the mobile bar and the
+  // app bar agree. Settings is deliberately NOT a sixth tab — five labels
+  // already fill a 375px bar, and settings is reachable from /profile.
+  it("orders the tabs Home / Guide / Matches / My plan / Documents, by index", () => {
+    render(<MobileTabBar />);
+    const labels = within(screen.getByTestId("mobile-tab-bar"))
+      .getAllByRole("link")
+      .map((a) => a.textContent);
+    expect(labels).toEqual(["Home", "Guide", "Matches", "My plan", "Documents"]);
   });
 
   it("leaves Profile to the avatar menu", () => {

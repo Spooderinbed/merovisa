@@ -129,7 +129,7 @@ export default async function MatchesPage() {
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
       <header className="flex flex-col gap-2">
-        <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+        <span className="text-caption uppercase tracking-wide text-ink-faint">
           Matches
         </span>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">Where your profile fits today.</h1>

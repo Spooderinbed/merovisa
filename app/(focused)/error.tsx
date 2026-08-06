@@ -28,7 +28,7 @@ export default function FocusedError({
 
   return (
     <div className="mx-auto flex w-full max-w-narrow flex-col items-start gap-4 px-5 py-16">
-      <p className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <p className="text-caption uppercase tracking-wide text-ink-faint">
         Something went wrong
       </p>
       <h1 className="text-display leading-snug text-ink">We couldn&apos;t load your results</h1>

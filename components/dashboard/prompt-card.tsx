@@ -25,7 +25,7 @@ const CTA_CLASSES =
 function Eyebrow({ tone }: { tone: "dark" | "light" }) {
   return (
     <span
-      className={`font-mono text-caption uppercase tracking-wide ${
+      className={`text-caption uppercase tracking-wide ${
         tone === "dark" ? "text-on-primary/70" : "text-ink-faint"
       }`}
     >

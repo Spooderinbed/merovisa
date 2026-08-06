@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Mobile counterpart of NAV_APP in app-bar.tsx — the five core surfaces.
-// Profile stays in the avatar menu (UserPill).
+// Mobile counterpart of NAV_APP in app-bar.tsx — the five core surfaces, in the
+// same order (MV-162: Guide second, not last). Profile stays in the avatar menu
+// (UserPill); Settings is not a sixth tab — five labels already fill a 375px
+// bar — and is reached from /profile.
 const TABS = [
   { label: "Home", href: "/dashboard" },
+  { label: "Guide", href: "/guide" },
   { label: "Matches", href: "/matches" },
   { label: "My plan", href: "/plan" },
   { label: "Documents", href: "/documents" },
-  { label: "Guide", href: "/guide" },
 ];
 
 function isActive(pathname: string, href: string): boolean {

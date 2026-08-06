@@ -29,7 +29,7 @@ export function SectionAccordion({
       title={title}
       subtitle={summary || "Not added yet"}
       trailing={
-        <span className={`inline-flex shrink-0 items-center rounded-pill px-2.5 py-0.5 font-mono text-caption ${STATUS_CLS[status]}`}>
+        <span className={`inline-flex shrink-0 items-center rounded-pill px-2.5 py-0.5 text-caption ${STATUS_CLS[status]}`}>
           {STATUS_LABEL[status]}
         </span>
       }

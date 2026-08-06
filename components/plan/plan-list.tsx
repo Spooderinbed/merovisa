@@ -55,7 +55,7 @@ export function PlanList({
 
       {closed.length > 0 ? (
         <Card as="details" padding="sm">
-          <summary className="cursor-pointer font-mono text-small uppercase tracking-wide text-ink-faint">
+          <summary className="cursor-pointer text-small uppercase tracking-wide text-ink-faint">
             Closed ({closed.length})
           </summary>
           <div className="mt-3 flex flex-col gap-3">

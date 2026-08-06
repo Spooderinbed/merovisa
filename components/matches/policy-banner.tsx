@@ -11,7 +11,7 @@ const GRANT = NEPAL_AU_STUDENT_VISA_GRANT_RATE;
 export function PolicyBanner() {
   return (
     <Card as="aside" radius="card" tone="tint" padding="sm" className="flex flex-col gap-2 text-meta text-ink-soft">
-      <span className="font-mono text-caption uppercase tracking-wide text-ink-faint">
+      <span className="text-caption uppercase tracking-wide text-ink-faint">
         Current policy (Nepal &rarr; Australia)
       </span>
       <ul className="flex flex-col gap-1">
