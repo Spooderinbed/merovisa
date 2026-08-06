@@ -1990,14 +1990,14 @@
     },
     {
       "id": "MV-162",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "file": "cards/MV-162-aesthetics-report-polish.md",
       "title": "Aesthetics-report polish: typography unification + 7 hierarchy fixes",
       "summary": "Ships the eight items from the external aesthetics review that need no palette decision — item 2 (mono confined to data tokens only, so eyebrows/chips/prose stop fighting the sans; 151 call sites, 73 files, guarded by a live-tree rule test), item 3 (hero decluttered, emphasis narrowed to \"pay anyone\"), item 6 (stunted rules removed from the /how scoring-dimensions block; prose kept), item 8 (equal-height destination cards with pinned footers), item 10 (larger journey step marker), item 12 (scholarship rows lifted, titles bold), item 14 (account deletion moved off /profile into a new /settings route), item 15 (Guide moved from last to second in both navs). The three colour items (1, 9, 13 — blue palette, red-for-urgency) are deliberately held for a founder decision and no colour token changes.",
       "created": "2026-08-05",
-      "entered": "2026-08-05"
+      "entered": "2026-08-06"
     },
     {
       "id": "MV-161",
