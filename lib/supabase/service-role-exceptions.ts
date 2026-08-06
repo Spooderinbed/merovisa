@@ -238,6 +238,15 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
       "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before the service-role write. NOTE requireCasePermission is not a field allowlist (MV-153 Finding 1): the Zod payload validation is what bounds WHICH fields move, and Stage 3's consultancy mutations inherit that question unsolved.",
     auditEvent: null,
   },
+  {
+    path: "scripts/stage2/capture-read-path-snapshot.mjs",
+    status: "sanctioned",
+    justification:
+      "MV-160 §A2's rehearsal-only equivalence replay. NOT AN APPLICATION PATH: it is invoked by hand by the integrator via `npm run stage2:equivalence` against a restored, offline copy of production, and is deliberately absent from the app, from CI and from `npm run test:integration`. Service-role is used for exactly two things, both of which are unreachable as any authenticated user by design: enumerating the Auth users to replay as, and capturing anonymous assessments (`owner IS NULL`), which every authenticated client is correctly unable to see. THE REPLAY ITSELF IS NOT SERVICE-ROLE and must never become so — each user's nine read paths go through an anon-key client carrying that user's own JWT, because proving the rows survived is not the same as proving the student can still read them, and only the second one is the Stage 2 exit gate (card §A, Risk notes: 'replaying as service-role would produce a green proof of the wrong statement').",
+    requiredCaseCheck:
+      "n/a — there is no caller and no case. The script reads only; it writes nothing to the database, and the one file it writes is the gitignored snapshot payload it then instructs the operator to destroy.",
+    auditEvent: null,
+  },
 ];
 
 /** The bare allow-list the ESLint rule and the drift sweep compare against. */

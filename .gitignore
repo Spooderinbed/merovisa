@@ -62,3 +62,10 @@ coverage/
 
 # DHA evidentiary-tool harvest cache (scripts/harvest-dha-evidentiary.mjs resume state)
 .harvest-cache/
+
+# MV-160 §A2 — the live-data equivalence snapshot. It is per-user payload for REAL students
+# (profile sections, names, emails, financial and academic detail), git history is permanent, and
+# committing it would contradict the layered controller model in docs/legal/2026-07-29-stage0-decision-record.md
+# D-A. Only the pseudonymous hash report in docs/migrations/stage2/equivalence-report.md is committed;
+# the payload is written here, read once, and DESTROYED on the rehearsal host.
+docs/migrations/stage2/snapshots/

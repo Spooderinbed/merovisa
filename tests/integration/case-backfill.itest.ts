@@ -317,9 +317,14 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
   };
 
   /**
-   * Seed one row in each of the nine tables for `owner`, in the PRE-MIGRATION shape: `owner` set,
-   * `case_id` untouched. Service-role, because four of the nine hold no authenticated INSERT grant
-   * and this is fixture construction, never an assertion.
+   * Seed one row in each of the nine tables for `owner`, ON that owner's personal case.
+   *
+   * IT USED TO SEED THE PRE-MIGRATION SHAPE — `owner` set, `case_id` untouched — and MV-160 makes
+   * that shape uninsertable: `case_id` is NOT NULL on eight of the nine, and the ninth carries
+   * `assessments_case_required_when_owned`, so an OWNED case-less row cannot exist anywhere. The
+   * helper therefore mints the owner's personal case first (through the real backfill, the same
+   * call the migration makes) and seeds onto it. Service-role, because four of the nine hold no
+   * authenticated INSERT grant and this is fixture construction, never an assertion.
    */
   const seedNine = async (owner: string, programId: string): Promise<{ assessmentId: string }> => {
     // Throws on BOTH a reported error and a silently absent row: a fixture that half-seeded would
@@ -334,7 +339,16 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       return data as NonNullable<T>;
     };
 
-    await svc("profiles", admin.from("profiles").insert({ owner, sections: {}, completeness: 10 }).select("id").single());
+    // The owner's personal case, minted by the real backfill. `personalCaseOf` throws unless
+    // exactly one exists, so a fixture that failed to mint one fails loudly here rather than
+    // turning every downstream assertion into a test of the fixture.
+    backfill();
+    const caseId = personalCaseOf(owner);
+
+    await svc(
+      "profiles",
+      admin.from("profiles").insert({ owner, case_id: caseId, sections: {}, completeness: 10 }).select("id").single(),
+    );
 
     const assessment = await svc(
       "assessments",
@@ -342,6 +356,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         .from("assessments")
         .insert({
           owner,
+          case_id: caseId,
           result: { verdict: "possible" },
           rule_version: "v0.5.0-mv155",
           expires_at: new Date(Date.now() + 3 * MS_PER_DAY).toISOString(),
@@ -358,25 +373,40 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       "plan_items",
       admin
         .from("plan_items")
-        .insert({ owner, kind: "english", impact: "high", title: "Sit IELTS", status: "todo" })
+        .insert({ owner, case_id: caseId, kind: "english", impact: "high", title: "Sit IELTS", status: "todo" })
         .select("id")
         .single(),
     );
     await svc(
       "user_program_state",
-      admin.from("user_program_state").insert({ owner, program_id: programId, status: "shortlisted" }).select("owner").single(),
+      admin
+        .from("user_program_state")
+        .insert({ owner, case_id: caseId, program_id: programId, status: "shortlisted" })
+        .select("owner")
+        .single(),
     );
     await svc(
       "documents",
       admin
         .from("documents")
-        .insert({ owner, kind: "passport", file_path: `${owner}/passport/p.pdf`, file_size: 10, original_name: "p.pdf" })
+        .insert({
+          owner,
+          case_id: caseId,
+          kind: "passport",
+          file_path: `${owner}/passport/p.pdf`,
+          file_size: 10,
+          original_name: "p.pdf",
+        })
         .select("id")
         .single(),
     );
     await svc(
       "document_status",
-      admin.from("document_status").insert({ owner, kind: "passport", obtained: true }).select("owner").single(),
+      admin
+        .from("document_status")
+        .insert({ owner, case_id: caseId, kind: "passport", obtained: true })
+        .select("owner")
+        .single(),
     );
 
     const prediction = await svc(
@@ -385,6 +415,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         .from("program_predictions")
         .insert({
           owner,
+          case_id: caseId,
           assessment_id: assessment.id,
           program_id: programId,
           verdict: "possible",
@@ -398,7 +429,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       "application_attempts",
       admin
         .from("application_attempts")
-        .insert({ owner, prediction_id: prediction.id, program_id: programId })
+        .insert({ owner, case_id: caseId, prediction_id: prediction.id, program_id: programId })
         .select("id")
         .single(),
     );
@@ -408,6 +439,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         .from("outcome_events")
         .insert({
           owner,
+          case_id: caseId,
           attempt_id: attempt.id,
           event_type: "applied",
           gate: "admission",
@@ -482,7 +514,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
   // A/B — structure
   // =====================================================================
   describe("structure", () => {
-    it("adds a NULLABLE case_id to exactly the nine, FK → cases(id) ON DELETE RESTRICT", () => {
+    it("adds a case_id to exactly the nine — NOT NULL on eight — FK → cases(id) ON DELETE RESTRICT", () => {
       const rows = sql(`
         select c.table_name || '|' || c.is_nullable || '|' || c.data_type
           from information_schema.columns c
@@ -490,7 +522,16 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
            and c.table_name in (${NINE.map((t) => `'${t}'`).join(",")})
          order by 1;
       `);
-      expect(rows).toEqual([...NINE].sort().map((t) => `${t}|YES|uuid`));
+      // THE NULLABILITY EXPECTATION MOVED WITH MV-160, WHICH IS THIS ASSERTION WORKING RATHER THAN
+      // being relaxed: `case_id` was nullable for the length of the Stage 2 transition and MV-160
+      // closes that window — NOT NULL on eight, and `assessments` kept nullable ON PURPOSE so an
+      // anonymous unclaimed row can stay case-less for MV-135's purge (the CHECK
+      // `assessments_case_required_when_owned` is what binds the owned/claimed half). Pinning the
+      // post-tighten shape here is what stops a later "tidy-up" closing the assessments exception
+      // or quietly re-opening one of the eight.
+      expect(rows).toEqual(
+        [...NINE].sort().map((t) => `${t}|${t === "assessments" ? "YES" : "NO"}|uuid`),
+      );
 
       // THE `ccu.table_name = 'cases'` FILTER IS REQUIRED FROM MV-156 ON, and it is not cosmetic.
       // MV-156 adds two COMPOSITE foreign keys that also carry `case_id` as a key column —
@@ -544,7 +585,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       }
     });
 
-    it("ships the per-case uniqueness rules BESIDE the per-owner ones, with the right partiality", () => {
+    it("ships the per-case uniqueness rules with the right partiality", () => {
       const definition = (name: string): string =>
         sqlOne(`select indexdef from pg_indexes where schemaname='public' and indexname='${name}';`);
 
@@ -570,34 +611,18 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
         /CREATE UNIQUE INDEX .* \(case_id, assessment_id, program_id, rule_version\)$/,
       );
 
-      // The legacy owner-keyed rules are still there — the swap is MV-160's, not this card's.
-      for (const legacy of [
-        "profiles_owner_key",
-        "assessments_primary_idx",
-        "plan_items_kind_open_idx",
-        "documents_owner_kind_key",
-        "program_predictions_owner_assessment_id_program_id_rule_ver_key",
-      ]) {
-        expect(sql(`select 1 from pg_indexes where schemaname='public' and indexname='${legacy}';`)).toEqual(["1"]);
-      }
-
-      // `user_program_state` and `document_status` USED to appear in that list as `*_pkey`. They
-      // were moved out at MV-156, and naming them here would now be WORSE than omitting them: the
-      // `*_pkey` names still exist, but on the surrogate `id`, so the old assertion stayed green
-      // while the rule it was checking had moved to a different index entirely. The owner-keyed
-      // rule on these two now lives in MV-156's replacement uniques, which MV-160 must also drop
-      // (spec §9.4). Asserted on the DEFINITION, not the name, for exactly that reason.
-      for (const [name, cols] of [
-        ["user_program_state_owner_program_idx", "(owner, program_id)"],
-        ["document_status_owner_kind_idx", "(owner, kind)"],
-      ] as const) {
-        const def = definition(name);
-        expect(def, `${name} must be UNIQUE`).toContain("CREATE UNIQUE INDEX");
-        expect(def).toContain(`USING btree ${cols}`);
-        // FULL, never partial: both are `ON CONFLICT` arbiters for pre-MV-157 code that is live
-        // today (`lib/documents/status-repo.ts`, `lib/matches/repo.ts`). See MV-156's migration.
-        expect(def, `${name} is a live ON CONFLICT arbiter and MUST NOT be partial`).not.toContain("WHERE");
-      }
+      // RETIRED BY MV-160 — the SEVEN legacy owner-keyed uniques that used to be asserted here
+      // (`profiles_owner_key`, `assessments_primary_idx`, `plan_items_kind_open_idx`,
+      // `documents_owner_kind_key`,
+      // `program_predictions_owner_assessment_id_program_id_rule_ver_key`, plus MV-156's
+      // `user_program_state_owner_program_idx` / `document_status_owner_kind_idx`) are gone.
+      //
+      // They were asserted BESIDE the per-case rules on the stated ground that "the swap is
+      // MV-160's, not this card's" — i.e. they were a property of the transitional window, named
+      // as such, with this card named as the one that closes it. MV-160 drops all seven as
+      // superseded (spec §9.4) and the per-case rules above are now the whole uniqueness story.
+      // Their live-arbiter role went with MV-157: `lib/matches/repo.ts` and
+      // `lib/documents/status-repo.ts` conflict on `case_id,program_id` / `case_id,kind` today.
     });
 
     it("adds no RLS policy and changes none on the nine", () => {
@@ -638,14 +663,24 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
   // A/C — personal cases and the backfill
   // =====================================================================
   describe("backfill", () => {
-    it("mints one personal case per Auth user and carries every owned row onto it", () => {
+    it("mints one personal case per Auth user, carrying that user's identity", async () => {
+      // NARROWED BY MV-160, AND ONLY THE HALF THAT BECAME UNCONSTRUCTABLE. This used to read
+      // "…and carries every owned row onto it", asserted as `report[table] >= 2` — a property OF
+      // THE NULLABLE WINDOW. It needed owned rows with `case_id` NULL for the backfill to move,
+      // and MV-160's NOT NULLs (plus `assessments_case_required_when_owned`) make that shape
+      // uninsertable, so no fixture anywhere can build the residue any more and the row-carrying
+      // half is unprovable against this database by construction, not by choice.
+      //
+      // THE CASE-MINTING HALF IS UNTOUCHED by the tighten and is what is asserted here — against a
+      // user minted inside the test, so the call genuinely has work to do rather than reporting
+      // zeros about a database the fixture has already conformed.
+      const fresh = await mint("mint");
       const report = backfill();
 
-      // Counts are >= the two users this suite seeded rather than == : the function is global by
-      // construction (its population is `auth.users`), so asserting an exact total would make this
-      // test a hostage to whatever else the run has already created.
-      expect(report.cases_created).toBeGreaterThanOrEqual(2);
-      for (const table of NINE) expect(report[table] as number, `${table} backfilled`).toBeGreaterThanOrEqual(2);
+      // `>=` rather than `==`: the function is global by construction (its population is
+      // `auth.users`), so an exact total would make this test a hostage to whatever else the run
+      // has already created.
+      expect(report.cases_created).toBeGreaterThanOrEqual(1);
 
       // The rollback's id list, produced by the apply that minted them. Without this the
       // `-v personal_case_ids=…` path in MV-155-rollback.sql names an input nothing generates.
@@ -653,23 +688,28 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       expect(report.personal_case_ids).toHaveLength(report.cases_created);
       for (const id of report.personal_case_ids) expect(id).toMatch(/^[0-9a-f-]{36}$/);
 
+      const caseId = personalCaseOf(fresh.id);
+      expect(caseId).toMatch(/^[0-9a-f-]{36}$/);
+      // The case this call reported really is the one it created for this user.
+      expect(report.personal_case_ids, "the minted case must appear in the report").toContain(caseId);
+
+      const shape = sqlOne(`
+        select organization_id is null and student_user_id = '${fresh.id}' and created_by = '${fresh.id}'
+               and email = '${fresh.email}' and operational_status = 'new'
+               and display_name = 'MV155 mint'
+          from public.cases where id = '${caseId}';
+      `);
+      expect(shape, "the personal case must carry owner identity, the OAuth name, and the 'new' default").toBe("t");
+
+      // The INVARIANT the backfill existed to establish still holds on the seeded users, and is
+      // still asserted end to end. Post-tighten the fixture seeds rows already carrying their
+      // case, so this WITNESSES the invariant rather than proving the movement that once created
+      // it; `mv155_assert_case_backfill()` below is the formal statement of the same claim.
       for (const actor of [userA, userB]) {
-        const caseId = personalCaseOf(actor.id);
-        expect(caseId).toMatch(/^[0-9a-f-]{36}$/);
-        // Every case this call reported really is one it created.
-        expect(report.personal_case_ids, `${actor.id}'s case must appear in the report`).toContain(caseId);
-
-        const shape = sqlOne(`
-          select organization_id is null and student_user_id = '${actor.id}' and created_by = '${actor.id}'
-                 and email = '${actor.email}' and operational_status = 'new'
-                 and display_name = 'MV155 ${actor.id === userA.id ? "a" : "b"}'
-            from public.cases where id = '${caseId}';
-        `);
-        expect(shape, "the personal case must carry owner identity, the OAuth name, and the 'new' default").toBe("t");
-
+        const actorCase = personalCaseOf(actor.id);
         for (const table of NINE) {
           const owned = sqlOne(
-            `select count(*) filter (where case_id = '${caseId}') || '/' || count(*)
+            `select count(*) filter (where case_id = '${actorCase}') || '/' || count(*)
                from public.${table} where owner = '${actor.id}';`,
           );
           // `^(\d+)/\1$` alone is satisfied by "0/0" — a table the fixture never seeded, or one a
@@ -709,19 +749,21 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       // run the backfill to completion, so a bare `backfill()` here updates 0 rows and creates 0
       // cases — and "the row counts did not change" is then true of doing nothing at all. It would
       // have passed against a backfill that INSERTed, as long as that backfill had nothing left to
-      // do. The fix is to give it work: mint a fresh user with rows across all nine, so this call
-      // creates a case and moves real rows, and the parity claim is about a backfill that acted.
+      // do. The fix was to give it work: a fresh user, so the call acts rather than idles.
+      //
+      // NARROWED BY MV-160. The work used to include `seedNine`'s owner-only, case-less rows and a
+      // `report[table] >= 1` check that they moved — the same closed-window property as the block
+      // above, and equally unconstructable now. The remaining shape the backfill can still act on
+      // is minting a personal case for a user who has none, so that is the work this gives it, and
+      // the surviving claim is that doing so touches the row population of none of the nine.
       const fresh = await mint("parity");
-      await seedNine(fresh.id, programA);
 
       const counts = (): string[] => NINE.map((t) => `${t}=${sqlOne(`select count(*) from public.${t};`)}`);
       const before = counts();
 
       const report = backfill();
       expect(report.cases_created, "the backfill must have had work to do").toBeGreaterThanOrEqual(1);
-      for (const table of NINE) {
-        expect(report[table] as number, `${table} must have been backfilled by this call`).toBeGreaterThanOrEqual(1);
-      }
+      expect(report.personal_case_ids, "and the work must be THIS user's case").toContain(personalCaseOf(fresh.id));
 
       expect(counts()).toEqual(before);
       reconcile();
@@ -744,8 +786,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
                                     from public.user_program_state where owner = '${fresh.id}'), ''));`);
 
       const before = fingerprint();
-      const report = backfill();
-      expect(report.profiles as number, "the backfill must have touched this user's profile").toBeGreaterThanOrEqual(1);
+      // NARROWED BY MV-160. The precondition `report.profiles >= 1` — "the backfill must have
+      // touched this user's profile" — is the closed-window property again: no owned row can be
+      // case-less, so the sweep has nothing to update and can never report a non-zero count for
+      // any of the nine. The trigger half below is NOT a window property and is why this test
+      // stays: `mv155_backfill_personal_cases()` still disables `set_updated_at` around its sweep,
+      // and a lost re-enable would be silent until timestamps had been frozen for months.
+      backfill();
       expect(fingerprint(), "updated_at must survive the backfill byte-identical").toBe(before);
 
       // The disable is scoped to the backfill and reverted before it returns. If a later edit drops
@@ -782,11 +829,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       const caseId = personalCaseOf(userA.id);
       const otherCaseId = personalCaseOf(userB.id);
 
-      // (1) an owned row with no case
-      sql(`update public.profiles set case_id = null where owner = '${userA.id}';`);
-      expect(sqlError("select private.mv155_assert_case_backfill();")).toContain("owned rows with case_id null");
-      sql(`update public.profiles set case_id = '${caseId}' where owner = '${userA.id}';`);
-      reconcile();
+      // (1) RETIRED BY MV-160 — "an owned row with no case". The fixture was
+      //     `update public.profiles set case_id = null`, and `profiles.case_id` is NOT NULL from
+      //     MV-160 on, so the statement now raises 23502 before the reconciliation function is
+      //     ever reached. The detector branch it drove is not deleted, it is UNREACHABLE: the
+      //     eight NOT NULLs and `assessments_case_required_when_owned` between them make an owned
+      //     case-less row impossible on all nine, which is exactly the state this card exists to
+      //     reach. The two branches below are still constructable and still assert.
 
       // (2) a row pointed at somebody else's personal case.
       //
@@ -830,7 +879,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
   // =====================================================================
   // D — the program_predictions immutability trigger
   // =====================================================================
-  describe("the narrowed immutability trigger", () => {
+  describe("the immutability trigger, restored to unconditional by MV-160", () => {
     /**
      * EVERY CASE IS DRIVEN TWICE — as `postgres` and as `service_role` — because the property
      * `20260620000000` exists to guarantee is that the guard is ROLE-INDEPENDENT. The function is
@@ -845,64 +894,37 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       `begin;${role ? ` set local role ${role};` : ""} ${statements} rollback;`;
 
     let predictionId: string;
-    let assessmentId: string;
     let caseId: string;
     let otherCaseId: string;
-
-    /** A fresh prediction with `case_id` NULL — the pre-backfill shape, inside the caller's tx. */
-    const seedCaseless = (id: string, tag: string): string =>
-      `insert into public.program_predictions
-              (id, owner, assessment_id, program_id, verdict, rule_version, score_snapshot)
-       values ('${id}', '${userA.id}', '${assessmentId}', '${programA}', 'possible', '${tag}', '{}'::jsonb);`;
 
     beforeAll(() => {
       backfill();
       caseId = personalCaseOf(userA.id);
       otherCaseId = personalCaseOf(userB.id);
-      assessmentId = sqlOne(`select id from public.assessments where owner = '${userA.id}' limit 1;`);
       predictionId = sqlOne(`select id from public.program_predictions where owner = '${userA.id}' limit 1;`);
     });
 
-    it("PERMITS the case_id-only null → not-null transition, for every role", () => {
-      // The plan's obstacle, discharged: this is the one statement shape the backfill needs, and it
-      // succeeds THROUGH the guard rather than around it.
-      for (const role of ROLES) {
-        const fresh = randomUUID();
-        expect(
-          () =>
-            sql(
-              inTx(
-                `${seedCaseless(fresh, `v-permit-${role ?? "postgres"}`)}
-                 update public.program_predictions set case_id = '${caseId}' where id = '${fresh}';`,
-                role,
-              ),
-            ),
-          `role=${role ?? "postgres"}`,
-        ).not.toThrow();
-      }
-    });
-
-    it("REFUSES null → a case that is NOT the row's own owner's personal case, for every role", () => {
-      // The permitted transition is bounded to the row's OWN owner's personal case, not to "any
-      // case". Without the `exists` clause in the guard the allowance reads null → ANY case, and a
-      // mistyped `set case_id = <another student's case>` in the backfill itself would be PERMITTED
-      // — caught only by the closing `mv155_assert_case_backfill()`, which is the right net at the
-      // wrong layer. The guard exists so the backfill statement cannot damage a prediction-of-record
-      // in the first place.
-      for (const role of ROLES) {
-        const fresh = randomUUID();
-        expect(
-          sqlError(
-            inTx(
-              `${seedCaseless(fresh, `v-wrongcase-${role ?? "postgres"}`)}
-               update public.program_predictions set case_id = '${otherCaseId}' where id = '${fresh}';`,
-              role,
-            ),
-          ),
-          `role=${role ?? "postgres"}`,
-        ).toContain("program_predictions is immutable");
-      }
-    });
+    // =====================================================================================
+    // RETIRED BY MV-160 — the two ALLOWANCE cases, and the `seedCaseless` fixture they needed.
+    //
+    //   · "PERMITS the case_id-only null → not-null transition, for every role"
+    //   · "REFUSES null → a case that is NOT the row's own owner's personal case, for every role"
+    //
+    // Both are properties of the NULLABLE WINDOW, twice over, and MV-160 closes it on both axes.
+    // (1) The fixture is unbuildable: `seedCaseless` inserted a `program_predictions` row with
+    //     `case_id` omitted, and that column is NOT NULL from MV-160 on, so the INSERT raises
+    //     23502 before any UPDATE runs. (2) The behaviour they pinned no longer exists: MV-155
+    //     NARROWED `private.reject_prediction_update()` to permit exactly one transition
+    //     (`case_id` null → not-null, every other column byte-identical, bounded to the row's own
+    //     owner's personal case) SO ITS BACKFILL COULD RUN, and said in two places that MV-160
+    //     restores the original. MV-160 §(i) is that restoration — the body is once again an
+    //     unconditional `raise`, so there is no allowance left to permit and no boundary on the
+    //     allowance left to police.
+    //
+    // Nothing about UNCONDITIONAL immutability is retired: every refusal case below is untouched,
+    // still driven as BOTH `postgres` and `service_role`, and the guard is still asserted
+    // SECURITY INVOKER + enabled + search_path-pinned.
+    // =====================================================================================
 
     it("REFUSES a case_id change (not-null → other), for every role", () => {
       for (const role of ROLES) {
@@ -925,16 +947,20 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
     });
 
     it("REFUSES a case_id update that ALSO touches another column, for every role", () => {
-      // Driven on a case_id-NULL row so the ONLY clause that can refuse it is the jsonb equality —
-      // on an already-cased row the null→not-null test would refuse it first and prove nothing.
+      // NARROWED BY MV-160. It used to be driven on a case_id-NULL row so that the only clause
+      // which could refuse it was the narrowed guard's "every other column byte-identical" jsonb
+      // equality — on an already-cased row the null→not-null clause would have refused it first
+      // and proved nothing. Both halves of that reasoning are gone: the row shape is uninsertable
+      // (NOT NULL) and the guard is unconditional again, so there is no per-clause ordering left
+      // to isolate. Driven on the seeded row instead, writing `case_id` to the value it ALREADY
+      // holds — the refusal must come from the statement being an UPDATE, never from a value
+      // comparison that a "no-op" write could slip past.
       for (const role of ROLES) {
-        const fresh = randomUUID();
         expect(
           sqlError(
             inTx(
-              `${seedCaseless(fresh, `v-combo-${role ?? "postgres"}`)}
-               update public.program_predictions
-                  set case_id = '${caseId}', verdict = 'reach' where id = '${fresh}';`,
+              `update public.program_predictions
+                  set case_id = '${caseId}', verdict = 'reach' where id = '${predictionId}';`,
               role,
             ),
           ),
@@ -1367,30 +1393,41 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
 
     it("leaves today's authenticated behaviour intact — the shortlist upsert and the checklist toggle", async () => {
       backfill();
-      // EXACT payloads from lib/matches/repo.ts and lib/documents/status-repo.ts. The narrowed
-      // UPDATE lists must still cover a PostgREST upsert, whose ON CONFLICT DO UPDATE SET names
-      // every payload column INCLUDING the conflict target — spec §4.4/§4.6's `(status, notes)` and
-      // `(obtained)` raise 42501 on the insert branch. Recorded in the migration; pinned here.
+      // EXACT payloads and conflict targets from lib/matches/repo.ts and lib/documents/status-repo.ts.
+      // The claim is unchanged and is the reason this test exists: the narrowed UPDATE lists must
+      // still cover a PostgREST upsert, whose ON CONFLICT DO UPDATE SET names every payload column
+      // INCLUDING the conflict target — spec §4.4/§4.6's `(status, notes)` and `(obtained)` raise
+      // 42501 on the insert branch. Recorded in the migration; pinned here.
+      //
+      // RE-AIMED BY MV-160 ONTO WHAT THOSE CALL SITES ACTUALLY ISSUE. It used to name
+      // `owner,program_id` / `owner,kind`, two of the seven superseded owner-keyed uniques MV-160
+      // drops (spec §9.4) — and it had ALREADY been stale since MV-157 moved both repos onto
+      // `case_id,program_id` / `case_id,kind`. The TARGET is an index column list rather than a
+      // write, so it may name `case_id`; the PAYLOAD still carries `owner` and never `case_id`,
+      // and `mv155_derive_case_id_from_owner` fills the column before the arbiter is consulted.
+      // Aimed at the retired indexes this would now be 42P10 — a stale test, not a broken seam.
+      const caseId = personalCaseOf(userA.id);
       const first = await userA.client
         .from("user_program_state")
         .upsert(
           { owner: userA.id, program_id: programA, status: "shortlisted", notes: null },
-          { onConflict: "owner,program_id", ignoreDuplicates: false },
+          { onConflict: "case_id,program_id", ignoreDuplicates: false },
         );
       expect(first.error, "shortlist upsert, insert branch").toBeNull();
       const second = await userA.client
         .from("user_program_state")
         .upsert(
           { owner: userA.id, program_id: programA, status: "applied", notes: "n" },
-          { onConflict: "owner,program_id", ignoreDuplicates: false },
+          { onConflict: "case_id,program_id", ignoreDuplicates: false },
         );
       expect(second.error, "shortlist upsert, conflict branch").toBeNull();
 
       const toggleOn = await userA.client
         .from("document_status")
-        .upsert({ owner: userA.id, kind: "passport", obtained: true }, { onConflict: "owner,kind" });
+        .upsert({ owner: userA.id, kind: "passport", obtained: true }, { onConflict: "case_id,kind" });
       expect(toggleOn.error, "checklist toggle, conflict branch").toBeNull();
-      const toggleOff = await userA.client.from("document_status").delete().eq("owner", userA.id).eq("kind", "other");
+      // status-repo.ts deletes by `case_id`+`kind` today, so the toggle-off half follows it.
+      const toggleOff = await userA.client.from("document_status").delete().eq("case_id", caseId).eq("kind", "other");
       expect(toggleOff.error, "checklist toggle off").toBeNull();
     });
   });
@@ -1492,20 +1529,23 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
       // (e) the seam itself: an AUTHENTICATED upsert that NAMES case_id is refused by the grant
       //     before the trigger is ever reached. This is why MV-157 must keep case_id out of the
       //     upsertProgramState / setObtained payloads.
+      //     CONFLICT TARGET RE-AIMED BY MV-160: `owner,program_id` is one of the seven superseded
+      //     uniques this card drops, so naming it would now raise 42P10 at plan time and mask the
+      //     42501 this assertion is about. `case_id,program_id` is what lib/matches/repo.ts issues.
       const refused = await userA.client
         .from("user_program_state")
         .upsert(
           { owner: userA.id, program_id: programB, status: "applied", case_id: theirs },
-          { onConflict: "owner,program_id" },
+          { onConflict: "case_id,program_id" },
         );
       expect(refused.error?.code, "an authenticated upsert naming case_id must be 42501").toBe("42501");
 
       // (f) and the upsert the application ACTUALLY issues — `owner` only, never `case_id` — still
       //     round-trips through both branches. This is the seam MV-155 built the trigger for and
-      //     the one MV-159 must not have disturbed.
+      //     the one MV-159 must not have disturbed. Same re-aiming as (e).
       const seam = await userA.client
         .from("user_program_state")
-        .upsert({ owner: userA.id, program_id: programB, status: "applied" }, { onConflict: "owner,program_id" });
+        .upsert({ owner: userA.id, program_id: programB, status: "applied" }, { onConflict: "case_id,program_id" });
       expect(seam.error, `the owner-only upsert must still work: ${seam.error?.message}`).toBeNull();
       expect(sqlOne(`select case_id from public.user_program_state where owner='${userA.id}' and program_id='${programB}';`)).toBe(
         mine,
@@ -1710,25 +1750,21 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
   // written.
   describe("right to delete", () => {
     it("leaves no row anywhere carrying the student's name or email — cases included", async () => {
-      const victim = await mint("rtbf");
-
-      // A name nothing else in the database could plausibly hold, so the sweep at the end cannot
-      // pass by accident and cannot be satisfied by some other fixture's row.
-      const uniqueName = `RTBF Sentinel ${stamp} ${randomUUID()}`;
+      // THE SENTINEL MOVED BRANCHES AT MV-160, AND THE BRANCH IT LEFT IS NOW DEAD CODE.
+      // `mv155_backfill_personal_cases()` coalesces the profile's `sections->personal->>name`
+      // ahead of the Auth `full_name`, and this test used to drive that first branch: seed the
+      // nine (profile included, case-less), write the sentinel into `sections`, THEN backfill.
+      // Post-tighten that ordering is impossible — a profile row cannot exist without a `case_id`,
+      // and `mv155_assert_case_backfill()` forbids that pointing anywhere but the owner's own
+      // personal case, so any user who HAS a profile already HAS a personal case and the backfill
+      // skips them. The profile-name branch is therefore unreachable and the sentinel rides the
+      // Auth-name branch instead, minted by the backfill exactly as before. THE SWEEP BELOW — the
+      // reason this test exists — is untouched, and still keys on a name nothing else in the
+      // database could plausibly hold.
+      const sentinel = randomUUID();
+      const victim = await mint(`rtbf-${sentinel}`);
+      const uniqueName = `MV155 rtbf-${sentinel}`;
       await seedNine(victim.id, programA);
-      // seedNine writes the profile row with `sections: {}`. Build the object outright rather than
-      // `jsonb_set(…, '{personal,name}', …, true)` — jsonb_set will not create a MISSING
-      // intermediate key, so against `{}` it silently returns `{}` and the sentinel never lands.
-      sql(`update public.profiles
-              set sections = jsonb_build_object('personal', jsonb_build_object('name', '${uniqueName}'))
-            where owner = '${victim.id}';`);
-      // The coalesce chain prefers the profile name, so this is the branch under test.
-      expect(
-        sqlOne(`select sections -> 'personal' ->> 'name' from public.profiles where owner = '${victim.id}';`),
-      ).toBe(uniqueName);
-
-      const report = backfill();
-      expect(report.cases_created, "the victim must have got a personal case").toBeGreaterThanOrEqual(1);
 
       // Precondition — the artifact really exists before we delete. Without this the sweep below
       // would pass just as happily against a migration that never minted the case at all.
