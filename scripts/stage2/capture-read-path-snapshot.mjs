@@ -50,6 +50,7 @@
 
 import { createHash, createHmac } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { assertCaptureHostAllowed } from "./capture-host-guard.mjs";
 
 /**
  * Every student-facing read path, as the table it reads. The repositories
@@ -360,6 +361,17 @@ async function runCli(argv) {
   }
 
   const url = requireEnv("SUPABASE_URL");
+
+  // MV-164. BEFORE any client is constructed and before any user is enumerated:
+  // refuse production outright, allow a local stack, and require --rehearsal-host
+  // for anything else. Throws on refusal — see `capture-host-guard.mjs` for why
+  // prose in a comment was not enough.
+  //
+  // `args.has`, not `args.get`: the parser above stores `undefined` for a flag in
+  // TRAILING position, so `get` would read a correctly-typed
+  // `… --snapshot <path> --rehearsal-host` as absent.
+  assertCaptureHostAllowed(url, { rehearsalHostAcknowledged: args.has("rehearsal-host") });
+
   const anonKey = requireEnv("SUPABASE_ANON_KEY");
   const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
   const jwtSecret = requireEnv("SUPABASE_JWT_SECRET");
@@ -410,7 +422,10 @@ async function runCli(argv) {
     process.stderr.write(
       "usage:\n" +
         "  BEFORE the first Stage 2 migration:  npm run stage2:equivalence -- --capture --out <path>\n" +
-        "  AFTER the Stage 2 migrations:        npm run stage2:equivalence -- --snapshot <path>\n",
+        "  AFTER the Stage 2 migrations:        npm run stage2:equivalence -- --snapshot <path>\n" +
+        "\n" +
+        "  --rehearsal-host   required when SUPABASE_URL is neither localhost nor 127.0.0.1, to confirm the\n" +
+        "                     target is the OFFLINE RESTORED COPY. Production is refused with or without it.\n",
     );
     return 2;
   }

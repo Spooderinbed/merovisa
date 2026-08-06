@@ -399,6 +399,29 @@ describe("D — the registry's prose is checked against the source it describes"
     );
   });
 
+  test("the stage2 capture script's entry describes a host guard the script actually has", () => {
+    // MV-164. This entry is the one whose "rehearsal-only" claim used to rest
+    // entirely on prose — in this registry, in the script's header and in the
+    // runbook — while nothing in the code refused a production URL. The entry now
+    // claims a guard; this is the read that keeps the claim true.
+    const CAPTURE = "scripts/stage2/capture-read-path-snapshot.mjs";
+    const captureSource = readFileSync(path.join(REPO_ROOT, CAPTURE), "utf8");
+    const guardSource = readFileSync(path.join(REPO_ROOT, "scripts/stage2/capture-host-guard.mjs"), "utf8");
+
+    const guardAt = captureSource.indexOf("assertCaptureHostAllowed(url");
+    const listAt = captureSource.indexOf("auth.admin.listUsers");
+    expect(guardAt, "the entry claims a guard runs — the script does not call one").toBeGreaterThan(-1);
+    expect(listAt, "the script no longer enumerates users — re-read this entry").toBeGreaterThan(-1);
+    expect(guardAt, "the guard must run BEFORE the Auth-user enumeration it exists to prevent").toBeLessThan(listAt);
+    expect(guardSource, "the guard must pin the production ref by name").toContain(
+      'PRODUCTION_PROJECT_REF = "obfvrxixtautamflzxzq"',
+    );
+
+    const prose = entryFor(CAPTURE);
+    expect(prose, "the entry must name the ref it refuses").toContain("obfvrxixtautamflzxzq");
+    expect(prose, "the entry must name the opt-in for a non-local rehearsal host").toContain("--rehearsal-host");
+  });
+
   test("the claim route's entry still says it verifies no token", () => {
     // The other lying entry the pre-PR review caught. lib/auth/finish-sign-in.ts
     // is the path that calls verifyClaim; the claim route does not.
