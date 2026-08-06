@@ -156,6 +156,32 @@ student can still read them, and only the second one is the exit gate. The servi
 to enumerating subjects and to the anonymous-assessment capture, which is invisible to every
 authenticated client by design.
 
+### The host guard (MV-164) — "rehearsal-only" is enforced, not merely stated
+
+Both commands above are copy-pasteable, and until MV-164 the only thing standing between them and a
+full-population personal-data export from production was the sentence telling you not to do it. It is
+now a check in the code. `scripts/stage2/capture-host-guard.mjs` runs **before any Supabase client is
+constructed and before `listUsers` enumerates anybody**, and classifies `SUPABASE_URL`:
+
+| Target | Result |
+| --- | --- |
+| The production ref `obfvrxixtautamflzxzq` | **Refused. No override** — `--rehearsal-host` does not unlock it. There is no legitimate run of this script against production. |
+| `localhost` / `127.0.0.1` | Allowed. The ordinary path; no flag needed. |
+| Any other host | **Refused unless `--rehearsal-host` is passed.** A restored copy may legitimately live on its own hosted project, so this is an opt-in rather than a ban — but choosing a remote target has to be visible and deliberate. |
+| Anything unparseable | Refused. The guard will not guess. |
+
+So a rehearsal copy on a **hosted** project is run as:
+
+```bash
+npm run stage2:equivalence -- --capture --out docs/migrations/stage2/snapshots/pre-migration.json --rehearsal-host
+```
+
+The ref is matched as a whole DNS label of the parsed host — not as a substring of the URL — so a
+path or query string that merely mentions it is not misread as production, and neither is a longer
+look-alike ref. Refusals name the rejected host and what to do instead. Guard behaviour is pinned by
+`tests/scripts/stage2-capture-host-guard.test.ts`, including that the guard is actually *wired up*
+ahead of the enumeration; the mutation evidence for it is §4's guard table, rows G1-G9.
+
 **No green §A2 record, no production apply.** The founder gate on applying Stage 2 to
 `obfvrxixtautamflzxzq` names this run and its date.
 
@@ -208,6 +234,36 @@ the narrowed body from the unconditional one, because `old.case_id is null` is u
 `case_id` is NOT NULL. That unreachability is exactly why MV-155's handoff had to be closed
 explicitly rather than left to self-close — "unreachable given a constraint elsewhere" evaporates if
 any later stage re-widens the column.
+
+### The §A2 host guard (MV-164)
+
+A guard whose tests pass without it is a guard nobody has. Each mutation below was applied to
+`scripts/stage2/capture-host-guard.mjs` or to the capture script's call site, run, and reverted;
+`tests/scripts/stage2-capture-host-guard.test.ts` is **34 green** before and after the whole run.
+
+| # | Mutation | Result | Test that went red |
+| --- | --- | --- | --- |
+| G1 | delete the guard call from `runCli` entirely | **RED** (3) | `it calls the guard BEFORE it constructs any Supabase client`; `… BEFORE it enumerates Auth users`; `the CLI reads the opt-in with has()` |
+| G2 | keep the call but move it *after* the client and `listUsers` | **RED** (2) | both `BEFORE …` ordering tests — the wiring assertion is on ORDER, not presence |
+| G3 | neuter production detection (`return false`) | **RED** (10) | `the canonical production URL is refused`; `the opt-in flag does NOT unlock production`; all six group-D production cases; both group-F throws |
+| G4 | whole-label match → naive `hostname.startsWith(ref)` | **RED** (2) | `a DIFFERENT project whose ref merely starts with the production ref is not production`; `the production ref as ANY whole host label is production` |
+| G5 | host parse → naive `rawUrl.includes(ref)` | **RED** (5) | `the ref appearing in the PATH is not production`; `… in the QUERY STRING …`; plus the no-scheme fail-closed case |
+| G6 | make `--rehearsal-host` a production override | **RED** (2) | `the opt-in flag does NOT unlock production`; `it throws on production even when the host is acknowledged` |
+| G7 | default `rehearsalHostAcknowledged` to `true` | **RED** (3) | `a remote host is refused by default`; `it throws on an unacknowledged remote host` |
+| G8 | make an unparseable URL fail **open** | **RED** (3) | all three group-E cases |
+| G9 | `assertCaptureHostAllowed` computes the verdict but never throws | **RED** (3) | all three group-F throws — the verdict object alone stops nothing |
+
+**G1/G2 and G6 are the ones worth reading twice.** G1/G2 are the inert-guard shape this repo has
+already been bitten by (a denial-only RLS suite passes identically against a *missing* policy): every
+behavioural assertion in groups A-F stays green while the guard is exported and never called, so the
+ordering assertion in group G is the only thing standing between "the guard exists" and "the guard
+runs". G6 is the one that decides whether the production refusal is a refusal or a speed bump.
+
+**One honest note on scope.** The guard classifies the host in `SUPABASE_URL`. It cannot see through
+a custom domain or a proxy that fronts production under another name, and it does not authenticate
+the target — it is a make-it-safe-by-construction fence against the realistic mistake (exporting
+production credentials and running the copy-pasteable command above), not a proof of where the bytes
+came from.
 
 ---
 
