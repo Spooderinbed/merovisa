@@ -49,6 +49,21 @@
  * carve-out by setting `owner` and `case_id` in the same statement.
  * `tests/integration/case-data-access.itest.ts` already carries the idiom; this
  * file now uses the same one.
+ *
+ * ## MV-160 retired the window-scoped half of this file
+ *
+ * Stage 2's tighten (`supabase/migrations/20260805140000_stage2_tighten_case_mandatory.sql`)
+ * makes `case_id` mandatory for any OWNED or CLAIMED assessment — CHECK
+ * `assessments_case_required_when_owned` — and §H drops the legacy owner-keyed
+ * `assessments_primary_idx`, leaving `assessments_case_primary_idx (case_id) WHERE is_primary`
+ * as the only primary-uniqueness rule. Two consequences for the prose above: the "BOTH keys"
+ * framing now names ONE key, and an owned-but-case-less row is no longer a state the database
+ * will hold — it is a 23514.
+ *
+ * The two tests built on that state are retired, with the reasoning left at their former site.
+ * A third was NARROWED rather than retired: its cell — an owned row survives the purge however
+ * overdue it looks — is untouched by the tighten, and only its `case_id`-null dressing was a
+ * window property. No access-control cell was removed by either move.
  */
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import { execFileSync } from "node:child_process";
@@ -163,15 +178,11 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     psql(ASSERT_BACKFILL);
   };
 
-  /** The detector's message when it FIRES — used by the two tests that manufacture residue on purpose. */
-  const reconcileError = (): string => {
-    try {
-      psql(ASSERT_BACKFILL);
-    } catch (err) {
-      return String((err as { stderr?: Buffer | string }).stderr ?? "");
-    }
-    throw new Error("expected mv155_assert_case_backfill() to raise, but it reported clean");
-  };
+  // `reconcileError()` — which ran the detector and returned the message it RAISED — was
+  // removed with the two tests MV-160 retired below. It was only ever callable by a test that
+  // had manufactured an owned, `case_id`-null row on purpose, and
+  // `assessments_case_required_when_owned` now refuses to store one, so a helper whose
+  // contract is "the detector must fire" has no shape left to hand it.
 
   const mintUser = async (label: string) => {
     const addr = `mv158-${label}-${Date.now()}@example.test`;
@@ -203,10 +214,15 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
   /**
    * MV-154's rule, enforced structurally rather than remembered: the detector
    * runs after EVERY test in this suite, so a mutating case added later cannot
-   * forget it. The two tests that manufacture residue on purpose assert the
-   * detector FIRES on it and then repair it, which is a stronger claim than
-   * skipping them would be — it proves the detector actually sees this shape
-   * rather than merely that it stays quiet.
+   * forget it.
+   *
+   * MV-160 REMOVED THE OTHER HALF OF THIS CLAIM, and the honest version is worth
+   * writing down: two tests used to manufacture residue deliberately and assert the
+   * detector FIRED on it, which proved it saw the shape rather than merely staying
+   * quiet. `assessments_case_required_when_owned` turns that shape into a 23514, so
+   * on `assessments` there is nothing left to hand it. Here the detector is now a
+   * quiet-guard only — it can still catch a mismatched `owner`/`case_id` pair, which
+   * no constraint rejects, but it can no longer be shown to be awake from this file.
    */
   afterEach(() => {
     if (!dbContainer) return;
@@ -398,63 +414,44 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     expect(after?.case_id).toBe(before?.case_id);
   });
 
-  it("THE DEMOTE MUST SATISFY BOTH KEYS — a same-owner, case-less primary is demoted too", async () => {
-    // THIS is the case that distinguishes the two demotes, and the first version
-    // of this suite did NOT have it: for an ordinary personal user, owner ↔ case
-    // is 1:1, so `demote where case_id = X` and `demote where owner = Y` select
-    // exactly the same rows and a case-scoped-only demote passes every other
-    // assertion here. Mutation-checking the demote is what exposed that — the
-    // "exactly one primary under both keys" tests above were green against the
-    // WRONG implementation.
-    //
-    // The row that separates them is an owned, is_primary row carrying NO
-    // case_id — precisely the residue F2 exists to heal, and precisely what a
-    // case-scoped demote cannot see. Leave it primary and the promote below
-    // trips the surviving `assessments_primary_idx (owner) WHERE is_primary`,
-    // the error is logged rather than thrown, and the student's dashboard stays
-    // pinned to the older assessment. That is MV-16, exactly.
-    const fresh = await mintUser("both-keys");
-    const stale = await seedAnonymousAssessment();
-    await claimAndBootstrapProfile(admin, { assessmentId: stale, user: fresh });
-    await admin.from("assessments").update({ case_id: null }).eq("id", stale);
-    expect((await getAssessmentById(admin, stale))?.is_primary).toBe(true);
-
-    const fresher = await seedAnonymousAssessment();
-    const r = await claimAndBootstrapProfile(admin, { assessmentId: fresher, user: fresh });
-    expect(r.claimed).toBe(true);
-
-    // Newest wins, and the case-less straggler was demoted with it.
-    expect((await getAssessmentById(admin, fresher))?.is_primary).toBe(true);
-    expect((await getAssessmentById(admin, stale))?.is_primary).toBe(false);
-    const { data: primaries } = await admin
-      .from("assessments").select("id").eq("owner", fresh.id).eq("is_primary", true);
-    expect(primaries!.map((r2) => r2.id)).toEqual([fresher]);
-
-    // The `stale` row is STILL owned and case-less, deliberately — so the
-    // detector must fire on it. Asserting that is the strongest form of "the
-    // detector was called": it proves this suite's `afterEach` is watching a
-    // function that genuinely sees this shape, rather than one that has been
-    // quietly returning clean. Repair it so the `afterEach` finds a clean tree.
-    expect(reconcileError()).toContain("owned rows with case_id null");
-    const healed = await resolvePersonalCaseId(fresh.id, admin);
-    await admin.from("assessments").update({ case_id: healed }).eq("id", stale);
-  });
-
-  it("F2 — a re-claim HEALS an owned row whose case_id is null", async () => {
-    const fresh = await mintUser("heal");
-    const a = await seedAnonymousAssessment();
-    await claimAndBootstrapProfile(admin, { assessmentId: a, user: fresh });
-
-    // Manufacture the residue this branch exists for: owned, but case-less.
-    await admin.from("assessments").update({ case_id: null }).eq("id", a);
-    expect((await getAssessmentById(admin, a))?.case_id).toBeNull();
-
-    const reclaim = await claimAndBootstrapProfile(admin, { assessmentId: a, user: fresh });
-
-    expect(reclaim).toEqual({ claimed: false, reason: "already-mine" });
-    const caseId = await resolvePersonalCaseId(fresh.id, admin);
-    expect((await getAssessmentById(admin, a))?.case_id).toBe(caseId);
-  });
+  // =====================================================================
+  // RETIRED BY MV-160 — two tests stood here. Both asserted a property OF THE
+  // NULLABLE WINDOW that the Stage 2 tighten deliberately closes, not an
+  // access-control cell, and both built their fixture out of a row the database
+  // will no longer store.
+  //
+  //  1. "THE DEMOTE MUST SATISFY BOTH KEYS — a same-owner, case-less primary is
+  //     demoted too". Its premise was that TWO uniqueness rules were live at once,
+  //     so a demote scoped to `case_id` alone would leave a same-owner primary
+  //     stranded in another case and the promote would then trip the legacy
+  //     owner-keyed index (MV-16, re-created). MV-160 §H drops
+  //     `assessments_primary_idx (owner) WHERE is_primary`; the only surviving rule
+  //     is `assessments_case_primary_idx (case_id) WHERE is_primary`, so there is no
+  //     second key for the demote to also satisfy. Its distinguishing row — an
+  //     OWNED, `case_id`-null primary — is unconstructable too: MV-160 §C's
+  //     `assessments_case_required_when_owned` refuses it with 23514.
+  //
+  //     WHAT SURVIVES IS STILL ASSERTED, unchanged and twice: newest-wins
+  //     demote-then-promote under the case key is covered by "a second claim becomes
+  //     primary and demotes the first (newest-wins)" and by "a second claim by the
+  //     same user REUSES the case and leaves exactly one primary under both keys",
+  //     both above. Narrowing this test to the surviving key would have produced a
+  //     third copy of them and nothing else, so it is retired rather than narrowed.
+  //
+  //  2. "F2 — a re-claim HEALS an owned row whose case_id is null". Same CHECK, same
+  //     reason: the residue it manufactured cannot exist, so the branch it drove —
+  //     `classifyMiss`'s `state.caseId === null` heal in `lib/assessments/claim.ts` —
+  //     is unreachable for any row the database will accept. The `already-mine`
+  //     classification it also asserted is still asserted by "a successful claim
+  //     records a lead and bootstraps a profile; a re-claim does not duplicate" above
+  //     and by the MV-160-precondition test below. F2's SECOND half (promote a case
+  //     that somehow has no primary) is untouched by the tighten and was never
+  //     asserted here.
+  //
+  // Neither deletion removes a matrix cell: cross-tenant denial, dual-role,
+  // revocation immediacy and anonymous invisibility live in the tenancy suites and
+  // are not touched by either test.
+  // =====================================================================
 
   it("a PURGED row claimed afterwards renders `expired`, bootstraps nothing, and leaves no orphan evidence", async () => {
     const fresh = await mintUser("purged");
@@ -475,27 +472,39 @@ describe.skipIf(!url || !serviceKey)("claim path against a real local Postgres",
     expect(profile).toBeNull();
   });
 
-  it("an OWNED, case_id-null row survives a real purge run", async () => {
+  it("an OWNED row survives a real purge run however long past its expiry", async () => {
     // The MV-135 landmine restated against the case model: a claim never extends
     // `expires_at`, so every converted student's row looks permanently expired,
     // and `owner is null` is the only thing separating it from an abandoned one.
+    //
+    // NARROWED BY MV-160, NOT WEAKENED — and the narrowing is what makes it mean
+    // anything again. This case used to null `case_id` on the claimed row first, so
+    // the survivor was owned AND case-less and the MV-155 detector had residue to
+    // fire on. `assessments_case_required_when_owned` refuses that write with 23514,
+    // and because the backdating rode in the SAME statement, the row was never aged:
+    // "it survived the purge" had quietly become vacuous, since the purge would not
+    // have looked at it either way. The `case_id: null` was a property of the window
+    // MV-160 closes; the surviving cell — an owned row is never purged, whatever its
+    // dates say — is untouched by the tighten and is what this test now proves, on a
+    // row the backdate is CHECKED to have actually aged.
     const fresh = await mintUser("survivor");
     const a = await seedAnonymousAssessment();
     await claimAndBootstrapProfile(admin, { assessmentId: a, user: fresh });
     const long = new Date(Date.now() - (ANON_RETENTION_DAYS + 5) * 24 * 60 * 60 * 1000).toISOString();
-    await admin.from("assessments").update({ case_id: null, created_at: long, expires_at: long }).eq("id", a);
+    const { error: backdateError } = await admin
+      .from("assessments")
+      .update({ created_at: long, expires_at: long })
+      .eq("id", a);
+    if (backdateError) throw new Error(`failed to backdate the claimed row: ${backdateError.message}`);
+    // Read back as an instant, not as a string: PostgREST renders `timestamptz` as
+    // `+00:00` where `toISOString()` writes `Z`, so a byte comparison would fail on a
+    // row that is in fact correctly aged.
+    const aged = await getAssessmentById(admin, a);
+    expect(new Date(aged!.expires_at).getTime()).toBe(new Date(long).getTime());
 
     await purgeUnclaimedAnonymousAssessments(admin);
 
     expect(await getAssessmentById(admin, a)).not.toBeNull();
-
-    // Same as the demote test above: the surviving row is owned and case-less by
-    // construction, so the detector must SEE it. Then repair, so the closing
-    // `afterEach` reconciliation is asserting a clean tree rather than tolerating
-    // a dirty one.
-    expect(reconcileError()).toContain("owned rows with case_id null");
-    const healed = await resolvePersonalCaseId(fresh.id, admin);
-    await admin.from("assessments").update({ case_id: healed }).eq("id", a);
   });
 
   it("THE MV-160 PRECONDITION — every successful claim leg leaves `owner` non-null wherever `claimed_at` is set", async () => {

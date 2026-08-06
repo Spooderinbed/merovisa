@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "stage2:equivalence": "node scripts/stage2/capture-read-path-snapshot.mjs",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "board": "node docs/kanban/build.mjs"

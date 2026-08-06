@@ -45,9 +45,7 @@ import {
   seedTenancyFixture,
   type Actor,
   type ActorKey,
-  type CaseKey,
-  type CaselessRows,
-  type StudentCaseRows,
+  type CaseKey,  type StudentCaseRows,
   type StudentDataSeeder,
   type StudentDataTable,
   type TenancyFixture,
@@ -246,22 +244,16 @@ const EXPECTED_POLICIES: Record<StudentDataTable, ReadonlyArray<readonly [name: 
 };
 
 /**
- * The transitional disjunct, byte-exact as `pg_get_expr` renders it. MV-160 §D deletes this
- * clause from every predicate; asserting the rendered form here is what makes that a mechanical
- * edit rather than a judgement call.
- *
- * IT HAS TWO SHAPES SINCE ROUND 2, and the split is the security fix rather than a style drift.
- * On READ/UPDATE/DELETE the bare form keeps a not-yet-backfilled row reachable by its owner. On
- * INSERT the bare form was a HOLE: the client chooses the `case_id` it writes, so naming yourself
- * as owner admitted a row into ANY case. `and case_id is null` restores the property that a row
- * naming a case must name a case the actor can reach.
+ * MV-160 §D RETIRED THE TRANSITIONAL DISJUNCT, and with it the three byte-exact constants that
+ * pinned its rendered shape (`TRANSITIONAL_DISJUNCT`, its INSERT variant, and `CASE_BRANCH`). They
+ * were consumed only by the §M block MV-160 §E deletes, and what they asserted is a PROPERTY OF THE
+ * NULLABLE WINDOW — "every predicate still carries an `owner = auth.uid()` arm" — which is the exact
+ * statement this card makes false on purpose. They are deleted rather than re-pointed because the
+ * surviving property is not a string: the CASE arm is asserted structurally by the branch guard in
+ * §F (`ownershipArms`), which fails both if that arm is lost and if a second arm ever reappears.
  */
-const TRANSITIONAL_DISJUNCT = "(owner = ( SELECT auth.uid() AS uid))";
 
-/** The INSERT shape of the same disjunct — five policies carry this instead of the bare one. */
-const TRANSITIONAL_DISJUNCT_INSERT = `(${TRANSITIONAL_DISJUNCT} AND (case_id IS NULL))`;
-
-/** The five INSERT policies, i.e. the ones whose disjunct must carry `and case_id is null`. */
+/** The five INSERT policies — the ones whose WITH CHECK carries the round-3 owner-axis bound. */
 const INSERT_POLICIES: ReadonlySet<string> = new Set([
   "user_program_state.ups_insert_case",
   "document_status.ds_insert_case",
@@ -269,10 +261,6 @@ const INSERT_POLICIES: ReadonlySet<string> = new Set([
   "application_attempts.aa_insert_case",
   "outcome_events.oe_insert_case",
 ]);
-
-/** The case-scoped half, likewise byte-exact — what must SURVIVE MV-160's edit. */
-const CASE_BRANCH =
-  "(case_id IS NOT NULL) AND (case_id = ANY (( SELECT private.actor_case_ids() AS actor_case_ids)::uuid[]))";
 
 /**
  * Split a rendered predicate into its TOP-LEVEL ownership arms — the disjuncts of the
@@ -347,7 +335,6 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
     StudentCaseRows
   >;
   let anonymousAssessment: string;
-  let caseless: CaselessRows;
   let spareProgram: string;
   let spareProgram2: string;
 
@@ -540,7 +527,6 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
     });
 
     anonymousAssessment = await seeder.seedAnonymousAssessment();
-    caseless = await seeder.seedCaselessRows({ owner: actor("studentA").id, documentKind: "pte" });
   }, 180_000);
 
   afterAll(async () => {
@@ -1407,6 +1393,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       `);
       expect(checkPredicates.length, "HARNESS DEFECT: no WITH CHECK predicates found").toBe(9);
 
+      // MV-160 §D CHANGED THE ANSWER FROM TWO ARMS TO ONE, AND THAT IS A COUNT CHANGE RATHER THAN A
+      // RETIREMENT. The guard is not asserting "there are two of something"; it is asserting that
+      // EVERY arm the catalogue actually has is aimed at by a probe. MV-160 deleted the transitional
+      // `owner = auth.uid()` arm from all nine predicates, so one is now the correct count and the
+      // guard keeps its whole point: it goes red if the surviving CASE arm is ever lost, and red
+      // again the moment a second arm — the transitional one restored, or a new one nobody has
+      // thought about — appears with no probe aimed at it.
       const requiredBranches = new Set<string>();
       for (const line of checkPredicates) {
         const [table, cmd, ...rest] = line.split("|");
@@ -1414,9 +1407,21 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         const arms = ownershipArms(rest.join("|"));
         expect(
           arms.length,
-          `${table}.${verb}: expected exactly two ownership arms, got ${arms.length} (${arms.join(" / ")})`,
-        ).toBe(2);
+          `${table}.${verb}: expected exactly one ownership arm — MV-160 §D retired the transitional ` +
+            `owner arm — got ${arms.length} (${arms.join(" / ")})`,
+        ).toBe(1);
+        expect(arms, `${table}.${verb}: the surviving arm must be the CASE arm`).toEqual(["case"]);
         for (const arm of arms) requiredBranches.add(`${table}.${verb}@${arm}`);
+
+        // THE OWNER AXIS DID NOT LEAVE THE SURFACE WHEN IT LEFT THE DISJUNCTION, so its probe is
+        // still required on every one of the nine — derived from the catalogue's own predicate list
+        // rather than hand-written, exactly like the arms above. What changed is only WHERE the
+        // axis is bounded, which is why it can no longer be READ OFF the disjunction: on the five
+        // INSERTs it is the `owner is null or owner = private.case_student_id(case_id)` conjunct
+        // (asserted structurally by the OWNER-axis test above); on the two upsert-seam UPDATEs it is
+        // MV-155 §H's trigger guard; on `profiles` / `plan_items` it is the absent column grant.
+        // A client can still steer `owner` on all of them, so all of them still need a probe.
+        requiredBranches.add(`${table}.${verb}@owner`);
       }
 
       const probedBranches = [...attempted].filter((k) => k.includes("@")).sort();
@@ -2332,13 +2337,33 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       `);
       console.log(`\n[MV-159 EXPLAIN — every migrated table as an org admin, 400 orgs / 10k cases]\n${plans}`);
 
-      // NO SEQ SCAN ON ANY OF THE NINE. Both disjuncts are indexed — the `owner` index each table
-      // has carried since before Stage 2, and the MV-155 `case_id` index — so the planner can
-      // answer "which rows may I see" with a BitmapOr instead of a heap sweep.
+      // NO SEQ SCAN ON ANY OF THE NINE, AND THE ACCESS PATH IS INDEX-DRIVEN. The predicate is
+      // indexed — MV-155's `case_id` index on each table — so the planner answers "which rows may
+      // I see" through an index rather than a heap sweep.
+      //
+      // AMENDED BY MV-160, AND IT IS THE SECOND TRANSITIONAL ASSERTION IN THIS BLOCK, NOT THE
+      // FIRST. The `InitPlan 2` count immediately below carries MV-159's own note that the number
+      // was transitional because MV-160 deletes the owner disjunct — the same sentence applies
+      // verbatim to the node SHAPE, and that half was missed. The assertion used to demand
+      // `Bitmap Heap Scan on <table>`, whose stated justification was a **BitmapOr over BOTH
+      // disjuncts** (`owner` index OR `case_id` index). After MV-160 there is only ONE disjunct.
+      // A single indexed `case_id = ANY (…)` is CHEAPER, and the planner is free to answer it with
+      // a plain Index Scan, an Index Only Scan, or a bitmap pair — its choice varies with table
+      // statistics and heap size, so pinning one node made a gating check depend on the cost
+      // model. Measured: the full lane went red on `Bitmap Heap Scan` once and green on an
+      // identical re-run, while the file passes in isolation every time.
+      //
+      // What is pinned instead is the property the comment always claimed to care about and which
+      // survives the disjunct removal: NOT a sweep, and reached through an index. A genuine
+      // regression — the helper going per-row, or an index being dropped — still turns this red
+      // through the Seq Scan half and through the SubPlan assertion below.
       for (const table of STUDENT_DATA_TABLES) {
         expect(plans, `${table} fell back to a Seq Scan`).not.toMatch(new RegExp(`Seq Scan on ${table}\\b`));
-        expect(plans, `${table} did not use a BitmapOr over both disjuncts`).toMatch(
-          new RegExp(`Bitmap Heap Scan on ${table}\\b`),
+        expect(plans, `${table} was not reached through an index`).toMatch(
+          new RegExp(
+            `(?:Bitmap Heap Scan|Index Scan using \\w+|Index Only Scan using \\w+) on ${table}\\b` +
+              `|Bitmap Index Scan on ${table}_`,
+          ),
         );
       }
       // THE HELPERS ARE HOISTED, EVALUATED ONCE PER STATEMENT RATHER THAN ONCE PER ROW. Without
@@ -2392,115 +2417,4 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
   //     is both MV-160-durable and a strictly stronger statement of the property.
   //
   // So the inherited work is once again exactly this block, deleted whole.
-  describe("transitional owner disjunct — retired by MV-160", () => {
-    // MOVED HERE IN ROUND 2 from its own block near the top of the file, because it belongs to
-    // exactly this retirement: it asserts every predicate CONTAINS the clause MV-160 deletes, so
-    // leaving it outside made the "one block, nothing else" promise false on the card's own
-    // terms. It is the FIRST test MV-160 should read and the first it should delete.
-    it("writes the disjunct on ONE line in every predicate, as the outermost OR", () => {
-      const predicates = sqlLines(`
-        select c.relname || '.' || p.polname || '@' || kind || '::' ||
-               replace(replace(expr, e'\\n', ' '), '  ', ' ')
-          from pg_policy p
-          join pg_class c on c.oid = p.polrelid
-          join pg_namespace n on n.oid = c.relnamespace
-          cross join lateral (
-            values ('using', pg_get_expr(p.polqual, p.polrelid)),
-                   ('check', pg_get_expr(p.polwithcheck, p.polrelid))
-          ) as v(kind, expr)
-         where n.nspname = 'public'
-           and c.relname in (${STUDENT_DATA_TABLES.map((t) => `'${t}'`).join(",")})
-           and p.polname <> 'Service inserts documents'
-           and v.expr is not null
-         order by 1;
-      `);
-
-      // 24 policies; every SELECT/INSERT/DELETE contributes one expression and every UPDATE two.
-      expect(predicates.length, "every new policy must carry a predicate").toBe(28);
-
-      let insertShaped = 0;
-      for (const line of predicates) {
-        const [head] = line.split("::");
-        const expr = line.split("::").slice(1).join("::");
-        const policy = head!.replace(/@(using|check)$/, "");
-        // TWO SHAPES SINCE ROUND 2 (see the constants at the head of this file): the five INSERT
-        // predicates carry `and case_id is null`, because on INSERT the client CHOOSES the
-        // case_id and the bare form admitted a row into any case at all. Everything else keeps
-        // the bare form, which is what holds a not-yet-backfilled row visible to its owner.
-        const isInsertPolicy = INSERT_POLICIES.has(policy) && head!.endsWith("@check");
-        const expected = isInsertPolicy ? TRANSITIONAL_DISJUNCT_INSERT : TRANSITIONAL_DISJUNCT;
-        if (isInsertPolicy) insertShaped++;
-
-        expect(expr, `${line}: the transitional disjunct is missing or reshaped`).toContain(expected);
-        expect(expr, `${line}: the case branch is missing or reshaped`).toContain(CASE_BRANCH);
-        // A non-INSERT predicate must NOT have acquired the tighter form: that would hide a
-        // case-bearing row from its owner, which is the regression the disjunct exists to avoid.
-        if (!isInsertPolicy) {
-          expect(expr, `${line}: a non-INSERT predicate carries the INSERT-only narrowing`).not.toContain(
-            TRANSITIONAL_DISJUNCT_INSERT,
-          );
-        }
-        // Exactly once. A second copy would mean the disjunct was woven into the case branch,
-        // and MV-160's edit would have to restructure rather than delete.
-        expect(
-          expr.split(TRANSITIONAL_DISJUNCT).length - 1,
-          `${line}: the owner disjunct appears more than once`,
-        ).toBe(1);
-        // And it is the LEFT operand of the outermost OR: everything before it is opening
-        // parentheses. A predicate MV-160 has to restructure is a predicate MV-160 will get wrong.
-        const prefix = expr.slice(0, expr.indexOf(expected));
-        expect(prefix.replace(/[\s(]/g, ""), `${line}: the owner disjunct is not the outermost OR`).toBe("");
-      }
-      expect(insertShaped, "all five INSERT predicates must carry the narrowed disjunct").toBe(5);
-    });
-
-    it("keeps a case-less row visible and updatable to its legacy owner, and to nobody else", async () => {
-      const owner = actor("studentA");
-      await proveExists("plan_items", caseless.planItem);
-
-      const seen = await visible(owner, "plan_items");
-      expect(seen, "a not-yet-backfilled row must stay visible to its owner").toContain(caseless.planItem);
-
-      // …and updatable, through the grant the student actually holds.
-      const { error } = await owner.client
-        .from("plan_items")
-        .update({ status: "dismissed" } as never)
-        .eq("id", planId(caseless.planItem));
-      expect(error, `the owner must still be able to act on it: ${error?.message}`).toBeNull();
-      await fixture.admin.from("plan_items").update({ status: "todo" }).eq("id", planId(caseless.planItem));
-
-      // Invisible to a cross-tenant admin AND to a case-scoped actor on the owner's own org case.
-      for (const key of ["adminB", "ownerB", "adminA", "counsellorAssignedA", "outsider"] as const) {
-        const other = await visible(actor(key), "plan_items");
-        expect(other, `${key} must not see a case-less row`).not.toContain(caseless.planItem);
-      }
-    });
-
-    it("hands the row to the case-scoped actor once its case_id is backfilled, and the owner keeps it", async () => {
-      const owner = actor("studentA");
-      const counsellor = actor("counsellorAssignedA");
-      const target = caseId("orgAssignedA");
-
-      expect(await visible(counsellor, "documents"), "precondition").not.toContain(caseless.document);
-
-      const { error } = await fixture.admin.from("documents").update({ case_id: target }).eq("id", caseless.document);
-      expect(error, `backfill failed: ${error?.message}`).toBeNull();
-
-      expect(await visible(counsellor, "documents"), "the case branch must pick it up").toContain(caseless.document);
-      expect(await visible(owner, "documents"), "and the owner must not lose it").toContain(caseless.document);
-
-      await fixture.admin.from("documents").update({ case_id: null }).eq("id", caseless.document);
-    });
-
-    it("shows the case-less assessment to its owner and to no case-scoped actor", async () => {
-      const owner = actor("studentA");
-      await proveExists("assessments", caseless.assessment);
-      expect(await visible(owner, "assessments")).toContain(caseless.assessment);
-      for (const key of ["adminA", "counsellorAssignedA", "adminB"] as const) {
-        expect(await visible(actor(key), "assessments"), `${key} must not see a case-less assessment`).not.toContain(
-          caseless.assessment,
-        );
-      }
-    });
-  });
 });

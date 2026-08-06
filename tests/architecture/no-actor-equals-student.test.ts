@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -42,13 +42,13 @@ import path from "node:path";
  * passes a bare identifier as a filter column is flagged, and must justify itself
  * on the list like everything else.
  *
- * ## Related, and deliberately NOT duplicated here
+ * ## The WRITE-side half is the second `describe` block below (MV-160 §D)
  *
- * MV-160 §D owns the complementary sweep — no exported repository function takes
- * a user id as its scoping argument, and no `owner:` key appears in an insert or
- * upsert payload outside the single allowlisted writer helper
- * (`lib/cases/dual-write.ts`). This file is the READ-side half, shipped with the
- * card that made it true.
+ * MV-157 shipped this file as the read-side half and pointed at MV-160 §D for
+ * the complementary sweep: no `owner:` key in an insert or upsert payload outside
+ * a justified allowlist, and no exported repository function taking a user id as
+ * its scoping argument. That block is now here, so the two halves share one
+ * detector idiom and one failure vocabulary.
  */
 
 const REPO_ROOT = process.cwd();
@@ -139,13 +139,13 @@ const OWNER_PREDICATE_ALLOW_LIST: ReadonlyArray<{ path: string; reason: string }
 
 const ALLOWED_PATHS = new Set(OWNER_PREDICATE_ALLOW_LIST.map((entry) => entry.path));
 
-function walk(dir: string, out: string[] = []): string[] {
+function walk(dir: string, extensions: ReadonlySet<string> = SCANNED_EXTENSIONS, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     if (entry === "node_modules" || entry === ".next" || entry === ".claude") continue;
     const full = path.join(dir, entry);
     if (statSync(full).isDirectory()) {
-      walk(full, out);
-    } else if (SCANNED_EXTENSIONS.has(path.extname(full))) {
+      walk(full, extensions, out);
+    } else if (extensions.has(path.extname(full))) {
       out.push(full);
     }
   }
@@ -242,5 +242,254 @@ describe("no repository or route scopes case data by `owner = actor`", () => {
 
     const repo = readFileSync(path.join(REPO_ROOT, "lib/assessments/repo.ts"), "utf8");
     expect(repo).toMatch(/\.is\(\s*["']owner["']\s*,\s*null\s*\)/);
+  });
+});
+
+/* ---------------------------------------------------------------------------------------- *
+ * MV-160 §D — THE WRITE-SIDE HALF.
+ *
+ * The read-side block above asks "does anything still SCOPE by the actor's user id". This one
+ * asks the two write-side questions the card pairs with it: does any insert/upsert payload
+ * still NAME `owner` outside a justified allowlist, and does any exported repository function
+ * still take a user id as its SCOPING argument.
+ *
+ * ## Why the payload detector is structural rather than a line regex
+ *
+ * A regex for `owner:` matches 33 lines in this tree, and 32 of them are type declarations
+ * (`owner: string | null;`) or read-side mappings (`owner: r.owner`). Flagging those would
+ * make the guard so noisy it would be deleted. The detector therefore finds `.insert(`,
+ * `.upsert(` and `.update(` call sites, takes the BALANCED argument text of each, and looks
+ * for an `owner` key inside it — i.e. it detects the BEHAVIOUR (writing the column), which is
+ * the correction the canonical access matrix made to MV-151's fence. A rename of the variable
+ * does not launder it; only removing the write does.
+ *
+ * ## The one allowlisted payload, and why it is not the file the card named
+ *
+ * MV-160 §D says the single allowlisted `owner:` payload is "MV-157's writer helper
+ * (`lib/cases/dual-write.ts`)". Measured against the tree: `lib/cases/dual-write.ts` performs
+ * NO write at all — it reads `cases`, derives `{ case_id, owner }` and RETURNS the fragment,
+ * which twelve call sites spread into their own payloads. It carries no `.insert(` or
+ * `.upsert(`, so a payload-scoped detector never sees it. The single literal `owner:` write
+ * payload in the tree is `lib/assessments/repo.ts`'s `createAnonymousAssessment`, which
+ * MV-157 §E's own header already nominates for exactly this allowlist, by exactly this
+ * reason. The COUNT the card fixes at one is right; the path is not. Corrected here, on the
+ * card, and in the Stage 2 matrix spec §12.
+ *
+ * The card's other requirement — that DELETING the dual-write must also turn this red, so the
+ * allowlist is not read as a licence to remove it — is carried by the choke-point block
+ * below rather than by the payload allowlist, because a module the payload detector cannot see
+ * cannot be pinned by a payload entry.
+ * ---------------------------------------------------------------------------------------- */
+
+/** The card's four directories. `.mjs` is in because `scripts/` is mostly `.mjs`. */
+const WRITE_SCANNED_DIRS = ["lib", "app", "components", "scripts"];
+const WRITE_SCANNED_EXTENSIONS = new Set([".ts", ".tsx", ".mjs"]);
+
+/** Comments are stripped first: a `.insert(` inside a JSDoc block is prose, not a write. */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+}
+
+/** The text between `source[open]`'s parentheses, respecting nesting and string literals. */
+function balancedArgument(source: string, open: number): string {
+  let depth = 0;
+  let quote = "";
+  for (let i = open; i < source.length; i += 1) {
+    const ch = source[i]!;
+    if (quote) {
+      if (ch === "\\") i += 1;
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if (ch === "(") depth += 1;
+    else if (ch === ")") {
+      depth -= 1;
+      if (depth === 0) return source.slice(open + 1, i);
+    }
+  }
+  return source.slice(open + 1);
+}
+
+/** An `owner` key in an object literal — not `...ownership`, not `case_owner:`. */
+const OWNER_PAYLOAD_KEY = /(?:^|[{,[\s])owner\s*:/;
+
+function ownerPayloadFormsIn(source: string): string[] {
+  const src = stripComments(source);
+  const hits = new Set<string>();
+  for (const match of src.matchAll(/\.(insert|upsert|update)\s*\(/g)) {
+    const open = match.index + match[0].length - 1;
+    if (OWNER_PAYLOAD_KEY.test(balancedArgument(src, open))) hits.add(`.${match[1]}({ … owner: … })`);
+  }
+  return [...hits];
+}
+
+/** EXACTLY ONE ENTRY. A test asserts the count in both directions. */
+const OWNER_PAYLOAD_ALLOW_LIST: ReadonlyArray<{ path: string; reason: string }> = [
+  {
+    path: "lib/assessments/repo.ts",
+    reason:
+      "`createAnonymousAssessment` writes the LITERAL `owner: null` on a row that has no case at " +
+      "all. That is not a dual-write: it is the anonymous carve-out — matrix spec §3, " +
+      "`owner IS NULL ⇒ case_id IS NULL` — the state MV-135's 3-day purge keys on and the state a " +
+      "claim transitions a row OUT of. There is no case id in scope to derive an owner from and " +
+      "therefore no pair that could disagree. Every other ownership payload in the tree spreads a " +
+      "value produced by `lib/cases/dual-write.ts`, which is pinned separately below.",
+  },
+];
+
+/**
+ * The deriving choke point. Not a payload site — it returns fragments — so it is pinned by its
+ * exports and its importers instead.
+ */
+const DUAL_WRITE_MODULE = "lib/cases/dual-write.ts";
+const DUAL_WRITE_EXPORTS = ["caseWriteColumns", "caseBindColumns", "caseUpsertColumns"] as const;
+const DUAL_WRITE_CONSUMERS = [
+  "lib/profiles/repo.ts",
+  "lib/documents/repo.ts",
+  "lib/documents/status-repo.ts",
+  "lib/matches/repo.ts",
+  "lib/outcomes/repo.ts",
+  "lib/plan/invalidate.ts",
+  "lib/assessments/claim.ts",
+];
+
+/** Repository modules for the migrated domains — the scope-argument rule applies to these. */
+const REPOSITORY_SUFFIX = "repo.ts";
+const USER_ID_PARAM = /\b(userId|user_id|ownerId|owner_id|actorId|uid)\b/;
+
+const USER_SCOPED_REPO_ALLOW_LIST: ReadonlyArray<{ fn: string; reason: string }> = [
+  {
+    fn: "healAssessmentCase",
+    reason:
+      "MV-158's claim repair. Its SCOPING argument is `caseId`; `userId` is an additional " +
+      "OWNERSHIP PROOF, not the scope — the row it repairs has no case yet, so `owner` is the only " +
+      "evidence at that instant that the caller may touch it, and dropping the parameter would let " +
+      "a caller bind someone else's orphaned assessment to their own case. Registered rather than " +
+      "removed for the same reason its `.eq(\"owner\", …)` is registered on the read side above.",
+  },
+];
+
+describe("MV-160 §D — no write path names `owner`, and no repository is scoped by a user id", () => {
+  const files = WRITE_SCANNED_DIRS.filter((dir) => existsSync(path.join(REPO_ROOT, dir))).flatMap((dir) =>
+    walk(path.join(REPO_ROOT, dir), WRITE_SCANNED_EXTENSIONS),
+  );
+  const allowedPayloadPaths = new Set(OWNER_PAYLOAD_ALLOW_LIST.map((e) => e.path));
+
+  test("the write-side scan reaches all four of the card's directories", () => {
+    const relatives = files.map(relative);
+    expect(relatives.length).toBeGreaterThan(100);
+    for (const dir of WRITE_SCANNED_DIRS) {
+      expect(
+        relatives.some((r) => r.startsWith(`${dir}/`)),
+        `the sweep never reached ${dir}/ — MV-160 §D names all four`,
+      ).toBe(true);
+    }
+  });
+
+  test("only the allow-listed path writes an `owner:` payload key", () => {
+    const offenders = files
+      .map((file) => ({ rel: relative(file), forms: ownerPayloadFormsIn(readFileSync(file, "utf8")) }))
+      .filter((entry) => entry.forms.length > 0 && !allowedPayloadPaths.has(entry.rel))
+      .map((entry) => `${entry.rel} — ${entry.forms.join(", ")}`);
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("the payload allow-list holds EXACTLY ONE entry, and it still carries a payload", () => {
+    // Both directions. A second `owner:` write appearing anywhere fails the test above; the
+    // count here fails if someone answers that by adding a second allow-list entry instead.
+    expect(OWNER_PAYLOAD_ALLOW_LIST).toHaveLength(1);
+    for (const { path: rel, reason } of OWNER_PAYLOAD_ALLOW_LIST) {
+      expect(reason.length).toBeGreaterThan(40);
+      expect(
+        ownerPayloadFormsIn(readFileSync(path.join(REPO_ROOT, rel), "utf8")),
+        `${rel} no longer writes an owner payload — drop its allow-list entry`,
+      ).not.toEqual([]);
+    }
+  });
+
+  test("the payload detector fires on every evasion shape — and on none of the innocents", () => {
+    for (const source of [
+      'db.from("profiles").insert({ owner: userId, case_id: caseId })',
+      'db.from("documents").upsert({ owner: userId }, { onConflict: "case_id,kind" })',
+      'db.from("plan_items").update({ owner: userId }).eq("id", id)',
+      'db.from("profiles").insert([{ case_id: caseId, owner: userId }])',
+      'db.from("profiles").insert({\n  case_id: caseId,\n  owner: userId,\n})',
+      'db.from("profiles").insert({ sections, owner: resolve(caseId).owner })',
+    ]) {
+      expect(ownerPayloadFormsIn(source), `not detected: ${source}`).not.toEqual([]);
+    }
+    // The innocents. Flagging any of these makes the guard noisy enough to be deleted, which
+    // is how a guard actually dies — and the spread is the SHAPE THE FIX TAKES, so a detector
+    // that fired on it would punish the migration it exists to enforce.
+    for (const source of [
+      'db.from("profiles").insert({ ...ownership, sections })',
+      "interface Row { owner: string | null }",
+      "return rows.map((r) => ({ id: r.id, owner: r.owner }))",
+      'db.from("profiles").select("owner").eq("case_id", caseId)',
+      'db.from("profiles").insert({ case_owner: x })',
+    ]) {
+      expect(ownerPayloadFormsIn(source), `false positive: ${source}`).toEqual([]);
+    }
+  });
+
+  test("M4b — the dual-write choke point exists, derives, and is still WIRED UP", () => {
+    // The card's guard against the allow-list being read as a licence to delete the
+    // dual-write. Removing `lib/cases/dual-write.ts`, or unhooking any repository from it,
+    // fails HERE — which is what makes "the dual-write survives Stage 2 and is removed in
+    // Stage 6, with the owner columns" an enforced decision rather than a comment.
+    const chokePoint = readFileSync(path.join(REPO_ROOT, DUAL_WRITE_MODULE), "utf8");
+    for (const exported of DUAL_WRITE_EXPORTS) {
+      expect(chokePoint, `${DUAL_WRITE_MODULE} no longer exports ${exported}`).toContain(`export async function ${exported}`);
+    }
+    // It DERIVES and returns; it must not itself become a write site, or the single-choke-point
+    // argument stops being checkable by the payload detector above.
+    expect(ownerPayloadFormsIn(chokePoint), `${DUAL_WRITE_MODULE} has become a write site`).toEqual([]);
+
+    const importers = files
+      .filter((file) => /from\s+["'](?:@\/)?(?:\.\.?\/)*(?:lib\/)?cases\/dual-write["']/.test(readFileSync(file, "utf8")))
+      .map(relative);
+    for (const consumer of DUAL_WRITE_CONSUMERS) {
+      expect(importers, `${consumer} no longer derives its ownership columns from the choke point`).toContain(consumer);
+    }
+  });
+
+  test("no exported repository function takes a user id as its scoping argument", () => {
+    // MV-160 §D. The scope of a migrated domain is a `caseId`, never an Auth user — that IS
+    // "case-scoped repositories no longer depend on actor equals student", stated at the
+    // signature level so a regression is visible in a diff rather than in a policy failure.
+    const allowedFns = new Set(USER_SCOPED_REPO_ALLOW_LIST.map((e) => e.fn));
+    const offenders: string[] = [];
+    for (const file of files.filter((f) => relative(f).startsWith("lib/") && f.endsWith(REPOSITORY_SUFFIX))) {
+      const source = stripComments(readFileSync(file, "utf8"));
+      for (const match of source.matchAll(/export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) {
+        const name = match[1]!;
+        const params = balancedArgument(source, match.index + match[0].length - 1);
+        if (USER_ID_PARAM.test(params) && !allowedFns.has(name)) {
+          offenders.push(`${relative(file)} — ${name}(${params.replace(/\s+/g, " ").trim().slice(0, 80)})`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("every scope-argument exemption still earns its place, with a reason", () => {
+    // The mirror, and the half that rots. An exemption left behind after the parameter was
+    // removed quietly re-opens the hole for the next author who "adds it back to a function
+    // that was already on the list".
+    const sources = files
+      .filter((f) => relative(f).startsWith("lib/") && f.endsWith(REPOSITORY_SUFFIX))
+      .map((f) => stripComments(readFileSync(f, "utf8")))
+      .join("\n");
+    for (const { fn, reason } of USER_SCOPED_REPO_ALLOW_LIST) {
+      const match = new RegExp(`export\\s+(?:async\\s+)?function\\s+${fn}\\s*\\(`).exec(sources);
+      expect(match, `${fn} is no longer an exported repository function — drop its exemption`).not.toBeNull();
+      expect(
+        USER_ID_PARAM.test(balancedArgument(sources, match!.index + match![0].length - 1)),
+        `${fn} no longer takes a user id — drop its exemption`,
+      ).toBe(true);
+      expect(reason.length).toBeGreaterThan(40);
+    }
   });
 });
