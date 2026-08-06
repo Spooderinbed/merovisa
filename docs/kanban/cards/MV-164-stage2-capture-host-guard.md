@@ -117,6 +117,12 @@ Run on the branch, 2026-08-06, in the `merovisa-mv164` worktree.
 | `npm test` | **2674 passed / 2674**, 333 files, exit 0 |
 | `npm run board` | **165 cards**, generated clean (it fails closed on a lying board) |
 
+**CI on PR #127 — all four checks green.** `validate` **pass** (4m20s) · `integration` **pass**
+(4m21s) · Vercel **pass** · Vercel Preview Comments **pass**. The `integration` job self-hosts its own
+Supabase stack and has been *gating* since 2026-08-03, so its green tick is real evidence rather than
+a `continue-on-error` pass — which is what makes the "not run locally" note below acceptable rather
+than a hole.
+
 `npm run test:integration` was **not** run: it needs a local Supabase stack, and nothing in this card
 touches the database, a migration, a policy or a grant. The one integration file that imports the
 capture script (`stage2-data-equivalence.itest.ts`) imports only the §A1 serializer/hash/exclusion
