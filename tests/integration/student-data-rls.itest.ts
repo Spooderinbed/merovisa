@@ -2337,13 +2337,33 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       `);
       console.log(`\n[MV-159 EXPLAIN — every migrated table as an org admin, 400 orgs / 10k cases]\n${plans}`);
 
-      // NO SEQ SCAN ON ANY OF THE NINE. Both disjuncts are indexed — the `owner` index each table
-      // has carried since before Stage 2, and the MV-155 `case_id` index — so the planner can
-      // answer "which rows may I see" with a BitmapOr instead of a heap sweep.
+      // NO SEQ SCAN ON ANY OF THE NINE, AND THE ACCESS PATH IS INDEX-DRIVEN. The predicate is
+      // indexed — MV-155's `case_id` index on each table — so the planner answers "which rows may
+      // I see" through an index rather than a heap sweep.
+      //
+      // AMENDED BY MV-160, AND IT IS THE SECOND TRANSITIONAL ASSERTION IN THIS BLOCK, NOT THE
+      // FIRST. The `InitPlan 2` count immediately below carries MV-159's own note that the number
+      // was transitional because MV-160 deletes the owner disjunct — the same sentence applies
+      // verbatim to the node SHAPE, and that half was missed. The assertion used to demand
+      // `Bitmap Heap Scan on <table>`, whose stated justification was a **BitmapOr over BOTH
+      // disjuncts** (`owner` index OR `case_id` index). After MV-160 there is only ONE disjunct.
+      // A single indexed `case_id = ANY (…)` is CHEAPER, and the planner is free to answer it with
+      // a plain Index Scan, an Index Only Scan, or a bitmap pair — its choice varies with table
+      // statistics and heap size, so pinning one node made a gating check depend on the cost
+      // model. Measured: the full lane went red on `Bitmap Heap Scan` once and green on an
+      // identical re-run, while the file passes in isolation every time.
+      //
+      // What is pinned instead is the property the comment always claimed to care about and which
+      // survives the disjunct removal: NOT a sweep, and reached through an index. A genuine
+      // regression — the helper going per-row, or an index being dropped — still turns this red
+      // through the Seq Scan half and through the SubPlan assertion below.
       for (const table of STUDENT_DATA_TABLES) {
         expect(plans, `${table} fell back to a Seq Scan`).not.toMatch(new RegExp(`Seq Scan on ${table}\\b`));
-        expect(plans, `${table} did not use a BitmapOr over both disjuncts`).toMatch(
-          new RegExp(`Bitmap Heap Scan on ${table}\\b`),
+        expect(plans, `${table} was not reached through an index`).toMatch(
+          new RegExp(
+            `(?:Bitmap Heap Scan|Index Scan using \\w+|Index Only Scan using \\w+) on ${table}\\b` +
+              `|Bitmap Index Scan on ${table}_`,
+          ),
         );
       }
       // THE HELPERS ARE HOISTED, EVALUATED ONCE PER STATEMENT RATHER THAN ONCE PER ROW. Without

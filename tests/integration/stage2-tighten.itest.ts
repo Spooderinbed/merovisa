@@ -27,14 +27,18 @@
  * tautology.
  *
  * NOT HERE, and each has a home:
- *   * §B's SWEEP TEST and §C's COUNTERFACTUAL both require applying (or half-applying) the
- *     migration to a database that is in the PRE-migration state. By the time this suite runs the
- *     migration is applied, and the fixtures they need — an owned, `case_id`-null row on one of the
- *     eight — can no longer be SEEDED, which is precisely what this card set out to make true. They
- *     ship as rehearsal scripts under `supabase/rehearsal/` instead, where the integrator runs them
- *     against a scratch copy. A test that cannot construct its own precondition is not a weaker
- *     test; it is a different kind of artifact, and pretending otherwise is how a suite goes green
- *     without exercising anything.
+ *   * §B's SWEEP TEST needs a database in the PRE-migration state: its fixture is an owned,
+ *     `case_id`-null row on one of the eight, which by the time this suite runs can no longer be
+ *     SEEDED — precisely what this card set out to make true. It lives in
+ *     `stage2-data-equivalence.itest.ts`, which reaches that state by applying
+ *     `supabase/rehearsal/MV-160-rollback.sql` inside a transaction it always rolls back. (An
+ *     earlier draft of this header said the sweep test and the counterfactual would ship as
+ *     rehearsal scripts the integrator runs by hand. They are CI tests instead — better, and the
+ *     rollback script gets executed on every run as a side effect, which is the artifact least
+ *     likely to be correct and most likely to be needed during an incident.)
+ *   * §C's COUNTERFACTUAL is here after all, at the end of the §C block: it needs only the
+ *     POST-migration state plus a re-widened column, so a rolled-back `ALTER` inside one
+ *     transaction constructs it honestly.
  *   * §A's equivalence proof lives in `stage2-data-equivalence.itest.ts` (synthetic, §A1) and in
  *     `npm run stage2:equivalence` (live replay, §A2, rehearsal-only).
  */
@@ -370,6 +374,43 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-160 Stage 2 tighten + exit 
         occurred_at: new Date().toISOString(),
       } as never);
       expect(error?.code).toBe("23503");
+    });
+
+    it("THE COUNTERFACTUAL: re-widen `case_id` and the same insert is admitted — the NOT NULL is what carries it", () => {
+      // The two BITES above prove the FK now refuses a mismatched child. They do NOT prove that
+      // the NOT NULL is what made that true — the redundancy argument for dropping
+      // `_ownership_axis_present` rests on exactly that, and the plan's own warning (line 326) is
+      // that a composite key including a nullable column is UNENFORCED for null rows. So the
+      // claim is falsified rather than argued: with the column re-widened, a null-`case_id` child
+      // whose parent lives in another case inserts freely, because MATCH SIMPLE skips the check
+      // entirely. Only the pair establishes that dropping the compensating check was safe.
+      //
+      // Run as the superuser inside a transaction that is always rolled back: the point is the
+      // CONSTRAINT layer, not RLS, and the ALTER never leaves this statement.
+      const admitted = sqlLines(`
+        begin;
+        alter table public.application_attempts alter column case_id drop not null;
+        insert into public.application_attempts (owner, case_id, prediction_id, program_id, destination)
+        values (null, null, '${personal.prediction}', '${spareProgram}', 'AU');
+        select 'ADMITTED|' || (select count(*)::text from public.application_attempts where case_id is null);
+        rollback;
+      `).filter((line) => line.startsWith("ADMITTED|"));
+
+      expect(
+        admitted,
+        "with `case_id` nullable the composite FK is skipped for the null row and the insert is " +
+          "ADMITTED. If this ever fails, something OTHER than the NOT NULL is carrying the " +
+          "enforcement and §C's safety argument for dropping the eight checks has to be rewritten.",
+      ).toEqual(["ADMITTED|1"]);
+
+      // And the column really is NOT NULL outside that transaction — otherwise the counterfactual
+      // above would just be describing the shipped state.
+      expect(
+        sqlOne(
+          "select case when attnotnull then 'yes' else 'no' end from pg_attribute " +
+            "where attrelid = 'public.application_attempts'::regclass and attname = 'case_id';",
+        ),
+      ).toBe("yes");
     });
   });
 

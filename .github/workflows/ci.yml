@@ -215,6 +215,26 @@ jobs:
           # probe that pins the clause MV-160 §D must keep, and one more `it.each` leg from the
           # fifth helper (`private.case_student_id`).
           test "$(grep -c '✓ tests/integration/student-data-rls.itest.ts' vitest-integration.log)" -ge 110
+          # MV-160: the Stage 2 tighten end state, read from the live catalog (pg_constraint,
+          # pg_index, pg_policy) rather than by grepping the migration — a grep passes against a
+          # policy that was never re-created. It also carries the `42501` Stage 3 deferral
+          # negative, which is DESIGNED to go red when Stage 3 grants those four INSERTs; that
+          # red is a decision gate, not a broken test (matrix spec §6).
+          grep -q '✓ tests/integration/stage2-tighten.itest.ts' vitest-integration.log
+          # 36 tests today. Floor below that, high enough that a gutted suite trips it.
+          test "$(grep -c '✓ tests/integration/stage2-tighten.itest.ts' vitest-integration.log)" -ge 30
+          # MV-160 §A1: the Stage 2 before/after data-equivalence proof — the exit gate's
+          # permanent CI half. THIS SUITE HAS NO SKIP PATH BY DESIGN. The live-data replay (§A2)
+          # needs a snapshot of real student PII that this repo has correctly decided never to
+          # hold, so it is a rehearsal-only `npm run stage2:equivalence` run by the integrator
+          # and is deliberately absent from this lane. Do not "close the gap" by adding it here:
+          # its artifact is absent on every CI run and the suite would skip every time, which
+          # these guards score as red. The synthetic half seeds its own corpus, captures in-run
+          # against the pre-migration state, applies the real migration file and diffs.
+          grep -q '✓ tests/integration/stage2-data-equivalence.itest.ts' vitest-integration.log
+          # 19 tests today. The M5/M5b perturbation probes and the M7 sweep counterfactual are
+          # what make the diff non-inert; a floor keeps them from being quietly dropped.
+          test "$(grep -c '✓ tests/integration/stage2-data-equivalence.itest.ts' vitest-integration.log)" -ge 15
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup

@@ -1028,11 +1028,41 @@ may conclude the whole criterion is stale.
 ### 9.2 `[R]` `document_status` has no `set_updated_at` trigger, and MV-160's excluded-field list assumes trigger behaviour it should re-derive.
 
 MV-160 §A excludes `profiles.updated_at` and `user_program_state.updated_at` because the backfill
-`UPDATE` fires `private.set_updated_at()`. **That list is correct** — §2.5 confirms those two tables
-carry the trigger and `document_status` does not, despite having an `updated_at` column. Recording it
-because the symmetry is misleading: a later reader will "notice the omission" and add
+`UPDATE` fires `private.set_updated_at()`. ~~**That list is correct**~~ — §2.5 confirms those two
+tables carry the trigger and `document_status` does not, despite having an `updated_at` column.
+Recording it because the symmetry is misleading: a later reader will "notice the omission" and add
 `document_status.updated_at` to the exclusion list, hollowing out the proof for no reason. The
 omission is correct; `document_status.updated_at` must match exactly.
+
+**AMENDED 2026-08-06 (MV-160) — the recommendation was right for the wrong reason, and the reason
+inverts the conclusion for the other two entries. NO `updated_at` COLUMN IS EXCLUDED.**
+
+This item told MV-160 to keep excluding `profiles.updated_at` and `user_program_state.updated_at`
+because the backfill moves them. **It does not.** `private.mv155_backfill_personal_cases()` — read
+from the live catalog, not from MV-155's dossier — opens with
+
+```sql
+alter table public.profiles           disable trigger profiles_set_updated_at;
+alter table public.user_program_state disable trigger user_program_state_set_updated_at;
+```
+
+and re-enables both before it returns, with MV-155's own comment giving the reason: stamping
+migration time onto "when did this student last edit their profile / shortlist" is **unrecoverable**,
+because the rollback takes the column and not the clock. MV-155 saw this coming and suppressed the
+movement. MV-160's sweep calls the same function, so it inherits the same suppression.
+
+So both timestamps are **stable across Stage 2**, and excluding them cost the proof its only guard on
+the mechanism that keeps them stable: had a later edit dropped that `disable trigger` pair, every
+existing student's profile timestamp would have moved to migration time and the equivalence proof
+would still have reported "equivalent". That is precisely the *"the excluded-field list is where the
+proof gets quietly hollowed out"* failure MV-160's own Risk notes name. All three `updated_at`
+columns are now compared exactly; the exclusion list is **eleven** entries (the nine `case_id`s and
+the two MV-156 surrogate `id`s), not thirteen; and `tests/integration/stage2-data-equivalence.itest.ts`
+asserts both halves — that no timestamp moved, and that the `disable`/`enable` pair is still in the
+function that holds them still.
+
+The original point of the item survives unchanged and is now general rather than special:
+`document_status.updated_at` must match exactly — and so must the other two.
 
 ### 9.3 `[R]` MV-160's owner-drop list omits an owner-keyed unique constraint that exists.
 
@@ -1737,3 +1767,29 @@ D-A work item 1 is satisfied for the current schema.
   property was written for.
   **No access-control cell changed.** Every edit in this entry corrects a rollback description or a
   stale policy-form description to match what shipped; the matrix is untouched.
+
+- **2026-08-06 — MV-160 §A/§D: two spec cells corrected against the live catalog, and neither was
+  discoverable by reading the sibling dossiers.**
+  **(1) §9.2's excluded-field recommendation is REVERSED.** It blessed MV-160 §A's exclusion of
+  `profiles.updated_at` and `user_program_state.updated_at` on the ground that the backfill `UPDATE`
+  fires `private.set_updated_at()`. Measured: `private.mv155_backfill_personal_cases()` **disables
+  both triggers** for the duration of the backfill and re-enables them before returning — MV-155
+  suppressed the movement deliberately, because the rollback takes the `case_id` column and not the
+  clock, so a stamped timestamp is unrecoverable. The exclusions were therefore covering for a
+  mechanism nobody was guarding: dropping that `disable trigger` pair would move every existing
+  student's timestamp to migration time and the proof would still have said "equivalent". Exclusion
+  list is now **eleven** entries, all three `updated_at` columns are compared exactly, and the
+  `disable`/`enable` pair is asserted structurally in `stage2-data-equivalence.itest.ts`.
+  **(2) MV-160 §D's single allowlisted `owner:` payload names the wrong file.** The card registers
+  "MV-157's writer helper (`lib/cases/dual-write.ts`)". `lib/cases/dual-write.ts` performs **no
+  write**: it reads `cases`, derives `{ case_id, owner }` and returns the fragment, which its callers
+  spread into their own payloads. It carries no `.insert(`/`.upsert(`, so a payload-scoped detector
+  never sees it. The one literal `owner:` write payload in the tree is `lib/assessments/repo.ts`'s
+  `createAnonymousAssessment` (`owner: null` on a case-less row — the §3 anonymous carve-out), which
+  MV-157 §E's own header already nominates for this allowlist by this reason. The **count** the card
+  fixes at one is right; the path is not. The card's separate requirement — that deleting the
+  dual-write must also turn the sweep red — is carried by a choke-point assertion (exports +
+  importers) rather than by a payload entry, since a module the detector cannot see cannot be pinned
+  by one. Both mutations measured red: deleting the module, and unhooking one repository from it.
+  **No access-control cell changed.** Both edits correct a claim about data-shape or source
+  structure; the matrix is untouched.

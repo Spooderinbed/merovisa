@@ -39,6 +39,7 @@
 - [ ] **`tests/integration/stage2-data-equivalence.itest.ts` runs on seeded fixtures, contains no real PII, and has no skip path.** It seeds a production-*shaped* corpus (several Auth users; a profile each; multiple assessments with one primary; an anonymous case-less assessment; open and closed plan items across kinds; program state; documents; `document_status`; a full prediction → attempt → outcome chain), **captures the snapshot itself at the top of the test** against the pre-migration schema state, applies the Stage 2 migrations, replays every read path, and diffs. Capture and replay happen in one run, so there is no external artifact and nothing to be absent.
 - [ ] **It shares ONE serializer, one hash function and one exclusion list with the live-data replay** — `scripts/stage2/capture-read-path-snapshot.mjs` and its diff module are imported by both, not reimplemented. A synthetic proof running different comparison code from the real one proves that the fixtures are equal, not that the comparison is right.
 - [ ] **The skip guard is inverted into a failure.** If the suite finds itself unable to seed or unable to reach the local stack it **fails**; it never returns green and never returns skipped. The CI guard for this file is a `✓ <path>` line like every other integration suite.
+- [ ] **HOW IT REACHES A PRE-MIGRATION DATABASE, recorded 2026-08-06 because the literal reading is unbuildable and the workaround is load-bearing.** By the time any suite runs, `supabase start` has applied every migration in the tree, so there is no un-applied state to capture from and no way to un-apply one for a single suite without wrecking the shared local database the other nine integration files run against. The suite therefore crosses the boundary the other way, inside ONE transaction that is always rolled back: apply `supabase/rehearsal/MV-160-rollback.sql` (its own `begin;`/`commit;` stripped, with both counts asserted so a change in that file's shape throws rather than silently COMMITTING a rollback onto the shared database) → **assert the pre-state was actually reached** (`case_id` nullable, all eight `_ownership_axis_present` checks present, at least one policy predicate reading `auth.uid()`) → seed → capture → apply the real migration file verbatim → capture → `rollback;`. Two things this buys: **the rollback script is EXECUTED on every CI run**, which is otherwise the artifact least likely to be correct and most likely to be needed during an incident; and **§B's sweep test and §C's counterfactual become CI tests instead of rehearsal scripts**, because inside the pre-state window an owned, `case_id`-null row is seedable again. What it does not buy: this is the MV-160 boundary (pre-tighten → post-tighten), not the whole-of-Stage-2 boundary, which would need reverse scripts for MV-155/156/158/159 that do not exist. **The whole-stage boundary is §A2's job** — which is why §A2 remains the exit gate and this remains the regression net.
 - [ ] **This half proves the mechanism, and the card says plainly what it does not prove:** that the *real* students' *real* rows survived. Synthetic fixtures cannot carry the shapes that actually break a migration — a `profile_snapshot` jsonb from an early rule version, an assessment with a dropped-column attnum gap behind it, a document row whose Storage object is one of the two known orphans. A1 is the regression net; **A2 is the exit gate.**
 
 **A2 — Live-data replay: a REHEARSAL-ONLY gate, run by the integrator, recorded as Done evidence. Not a CI test.**
@@ -50,7 +51,8 @@
 - [ ] **The replay runs as the user through an RLS-scoped client** (anon key + that user's JWT), never through the service-role admin. Proving the rows survived is not the same as proving the student can still read them, and only the second one is the exit gate.
 
 **Shared by A1 and A2 — the comparison itself**
-- [ ] **The normalized/excluded field list is enumerated in the script with a reason per entry, and is asserted by A1** (so it is guarded on every CI run, not only at rehearsal). The complete list: `profiles.updated_at` and `user_program_state.updated_at` (moved by `private.set_updated_at()` under MV-155's backfill `UPDATE`); the new `case_id` column on all nine tables and the new surrogate `id` on `user_program_state` / `document_status` (they did not exist pre-migration and have nothing to compare against). **Nothing else.** Every field not on that list must match exactly. A test fails if the list grows without a reason string — a wildcard exclusion turns a byte-diff into a vibe check. **`document_status.updated_at` is NOT excluded and must match exactly:** that table has an `updated_at` column but carries **no** `set_updated_at` trigger (unlike `profiles` and `user_program_state`), so nothing moves it. The asymmetry looks like an oversight and is not; a later reader "completing the pattern" hollows out the proof for a table with no reason to drift.
+- [ ] **The normalized/excluded field list is enumerated in the script with a reason per entry, and is asserted by A1** (so it is guarded on every CI run, not only at rehearsal). ~~The complete list: `profiles.updated_at` and `user_program_state.updated_at` (moved by `private.set_updated_at()` under MV-155's backfill `UPDATE`);~~ the new `case_id` column on all nine tables and the new surrogate `id` on `user_program_state` / `document_status` (they did not exist pre-migration and have nothing to compare against). **Nothing else.** Every field not on that list must match exactly. A test fails if the list grows without a reason string — a wildcard exclusion turns a byte-diff into a vibe check. ~~**`document_status.updated_at` is NOT excluded and must match exactly:**~~ that table has an `updated_at` column but carries **no** `set_updated_at` trigger (unlike `profiles` and `user_program_state`), so nothing moves it. The asymmetry looks like an oversight and is not; a later reader "completing the pattern" hollows out the proof for a table with no reason to drift.
+  - **CORRECTED 2026-08-06 — NO `updated_at` COLUMN IS EXCLUDED, and the exclusion list is ELEVEN entries, not thirteen.** This criterion excluded `profiles.updated_at` and `user_program_state.updated_at` on the stated ground that MV-155's backfill `UPDATE` fires `private.set_updated_at()`. Read out of the live catalog rather than out of MV-155's dossier: **it does not.** `private.mv155_backfill_personal_cases()` opens with `alter table public.profiles disable trigger profiles_set_updated_at` and the same for `user_program_state`, and re-enables both before it returns — MV-155 saw this coming and suppressed the movement, because the rollback takes the `case_id` column and not the clock, so a stamped "when did this student last edit their profile" is unrecoverable. MV-160's sweep calls that same function and inherits the suppression. So the two timestamps are stable across Stage 2, and excluding them cost the proof its only guard on the mechanism keeping them stable: had a later edit dropped the `disable trigger` pair, every existing student's timestamp would have moved to migration time and the diff would still have read "equivalent" — **the exact failure this card's own Risk notes name as "the excluded-field list is where the proof gets quietly hollowed out"**. All three `updated_at` columns are now compared exactly. The asymmetry paragraph above survives with its point generalised: `document_status.updated_at` must match exactly, *and so must the other two*. Amended in this PR on the card, on matrix spec **§9.2** (which had blessed the wrong list) and in spec §12. `stage2-data-equivalence.itest.ts` asserts both halves — that no timestamp moved, and that the `disable`/`enable` pair is still in the function.
 - [ ] **Row-count parity AND identity parity per table:** every pre-migration row id still exists post-migration, and the only rows Stage 2 added are the personal `cases` MV-155 minted. Nothing is destroyed. **Known pre-existing condition to record rather than discover:** the `documents` bucket holds 8 `storage.objects` against 6 `documents` rows — **2 orphan objects with no matching row**. They are not `documents` rows so they do not break identity parity, but record their count and ids in the equivalence report as a known pre-existing condition. They will surface in Stage 4's re-path and Stage 6's export/deletion work, and an unrecorded orphan found later reads as data loss caused by this stage.
 - [ ] **A non-empty diff fails loudly and legibly** — the failure names the user, the domain, and the field that moved, so the founder can read what changed instead of being handed a hash mismatch.
 - [ ] **The committed artifact is the report, not the payload.** `docs/migrations/stage2/equivalence-report.md` carries pseudonymous per-user labels, the per-domain hash pairs, counts, the A1 CI result, the A2 rehearsal verdict and its date, and the overall verdict. The raw snapshot JSON contains real profile sections, names and emails and **must not enter git history**: it is written to a gitignored path, the `.gitignore` entry is asserted by a test, and the file is destroyed on the rehearsal host once the report is produced. **This is also the reason A2 cannot be a CI test** — the artifact it needs is one this repo has correctly decided never to hold.
@@ -89,6 +91,7 @@
 - [ ] **The rollback covers the policies too, and it is the one part of this card's rollback that is not pure DDL re-application of constraints.** MV-160's reverse script re-creates MV-159's policy set **with the disjunct restored — and with the five INSERT owner-axis bounds still present** (added 2026-08-04; a rollback that restores the disjunct but drops that clause lands the round-3 blocker on the way BACK, which is the failure mode a reverse script is least likely to be tested for), and it must run *before* `case_id` is re-widened to nullable — restore the pure case predicate over re-widened nullable rows and a case-less row is invisible to its owner for the length of the window. This is matrix spec §10.1 **R1**; keep the two in step.
 - [ ] **The `owner` columns are NOT dropped and no row is deleted.** Explicit non-goal — see the Decision log. This is what keeps the card's rollback a pure DDL re-application.
 - [ ] **A machine-enforced source sweep** — `tests/architecture/no-actor-equals-student.test.ts`, modelled on `tests/supabase/service-role-exceptions.test.ts` — scans the live first-party tree (`lib`, `app`, `components`, `scripts`) at run time and fails on any owner-keyed data access against a migrated table outside a **registered allowlist with a reason string per entry**. The registry is read against the live source, so adding a new `.eq("owner", …)` fails the test until someone registers it. Per the access matrix's correction to MV-151's fence, the check detects the **behaviour** (a query scoped by an actor's user id), not one literal call shape — a rename must not launder it.
+- [ ] **CORRECTED 2026-08-06 — the ONE allowlisted `owner:` payload is `lib/assessments/repo.ts`, not `lib/cases/dual-write.ts`, and the "deleting the dual-write also fails" guard is carried by a different mechanism.** The criterion below registers "MV-157's writer helper" by path. Measured against the tree: **`lib/cases/dual-write.ts` performs no write at all.** It reads `cases`, derives `{ case_id, owner }` and RETURNS the fragment; twelve call sites spread it into their own payloads. It carries no `.insert(` or `.upsert(`, so a payload-scoped detector — and the detector must be payload-scoped, because a bare `owner:` line regex matches 33 sites in this tree of which 32 are type declarations and read-side mappings — never sees it. The one literal `owner:` write payload in the tree is `createAnonymousAssessment` (`owner: null` on a row with no case at all: the §3 anonymous carve-out), and **MV-157 §E's own module header already nominates exactly that site for exactly this allowlist, by exactly this reason** — the correction was written down at the seam and never reached this card. **The COUNT this card fixes at one is right; the path is not.** The card's separate and equally important requirement — that *deleting* the dual-write must also turn the sweep red, so the allowlist is not read as a licence to remove it — cannot be carried by a payload entry pointing at a module the detector cannot see. It is carried instead by a **choke-point assertion**: the module exists, still exports `caseWriteColumns` / `caseBindColumns` / `caseUpsertColumns`, is still imported by all seven migrated-domain writers, and has not itself become a write site. Both directions measured red (M4b: delete the module; M4d: unhook one repository from it). Amended on this card and in matrix spec §12.
 - [ ] **MV-157's dual-write DOES NOT STOP at this card, and the sweep's allowlist says so explicitly.** The sweep flags any `owner:` key in an insert or upsert payload — and MV-157's single writer helper deliberately writes `owner` on every personal-case row, derived from `cases.student_user_id`. Left unstated, the first agent to run this test resolves the conflict by deleting the dual-write, which is an unforced behaviour change made under a red test. **The resolution is an explicit, justified allowlist of exactly ONE `owner:`-payload entry:** MV-157's writer helper, registered by path, reason: *"deliberate Stage 2 dual-write — `owner` is derived from `cases.student_user_id`, never caller-supplied (MV-157 §E), and is retained as the provenance link that `app/api/account/delete/route.ts`'s Auth-account teardown and MV-135's `owner is null` purge predicate both still read."* Every **other** `owner:` payload site anywhere in the tree fails the sweep.
 - [ ] **Why an allowlist and not deliberate removal, stated so it is a decision rather than an omission.** Stopping the dual-write here would leave every row created after Stage 2 with `owner IS NULL` on a personal case, which (a) silently breaks `app/api/account/delete`'s owner-keyed teardown for exactly the newest rows, turning a right-to-delete obligation into a partial delete, (b) destroys the provenance link this card's own equivalence proof and any future reconciliation depend on, and (c) contradicts this card's other decision that the `owner` **columns** survive — retaining a column while ceasing to populate it produces the worst of both. **Removal of the dual-write is a Stage 6 item, sequenced with dropping the `owner` columns and after those two consumers are gone.** The same sentence is written on MV-157 §E, on the card that creates the writes.
 - [ ] **No exported repository function for a migrated domain takes a user id as its scoping argument.** The scope argument is a `caseId` (or a `CaseContext`). Enforced by type, so a regression fails `npm run typecheck` rather than a review.
@@ -183,7 +186,145 @@
 - 2026-08-04 — **MV-159 review round 3 hands this card TWO amendments and one new obligation, all recorded here because each of them would otherwise be discovered by breaking something.** (1) **The `WHEN`-clause STOP instruction in §D's write half was INVERTED and is now a trap.** It read "if the trigger you find in the tree has no `WHEN` clause, stop" — and MV-159 §1b *removed* that clause deliberately (`owner → NULL` is the one transition it never fired on, and that transition permanently breaks `/api/account/delete`), then asserted its ABSENCE at apply time in §13 (3). The criterion stays satisfiable because the derive is qualified in the trigger BODY instead; the instruction is rewritten to halt on the clause's *return*. (2) **"No policy predicate reads `owner`" is re-scoped to "no policy predicate uses `owner` as an authorization source", i.e. compares it with `auth.uid()`.** As worded it would go red against MV-159's round-3 fix, and the only way to green it would be to delete the owner-axis bound — failing a test about a P0 by re-opening the P0. `owner = auth.uid()` asks "is the actor this row's owner" (actor-equals-student, the assumption Stage 2 deletes); `owner = private.case_student_id(case_id)` asks "is this row's owner the student of the case it names" — a statement about the ROW, with no reference to the actor. (3) **§D's policy re-creation must KEEP the five INSERT owner-axis bounds.** They are not the transitional disjunct and carry no `delete this line` marker; dropping them re-admits `owner = <victim>, case_id = <the actor's own case>`, which plants a fabricated `visa_granted` outcome event of record in a victim's data and permanently breaks their `document_status` checklist for a chosen kind. Two mechanisms bite if a re-creation drops it — MV-159 §13 (4) fails the apply, and `student-data-rls.itest.ts` goes red behaviourally *and* structurally — because this clause is invisible to every legitimate caller and only an attacker notices its absence.
 - 2026-08-02 — **Integrator: dropping the disjunct is behaviour-preserving on SELECT/UPDATE and strictly tightening on INSERT — established by argument, then pinned by tests, because "obviously equivalent" is how a silent visibility regression ships.** For any row that can exist after §B: `owner` is either NULL (the disjunct's first branch is `NULL = uid()`, never true, so the row was already carried by the case branch alone) or non-NULL, in which case §B's `mv155_assert_case_backfill()` has just proven `case_id` resolves to the case with `organization_id IS NULL AND student_user_id = owner`, and `private.actor_case_ids()` returns every case whose `student_user_id` is the actor — so `owner = uid()` **implies** the case branch, and removing it removes nothing. `case_id`-null rows cannot exist on the eight (NOT NULL) and on `assessments` exist only as `owner IS NULL AND claimed_at IS NULL`, which both predicates exclude. **Three preconditions, all checkable, and (iii) is the fragile one:** (i) the NOT NULLs are applied first; (ii) the assert passed; (iii) `actor_case_ids()`'s student-link arm is **not** membership-status gated — MV-159's dual-role rule requires this, and if a later edit ever gates it, dropping the disjunct hides every personal student's own data and nothing else in this card notices. On **INSERT** the predicates are not equivalent: the disjunct let `owner = self, case_id = <another case>` pass on the first branch, and the pure case predicate rejects it. That is a hole the transitional form opens and this step closes; no legitimate write is affected.
 - 2026-08-02 — **Integrator: one MV-159 test cannot survive this card, and the exception is named rather than discovered.** MV-159's test plan deliberately seeds a **case-less** row and asserts it stays visible to its legacy owner — a test *of the transitional window*. §B's `SET NOT NULL` makes that fixture unseedable (`23502`), so the test dies at the seed regardless of whether this card touches a policy; the disjunct removal is not what kills it. §E's "MV-159's suites pass UNEDITED" was therefore already false and would have been discovered by an agent mid-card, at which point the cheap resolution is to edit an access-control expectation — the one thing §E exists to forbid. Resolved by making it a **deletion of one clearly-named block** that MV-159 is required to isolate up front, with two guards: no matrix cell may go with it, and a *second* red block is a finding, not an extension of the exception.
+- 2026-08-06 — **Agent: §E's ONE-block exception was not enough, and the shortfall is a finding rather than a licence.** §E names exactly one unavoidable deletion: MV-159's `describe("transitional owner disjunct — retired by MV-160")`. Applying the migration turned **five** suites red, not one — `case-backfill`, `owner-nullable-rebase`, `case-data-access`, `claim-path` and `student-data-rls`. Two of them died at **fixture seed** (`23502` on `profiles.case_id`), so whole files failed rather than blocks, which is why §E's block-shaped exception could not describe them. Every one was verified individually to be a test **of the transitional window** — the same class as the named exception, not a matrix cell — and each was retired or narrowed with its own recorded reason; no access-control expectation was edited. One of the five turned out to be **stale since MV-157** rather than window-scoped (`case-data-access`'s upsert test named `owner,program_id` while the live call sites use `case_id,program_id`) and was re-aimed at what ships. The rule §E exists to protect is intact: nothing was retired to make a lane green, and the disjunct-removal argument (§E's third criterion) was independently checked before any deletion.
+- 2026-08-06 — **Agent: a SIXTH §E casualty, found only by running the whole lane twice — MV-159's EXPLAIN probe pinned a plan-node SHAPE whose justification MV-160 deletes.** The probe asserted `Bitmap Heap Scan on <table>` for all nine, justified in its own comment as *"a BitmapOr over BOTH disjuncts"* (the `owner` index OR the `case_id` index). After MV-160 there is one disjunct, a single indexed `case_id = ANY (…)` is **cheaper**, and the planner may answer it with a plain Index Scan, an Index Only Scan or a bitmap pair depending on statistics and heap size — so the assertion made a **gating** check depend on the cost model. Measured: the full lane went red on it once and green on an identical re-run, while the file passes in isolation every time. This is the SECOND transitional assertion in that same block, not the first: the `InitPlan 2` count beside it carries MV-159's own note that the number was transitional *because MV-160 deletes the owner disjunct* — the identical sentence applies to the node shape and that half was missed. Amended to pin the property the comment always claimed (**not a sweep, and reached through an index**), which survives the removal; the `Seq Scan` half and the no-`SubPlan` assertion are untouched, so a helper going per-row or an index being dropped still turns it red. Recorded as a finding rather than a quiet edit, per §E.
+- 2026-08-06 — **Agent: §A1 reaches its pre-migration state through the ROLLBACK SCRIPT, inside a transaction it always rolls back — and that turned §B's sweep test and §C's counterfactual into CI tests.** The literal §A1 design ("capture against the pre-migration schema state, then apply the Stage 2 migrations") is unbuildable in this harness: `supabase start` has applied every migration before any suite runs, and un-applying one for a single suite would wreck the shared local database the other nine integration files run against. Options weighed: a scratch database built from the migration files (rejected — the repo migrations do not create `auth.users`, `auth.uid()` or `storage.objects`, so it would need a stub surface large enough to make the proof about the stubs); replay only post-migration (rejected — that is not a boundary); apply the committed rollback inside one always-rolled-back transaction (chosen). Three things it buys: the pre-state is *asserted* before capture so a wrong rollback fails loudly rather than producing a vacuous comparison; **the rollback script is executed on every CI run**, which no other mechanism does and which matters because a reverse script is needed only during an incident; and inside the pre-state window an owned, `case_id`-null row is seedable again, so §B's sweep test and §C's counterfactual stop being rehearsal scripts nobody runs. The cost is honest and recorded on the card: this is the MV-160 boundary, not the whole-of-Stage-2 boundary, which remains §A2's job.
+- 2026-08-06 — **Agent: the two `updated_at` exclusions were removed, and the reason they existed was false.** See §A's corrected criterion and matrix spec §9.2/§12. The short version: MV-155's backfill **disables** `profiles_set_updated_at` and `user_program_state_set_updated_at` rather than firing them, so the two timestamps never moved, and excluding them meant the proof had no guard on the `disable trigger` pair that keeps them still. Deleting that pair would have moved every existing student's "last edited" timestamp to migration time — unrecoverably, since the rollback takes the column and not the clock — and the equivalence proof would still have reported "equivalent". This is the failure mode this card's own Risk notes name, arriving through the criterion that was supposed to prevent it. The list is eleven entries; all three `updated_at` columns are compared exactly; the suite asserts the mechanism as well as the outcome.
 - 2026-08-02 — **Passing the Stage 1 suites unedited is an acceptance criterion, not a courtesy.** Tightening is a data-shape change; if `tenant-isolation.itest.ts` or `case-rls.itest.ts` needs an edit to stay green, this card has moved an access-control cell and contradicts the canonical matrix. The correct response is to reconcile against the spec, never to update the expectation.
 
 ## Done evidence
-(pending)
+
+**Branch `mv-160-tighten-stage2-exit`. STACKED on MV-161 (PR #123) — it contains MV-159's
+`20260803180000` and MV-161's `20260805120000` and is not branched off master. Merge after #123.
+Applied to the LOCAL stack only; the hosted apply and §A2 are separately founder-gated.**
+
+### Gate
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` | green |
+| `npm run lint` | green |
+| `npm test` | green |
+| `npm run test:integration` | green — 11 files, local stack |
+| `tests/integration/stage2-tighten.itest.ts` | 36/36 |
+| `tests/integration/stage2-data-equivalence.itest.ts` | 19/19 |
+| `tests/architecture/no-actor-equals-student.test.ts` | 12/12 (read-side 5 + write-side 7) |
+
+### §A — equivalence
+
+Report: `docs/migrations/stage2/equivalence-report.md`.
+
+- **§A1 GREEN.** Whole-snapshot hash identical before and after; **diff zero**; row-count *and*
+  identity parity per user per domain on all nine read paths. Captures its own snapshot in-run,
+  loads nothing, **has no skip path**, and carries a `✓` guard plus a count floor in `ci.yml`.
+- **§A2 NOT RUN.** It is the integrator's, on the rehearsal host, and it is the exit gate. `npm run
+  stage2:equivalence` ships and is deliberately absent from CI, with the reason written at the top of
+  the script so nobody "closes the gap" and re-creates the permanent skip. **No green §A2 record, no
+  production apply.**
+- Exclusion list: **eleven** entries, not thirteen — see the correction below.
+
+### §B — `case_id` mandatory, sweep proven
+
+`case_id` NOT NULL on the eight; `assessments.case_id` **still nullable** and covered by
+`assessments_case_required_when_owned`, asserted both ways (an owned row with a null `case_id` is
+rejected; an anonymous one is admitted). The sweep is measured, not trusted: 11 residue rows seeded
+across all nine tables at `0/N` pre-migration, `N/N` post-migration, every row on **its own** owner's
+personal case, one personal case minted. M7 shows the apply **fails** without the sweep.
+
+### §C — checks dropped, FKs proven, trigger restored
+
+All eight `_ownership_axis_present` checks gone (enumerated, not counted). The case-side composite FKs
+**bite** (`23503` on a mismatched child) **and** the counterfactual holds: re-widen `case_id` inside a
+rolled-back transaction and the same insert is admitted, which is what establishes that the NOT NULL —
+and nothing else — carries the enforcement. `private.reject_prediction_update()` restored to its
+unconditional body as the migration's **last** statement, asserted structurally *and* for
+`service_role` (the function is SECURITY INVOKER, so `service_role` does not bypass it).
+
+### §D — legacy owner assumptions removed
+
+No unique constraint, PK or FK target on the nine has `owner` as a key column — read from
+`pg_index`/`pg_constraint`, and the **seven** superseded uniques are asserted gone **by name**. The
+surviving plain `owner` lookup indexes are asserted **present**, each with the reader that needs it:
+
+| Surviving index | Reader |
+| --- | --- |
+| `assessments_anon_purge_idx` | MV-135's 3-day purge, pinned by MV-158 to the `owner is null` predicate |
+| `assessments_owner_idx` | the owner-scoped assessment reads that outlive Stage 2 |
+| `profiles_owner_idx`, `plan_items_owner_idx`, `user_program_state_owner_idx`, `documents_owner_idx`, `document_status_owner_idx`, `program_predictions_owner_idx`, `application_attempts_owner_idx`, `outcome_events_owner_idx` | `app/api/account/delete/route.ts`'s Auth-account teardown, deliberately owner-keyed through Stage 6 |
+
+**Not dropped, and reported rather than silently removed:** `application_attempts_prediction_id_owner_idx`
+is also orphaned by the composite-FK drop, and the card's drop list does not name it. The card was
+followed literally; the index is a finding for MV-154 or a follow-up, not something this migration
+took on its own authority.
+
+**Policy rewrite:** every policy MV-159 shipped on the nine re-created with the transitional owner
+disjunct removed, same names, same `to authenticated`, same USING/WITH CHECK pairing, same helpers.
+No predicate on the nine compares `owner` with `auth.uid()`. **KEPT, deliberately:** MV-159 round 3's
+owner-axis bound on all five INSERT predicates, MV-161's pointer bounds on `pp_insert_case` and
+`oe_insert_case`, `oe`'s `source = 'self_reported'` and `verified_by is null`, and `assessments`'
+`case_id is not null` guard. Precondition (iii) is asserted directly — `private.actor_case_ids()`'s
+student-link arm is not membership-gated.
+
+**Source sweep** (`tests/architecture/no-actor-equals-student.test.ts`, write-side half): payload
+detector is structural (balanced `.insert(`/`.upsert(`/`.update(` argument text), not a line regex —
+a bare `owner:` regex matches 33 sites here of which 32 are type declarations and read mappings. One
+allowlisted payload; the dual-write choke point pinned by exports **and** importers so deleting it or
+unhooking a repository from it goes red. No exported repository function takes a user id as its
+scoping argument (one registered exemption, with its reason).
+
+**Consultancy proof:** counsellor on an `organization_id`-set, `student_user_id`-NULL case with
+`owner IS NULL` on every row **reads all nine** tables and **writes the five** the Stage 2 grant set
+permits (INSERT/UPDATE/DELETE on `user_program_state` and `document_status`; the full
+prediction → attempt → outcome chain; column-narrowed UPDATE on `profiles` and `plan_items`).
+The Stage 3 deferral is pinned as a **negative**: INSERT into `profiles` / `assessments` /
+`plan_items` / `documents` is `42501`, commented in the file with the pointer to matrix spec §6 so its
+red reads as a decision gate rather than a broken test.
+
+### §E — Stage 2 exit
+
+`tenant-isolation.itest.ts` and `case-rls.itest.ts` pass **unedited** (`git diff --stat` shows zero
+changes to either). The named exception — MV-159's `describe("transitional owner disjunct — retired by
+MV-160")` — was deleted whole: **4 `it()`, 16 `expect()`, file 163 → 147 expects.** Four further
+suites also carried window-scoped fixtures that §B makes unseedable, and a **sixth** casualty turned
+up only on a second full-lane run: MV-159's EXPLAIN probe pinned a plan-node shape justified by "a
+BitmapOr over BOTH disjuncts", which MV-160 reduces to one. All six are recorded as findings in the
+Decision log, each was verified individually, and **no matrix expectation was edited**.
+
+### Mutation table — every assertion shown to bite
+
+Full table with the test names in `docs/migrations/stage2/equivalence-report.md` §4. Summary: **M1,
+M2, M3a, M3b, M4, M4b, M4c, M4d, M5, M5b, M6, M7, M8, M8b — all RED.** Catalog fingerprint
+(constraints + policies + indexes + the trigger body) verified identical before and after the whole
+run, and the suite re-run green afterwards.
+
+Two worth reading twice. **M5** is what makes the equivalence proof non-inert — it names the user,
+the domain *and* the field. **M6** is red on the structural assertion only, because the behavioural
+probes cannot tell the narrowed body from the unconditional one once `case_id` is NOT NULL — which is
+precisely why MV-155's handoff had to be closed explicitly rather than left to self-close.
+
+### A0 — spec fidelity
+
+`git diff --stat origin/master -- docs/superpowers/ docs/kanban/board.json` is **non-empty**. Two
+contradictions found and amended in this PR, on the card, in matrix spec §9.2 / §10.1 R1, and in a
+dated §12 entry:
+
+1. **The excluded-field list.** §9.2 blessed excluding `profiles.updated_at` and
+   `user_program_state.updated_at` because "the backfill `UPDATE` fires `private.set_updated_at()`".
+   It does not — `private.mv155_backfill_personal_cases()` **disables both triggers** and re-enables
+   them, deliberately. The exclusions were covering for a mechanism nobody was guarding.
+2. **The single allowlisted `owner:` payload.** §D names `lib/cases/dual-write.ts`; that module
+   performs no write at all. The real payload site is `lib/assessments/repo.ts`'s
+   `createAnonymousAssessment`, which MV-157 §E's own header already nominates. The count is right;
+   the path was not.
+
+Also amended earlier in this PR: **§10.1 R1** named six owner-keyed uniques where there are seven,
+and its policy step would have dropped MV-159's owner-axis bound and MV-161's pointer bounds on the
+way back — landing the round-3 P0 during a rollback, the failure mode a reverse script is least
+likely to be tested for.
+
+### Rehearsal / reversibility (MV-154)
+
+`supabase/rehearsal/MV-160-rollback.sql` is written to spec §10.1 R1 order, one transaction, policies
+restored **first**. It is **executed on every CI run** by §A1, which then asserts the state it
+produced — so it is no longer an artifact that has only ever been read. It has **not** been run
+against the hosted project; that is the integrator's rehearsal step and is founder-gated.
