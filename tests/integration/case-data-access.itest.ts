@@ -805,7 +805,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-157 case-aware data access"
 
       const { adoptOwnerKeyedResidue } = await import("@/lib/cases/residue");
       for (const table of ["profiles", "documents", "assessments", "plan_items"] as const) {
-        expect(adoptOwnerKeyedResidue(admin, table, actor.caseId)).resolves.toBe(0);
+        await expect(adoptOwnerKeyedResidue(admin, table, actor.caseId)).resolves.toBe(0);
       }
 
       expect((await getProfileForCase(admin, actor.caseId))?.completeness).toBe(5);

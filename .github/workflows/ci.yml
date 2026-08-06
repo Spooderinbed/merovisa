@@ -169,8 +169,15 @@ jobs:
           # so the live pre-MV-157 upserts still infer an `ON CONFLICT` arbiter. Anchored for the
           # same reason as the four above.
           grep -q '✓ tests/integration/owner-nullable-rebase.itest.ts' vitest-integration.log
-          # 45 tests today. Same floor rationale as MV-155's.
-          test "$(grep -c '✓ tests/integration/owner-nullable-rebase.itest.ts' vitest-integration.log)" -ge 38
+          # 31 tests today, down from 45. LOWERED 38 -> 26 by MV-160, with the reason this
+          # comment block demands: `8674bf0` retired this suite's window-scoped fixtures
+          # because closing the nullable window is exactly what MV-160 does — they died at
+          # FIXTURE SEED with 23502, unconstructable by construction rather than merely
+          # failing. Each retirement was cleared by an independent adversarial pass against
+          # the applied migration (removed-matrix-cell / masked-a-regression / over-deleted /
+          # false-justification). The floor was not moved with them, so this guard — not any
+          # test — is what turned the lane red. Same floor rationale as MV-155's otherwise.
+          test "$(grep -c '✓ tests/integration/owner-nullable-rebase.itest.ts' vitest-integration.log)" -ge 26
           # MV-157: the ONLY probe that can see a case-scoping bug while the LEGACY
           # owner-scoped policies are still in force. Every assertion in it runs through
           # the service-role client with RLS bypassed, precisely because a read issued as
