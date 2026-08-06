@@ -2023,7 +2023,7 @@
     },
     {
       "id": "MV-164",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-164-stage2-capture-host-guard.md",
