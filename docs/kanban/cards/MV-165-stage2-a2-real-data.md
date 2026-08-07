@@ -37,9 +37,9 @@ state, so no PITR is needed.
 | A6 | Real production data loaded (not synthetic), `auth.users` recreated with matching uuids | ✅ §3.2 |
 | A7 | Capture pre → apply `20260805120000` then `20260805140000` **verbatim, in order** → capture post → diff | ✅ §3.3 |
 | A8 | Verdict recorded with date/run-by; §B's real sweep repair count; the 2 orphan `storage.objects` ids; status line flipped | ✅ §3, §B, §"Known pre-existing condition", header |
-| A9 | MV-164 host guard **not weakened, not bypassed** — and re-proven live | ✅ §4 row G-live; `git status scripts/stage2/` empty |
+| A9 | MV-164 host guard **not weakened, not bypassed** — and re-proven live | ✅ §4 row G-live; `git diff --stat origin/master...HEAD` does not list `scripts/stage2/` at all (a weakening that was *committed* would pass a bare `git status`, so the branch diff is the durable check) |
 | A10 | No PII committed; snapshots path gitignored; payload destroyed on the rehearsal host | ✅ §5 |
-| A11 | Nothing applied to production | ✅ every write went to `supabase_db_merovisa` |
+| A11 | Nothing applied to production | ✅ §3.2 ("a read; no write of any kind was issued against production") + §4 row G-live; every write went to `supabase_db_merovisa` |
 
 ---
 
@@ -50,7 +50,8 @@ and after: `a08f69938eae95951f88acf2684e0d6ddbf331ca4dd070ce5396986310ab3be9`.
 
 - **174 rows** captured across **10 users** (7 carry data; `student-07/09/10` are real accounts with
   none). The per-user RLS-scoped reads **sum exactly** to the service-role table totals
-  (7+36+74+12+6+0+10+10+19 = 174) — every production row is visible to exactly one student.
+  (7+36+74+12+6+0+10+10+19 = 174). **That is a count identity, not a proven bijection** — the
+  per-row uniqueness check was not run and the payload is destroyed, so see §3.3's correction.
 - **MV-160's sweep repaired ZERO rows** and minted **zero** cases. The MV-157 dual-write did not
   leak — *and* the sweep's repair path was therefore never exercised by live data (it rests on §A1's
   `student-C-residue` fixture alone). Both halves of that are recorded in §B.
@@ -69,12 +70,15 @@ incident unwind; wrong for this rehearsal, which must start where production sta
 
 So MV-161's missing reverse script was written — a real gap in this directory's reversibility
 doctrine. It restores MV-159's two INSERT predicates verbatim, drops
-`private.outcome_event_case_id()`, and asserts the restored state (9 post-conditions). Both guards
-were shown to bite:
+`private.outcome_event_case_id()`, and asserts the restored state (10 post-conditions). Its guards
+and one of its post-conditions were shown to bite:
 
 - **R1** — re-run with the helper already gone → **REFUSED**, exit 3.
 - **R2** — run *before* `MV-160-rollback.sql` (post-MV-160 DB) → **REFUSED**, exit 3, naming the
   correct order.
+- **R3** — mutation: the case axis (`actor_case_ids()`) deleted from both restored predicates in a
+  copy → **RED**, transaction aborted. Post-condition (d2) exists *because* the first draft's nine
+  checks all passed with that clause gone.
 
 It is `rehearsal/`-only and says twice, in the file, that unwinding a live P0 fix is not an incident
 action.
@@ -99,14 +103,71 @@ docker exec -i supabase_db_merovisa psql -U postgres -d postgres -v ON_ERROR_STO
 docker exec -i supabase_db_merovisa psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/rehearsal/MV-161-rollback.sql
 ```
 
-Then delete both history rows, load prod data, capture, apply both migrations in order, diff. The
-capture env (local demo keys — public dev constants, not secrets):
+Then `delete from supabase_migrations.schema_migrations where version in ('20260805120000','20260805140000');`.
+
+**Then load production data — and this step is NOT runnable as written.** The one-off reader, loader
+and fidelity checker were destroyed and are **deliberately never committed** (equivalence-report §5
+gives the reason: committing them reinstates the full-population export path MV-164 exists to close).
+They must be **rewritten**; equivalence-report §3.2 is the spec, including the four traps below.
+
+Then capture → apply `20260805120000` → apply `20260805140000` → diff. **All four env vars are
+required** — `capture-read-path-snapshot.mjs` calls `requireEnv` on each and throws on the first
+missing one, before reading a single row. These are the local demo keys: public dev constants, not
+secrets.
 
 ```bash
-SUPABASE_URL="http://127.0.0.1:54321" SUPABASE_JWT_SECRET="super-secret-jwt-token-with-at-least-32-characters-long" npm run stage2:equivalence -- --snapshot docs/migrations/stage2/snapshots/pre-migration.json
+export SUPABASE_URL="http://127.0.0.1:54321" SUPABASE_JWT_SECRET="super-secret-jwt-token-with-at-least-32-characters-long" SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0" SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
 ```
 
-**Gate:** `npm run typecheck && npm run lint && npm test` — all three green.
+```bash
+npm run stage2:equivalence -- --capture --out docs/migrations/stage2/snapshots/pre-migration.json
+```
+
+```bash
+npm run stage2:equivalence -- --snapshot docs/migrations/stage2/snapshots/pre-migration.json
+```
+
+**Gate:** `npm run typecheck` · `npm run lint` · `npm test` · `npm run test:integration` (against a
+local stack — `npm test` excludes `**/*.itest.ts`, so it never runs the §A1 suite this card claims
+parity with).
+
+## Done evidence
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` | exit **0** |
+| `npm run lint` | exit **0** |
+| `npm test` | **333 files, 2674 tests passed**, exit 0 |
+| `npm run test:integration` | **not runnable on this host** — `capture-read-path-snapshot.mjs` line 1 is `#!/usr/bin/env node` with a **CRLF** ending, which the vitest SSR transform cannot parse on a Windows working tree. Pre-existing (this branch touches no code); covered by CI instead. |
+| CI on PR **#129** | `validate` **pass** (4m13s) · `integration` **pass** (4m2s) · Vercel **pass** ×2 |
+| Branch / commits | `mv-165-stage2-a2-real-data` — `818d770` (work), `9f19341` (board) |
+
+## Context links
+
+- Spec: `docs/superpowers/specs/2026-08-02-stage2-migration-and-access-matrix.md` §9.2, §9.10, §10.1 R1
+- The gate: `docs/migrations/stage2/equivalence-report.md` (§3.0 amendment, §3.1–3.4 the run, §B, §4)
+- Parents: `cards/MV-160-tighten-stage2-exit.md` · `cards/MV-161-unbounded-insert-columns.md` · `cards/MV-164-stage2-capture-host-guard.md`
+- Rehearsal: `supabase/rehearsal/README.md` · `MV-160-rollback.sql` · `MV-161-rollback.sql` (new here)
+
+## Dependencies / blocked-by
+
+- **Upstream:** MV-160, MV-161 (the two migrations under test), MV-164 (the host guard).
+- **Downstream — this is the point of the card:** the production apply to `obfvrxixtautamflzxzq` is
+  **founder-gated** and is performed by the **composer session**, which holds the authorized Supabase
+  connector. This card produces the evidence; it does not apply anything.
+
+## Risk notes
+
+Three limits a reviewer needs, none of which the green verdict conveys:
+
+1. **Half of Stage 2 is not in any diff.** MV-155 → MV-159 is already live and can never be diffed
+   (§3.0). Its only evidence is the zero-residue table, which proves the invariant held — not that
+   every field is byte-identical to its pre-Stage-2 value.
+2. **The sweep's repair path was never exercised by live data** (0 repairs), so its correctness rests
+   entirely on §A1's synthetic `student-C-residue` fixture (§B).
+3. **`document_status` (0 prod rows) and the anonymous-assessment population (0 rows) are vacuous**
+   in §A2 — empty-set comparisons, not passing evidence (§3.0). The 174-row count identity is a
+   count identity only; the per-row uniqueness check was not run (§3.3).
 
 ---
 

@@ -1,7 +1,10 @@
 # Stage 2 data-equivalence report (MV-160 §A)
 
-**Status: §A1 GREEN · §A2 GREEN on real production data, 2026-08-07 (boundary AMENDED — see §3.0).
-The production apply is no longer gated on this file; it is gated on the founder reading it.**
+**Status: §A1 GREEN · §A2 GREEN on real production data, 2026-08-07 — at an AMENDED boundary.**
+**§A2 now covers the two PENDING migrations only. The MV-155 → MV-159 interval, which is already
+live, is crossed by no diff in either half of this proof and never can be — §3.0 says why and what
+stands in its place. The evidence this file owed is recorded; the remaining gate is the founder
+reading §3.0's scope limits before authorising the apply.**
 
 The Stage 2 exit gate is *"existing students see the same correct data, while case-scoped
 repositories no longer depend on actor equals student"* (consultancy plan line 637). This file is
@@ -72,8 +75,13 @@ an artifact that is only ever read, and is needed only during an incident), and 
 an owned, `case_id`-null row is seedable again.
 
 This is the MV-160 boundary (pre-tighten → post-tighten), **not** the whole-of-Stage-2 boundary. The
-whole-stage boundary would need reverse scripts for MV-155/156/158/159 that do not exist. That is
-§A2's job, and it is why §A2 is the exit gate and §A1 is the regression net.
+whole-stage boundary would need reverse scripts for MV-155/156/158/159 that do not exist.
+
+**That used to be §A2's job. It no longer is, and no other section has taken it over.** §3.0 amends
+§A2 to the pre-MV-161 → post-MV-160 boundary because the whole-stage one is permanently unreachable,
+so **the MV-155 → MV-159 interval is crossed by NO diff in either half of this proof.** Its evidence
+is the zero-residue inspection in §3.0 and nothing stronger. §A2 remains the exit gate for the two
+pending migrations; §A1 remains the regression net.
 
 ### The corpus
 
@@ -151,6 +159,14 @@ second is the uncomfortable one:
 
 - **Verdict:** **EQUIVALENT — zero differences.** Whole-snapshot hash identical before and after:
   `a08f69938eae95951f88acf2684e0d6ddbf331ca4dd070ce5396986310ab3be9`. CLI exit `0`.
+  **"Zero differences" is measured over every column EXCEPT the eleven on §2's exclusion list** —
+  `case_id` on all nine tables, plus `user_program_state.id` and `document_status.id`. That list is
+  shared with §A1 by design, and its `case_id` rationale ("there is no pre-Stage-2 value to compare
+  against") is §A1's, not this boundary's: at the amended boundary `case_id` exists and is populated
+  on **both** sides, so it *could* have been compared here and was not. The gap is closed by
+  measurement rather than left open — the sweep report in §3.3 shows **0** rows rewritten on every
+  table, so no `case_id` moved, and §3.0's table shows none was NULL to begin with. A reader should
+  nonetheless know the headline hash does not cover those eleven columns.
 - **Date:** 2026-08-07
 - **Run by:** MV-165, on the **local rehearsal host** (`supabase_db_merovisa`, `127.0.0.1:54321`) —
   not CI, and never against production. The MV-164 host guard was re-tested during this run and
@@ -205,7 +221,7 @@ than a diff.
 an empty list is byte-identical to another snapshot of an empty list. That domain shows `=` below on
 all ten users because there was nothing to compare, **not** because a comparison passed. The only
 evidence covering `document_status` is §A1's synthetic corpus. The same caveat applies, for the same
-reason, to the anonymous-assessment population: production carries **0** anonymous rows (§3.2), so
+reason, to the anonymous-assessment population: production carries **0** anonymous rows (§3.0's table), so
 the case-less branch has no live subject either.
 
 ### 3.1 How the pre-state was reached — and the reversal that had to be written
@@ -238,7 +254,7 @@ a rehearsal-only act.
 | `*_ownership_axis_present` checks | 8 | 8 | ✅ |
 | Policies on `public` | 45 | 45 | ✅ |
 | …of which mention `owner` (MV-159's transitional disjunct) | 31 | 31 | ✅ |
-| `case_id` NOT NULL on the nine | 0 | 0 | ✅ |
+| `case_id` NOT NULL on the eight MV-160 tightens | 0 | 0 | ✅ |
 | `private.outcome_event_case_id()` present | no | no | ✅ |
 | `schema_migrations` max version | `20260803180000` | `20260803180000` | ✅ |
 
@@ -280,6 +296,8 @@ Four things the copy had to get right, each verified rather than assumed:
 | `application_attempts` | 10 | `d8783db698ca` = |
 | `outcome_events` | 19 | `6643ab28a58e` = |
 
+`document_status` is absent from the table above because it has **0** production rows — it was copied
+as empty, which is why all nine read paths are accounted for and only eight appear.
 `leads` (11 rows) and `audit_events` (0) were **not** copied: nothing in the nine read paths
 references them. `organizations` / `organization_memberships` / `case_assignments` / `invitations`
 are empty on production and were copied as empty.
@@ -300,12 +318,20 @@ no edit of any kind.
 | Users captured | **10** (all of production's `auth.users`) |
 | Rows in the snapshot | **174** |
 | Users carrying ≥1 row | 7 of 10 — `student-07`, `student-09`, `student-10` are real accounts with **no data at all** on any of the nine |
-| Anonymous assessments | **0 → 0** (see §3.2's caveat) |
+| Anonymous assessments | **0 → 0** (see §3.0's caveat) |
 
 **The 174 rows read RLS-scoped, summed per user, equal the service-role table totals exactly**
-(7 + 36 + 74 + 12 + 6 + 0 + 10 + 10 + 19 = 174). Every production row on the nine is visible to
-exactly one student, none is orphaned or invisible, and none is double-counted. That is a stronger
-statement than the diff itself and it is what makes the diff meaningful.
+(7 + 36 + 74 + 12 + 6 + 0 + 10 + 10 + 19 = 174).
+
+**Read that as a count identity and nothing more — an earlier draft of this section overstated it.**
+A sum is satisfied identically by a correct one-row-one-student partition *and* by a state where one
+row is visible to two students while another is visible to none. The per-row uniqueness check that
+would exclude the second case was **not run**, and the payload has since been destroyed (§5), so it
+cannot be run retrospectively. What the identity does establish is worth having and is weaker than a
+bijection: **the visible-row count matches the table totals on every one of the nine**, so no bulk
+population is invisible to the students who own it and none is grossly duplicated. Anyone re-running
+§A2 should add the id-level set comparison — the snapshot carries row ids, so it is cheap — and this
+paragraph should then be replaced by its result.
 
 | User | profile | assessments | plan | shortlist | documents | checklist | predictions | attempts | outcomes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -411,13 +437,15 @@ ahead of the enumeration; the mutation evidence for it is §4's guard table, row
 
 ### Expected values, stated BEFORE the run so a surprise is legible
 
-Stated before the run; the **Measured** column was filled afterwards and every prediction held.
+Stated before the run; the **Measured** column was filled afterwards. **Three of the four held; the
+fourth was satisfied vacuously and is marked so** — ticking "only personal cases were added" against
+an empty set is exactly the vacuity this document flags elsewhere.
 
 | Measurement | Expected | **Measured 2026-08-07** | Why |
 | --- | --- | --- | --- |
 | Anonymous assessments (`owner IS NULL`) | **0** | **0** ✅ | The plan's "40 anonymous/unclaimed" is from 2026-07-23. A hosted capture on 2026-08-02 found 36 assessments and 0 with `owner IS NULL` — MV-135's 3-day purge has cleared the population, which is transient by design. A reviewer expecting 40 will read 0 as a capture bug. **Consequence that is not "just update the number": the case-less behaviour has no live subject to exercise, so it is proven only by §A1's synthetic seed and the rehearsal cannot confirm it.** |
 | Assessments total | ~36 | **36** ✅ | Same 2026-08-02 capture; read the real number at capture time. |
-| Rows added by Stage 2 | personal `cases` only | **none at all** ✅ | Nothing else is created and nothing is deleted — and in the event the sweep minted **zero** cases, because there was no residue to repair (§3.3). |
+| Rows added by Stage 2 | personal `cases` only | **none at all** — ⚠️ **vacuous** | Nothing else is created and nothing is deleted — and in the event the sweep minted **zero** cases, because there was no residue to repair (§3.3). |
 | Diff | **zero** | **zero** ✅ | Non-zero = the stage exit has failed. |
 
 ### Known pre-existing condition — 2 orphan `storage.objects`
@@ -517,6 +545,7 @@ rehearsal database:
 | --- | --- | --- |
 | R1 | run a **second** time, with the helper already dropped | **REFUSED**, exit `3` — `private.outcome_event_case_id() does not exist, so MV-161 is not applied … refuses rather than re-typing MV-159's predicates over an unverified state` |
 | R2 | run **before** `MV-160-rollback.sql`, i.e. against a post-MV-160 database | **REFUSED**, exit `3` — `program_predictions.case_id is NOT NULL, so MV-160 … is still applied. Unwind in REVERSE ORDER OF APPLICATION` |
+| R3 | **mutation** — the case axis (`case_id = any (private.actor_case_ids())`) deleted from both restored predicates in a COPY of the script | **RED**, transaction aborted — `POST-CONDITIONS FAILED: only 0 of 2 INSERT predicates still bound the CASE axis … a client could name a case it has no access to`. Check (d2) was added *because* the first draft's nine post-conditions all passed with that clause gone — checks (c) and (d) cover the owner arm and the transitional arm and neither notices. |
 
 It was also run **forward-clean** in the real sequence, its nine post-conditions passed, and the
 database it produced then matched production's catalog on **all six probes** in §3.1's table — the
@@ -548,8 +577,12 @@ decided never to hold.
 
 ### Destruction record — MV-165, 2026-08-07
 
-Both copies of the payload are gone. Nothing in this report, the MV-165 card or its PR carries a row,
-an email, a name or a user id — counts, pseudonyms, hashes and verdicts only.
+Both copies of the payload are gone. Nothing in this report, the MV-165 card or its PR carries a
+**student** row, an email, a name or a user id — counts, pseudonyms, hashes and verdicts. **Two
+deliberate exceptions, named rather than glossed:** the two `storage.objects` UUIDs above, which are
+object keys rather than student identifiers and which this section is explicitly asked to record; and
+the single field value in §3.4's mutation line (`completeness: 100 -> 101`), one integer attached to
+a pseudonym.
 
 | Artifact | Disposition |
 | --- | --- |

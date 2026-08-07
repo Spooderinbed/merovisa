@@ -57,7 +57,7 @@
 --   (+) the transitional owner disjunct's INSERT shape (`and case_id is null`). The bare form admits
 --       a row into any case the actor names — MV-159 round 2 measured it.
 --
--- §3 asserts all of them by measurement rather than trusting this comment.
+-- §4 asserts all of them by measurement rather than trusting this comment (§3 is the helper drop).
 --
 -- ============================ THE HOLE THIS RE-OPENS, STATED PLAINLY ============================
 --
@@ -78,6 +78,14 @@
 --
 -- No `lock_timeout`, deliberately, and for `MV-160-rollback.sql`'s reason: an unwind that fails
 -- part-way is worse than an unwind that waits for the lock.
+
+-- `MV-160-rollback.sql:145`'s line, and it is load-bearing rather than decorative. Both guards below
+-- work by `raise exception`. WITHOUT this, a psql invoked without `-v ON_ERROR_STOP=1` does not stop:
+-- it continues past the refusal, every following statement fails `25P02`, and the closing `commit;`
+-- is executed inside an aborted transaction — which Postgres turns into a ROLLBACK and reports as
+-- `ROLLBACK`, exit code 0. A REFUSAL WOULD THEN READ AS SUCCESS to any harness checking the exit
+-- code. Setting it in the file means the guards cannot be defeated by the way the file is invoked.
+\set ON_ERROR_STOP on
 
 begin;
 
@@ -247,6 +255,23 @@ begin
   if v_n <> 2 then
     v_problems := v_problems || format(
       '%s of 2 INSERT predicates carry the INSERT shape of the transitional disjunct (`and case_id is null`)', v_n);
+  end if;
+
+  -- (d2) THE CASE AXIS ITSELF. Checks (c) and (d) cover the OWNER arm and the transitional arm, and
+  --      between them they would both pass on a predicate that had lost
+  --      `case_id = any (private.actor_case_ids())` — the clause that decides WHICH CASE a row may
+  --      be inserted into at all. Without it the case arm degenerates to "any non-null case_id whose
+  --      student matches the owner", i.e. a client may insert into a case it has no access to. This
+  --      script re-types both predicates in full, so that clause is exactly as droppable as the ones
+  --      already guarded, and nothing else in this block would notice.
+  select count(*) into v_n
+    from pg_catalog.pg_policy p
+   where p.polname in ('pp_insert_case', 'oe_insert_case')
+     and pg_catalog.pg_get_expr(p.polwithcheck, p.polrelid) like '%actor_case_ids%';
+  if v_n <> 2 then
+    v_problems := v_problems || format(
+      'only %s of 2 INSERT predicates still bound the CASE axis with private.actor_case_ids() — a '
+      'client could name a case it has no access to', v_n);
   end if;
 
   -- (e) the parentage clauses survived.
