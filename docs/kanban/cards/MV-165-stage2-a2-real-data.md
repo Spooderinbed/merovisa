@@ -160,11 +160,12 @@ authorized ("yes apply"), and **both migrations are now live on production**. Fu
 
 1. Production holds **0 anonymous unclaimed assessments**, so step (c)'s exception is structurally
    correct but has no live data exercising it. Same vacuity §A2 flagged; still open.
-2. **Migration-ledger drift — OPEN, founder action.** `apply_migration` stamped its own wall-clock
-   versions (`20260807032103` / `20260807065246`) instead of the repo filenames. Nothing user-facing
-   is affected, but the **next** `supabase db push` would re-run both files and fail. The corrective
-   `UPDATE` is blocked by the agent safety classifier, so it cannot be done by an agent. Fix and both
-   remedies are in §6.4.
+2. ~~**Migration-ledger drift — OPEN.**~~ **RESOLVED same day, 2026-08-07.** `apply_migration` had
+   stamped its own wall-clock versions (`20260807032103` / `20260807065246`) instead of the repo
+   filenames, which would have made the **next** `supabase db push` re-run both files and fail.
+   Corrected with two single-row `UPDATE`s; verified at 24 migrations, tail matching the repo
+   filenames, zero stale rows. §6.4 keeps the full record — the trap recurs on every migration
+   applied via the MCP.
 
 ## Context links
 

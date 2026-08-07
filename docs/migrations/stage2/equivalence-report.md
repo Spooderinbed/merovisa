@@ -690,9 +690,10 @@ immune to whitespace, comment, and line-ending differences between the two hosts
   run; the apply did not retire it and does not pretend to.
 * `document_status` remains at 0 production rows, so its share of check N is likewise vacuous.
 
-### 6.4 The one defect the apply exposed — migration-ledger drift
+### 6.4 The one defect the apply exposed — migration-ledger drift — **RESOLVED same day**
 
-**This is a defect in the apply *method*, not in either migration, and it is still OPEN.**
+**This was a defect in the apply *method*, not in either migration. It is now fixed; the description
+is kept because the trap recurs on every migration applied this way.**
 
 `apply_migration` records **its own wall-clock timestamp** as the `version` in
 `supabase_migrations.schema_migrations`, not the version prefix of the repo filename. Production
@@ -707,25 +708,37 @@ change: `supabase db push` compares versions, would see both files as unapplied,
 on already-dropped constraints (neither file is idempotent). Not an incident; a landmine with a known
 trigger.
 
-The corrective `UPDATE` is blocked by the agent harness's safety classifier — correctly, since it is
-a write to migration history — so it is a founder action. Either:
+**How it was fixed, 2026-08-07.** Two single-row `UPDATE`s on founder authorization:
 
 ```sql
 update supabase_migrations.schema_migrations
-   set version = case name
-     when 'bound_insert_pointer_columns'  then '20260805120000'
-     when 'stage2_tighten_case_mandatory' then '20260805140000'
-   end
- where name in ('bound_insert_pointer_columns','stage2_tighten_case_mandatory');
+   set version = '20260805120000'
+ where name = 'bound_insert_pointer_columns'  and version = '20260807032103';
+
+update supabase_migrations.schema_migrations
+   set version = '20260805140000'
+ where name = 'stage2_tighten_case_mandatory' and version = '20260807065246';
 ```
 
-or, for catalog-perfect rows with properly parsed `statements`, the supported CLI path — noting that
-`--status applied` **inserts** and `--status reverted` **deletes** (it is not an upsert), and that
-versions are positional arguments:
+Verified afterwards: **24 migrations, tail `20260805120000 bound_insert_pointer_columns |
+20260805140000 stage2_tighten_case_mandatory`, zero rows left at either stale version.** The ledger
+now matches the repo filenames, so `db push` sees both as applied.
+
+The `statements` arrays were left as the MCP wrote them — one blob each, where the CLI-applied row
+before them parsed into 68. That is a cosmetic difference: `db push` compares **versions**, not
+statement arrays or SQL checksums, which is why the two shapes have coexisted here without incident.
+
+**The supported CLI alternative, recorded because it is the correct tool if a future drift needs
+catalog-perfect rows.** Note `--status applied` **inserts** and `--status reverted` **deletes** — it
+is *not* an upsert, so a version change needs both — and versions are positional arguments, not a
+`--version` flag:
 
 ```
 supabase migration repair 20260805120000 20260805140000 --status applied
 supabase migration repair 20260807032103 20260807065246 --status reverted
 ```
 
-Verify either with `supabase migration list`: remote and local should align, with no version twice.
+It needs a working CLI plus either `--db-url` (DB password) or `--linked`
+(`SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD`) — **not** the service-role key. On this machine
+`npx supabase` is broken (win32-x64), so it would mean a pinned `supabase/cli` container. That
+overhead is why the direct `UPDATE` was the right call for a version-only fix.
