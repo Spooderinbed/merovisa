@@ -99,4 +99,48 @@ This card ships a document and card dossiers, so its "tests" are checks a review
 
 ## Done evidence
 
-(pending)
+**Shipped 2026-08-07** on branch `mv-166-stage3-spec`. Documentation and board state only.
+
+### What was produced
+
+- **`docs/superpowers/specs/2026-08-07-stage3-workspace-and-access-matrix.md`** — 11 sections: authority + grounding (§1), captured inventory (§2), the stage invariant (§3), the 20-surface × 7-actor access matrix (§4), what Stage 3 does NOT change (§5), the three inherited debts resolved (§6), seven findings (§7), the slice carve + DAG (§8), the exit gate + vacuity analysis (§9), the query appendix (§10), decision log (§11).
+- **`docs/kanban/cards/MV-167-stage3-umbrella.md`** — Stage 3 umbrella, `col: backlog`, tracking only.
+- **Seven slice rows appended to `board.json`** in `backlog`: MV-168…MV-174, each with a real summary.
+
+### A — grounded, not narrated
+
+Grounded in a **live read** of `supabase_db_merovisa` (local Docker), verified at the repo migration head first: 24 files in `supabase/migrations/`, 24 rows in `supabase_migrations.schema_migrations`, identical set. **Production was not read** — criterion A prescribes the local stack, and MV-164's host guard was neither weakened nor touched. Eight queries recorded in spec §10 as `[Q1]`–`[Q8]` and cited inline beside every derived claim.
+
+**The live read changed the answer twice**, which is the whole justification for the card:
+
+1. **Table-level grants understate the write surface.** `information_schema.role_table_grants` shows `authenticated` holding no UPDATE on any table — reading only that, the deferred-grant debt looks enormous. MV-161 replaced table-wide privileges with **column-scoped** grants, visible only in `role_column_grants` `[Q3]`. Spec §2.2 records both and marks the column set authoritative.
+2. **Canonical divergences #2 and #4 look open in the policies and are not.** `cases_update_accessor` admits the linked student and the column grant includes `archived_at`/`operational_status`. They are enforced by the `cases_write_surface_guard` **trigger** `[Q6]`, not by RLS. A false finding was drafted and withdrawn after reading the trigger body; spec §2.4 exists so the next reader does not repeat it.
+
+### B — the matrix extends Stage 1's
+
+Spec §4: 20 surfaces × 7 actors (owner, admin, counsellor-assigned, counsellor-unassigned, linked student, inactive membership, anonymous), each cell naming its enforcement point, its owning slice, and the canonical row it traces to. Cells that exist only in Stage 3 are marked **NEW** and raised as findings (F-2, F-3, F-4) rather than decided. The dual-role and inactive-membership rules are shown holding **mechanically** — `status = 'active'` appears in all five `actor_*_ids()` helpers, in `actor_assigned_case_ids()`'s join, and in `can_staff_case` `[Q5]` — not assumed.
+
+### C — the three debts resolved on paper
+
+- **Deferred grants: ten verbs, not four.** Stage 2 spec §6 enumerates ten; the card's "four" is a simplification of the four INSERTs. All ten re-measured live and dispositioned (spec §6.1): **3 granted** (`profiles` INSERT, `plan_items` INSERT, `assessments` UPDATE narrowed to `is_primary`) in MV-168; **4 refused permanently** (`assessments` INSERT — client-writable `result`/`rule_version` would let any actor mint their own verdict against the server-side scoring rule; `assessments` DELETE; `plan_items` DELETE); **1 deferred to Stage 4** (`documents` INSERT — its only caller also needs a Stage 4 Storage policy, so granting it alone retires no service-role path); **2 confirmed never** (append-only chains).
+- **The `42501` pin is one test, not eight.** `grep -c 42501` returns 8 lines in `tests/integration/stage2-tighten.itest.ts`, but only **4 are assertions** pinning the deferral (lines 945/956/961/971), all inside the single `DEFERRED HALF` test; the other two assertions (775, 783) are cross-case policy tests that must not be touched. Spec §6.1 gives MV-168 a four-step retirement: invert 2 assertions, leave 2 green with a corrected comment, amend Stage 2 §6, add a dated §12 entry.
+- **Nine service-role paths, dispositioned individually** (spec §6.2): 2 retire (MV-168+MV-172), 2 narrow, 2 reclassify to `sanctioned` (**F-6** — mislabelled), 3 wait for Stage 4. **The list also grows by one**: a case needs an assessment scored, and §6.1 refuses to let the client write one, so Stage 3 adds a case-scoped scoring route. Net 9 → 8.
+- **Consultancy row shape** (spec §6.3): `owner IS NULL` + `case_id` set is already legal — every uniqueness index is keyed on `case_id`, never `owner` `[Q7]`, `owner` is nullable on all nine tables, and the composite FK chain is `(id, case_id)`. **Stage 3 needs grants and policies, not a migration.** One trap recorded: `mv155_derive_case_id_from_owner` only derives when `owner IS NOT NULL`, so a consultancy writer must supply `case_id` explicitly or hit `23502`.
+
+### D — the carve
+
+Max id verified on `board.json` at carve time (**167 cards, max MV-166**), so IDs run **MV-167 upward**. Umbrella MV-167 + seven slices MV-168…MV-174. DAG with **a stated reason per edge** (spec §8.2), each labelled **data** / **code** / **gate** — the one code edge (MV-170 → MV-171) is stated as parallelisable-at-the-cost-of-rework rather than dressed up as a data dependency. **No release train**, with the justification for its absence recorded. **All seven slices are reachable on seeded test data; none is blocked by D-B**, which gates real-data onboarding (Stage 7's pilot), not construction.
+
+### E — the exit gate and its vacuity
+
+Six observable criteria E1–E6 at named layers (spec §9.1), each paired with **how it could pass vacuously and the guard that prevents it** (§9.2). E4 is the direct analogue of Stage 2 §A2: it passes trivially if the case under test has a `student_user_id`, or on an empty write set — so it must assert `student_user_id IS NULL`, `owner IS NULL` on every row written, **and** a created-row count `> 0`. §9.3 states the gate's own limit up front: with D-B shut, every criterion is proved on seeded test data, so a green Stage 3 licenses the claim *the mechanism works*, never *it works for real students*.
+
+### Findings — the highest-value output
+
+Seven, in spec §7. **F-1 is a blocker and is deliberately left to the founder:** the plan's exit gate says an *authorized counsellor* can **create** and **assign**, but both enforcement layers deny a counsellor exactly those two verbs (`cases_insert_admin` and `case_assignments_insert_admin` require `is_org_admin`; `CASE_PERMISSION_MATRIX.counsellor` sets both to `"deny"`, with the comment *"Widening this is a deliberate later decision, not a convenience"*). The layers agree with each other — the plan's prose is what disagrees. The spec proceeds provisionally on reading (a) ("counsellor" = consultancy staff) and does not move a canonical cell.
+
+### Gate
+
+- `node docs/kanban/build.mjs` → **exit 0**, 175 cards (167 + 8 carved: the MV-167 umbrella + seven slices), MV-167 dossier resolved. `board.json` diff is **+89 / −1**, the single removed line being MV-166's own `"col": "ready"` — append-only, no union.
+- **`git diff --stat origin/master -- app/ lib/ components/ supabase/ tests/` → EMPTY.** No product code, no SQL, no test changes. The card shipped a document and board state, as specified.
+- `typecheck` / `lint` / `test` untouched-green by construction (no source files changed); CI's `validate` + `integration` are the gate on the PR.

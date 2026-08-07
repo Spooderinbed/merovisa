@@ -2046,12 +2046,100 @@
     },
     {
       "id": "MV-166",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-166-stage3-spec.md",
       "title": "Write the Stage 3 spec (consultancy workspace): access matrix, route model, grant resolution, and the slice carve",
       "summary": "Stage 3's entire planning today is FOUR BULLETS in the consultancy plan (lines 639-646), where Stage 2 entered execution with a 13-step sequence plus a dedicated 12-section spec. Stage 1's documented failure mode was six slices each deriving an access matrix from the plan's prose independently — the Stage 2 spec's §9 lists ELEVEN contradictions that had to be reconciled afterwards, and MV-154 carries a stage-level amend-the-spec-in-your-own-PR rule added only because the prose version failed twice running. This card writes docs/superpowers/specs/2026-08-XX-stage3-workspace-and-access-matrix.md, grounded in a LIVE READ of the schema (never the plan's prose), extending the canonical Stage 1 access matrix cell-for-cell rather than re-deriving it; resolves on paper the three debts Stage 2 handed forward (the four deferred write grants on profiles/assessments/plan_items/documents INSERT, pinned shut by MV-160's 42501 assertions; the nine remaining legacy-owner-scoped service-role paths; case routes and consultancy UI); and produces the slice carve — IDs from MV-167 up, DAG with a reason per edge, a Stage 3 umbrella, and a statement of which slices are reachable on TEST DATA versus which need the Stage 0 D-B legal gate that is currently SHUT with counsel. Ships NO product code and NO SQL: a non-empty git diff over app/ lib/ components/ supabase/ tests/ means the card overran. Not blocked — Stage 2 is complete and live in production (PR #129, master b3347a9), and writing the carve is exactly the work that is useful while counsel is out.",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-167",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "founder+agent",
+      "file": "cards/MV-167-stage3-umbrella.md",
+      "title": "Umbrella: Stage 3 consultancy workspace (MV-168 grants · MV-169 org+team · MV-170 student list · MV-171 case creation+assignment · MV-172 case route · MV-173 indicators+field allowlist · MV-174 service-role retreat + stage exit)",
+      "summary": "TRACKING ONLY — do NOT build from this card. Drives Stage 3 to its exit gate (an authorized counsellor can create, find, assign, and manage a case WITHOUT a student account) across seven slices. The authoritative document is docs/superpowers/specs/2026-08-07-stage3-workspace-and-access-matrix.md, written by MV-166 and grounded in a live schema read rather than the plan's four bullets; every slice reads it instead of the prose, and a slice that contradicts it amends it IN ITS OWN PR. Holds the slice map, the DAG (a stated reason per edge; NO release train, and why), the six exit criteria with their vacuity guards, and F-1 — the one open founder decision: the plan's exit gate says a COUNSELLOR can create and assign, but both enforcement layers deny a counsellor exactly those two verbs, so the spec proceeds provisionally on reading (a) rather than move a canonical cell. NOT blocked by the Stage 0 D-B legal gate: D-B gates real-data onboarding (Stage 7's pilot), not construction, and all seven slices are reachable on seeded test data. Dossier: cards/MV-167-stage3-umbrella.md.",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-168",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "file": null,
+      "title": "Stage 3 slice 1 — the consultancy write grants, and retiring MV-160's 42501 pin in the same PR",
+      "summary": "PREREQUISITE, not a late slice: nothing can be written into a student-less case until these land. The ONLY SQL in Stage 3 — no schema change. Adds INSERT grant+policy on profiles and plan_items and a NARROWED UPDATE (is_primary) grant+policy on assessments, each mirroring the five-sibling WITH CHECK template already shipped (case_id IS NOT NULL AND case_id = ANY(actor_case_ids()) AND (owner IS NULL OR owner = case_student_id(case_id))) — that third conjunct is the consultancy-row clause and omitting it is the bug. Stage 2 spec §6 defers TEN verbs, not four; spec §6.1 dispositions all ten: 3 granted here, 4 refused permanently (assessments INSERT is refused because client-writable result/rule_version would let any actor mint their own verdict against the server-side scoring rule; assessments DELETE; plan_items DELETE), 1 deferred to Stage 4 (documents INSERT — its only caller also needs a Stage 4 Storage policy, so granting it alone retires no service-role path), 2 confirmed never. RETIRES THE PIN IN THIS SAME PR: the pin is ONE test (stage2-tighten.itest.ts 'DEFERRED HALF') holding FOUR assertions, not eight — invert the profiles and plan_items ones, leave the assessments and documents ones GREEN with a corrected comment, amend Stage 2 spec §6 and add a dated §12 entry. Retires service-role entries 8 and 9 (with MV-172). See spec §6.1 + §8.2 for why widening a production grant before any caller exists is safe here.",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-169",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "file": null,
+      "title": "Stage 3 slice 2 — org context, org selection, and team management",
+      "summary": "Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4.",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-170",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "file": null,
+      "title": "Stage 3 slice 3 — student list, search, filters, and statuses",
+      "summary": "Plan bullet 2a. The org-scoped case list with search, filter and operational_status display. READ-ONLY — no creation, no assignment, no writes at all (MV-171 owns those). Assigned-only for counsellors, all-org for owner/admin, nothing for an unassigned counsellor or an inactive membership (cases_select_accessor → admin-org ∪ assigned ∪ own; access matrix cell 7). Depends on MV-169: the list is scoped by the selected organization, so with no org context there is no scope to list within. TEST TRAP recorded in the spec's exit-gate vacuity table: a fixture with only ONE case, or an 'unassigned' counsellor who holds no membership at all, turns this into a tenancy test that Stage 1 already passes — the fixture must hold at least two cases in the SAME org with the unassigned counsellor holding an ACTIVE membership. This slice is also what first exposes F-3 (a linked student can rewrite the display_name and email this list shows a counsellor); the fix lands in MV-173, in the same stage that creates the exposure.",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-171",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "file": null,
+      "title": "Stage 3 slice 4 — case creation and assignment (carries the F-1 decision)",
+      "summary": "Plan bullet 2b. Create a case with organization_id set and student_user_id NULL through the AUTHENTICATED client; assign/reassign the primary counsellor; write operational_status (gated by the cases_write_surface_guard trigger → can_staff_case). Also adds the case-scoped scoring route, because a case needs an assessment and spec §6.1 refuses to let the client write one — a NEW service-role registry entry, deliberately registered, which is why Stage 3 ends at 8 entries rather than 7. BLOCKED ON FOUNDER DECISION F-1 (MV-168/169/170 are not): the plan's exit gate says an authorized COUNSELLOR can create and assign, but BOTH enforcement layers deny a counsellor exactly those two verbs — cases_insert_admin and case_assignments_insert_admin require is_org_admin, and CASE_PERMISSION_MATRIX.counsellor sets case.create and case.assign to 'deny' with the comment 'Widening this is a deliberate later decision, not a convenience'. The layers AGREE; it is the plan's prose that disagrees. Reading (a) = 'counsellor' is loose prose for consultancy staff, build for owner/admin, nothing moves (spec's recommendation). Reading (b) widens the role and MOVES A CANONICAL CELL, needing its own slice plus edits to the Stage 1 suites. NOT a multi-counsellor model: case_assignments_primary_idx allows at most one primary counsellor per case and assignment_role is restricted to that single literal. No archive (Stage 6), no student invitation (Stage 5).",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-172",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "file": null,
+      "title": "Stage 3 slice 5 — render the existing experience inside an explicit case route",
+      "summary": "Plan bullet 3, and the largest surface in the stage. Renders the existing MeroVisa experience (profile, matches, plan, documents, checklist) under an explicit case route for a case that is NOT the actor's own — the first time a non-student actor reaches student data through the product. Flips app/api/profile/section/route.ts and app/api/plan/action/route.ts off service-role onto the authenticated client, retiring service-role registry entries 8 and 9; those flips ARE grants 1 and 5, which is why MV-168 is a hard predecessor (without it this slice ships the case route still on service-role, the exact inverse of the enforcement boundary). Depends on MV-171 for a real student-less case to exercise: before it, the route can only be tested against a personal case, which is the Stage 2 shape and proves nothing new. NOT IN SCOPE: any change to the documents model, Storage paths, or signed downloads (Stage 4 — object paths stay owner-keyed through Stage 3 by the Stage 2 spec §8 decision); the case-context indicators (MV-173). Access matrix cells 13-17 in spec §4.",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-173",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "file": null,
+      "title": "Stage 3 slice 6 — case-context indicators, and closing the student field-allowlist gap (F-3)",
+      "summary": "Plan bullet 4, plus the trust bug the list surface exposes. Persistent, unmissable indication of WHOSE case the actor is in and whether it is their own — a counsellor editing a student's profile must never be able to mistake it for their own data. PLUS F-3, which is a trust risk rather than a cosmetic one: cases grants authenticated UPDATE on (archived_at, display_name, email, operational_status), cases_update_accessor admits the LINKED STUDENT, and enforce_case_write_surface guards only archived_at and operational_status — so display_name and email are student-writable, and those are exactly the two columns MV-170's list renders to a counsellor. A student could rename their case to impersonate another student in the list, or change the email a counsellor corresponds with. This is the concrete instance of the field-allowlist gap that lib/cases/permissions.ts and lib/cases/README.md both record in the abstract ('a Stage 3 mutation that accepts an arbitrary case patch from a student is a defect even though this cell allows the claim'). Two candidate fixes; the spec recommends extending enforce_case_write_surface to require can_staff_case for both columns, because that is where the sibling rules already live and a trigger cannot be bypassed by a second caller. NOT IN SCOPE: consultancy-internal notes (F-4 — the case.notes.internal permission exists but no column or table does; Stage 4 owns case activity, and no slice invents a notes model to satisfy a permission constant).",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-174",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "agent",
+      "file": null,
+      "title": "Stage 3 slice 7 — service-role retreat and the stage exit gate",
+      "summary": "CARRIES THE STAGE EXIT. Completes the service-role disposition (spec §6.2): reclassify entries 1 and 2 to 'sanctioned' (F-6 — app/(focused)/assessment/[id]/page.tsx serves an UNAUTHENTICATED visitor so no grant to authenticated can ever retire it, and app/api/account/delete/route.ts says 'DELIBERATELY still owner-keyed' in its own justification; both are permanent designs mislabelled as grandfathered, so the list currently reports two entries as awaiting a migration that will never come), narrow entries 3 and 4, confirm 5-7 wait for Stage 4's Storage policies, and register the new case-scoped scoring route. Net 9 → 8, and the growth is admitted rather than hidden: MV-154's framing of the list as monotonically shrinking does not survive Stage 3. THEN proves the exit gate — six criteria E1-E6 at named layers (spec §9.1), each shipping the vacuity guard from §9.2. E4 is the direct analogue of the Stage 2 §A2 vacuity MV-165 recorded honestly: it passes trivially if the case under test has a student_user_id, or on an empty write set, so it must assert cases.student_user_id IS NULL, owner IS NULL on every row written, AND a created-row count > 0. E1 must assert the actor's JWT role is 'authenticated' (a test run as service_role bypasses every policy and proves nothing). E6 must assert per-entry disposition, never a count. AND THE EXIT MUST NOT OVERCLAIM (spec §9.3): with D-B shut, production holds no consultancy org and no student-less case, so a green Stage 3 licenses 'the mechanism is built and proven under RLS as the authenticated user' and NEVER 'it works for real students' — that is earned in Stage 7's pilot.",
       "created": "2026-08-07",
       "entered": "2026-08-07"
     }
