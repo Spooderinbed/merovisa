@@ -1691,14 +1691,14 @@
     },
     {
       "id": "MV-134",
-      "col": "backlog",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-134-destinations-false-claim-copy.md",
       "title": "Destinations page markets corridors the product does not support (audit C-11)",
       "summary": "Audit C-11 plus the Today stop-live-false-claims P0, uncarded. app/(marketing)/destinations/page.tsx presents six-countries-done-well (plus adjacent overclaims like 485=2-4yr and all-figures-current) while only Nepal to Australia ships, a live production false claim that bounces students to consultancies. SAME class as MV-122, DIFFERENT surface. Founder owns the wording. Grep all marketing surfaces before closing.",
       "created": "2026-07-18",
-      "entered": "2026-07-18"
+      "entered": "2026-08-07"
     },
     {
       "id": "MV-135",
