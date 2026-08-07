@@ -1,6 +1,8 @@
 # Stage 2 data-equivalence report (MV-160 §A)
 
 **Status: §A1 GREEN · §A2 GREEN on real production data, 2026-08-07 — at an AMENDED boundary.**
+**BOTH MIGRATIONS ARE NOW APPLIED TO PRODUCTION, 2026-08-07. Stage 2 is live. See §6 for the
+apply record, the post-apply verification, and the one open defect the apply exposed.**
 **§A2 now covers the two PENDING migrations only. The MV-155 → MV-159 interval, which is already
 live, is crossed by no diff in either half of this proof and never can be — §3.0 says why and what
 stands in its place. The evidence this file owed is recorded; the remaining gate is the founder
@@ -609,3 +611,121 @@ has. More to the point: **committing a script whose whole purpose is "read every
 data" reintroduces the copy-pasteable full-population export path MV-164 exists to close.** The
 method is documented in §3.2 and in the MV-165 card in enough detail to rewrite it deliberately; that
 friction is the feature. `npm run lint` is green precisely *because* the scripts are gone.
+
+---
+
+## 6. The production apply — 2026-08-07
+
+This section is the outcome. Everything above it is the argument for being allowed to do this; this
+is what was done and what was measured afterwards. Added after the fact, which is why it sits at the
+end rather than being folded into §3.
+
+Applied from the composer session via the Supabase MCP `apply_migration`, on founder authorization
+("yes apply"), in the order the rollback scripts assume. **Both went in byte-identical to the files
+this report proves** — the staged copies were hashed immediately before each call and the comment
+bodies were NOT stripped, because the whole value of §A2 is that what was proven is what was applied:
+
+| # | Migration | sha256 of the applied text | Result |
+| --- | --- | --- | --- |
+| 1 | `20260805120000_bound_insert_pointer_columns` (MV-161) | `278850285de7143ab2feee2631685373293fa47c5b41e94530f73c557a7da850` | success; its own §4 DO-block assertions ran and passed at apply time |
+| 2 | `20260805140000_stage2_tighten_case_mandatory` (MV-160) | `d655f9f0f386a9429cfd7b7a4108b8e8b0ec07b1d6152ee2d4a23fd4d6977ad6` | success |
+
+They were applied in two sittings with a context compaction between them. The resting state in
+between — post-MV-161, pre-MV-160 — is deliberately the exact state `supabase/rehearsal/
+MV-160-rollback.sql` lands in, so the pause was taken at a point with a proven reverse path rather
+than at an arbitrary one.
+
+### 6.1 Post-apply verification, run against production
+
+Stated as want-vs-got so a future reader can tell a pass from a restatement:
+
+| Check | Want | Got |
+| --- | --- | --- |
+| A. `case_id` NOT NULL on the eight targets | 8 | **8** |
+| B. **`assessments.case_id` still NULLABLE** | YES | **YES** |
+| C. owner disjunct gone — `_case` policies still naming `uid()` | 0 | **0** |
+| D. round-3 owner-axis `case_student_id` bound survives | 5 | **5** |
+| E. MV-161 parent-pointer bounds survive | 2 | **2** |
+| F. `oe_insert_case` `source`/`verified_by` clauses survive | 1 | **1** |
+| G. `<table>_ownership_axis_present` checks dropped | 0 | **0** |
+| H. `assessments_case_required_when_owned` present | 1 | **1** |
+| I. legacy `(id, owner)` unique constraints dropped | 0 | **0** |
+| J. legacy composite FKs dropped | 0 | **0** |
+| K. superseded owner-keyed indexes dropped | 0 | **0** |
+| L. `assessments_anon_purge_idx` + `assessments_owner_idx` **kept** | 2 | **2** |
+| M. `private.reject_prediction_update()` unconditional again | true | **true** |
+| N. **total rows across the nine tables** | 174 | **174** |
+
+**B and N are the two that matter most, and they are the two most easily mistaken for formalities.**
+B is the trap the migration header names explicitly: a migration that *succeeds* at setting
+`assessments.case_id NOT NULL` has destroyed the anonymous rows — a failure wearing a success's
+clothes. It did not fire. N is 174, the exact figure §3.3 measured on the byte-identical copy, so no
+row was lost, moved, or silently rewritten. L is there because dropping those two indexes would have
+been an easy over-reach: they are load-bearing for MV-135's purge after this migration, not before.
+
+### 6.2 The check that actually proves step (d)
+
+Steps (d) and (e) are the two the migration header marks **SILENT** — if they go wrong there is no
+error and no log line, just a student whose data has become invisible to them. An assertion written
+by the same author as the migration is weak evidence against that class of failure, so the check used
+was a comparison against an independent artifact:
+
+```
+md5 over (tablename|policyname|cmd|roles|qual|with_check), ordered, for the 9 tables' `*_case` policies
+
+  production                          24 policies   bf5eaa750b06df575c83ba75e3784e06
+  supabase_db_merovisa (rehearsal)    24 policies   bf5eaa750b06df575c83ba75e3784e06
+```
+
+The rehearsal host is the one §3.3 proved equivalent on real data. Identical hashes mean production's
+**deparsed** policy expressions are the ones that were proven — not "equivalent in spirit", the same
+catalog output. `pg_policies.qual` / `with_check` are Postgres's own rendering, so this comparison is
+immune to whitespace, comment, and line-ending differences between the two hosts.
+
+### 6.3 What the apply did NOT prove — recorded, not glossed
+
+* **Production holds 0 anonymous unclaimed assessments.** So step (c)'s
+  `assessments_case_required_when_owned` exception is structurally correct (check B) but has **no live
+  data exercising it**. This is the same vacuity §3.3 flagged for the anonymous population before the
+  run; the apply did not retire it and does not pretend to.
+* `document_status` remains at 0 production rows, so its share of check N is likewise vacuous.
+
+### 6.4 The one defect the apply exposed — migration-ledger drift
+
+**This is a defect in the apply *method*, not in either migration, and it is still OPEN.**
+
+`apply_migration` records **its own wall-clock timestamp** as the `version` in
+`supabase_migrations.schema_migrations`, not the version prefix of the repo filename. Production
+therefore recorded `20260807032103` / `20260807065246` against files named `20260805120000_*` /
+`20260805140000_*`. It also stored each file as a **single** `statements` array element, where the
+CLI-applied row immediately before it (`20260803180000`) parsed its file into 68.
+
+Blast radius, stated precisely because "the migration ledger is wrong" sounds worse than it is:
+runtime queries, RLS, student data, Vercel deploys and fresh-from-scratch CI stacks are **all
+unaffected** — nothing reads this table at runtime. What breaks is the **next** production schema
+change: `supabase db push` compares versions, would see both files as unapplied, re-run them, and die
+on already-dropped constraints (neither file is idempotent). Not an incident; a landmine with a known
+trigger.
+
+The corrective `UPDATE` is blocked by the agent harness's safety classifier — correctly, since it is
+a write to migration history — so it is a founder action. Either:
+
+```sql
+update supabase_migrations.schema_migrations
+   set version = case name
+     when 'bound_insert_pointer_columns'  then '20260805120000'
+     when 'stage2_tighten_case_mandatory' then '20260805140000'
+   end
+ where name in ('bound_insert_pointer_columns','stage2_tighten_case_mandatory');
+```
+
+or, for catalog-perfect rows with properly parsed `statements`, the supported CLI path — noting that
+`--status applied` **inserts** and `--status reverted` **deletes** (it is not an upsert), and that
+versions are positional arguments:
+
+```
+supabase migration repair 20260805120000 20260805140000 --status applied
+supabase migration repair 20260807032103 20260807065246 --status reverted
+```
+
+Verify either with `supabase migration list`: remote and local should align, with no version twice.

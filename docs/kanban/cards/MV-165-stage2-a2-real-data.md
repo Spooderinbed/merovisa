@@ -142,6 +142,30 @@ parity with).
 | CI on PR **#129** | `validate` **pass** (4m13s) · `integration` **pass** (4m2s) · Vercel **pass** ×2 |
 | Branch / commits | `mv-165-stage2-a2-real-data` — `818d770` (work), `9f19341` (board) |
 
+### The production apply this card was the gate for — DONE, 2026-08-07
+
+The card's whole purpose was "no green §A2 record, no production apply." §A2 went green, the founder
+authorized ("yes apply"), and **both migrations are now live on production**. Full record in
+`docs/migrations/stage2/equivalence-report.md` **§6**.
+
+| Check | Result |
+| --- | --- |
+| MV-161 `20260805120000` applied | success — its own §4 assertions passed at apply time |
+| MV-160 `20260805140000` applied | success |
+| Applied text byte-identical to the proven files | sha256 verified immediately before each call; comments NOT stripped |
+| Post-apply verification, 15 checks | **all pass** (§6.1) — incl. `assessments.case_id` **still nullable** and **174 rows**, the exact §A2 figure |
+| Policy expressions vs the proven rehearsal host | **identical** — `bf5eaa750b06df575c83ba75e3784e06`, 24 policies both sides (§6.2) |
+
+**Two things this apply did NOT settle, carried forward rather than closed:**
+
+1. Production holds **0 anonymous unclaimed assessments**, so step (c)'s exception is structurally
+   correct but has no live data exercising it. Same vacuity §A2 flagged; still open.
+2. **Migration-ledger drift — OPEN, founder action.** `apply_migration` stamped its own wall-clock
+   versions (`20260807032103` / `20260807065246`) instead of the repo filenames. Nothing user-facing
+   is affected, but the **next** `supabase db push` would re-run both files and fail. The corrective
+   `UPDATE` is blocked by the agent safety classifier, so it cannot be done by an agent. Fix and both
+   remedies are in §6.4.
+
 ## Context links
 
 - Spec: `docs/superpowers/specs/2026-08-02-stage2-migration-and-access-matrix.md` §9.2, §9.10, §10.1 R1
