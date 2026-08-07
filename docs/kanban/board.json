@@ -2043,6 +2043,17 @@
       "created": "2026-08-07",
       "entered": "2026-08-07",
       "badge": "Done — PR #129 merged to master 2026-08-07 (b3347a9); Stage 2 is LIVE on production"
+    },
+    {
+      "id": "MV-166",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-166-stage3-spec.md",
+      "title": "Write the Stage 3 spec (consultancy workspace): access matrix, route model, grant resolution, and the slice carve",
+      "summary": "Stage 3's entire planning today is FOUR BULLETS in the consultancy plan (lines 639-646), where Stage 2 entered execution with a 13-step sequence plus a dedicated 12-section spec. Stage 1's documented failure mode was six slices each deriving an access matrix from the plan's prose independently — the Stage 2 spec's §9 lists ELEVEN contradictions that had to be reconciled afterwards, and MV-154 carries a stage-level amend-the-spec-in-your-own-PR rule added only because the prose version failed twice running. This card writes docs/superpowers/specs/2026-08-XX-stage3-workspace-and-access-matrix.md, grounded in a LIVE READ of the schema (never the plan's prose), extending the canonical Stage 1 access matrix cell-for-cell rather than re-deriving it; resolves on paper the three debts Stage 2 handed forward (the four deferred write grants on profiles/assessments/plan_items/documents INSERT, pinned shut by MV-160's 42501 assertions; the nine remaining legacy-owner-scoped service-role paths; case routes and consultancy UI); and produces the slice carve — IDs from MV-167 up, DAG with a reason per edge, a Stage 3 umbrella, and a statement of which slices are reachable on TEST DATA versus which need the Stage 0 D-B legal gate that is currently SHUT with counsel. Ships NO product code and NO SQL: a non-empty git diff over app/ lib/ components/ supabase/ tests/ means the card overran. Not blocked — Stage 2 is complete and live in production (PR #129, master b3347a9), and writing the carve is exactly the work that is useful while counsel is out.",
+      "created": "2026-08-07",
+      "entered": "2026-08-07"
     }
   ]
 }

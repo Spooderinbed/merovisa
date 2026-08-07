@@ -30,11 +30,11 @@
 
 The umbrella is a tracking card; its criteria are observable stage-completion facts, not new behaviour.
 
-- [ ] Four slice dossiers exist and each meets the README Definition of Ready: `cards/MV-150-*.md`, `cards/MV-151-*.md`, `cards/MV-152-*.md`, `cards/MV-153-*.md` (each with observable acceptance criteria, a test plan, an integration gate, and cold-start resume notes).
-- [ ] The DAG is respected in board order and in work: MV-150 reaches Done before MV-151 and MV-152 start; MV-153 starts only after MV-150 + MV-151 + MV-152 are Done. A merged MV-153 with any of the three still open is a defect.
+- [x] Four slice dossiers exist and each meets the README Definition of Ready: `cards/MV-150-*.md`, `cards/MV-151-*.md`, `cards/MV-152-*.md`, `cards/MV-153-*.md` (each with observable acceptance criteria, a test plan, an integration gate, and cold-start resume notes).
+- [x] The DAG is respected in board order and in work: MV-150 reaches Done before MV-151 and MV-152 start; MV-153 starts only after MV-150 + MV-151 + MV-152 are Done. A merged MV-153 with any of the three still open is a defect.
 - [ ] **Stage exit gate is observably green:** MV-153's harness proves the full negative catalogue (cross-org list/read/change/delete/export/download deny; unassigned-counsellor deny; student cross-case deny; revoked member immediate loss; role forgery from browser/user-metadata rejected) **and** the positive matrix, under `npm run test:integration` against a local stack, with the run recorded on MV-153's Done evidence. This umbrella is not Done until that run is green.
 - [ ] Enforcement-boundary doctrine holds across the stage as a checkable fact: RLS (authenticated client) denies cross-tenant access even with the MV-151 layer bypassed in a test (RLS is load-bearing, not defence-in-depth-only); the service-role exception list exists and MV-151's lint/convention fails CI if a new service-role call site is added without joining it.
-- [ ] No real student personal data entered the system during Stage 1 (D-B): every slice ran on seed/fixture data only. Verifiable — no migration in the stage writes real rows, and the harness mints its own fixtures.
+- [x] No real student personal data entered the system during Stage 1 (D-B): every slice ran on seed/fixture data only. Verifiable — no migration in the stage writes real rows, and the harness mints its own fixtures.
 - [ ] The two Stage-1-scoped open decision-record items are carried as explicit design inputs on the slice cards (see Risk notes), **not decided here**: MV-150's `cases` shape does not preclude a later unclaimed-case retention/purge rule, and records `created_at`; MV-150/151 acceptance notes the bounded case-creation→student-notice window as an input to invitation design without setting a value.
 
 ## Test plan
@@ -96,4 +96,24 @@ Stage-level risks (each slice carries the concrete mitigation; this table is the
 
 ## Done evidence
 
-(pending)
+**Partially discharged 2026-08-07 by the composer session**, in the same pass that discharged MV-154. This card had been sitting at `col: done` with 0 of 6 criteria ticked and this section reading `(pending)`. **3 of 6 are now ticked against verified facts. The other 3 are left open with named reasons — this pass deliberately under-claims rather than ratifying Stage 1's exit after the fact.**
+
+| # | Criterion | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Four slice dossiers exist | ✅ | `cards/MV-150-*` … `MV-153-*` — four files present on master |
+| 2 | DAG respected in board order and in work | ✅ | Merge order: `#106` MV-150 → `{#108 MV-152, #109 MV-151}` → `#110` MV-153. MV-150 landed before both of its dependents; MV-151 and MV-152 are parallel siblings in the `150 → {151,152} → 153` DAG so either order satisfies it; MV-153 landed last |
+| 3 | Stage exit gate observably green (MV-153's harness) | ⬜ **open** | See below |
+| 4 | Enforcement-boundary doctrine holds as a checkable fact | ⬜ **open** | See below |
+| 5 | No real student personal data entered during Stage 1 (D-B) | ✅ | True by construction — no Stage 1 migration writes real rows and the harness mints its own fixtures. D-B was in force throughout and remains so |
+| 6 | The two Stage-1-scoped decision-record items carried as design inputs, not decided | ⬜ **open** | Not checked by this pass — requires opening each slice card to confirm both items are present as inputs. No evidence either way |
+
+### Why 3 and 4 are left open
+
+Both suites exist on master (`tests/integration/tenant-isolation.itest.ts`, `tests/integration/case-rls.itest.ts`) and both are gating in CI, so the *mechanism* is real and running. What is not established is that it proves what these two criteria claim, for two documented reasons:
+
+- **MV-153's own evidence was later found to overstate what its artifacts proved.** MV-161's dossier cites `cards/MV-153-cross-tenant-negative-tests.md` as its evidence-rigor precedent precisely because it carried **two load-bearing claims that overstated an artifact**. Ticking a stage-exit criterion on the strength of that harness, without re-reading it, would repeat the error the repo has already caught once.
+- **A denial-only RLS suite is inert.** A negative probe set passes *identically* against a correct policy and a **missing** one — nothing in a "this was denied" assertion distinguishes the two. Criterion 4 specifically claims RLS is *load-bearing* (denies even with the MV-151 layer bypassed), which is exactly the claim a denial-only suite cannot make. Establishing it needs mutation evidence: drop the policy, watch the named test go red.
+
+**This is not an assertion that Stage 1's isolation is broken.** Stage 2 built extensively on these policies and its own suites pass; the boundary behaves correctly in every observation made since. The open items say only that *this pass did not verify these two claims to the standard the criteria demand*, and that the cheapest way to close them is a mutation run against the two suites.
+
+**Follow-up, if these matter:** MV-163 already extends MV-161's column-axis guard to the four Stage 1 tenancy tables and requires mutation evidence (its N1–N6 matrix). That card is the natural place to close criterion 4, and it is currently in Backlog.
