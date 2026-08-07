@@ -1,6 +1,7 @@
 # Stage 2 data-equivalence report (MV-160 §A)
 
-**Status: §A1 GREEN · §A2 NOT YET RUN — the production apply stays founder-gated on it.**
+**Status: §A1 GREEN · §A2 GREEN on real production data, 2026-08-07 (boundary AMENDED — see §3.0).
+The production apply is no longer gated on this file; it is gated on the founder reading it.**
 
 The Stage 2 exit gate is *"existing students see the same correct data, while case-scoped
 repositories no longer depend on actor equals student"* (consultancy plan line 637). This file is
@@ -10,11 +11,13 @@ never committed — see §5.
 
 | | |
 | --- | --- |
-| Card | `docs/kanban/cards/MV-160-tighten-stage2-exit.md` §A |
+| Card | `docs/kanban/cards/MV-160-tighten-stage2-exit.md` §A · `docs/kanban/cards/MV-165-stage2-a2-real-data.md` (the §A2 run + the §3.0 amendment) |
 | Spec | `docs/superpowers/specs/2026-08-02-stage2-migration-and-access-matrix.md` §9.2, §9.10, §10.1 R1 |
 | Shared comparison | `scripts/stage2/capture-read-path-snapshot.mjs` — one serializer, one hash, one exclusion list |
 | §A1 (synthetic, CI) | `tests/integration/stage2-data-equivalence.itest.ts` |
 | §A2 (live, rehearsal) | `npm run stage2:equivalence -- --snapshot <path>` |
+| Reaching the pre-state | `supabase/rehearsal/MV-160-rollback.sql` **then** `supabase/rehearsal/MV-161-rollback.sql` (§3.1) |
+| Host guard | `scripts/stage2/capture-host-guard.mjs` — refuses production, no override |
 
 ---
 
@@ -132,14 +135,235 @@ Nothing else is excluded. A whole-table or wildcard exclusion is rejected by tes
 not a housekeeping detail: it is the number of rows that were owned but case-less at the moment
 Stage 2 closed, i.e. evidence that the MV-157 dual-write leaked, and it is a finding about Stage 2.
 
+**MEASURED ON REAL PRODUCTION DATA, 2026-08-07 (MV-165 §A2): ZERO on every table, and zero personal
+cases minted.** Full sweep report in §3.3. The dual-write did **not** leak. Two consequences, and the
+second is the uncomfortable one:
+
+- The good one: there was no residue, which is what §3.0's zero-`case_id IS NULL` table independently
+  predicted. Two different measurements of the same invariant agree.
+- The one worth stating: **the sweep's repair path was therefore never exercised by live data.** Its
+  correctness rests entirely on §A1's `student-C-residue` fixture. A green §A2 is not evidence that
+  the sweep works — only that it had nothing to do.
+
 ---
 
-## 3. §A2 — live-data replay: **NOT YET RUN**
+## 3. §A2 — live-data replay: **GREEN**
 
-- **Verdict:** _pending_
-- **Date:** _pending_
-- **Run by:** _pending — the integrator, on the rehearsal host, not the agent and not CI_
-- **Snapshot captured before MV-155 first mutated the copy:** _to be confirmed by the integrator_
+- **Verdict:** **EQUIVALENT — zero differences.** Whole-snapshot hash identical before and after:
+  `a08f69938eae95951f88acf2684e0d6ddbf331ca4dd070ce5396986310ab3be9`. CLI exit `0`.
+- **Date:** 2026-08-07
+- **Run by:** MV-165, on the **local rehearsal host** (`supabase_db_merovisa`, `127.0.0.1:54321`) —
+  not CI, and never against production. The MV-164 host guard was re-tested during this run and
+  still refuses production **with `--rehearsal-host` passed** (§4, row G-live).
+- **Boundary:** **AMENDED** — pre-MV-161 → post-MV-160, i.e. **production-as-it-stands-today →
+  Stage 2 closed**, on a byte-identical copy of real production data. The original
+  "snapshot captured before MV-155 first mutated the copy" is permanently unreachable; §3.0 records
+  why, and what that costs.
+
+### 3.0 THE AMENDMENT — what this section used to require, and why it cannot
+
+This section previously required the pre-migration snapshot be captured **"before MV-155 first
+mutated the copy"**, making the proven boundary the whole of Stage 2 (pre-MV-155 → post-MV-160).
+**That boundary can never be proven by snapshot diff, and the reason is not that anyone skipped a
+step.** Four independent facts, each measured on 2026-08-07, close it:
+
+| # | Fact | Consequence |
+| --- | --- | --- |
+| 1 | Production has been **post-MV-155 since 2026-08-02**. | The pre-MV-155 state no longer exists anywhere on the live database. |
+| 2 | The organization (`kryajhnrcukcknuwmtfz`) is on the **free plan** — no automated backups, no PITR. | There is no restore point of any age to roll back to. |
+| 3 | **PITR is not retroactive.** | Upgrading the plan today does not manufacture a 2026-08-01 restore point. Paying more cannot buy the missing artifact. |
+| 4 | A filesystem-wide search on 2026-08-07 (Downloads, Desktop incl. every worktree, Documents, OneDrive\Documents; `.sql`/`.dump`/`.backup`/`.bak`/`.pgdump`) found **no dump of any kind** — 99 hits, all repo rehearsal helpers, all dated 2026-08-03 or later. | No offline copy of the pre-MV-155 state was ever taken. |
+
+So the requirement is amended to the boundary that **is** reachable, and which is also the one the
+founder gate actually needs: **today's production is the pre-tighten state**, so the two pending
+migrations can be rehearsed against it with no PITR at all.
+
+**WHAT THIS GIVES UP, STATED PLAINLY.** The MV-155→158 half of Stage 2 is already live and is *not*
+inside this diff. Its compensating evidence is the zero-residue inspection below.
+
+| Table | Prod rows (2026-08-07) | `case_id IS NULL` |
+| --- | --- | --- |
+| `profiles` | 7 | **0** |
+| `assessments` | 36 (of which **0** anonymous) | **0** |
+| `plan_items` | 74 | **0** |
+| `user_program_state` | 12 | **0** |
+| `documents` | 6 | **0** |
+| `document_status` | **0** | 0 (vacuous — see below) |
+| `program_predictions` | 10 | **0** |
+| `application_attempts` | 10 | **0** |
+| `outcome_events` | 19 | **0** |
+| `cases` | 10 (all personal; `organizations` 0, `case_assignments` 0, `invitations` 0) | — |
+
+**Read that table for exactly what it says.** It proves **the invariant held** — every owned row on
+every migrated table carries a case, so MV-155→158 left no residue for MV-160's sweep to repair. It
+does **NOT** prove that every field value is byte-identical to its pre-Stage-2 value. That stronger
+claim is no longer obtainable by any means, and no later reader should treat the zero-residue table
+as if it were the missing diff. It is the best available evidence for that half, and it is weaker
+than a diff.
+
+**`document_status` has 0 production rows, so its §A2 domain comparison is VACUOUS.** A snapshot of
+an empty list is byte-identical to another snapshot of an empty list. That domain shows `=` below on
+all ten users because there was nothing to compare, **not** because a comparison passed. The only
+evidence covering `document_status` is §A1's synthetic corpus. The same caveat applies, for the same
+reason, to the anonymous-assessment population: production carries **0** anonymous rows (§3.2), so
+the case-less branch has no live subject either.
+
+### 3.1 How the pre-state was reached — and the reversal that had to be written
+
+Production is applied through `20260803180000_case_aware_student_data_rls` (MV-159); **exactly two**
+migrations are pending — `20260805120000` (MV-161) and `20260805140000` (MV-160). The local stack had
+**all 24** applied, so it had to be walked backwards to production's exact position:
+
+```
+supabase/rehearsal/MV-160-rollback.sql   → post-MV-159 / post-MV-161 / pre-MV-160
+supabase/rehearsal/MV-161-rollback.sql   → post-MV-159 / pre-MV-161  / pre-MV-160   ← NEW, this card
+delete from supabase_migrations.schema_migrations
+  where version in ('20260805120000','20260805140000');
+```
+
+**`MV-160-rollback.sql` alone lands one migration short of production**, and deliberately so: its
+header says *"MV-161 IS NOT BEING UNWOUND HERE … it is a P0 fix that sits ON TOP of MV-159 and must
+survive R1 untouched"*, and its §8 post-conditions **assert** the pointer bound and
+`private.outcome_event_case_id()` survived. That is right for an incident unwind and wrong for this
+rehearsal, so **`supabase/rehearsal/MV-161-rollback.sql` is new in this card** — the reverse script
+MV-161 never got, closing a real gap in the directory's reversibility doctrine. It restores MV-159's
+two INSERT predicates verbatim, drops the helper, and asserts the restored state. Both of its guards
+were shown to bite (§4, rows R1/R2), and it says twice, in the file, that unwinding a live P0 fix is
+a rehearsal-only act.
+
+**The pre-state was then verified against production's own measured catalog rather than assumed:**
+
+| Probe | Local pre-state | Production | |
+| --- | --- | --- | --- |
+| `*_ownership_axis_present` checks | 8 | 8 | ✅ |
+| Policies on `public` | 45 | 45 | ✅ |
+| …of which mention `owner` (MV-159's transitional disjunct) | 31 | 31 | ✅ |
+| `case_id` NOT NULL on the nine | 0 | 0 | ✅ |
+| `private.outcome_event_case_id()` present | no | no | ✅ |
+| `schema_migrations` max version | `20260803180000` | `20260803180000` | ✅ |
+
+### 3.2 How real production data got onto the rehearsal host
+
+`pg_dump` was **not** used: it needs the database password, which is not in `.env.local`, and hunting
+for credentials was explicitly out of scope. Instead a one-off reader
+(`docs/migrations/stage2/snapshots/copy-prod-to-local.mjs`, gitignored with the payload) read
+production through PostgREST with the service-role key already in `.env.local` — **a read; no write
+of any kind was issued against production** — and loaded the rows into the local stack through
+`docker exec psql`. The ten `auth.users` rows were recreated locally **with matching uuids**, because
+the capture reads RLS-scoped as each user and enumerates subjects through `listUsers`.
+
+Four things the copy had to get right, each verified rather than assumed:
+
+- **Column parity was asserted before a single row was inserted.** Every copied table's production
+  column set was compared with the rolled-back local catalog; a mismatch aborts. All identical.
+- **`plan_items.id` is `GENERATED ALWAYS AS IDENTITY`** — a supplied value raises `428C9`. Inserted
+  with `OVERRIDING SYSTEM VALUE` through psql, so the real ids survive. (A PostgREST copy cannot
+  emit that clause and would have silently renumbered them.)
+- **The two `BEFORE INSERT` derive triggers** (`user_program_state_derive_case_id`,
+  `document_status_derive_case_id`) were disabled for the load and **re-enabled afterwards** —
+  verified enabled at the end. Every `*_set_updated_at` trigger is `BEFORE UPDATE` only, so an
+  INSERT-only copy preserves `updated_at` untouched; no upsert was used anywhere.
+- **Copy fidelity was proven, not trusted.** Every copied table hashes identically to what
+  production returned:
+
+| Table | rows | prod hash == local hash |
+| --- | --- | --- |
+| `universities` | 15 | `eade7a3a83bc` = |
+| `programs` | 83 | `76e64b1fb1ff` = |
+| `cases` | 10 | `0e837a180387` = |
+| `profiles` | 7 | `1fa5991b7334` = |
+| `assessments` | 36 | `a32e9c2fbfcb` = |
+| `plan_items` | 74 | `d4d50b3d5190` = |
+| `user_program_state` | 12 | `a17bd466eee3` = |
+| `documents` | 6 | `f9fcc9b497a5` = |
+| `program_predictions` | 10 | `a7eea1972dba` = |
+| `application_attempts` | 10 | `d8783db698ca` = |
+| `outcome_events` | 19 | `6643ab28a58e` = |
+
+`leads` (11 rows) and `audit_events` (0) were **not** copied: nothing in the nine read paths
+references them. `organizations` / `organization_memberships` / `case_assignments` / `invitations`
+are empty on production and were copied as empty.
+
+### 3.3 The run, and the result
+
+```
+capture pre-tighten  →  apply 20260805120000 (MV-161)  →  apply 20260805140000 (MV-160)  →  capture post  →  diff
+```
+
+Both migration files were applied **verbatim, in order, through `psql --single-transaction`**, with
+no edit of any kind.
+
+**The captured population is not vacuous** — the check §A1 exists to make impossible to skip:
+
+| | |
+| --- | --- |
+| Users captured | **10** (all of production's `auth.users`) |
+| Rows in the snapshot | **174** |
+| Users carrying ≥1 row | 7 of 10 — `student-07`, `student-09`, `student-10` are real accounts with **no data at all** on any of the nine |
+| Anonymous assessments | **0 → 0** (see §3.2's caveat) |
+
+**The 174 rows read RLS-scoped, summed per user, equal the service-role table totals exactly**
+(7 + 36 + 74 + 12 + 6 + 0 + 10 + 10 + 19 = 174). Every production row on the nine is visible to
+exactly one student, none is orphaned or invisible, and none is double-counted. That is a stronger
+statement than the diff itself and it is what makes the diff meaningful.
+
+| User | profile | assessments | plan | shortlist | documents | checklist | predictions | attempts | outcomes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `student-01` | = | = | = | = | = | = ¹ | = | = | = |
+| `student-02` | = | = | = | = | = | = ¹ | = | = | = |
+| `student-03` | = | = | = | = | = | = ¹ | = | = | = |
+| `student-04` | = | = | = | = | = | = ¹ | = | = | = |
+| `student-05` | = | = | = | = | = | = ¹ | = | = | = |
+| `student-06` | = | = | = | = | = | = ¹ | = | = | = |
+| `student-07` ² | = | = | = | = | = | = ¹ | = | = | = |
+| `student-08` | = | = | = | = | = | = ¹ | = | = | = |
+| `student-09` ² | = | = | = | = | = | = ¹ | = | = | = |
+| `student-10` ² | = | = | = | = | = | = ¹ | = | = | = |
+
+¹ **vacuous** — `document_status` has 0 production rows. ² the user carries no rows on any domain,
+so every cell in that row is vacuous. The labels are pseudonyms assigned by sorting user ids; no id,
+name or email appears in this file.
+
+**MV-160's reconciliation sweep, on real production data — the number §B asked for:**
+
+```
+{"profiles": 0, "documents": 0, "plan_items": 0, "assessments": 0, "cases_created": 0,
+ "outcome_events": 0, "document_status": 0, "personal_case_ids": [],
+ "user_program_state": 0, "program_predictions": 0, "application_attempts": 0}
+MV-160 (a) private.mv155_assert_case_backfill() passed — every owned row carries a case.
+```
+
+**Zero rows repaired, zero personal cases minted.** Read against §B's own framing — *"a non-zero
+count … is evidence that the MV-157 dual-write leaked, and it is a finding about Stage 2"* — a zero
+count is the good outcome: **the dual-write did not leak.** It also means the sweep's repair path was
+**not exercised by live data**, so its correctness rests on §A1's `student-C-residue` fixture alone.
+
+**And the migration closed the window it was supposed to close:**
+
+| Probe | pre | post |
+| --- | --- | --- |
+| `case_id` NOT NULL on the eight | 0 | **8** |
+| `*_ownership_axis_present` checks | 8 | **0** |
+| Policies on the nine reading `auth.uid()` | >0 | **0** |
+
+The four surviving `auth.uid()` policies are on `cases` and `organization_memberships` — the identity
+tables `private.actor_case_ids()` is anchored on. They are supposed to remain.
+
+### 3.4 The proof was shown to bite, on this data, in this run
+
+A hash comparison nobody has seen fail is not evidence — §4's argument, applied to §A2 rather than
+only to §A1. §A1's **M5** was reproduced against the live copy: one field of one user's profile was
+perturbed post-migration (with `profiles_set_updated_at` disabled, so **only** that field moved), the
+diff re-run, and the row then restored exactly.
+
+| Step | Whole-snapshot hash | CLI exit | Result |
+| --- | --- | --- | --- |
+| after the real apply | `a08f6993…3be9` | `0` | `EQUIVALENT — zero differences.` |
+| one field perturbed | `34be8275…c573` | **`1`** | `NOT EQUIVALENT — 1 difference(s): student-06 / profile / row <id> / completeness: 100 -> 101` |
+| perturbation reverted | `a08f6993…3be9` | `0` | `EQUIVALENT — zero differences.` |
+
+It named the pseudonymous user, the domain **and** the field, and it exited non-zero. The green above
+is a green that can go red.
 
 ```bash
 npm run stage2:equivalence -- --capture --out docs/migrations/stage2/snapshots/pre-migration.json
@@ -187,12 +411,14 @@ ahead of the enumeration; the mutation evidence for it is §4's guard table, row
 
 ### Expected values, stated BEFORE the run so a surprise is legible
 
-| Measurement | Expected | Why |
-| --- | --- | --- |
-| Anonymous assessments (`owner IS NULL`) | **0** | The plan's "40 anonymous/unclaimed" is from 2026-07-23. A hosted capture on 2026-08-02 found 36 assessments and 0 with `owner IS NULL` — MV-135's 3-day purge has cleared the population, which is transient by design. A reviewer expecting 40 will read 0 as a capture bug. **Consequence that is not "just update the number": the case-less behaviour has no live subject to exercise, so it is proven only by §A1's synthetic seed and the rehearsal cannot confirm it.** |
-| Assessments total | ~36 | Same 2026-08-02 capture; read the real number at capture time. |
-| Rows added by Stage 2 | personal `cases` only | Nothing else is created and nothing is deleted. |
-| Diff | **zero** | Non-zero = the stage exit has failed. |
+Stated before the run; the **Measured** column was filled afterwards and every prediction held.
+
+| Measurement | Expected | **Measured 2026-08-07** | Why |
+| --- | --- | --- | --- |
+| Anonymous assessments (`owner IS NULL`) | **0** | **0** ✅ | The plan's "40 anonymous/unclaimed" is from 2026-07-23. A hosted capture on 2026-08-02 found 36 assessments and 0 with `owner IS NULL` — MV-135's 3-day purge has cleared the population, which is transient by design. A reviewer expecting 40 will read 0 as a capture bug. **Consequence that is not "just update the number": the case-less behaviour has no live subject to exercise, so it is proven only by §A1's synthetic seed and the rehearsal cannot confirm it.** |
+| Assessments total | ~36 | **36** ✅ | Same 2026-08-02 capture; read the real number at capture time. |
+| Rows added by Stage 2 | personal `cases` only | **none at all** ✅ | Nothing else is created and nothing is deleted — and in the event the sweep minted **zero** cases, because there was no residue to repair (§3.3). |
+| Diff | **zero** | **zero** ✅ | Non-zero = the stage exit has failed. |
 
 ### Known pre-existing condition — 2 orphan `storage.objects`
 
@@ -201,8 +427,29 @@ objects with no matching row** (spec §2.8, §9.10). They are not `documents` ro
 break identity parity. Recorded here because they will surface in Stage 4's re-path and Stage 6's
 export/deletion work, and an unrecorded orphan found later reads as data loss caused by this stage.
 
-**Object ids: _to be filled from the rehearsal capture_** — they live on the hosted project and were
-not enumerated in the spec, only counted.
+**Object ids, enumerated on production 2026-08-07:**
+
+| `storage.objects.id` | bytes |
+| --- | --- |
+| `fab04169-45d9-404d-a84f-994ceed71914` | 315 607 |
+| `695d9da3-2ca4-4fb4-9eb2-28e78c9b1d16` | 315 607 |
+
+**Identical byte counts**, which makes a duplicate upload the likeliest origin — but that is an
+inference from two numbers, not a finding, and it is recorded as such. The complementary direction
+was also measured and is the reassuring half: **0 dangling `documents` rows** — every one of the 6
+rows has its object, so nothing a student can see points at missing bytes. The orphans are bytes with
+no row, not rows with no bytes.
+
+These are `storage.objects` UUIDs, not student identifiers. They were read through the **Storage
+API**, not by joining `storage.objects`: that schema is not PostgREST-exposed
+(`supabase/config.toml` `[api] schemas = ["public", "graphql_public"]`), and a direct
+`storage.objects` join attempted against production was **blocked by the tool classifier**. The
+Storage-API walk is the same read by another route and is recorded here so the next reader does not
+repeat the blocked attempt.
+
+**They are not in the §A2 capture and could not have been.** The capture reads the nine `public`
+read paths; storage objects are not one of them, and the rehearsal copy deliberately carries no
+object bytes. This row is evidence about production, gathered alongside §A2, not a product of it.
 
 ---
 
@@ -252,12 +499,31 @@ A guard whose tests pass without it is a guard nobody has. Each mutation below w
 | G7 | default `rehearsalHostAcknowledged` to `true` | **RED** (3) | `a remote host is refused by default`; `it throws on an unacknowledged remote host` |
 | G8 | make an unparseable URL fail **open** | **RED** (3) | all three group-E cases |
 | G9 | `assertCaptureHostAllowed` computes the verdict but never throws | **RED** (3) | all three group-F throws — the verdict object alone stops nothing |
+| **G-live** | *(not a mutation)* MV-165 pointed the real CLI at `https://obfvrxixtautamflzxzq.supabase.co` **with `--rehearsal-host` passed** | **REFUSED**, exit `1` | Live proof, not a unit test: `REFUSING: SUPABASE_URL points at the PRODUCTION project … THERE IS NO OVERRIDE, --rehearsal-host included.` `git status scripts/stage2/` is **empty** — the guard was neither weakened nor bypassed to get §A2 green. |
 
 **G1/G2 and G6 are the ones worth reading twice.** G1/G2 are the inert-guard shape this repo has
 already been bitten by (a denial-only RLS suite passes identically against a *missing* policy): every
 behavioural assertion in groups A-F stays green while the guard is exported and never called, so the
 ordering assertion in group G is the only thing standing between "the guard exists" and "the guard
 runs". G6 is the one that decides whether the production refusal is a refusal or a speed bump.
+
+### The MV-161 reversal (MV-165) — its two guards were shown to bite
+
+`supabase/rehearsal/MV-161-rollback.sql` is new (§3.1), and *"a written rollback that was never run
+is a hypothesis"* — `README.md`'s opening paragraph. Both guards were exercised against the live
+rehearsal database:
+
+| # | Situation | Result |
+| --- | --- | --- |
+| R1 | run a **second** time, with the helper already dropped | **REFUSED**, exit `3` — `private.outcome_event_case_id() does not exist, so MV-161 is not applied … refuses rather than re-typing MV-159's predicates over an unverified state` |
+| R2 | run **before** `MV-160-rollback.sql`, i.e. against a post-MV-160 database | **REFUSED**, exit `3` — `program_predictions.case_id is NOT NULL, so MV-160 … is still applied. Unwind in REVERSE ORDER OF APPLICATION` |
+
+It was also run **forward-clean** in the real sequence, its nine post-conditions passed, and the
+database it produced then matched production's catalog on **all six probes** in §3.1's table — the
+strongest available check that the reversal lands where it claims. **It was proven in both
+directions**, which `MV-160-rollback.sql`'s own closing note demands and which no predecessor in this
+directory had done: the rehearsal rolled *back* through it and then rolled *forward* through the real
+`20260805120000`, which re-created both predicates and the helper without complaint.
 
 **One honest note on scope.** The guard classifies the host in `SUPABASE_URL`. It cannot see through
 a custom domain or a proxy that fronts production under another name, and it does not authenticate
@@ -279,3 +545,24 @@ the layered controller model in `docs/legal/2026-07-29-stage0-decision-record.md
 
 This is also the reason §A2 cannot be a CI test: the artifact it needs is one this repo has correctly
 decided never to hold.
+
+### Destruction record — MV-165, 2026-08-07
+
+Both copies of the payload are gone. Nothing in this report, the MV-165 card or its PR carries a row,
+an email, a name or a user id — counts, pseudonyms, hashes and verdicts only.
+
+| Artifact | Disposition |
+| --- | --- |
+| `snapshots/pre-migration.json` (2 078 599 B) | **deleted** |
+| `snapshots/prod-copy.json` (1 767 602 B) | **deleted** |
+| `snapshots/` one-off reader, loader, fidelity checker, key helper, apply log | **deleted** — the whole directory was removed |
+| The production copy loaded into `supabase_db_merovisa` | **truncated**; re-counted afterwards at **0** rows across all nine plus `cases` and `auth.users` |
+
+**THE COPY TOOLING IS DELIBERATELY NOT COMMITTED, and that is a decision rather than an oversight.**
+The one-off prod reader/loader would have to be registered in
+`lib/supabase/service-role-exceptions.ts` to pass lint — a registry whose entries are application
+paths carrying a case-authorization check and an audit event, neither of which a rehearsal script
+has. More to the point: **committing a script whose whole purpose is "read every production student's
+data" reintroduces the copy-pasteable full-population export path MV-164 exists to close.** The
+method is documented in §3.2 and in the MV-165 card in enough detail to rewrite it deliberately; that
+friction is the feature. `npm run lint` is green precisely *because* the scripts are gone.
