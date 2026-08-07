@@ -223,7 +223,7 @@ Actors, exactly as Stage 1 defines them, plus the two Stage 1 got wrong most oft
 | 9 | Case assignment | assign | assign | **deny** | deny | deny | ∅ | ∅ | `case_assignments_insert_admin` → `can_manage_case` = `is_org_admin` | MV-171 | canonical — **and F-1** |
 | 10 | Case `operational_status` | write | write | write | deny | **deny** | ∅ | ∅ | `enforce_case_write_surface` → `can_staff_case` | MV-171 | **divergence #4** |
 | 11 | Case `archived_at` | write | write | **deny** | deny | **deny** | ∅ | ∅ | `enforce_case_write_surface` → `is_org_admin` | MV-171 | **divergence #2** |
-| 12 | Case `display_name` / `email` | write | write | write | deny | **write** | ∅ | ∅ | policy only — **no field guard** | MV-173 | **NEW — see F-3** |
+| 12 | Case `display_name` / `email` | write | write | write | deny | **write** | ∅ | ∅ | policy + column grant only — the trigger guards neither column, **by design** | — (founder) | canonical "updates permitted profile fields" — **and F-3** |
 | 13 | Case route: read the case's data | all-org | all-org | assigned | ∅ | own | ∅ | ∅ | `*_select_case` → `actor_case_ids()` on all 9 tables | MV-172 | canonical, extended to Stage 2's tables |
 | 14 | Case route: edit profile | write | write | write | ∅ | **write (fields ¹)** | ∅ | ∅ | `profiles_update_case` + col grant `(sections, completeness)` | MV-172 | canonical "updates permitted profile fields" |
 | 15 | Case route: create profile row | write | write | write | ∅ | write | ∅ | ∅ | **grant does not exist yet** → MV-168 | MV-168 | §6.1 |
@@ -232,13 +232,25 @@ Actors, exactly as Stage 1 defines them, plus the two Stage 1 got wrong most oft
 | 18 | Case-context indicator | show | show | show | n/a | show | n/a | n/a | render-time, from `getCaseContext` | MV-173 | NEW (presentation only) |
 | 19 | Consultancy-internal notes | — | — | — | — | — | — | — | **no column exists** | — | **NEW — see F-4** |
 | 20 | Org audit log | read | read | deny | deny | ∅ | ∅ | ∅ | `audit_events_select_admin` → `actor_admin_org_ids()` | **Stage 6** | canonical role table |
+| 21 | Case route: shortlist / program state ² | write | write | write | ∅ | write | ∅ | ∅ | `ups_insert_case` / `ups_update_case` + col grants `[Q3, Q4]` | MV-168 + MV-172 | **NEW — see F-8** |
+| 22 | Case route: document checklist tick ² | write | write | write | ∅ | write | ∅ | ∅ | `ds_insert_case` / `ds_update_case` + col grants `[Q3, Q4]` | MV-168 + MV-172 | **NEW — see F-8** |
+| 23 | Case route: outcome capture ² | write | write | write | ∅ | write | ∅ | ∅ | `pp_insert_case` / `aa_insert_case` / `oe_insert_case` `[Q4]` | MV-172 | **NEW — see F-8** |
 
 ¹ **The field allowlist is still missing.** `lib/cases/permissions.ts` resolves `student.case.update`
 to `linked` and its own comment says so: *"A Stage 3 mutation that accepts an arbitrary case patch
 from a student is a defect even though this cell allows the claim."* `lib/cases/README.md` records
-the same gap. Cell 14 is safe today only because the **column grant** on `profiles` is
-`(sections, completeness)` — the allowlist is enforced by Postgres, not by the app. Cell 12 is where
-that runs out (see **F-3**).
+the same gap **and locates the remedy**: *"The allowlist belongs with that mutation"* (`:152-157`).
+Cell 14 is safe today only because the **column grant** on `profiles` is `(sections, completeness)` —
+the allowlist is enforced by Postgres, not by the app. That TypeScript gap is real, is **not**
+canonical, and is MV-173's. Cell 12 is a different thing: there the omission is the canonical
+decision itself, not an oversight (see **F-3**).
+
+² **Cells 21–23 are Stage 2 surfaces the case route inherits, and their five routes take no case id.**
+Grants and policies already exist on all five tables; what does not exist is a caller that can name a
+case other than the actor's own — every one resolves `resolvePersonalCaseId(<user>.id, …)`. This is
+the one place where MV-172 can ship green and write to the **wrong case**. Cell 17 is the `documents`
+vault table and is **not** cell 22: `document_status` is a separate table with its own grant and
+`ds_insert_case` policy. See **F-8**.
 
 ### The two rules Stage 1 got wrong most often, shown holding on every new surface
 
@@ -289,12 +301,12 @@ permanent by accident.
 
 | # | Table | Verb | Live state `[Q3, Q4]` | **Stage 3 resolution** | Slice |
 |---|---|---|---|---|---|
-| 1 | `profiles` | INSERT | no grant, no policy | **GRANT** `INSERT (owner, case_id, sections, completeness)` + `profiles_insert_case` | **MV-168** |
+| 1 | `profiles` | INSERT | no grant, no policy | **GRANT** `INSERT (owner, case_id, sections, completeness)` + `profiles_insert_case` — **and convert the call site off `.upsert()` in the same slice**, or the grant never reaches it. See below. | **MV-168** |
 | 2 | `assessments` | INSERT | no grant, no policy | **REFUSE — permanently.** See below. Amend §6. | — |
 | 3 | `assessments` | UPDATE | no grant, no policy | **GRANT, narrowed to `UPDATE (is_primary)`** + `assessments_update_case`. Re-scoring stays server-side. | **MV-168** |
 | 4 | `assessments` | DELETE | no grant, no policy | **REFUSE.** No domain need; row removal is account teardown (Stage 6). | — |
 | 5 | `plan_items` | INSERT | no grant, no policy | **GRANT** `INSERT (owner, case_id, kind, impact, title, body, status, lift_estimate, time_estimate)` + `plan_items_insert_case` | **MV-168** |
-| 6 | `plan_items` | DELETE | no grant, no policy | **REFUSE.** Plan items are *dismissed* (`status='dismissed'`), never deleted; the existing UPDATE grant covers the domain. | — |
+| 6 | `plan_items` | DELETE | no grant, no policy | **REFUSE.** Plan items are *dismissed* (`status='dismissed'`), never deleted. The existing UPDATE grant covers the **student's** domain — **not** the generator's copy columns; see the row-6 correction below. | — |
 | 7 | `documents` | INSERT | no grant; policy is `service_role`-only | **DEFER to Stage 4**, with reason. Amend §6. | Stage 4 |
 | 8 | `documents` | UPDATE | no grant, no policy | **NEVER** — Stage 4 replaces the model. Confirmed. | — |
 | 9 | `program_predictions` | UPDATE | no grant **and** `reject_prediction_update` trigger `[Q6]` | **NEVER** — append-only. Confirmed live. | — |
@@ -322,6 +334,64 @@ that would let the authenticated client do that is Stage 4's, and Stage 2 §8 pi
 owner-keyed through Stage 3. Granting the row INSERT alone therefore retires **no** service-role path
 and widens the write surface for no caller. Deferring is the smaller change; the amendment to §6
 records it so it is a decision, not a silence.
+
+#### Grant 1 does not unblock its own call site — and the fix is TypeScript, not a wider grant
+
+**The first profile write is an upsert, not an insert.** `lib/profiles/repo.ts:84` —
+`.upsert(payload, { onConflict: "case_id", ignoreDuplicates: false })`, with `payload` carrying
+`owner`, `case_id`, `sections`, `completeness` (`:76-80`). It is reached from
+`patchProfileSectionForCase` (`:129-133`) whenever the case has no profile row yet — exactly the
+"first-ever profile row" case §6.2 entry 9 names.
+
+MV-155 already measured what that compiles to and wrote the measurement into the migration
+(`supabase/migrations/20260802120000_stage2_case_id_and_personal_cases.sql:630-640`): an upsert
+becomes `INSERT … ON CONFLICT DO UPDATE SET`, **PostgREST puts every payload column in that SET list,
+including the conflict target**, and the privilege check happens at plan time — so **even the insert
+branch raises `42501` on the FIRST call, with no row present and neither branch reachable.** Grant 1
+is INSERT-only. Under it, the upsert fails before it ever inserts.
+
+**The obvious patch is forbidden.** Granting `UPDATE (case_id)` would satisfy the SET list, and it is
+precisely what the migration's rule at `:602-604` refuses: *"THE ASYMMETRY IS THE POINT AND IT IS NOT
+A SLIP: `case_id` is OMITTED from every UPDATE list and INCLUDED in every INSERT list… a client that
+can UPDATE case_id RE-POINTS an existing row into another case."* **No Stage 3 slice weakens that
+rule.**
+
+**Resolution — MV-168 converts `upsertProfileForCase` to read-then-insert**, treating a `23505` on
+`profiles_case_idx` as "someone else created it, re-run the UPDATE". This is not a new pattern: §2.5
+already names it as *the* Stage 3 writer pattern (*"read-then-insert with `23505` treated as a
+resolve, exactly as `ensurePersonalCase` does"*).
+
+**Trade-off, stated.** It costs one extra round trip on the first-ever profile write only, and a
+genuinely concurrent first write resolves instead of failing. The alternatives are worse here: a
+`SECURITY DEFINER` function adds a SQL surface Stage 3 does not otherwise need **and hides the write
+from the column grants that are the enforcement point**; an insert-then-update pair costs the same
+round trip and leaves a half-written row when the update fails.
+
+**One trap the conversion must not walk into.** `upsertProfileForCase` already treats `23505` as the
+residue signal (`:89-92` → `adoptOwnerKeyedResidue`), and the legacy `profiles_owner_key` unique on
+`owner` is still live. Both collisions raise the same SQLSTATE, so the conversion must distinguish
+the `profiles_case_idx` collision (resolve: re-read and update) from the `profiles_owner_key` one
+(adopt residue, then retry) rather than treating any `23505` as a resolve.
+
+**Scoped to MV-168, not MV-172**, because a grant whose only call site cannot use it is exactly the
+paper resolution this document exists to prevent. MV-168's "no UI, no route" scope admits this one
+repository-helper change, and its acceptance criteria must pin it with a test that **fails against
+the `.upsert()` form**: *the authenticated client creates a first-ever `profiles` row for a case it
+may reach.* The same conversion is needed on two more tables — see **F-8**.
+
+#### Correction to row 6 — the existing UPDATE grant does not cover the whole `plan_items` domain
+
+`plan_items` grants `authenticated` `UPDATE (status, completed_at, started_at)`
+(`…20260802120000….sql:626`) — the student's columns. But `invalidatePlan`'s **copy refresh**
+(`lib/plan/invalidate.ts:172-176`) UPDATEs `impact`, `title`, `body`, `lift_estimate`,
+`time_estimate`, and the migration is explicit that those are out of scope on purpose: *"`kind`,
+`title`, `impact` and the rest are MeroVisa's determination (spec §11.1's Platform layer)"* (`:623-624`).
+
+**Stage 3 does not grant them and must not** — a client that can rewrite its own plan copy can
+rewrite the advice, which is the same trust property §6.1 row 2 protects on `assessments.result`.
+Row 6's refusal of `plan_items` DELETE stands; only its *reason* was overstated. The consequence is
+that plan copy refresh stays a server-side write, and it is the second of the three legs that keep
+`app/api/profile/section/route.ts` on service-role (§6.2 entry 9).
 
 #### Retiring MV-160's `42501` pin — the same slice, or the suite lies
 
@@ -365,17 +435,63 @@ disposition; "still legacy, no reason" is not acceptable (MV-154's standard).
 | 6 | `app/api/documents/[id]/view/route.ts` | mints a signed URL for a private object | **WAITS FOR STAGE 4** — Storage policy + per-document metadata authorization. |
 | 7 | `app/api/documents/upload/route.ts` | Storage upload **and** `documents` INSERT | **WAITS FOR STAGE 4** — both halves are Stage 4's (§6.1 row 7). |
 | 8 | `app/api/plan/action/route.ts` | `plan_items` has UPDATE but **no INSERT**, and `invalidatePlan` inserts on the same client | **RETIRES in MV-168 + MV-172.** Grant 5 is exactly what this waits on. |
-| 9 | `app/api/profile/section/route.ts` | `profiles` has UPDATE but **no INSERT**, and this path must create a first-ever profile row | **RETIRES in MV-168 + MV-172.** Grant 1 is exactly what this waits on. |
+| 9 | `app/api/profile/section/route.ts` | `profiles` has UPDATE but **no INSERT**, and this path must create a first-ever profile row | **NARROWS — it does NOT retire.** The registry's stated reason is incomplete: three further legs on the same client are refused by §6.1 and stay service-role. See below. |
 
-**Net effect of Stage 3 on the list: 9 → 7 entries**, of which 3 wait for Stage 4 and 4 are
-permanent. **Two are retired outright (8, 9); two are narrowed (3, 4); two are reclassified (1, 2).**
+#### Why entry 8 retires and entry 9 does not — two rows that look alike
+
+`app/api/plan/action/route.ts` calls exactly three helpers — `getPlanItemKind` (a read),
+`setPlanItemStatus` (`status`, `completed_at`) and `setPlanItemStarted` (`started_at`) — every write
+inside the granted `UPDATE (status, completed_at, started_at)`. It does **not** call `invalidatePlan`;
+only a comment at `:45` names it. **Entry 8 genuinely retires.**
+
+`app/api/profile/section/route.ts` does four things on one admin client, and Stage 3's grants cover
+only the first two:
+
+| Leg | Write | Covered by Stage 3? |
+|---|---|---|
+| `patchProfileSectionForCase` (`:47`) | `profiles` UPDATE `(sections, completeness)`, falling back to creating a first-ever row | **Yes** — existing grant + grant 1 (with the `.upsert()` conversion above) |
+| `invalidatePlan` (`:53`) → auto-close + insert | `plan_items` UPDATE `(status, completed_at)`, INSERT | **Yes** — existing grant + grant 5 |
+| `invalidatePlan` → **copy refresh** | `plan_items` UPDATE `(impact, title, body, lift_estimate, time_estimate)` | **No — refused.** Generator-owned columns (row-6 correction, §6.1) |
+| `invalidatePlan` / `upsertProfileForCase` → `adoptOwnerKeyedResidue` | `UPDATE (case_id)` | **No — refused permanently.** `case_id` is omitted from every UPDATE list by design; `lib/cases/residue.ts:45-51` documents the path as service-role-only |
+| `reScoreAssessment` (`:58`) | `assessments` UPDATE `(result)` | **No — refused permanently** by §6.1 row 3 ("Re-scoring stays server-side") |
+
+**The failure would be silent, which is why this is a blocker and not a detail.**
+`lib/assessments/re-score.ts:33` never destructures `error` from its `.update()`, and a PostgREST
+`42501` **resolves rather than rejects** — so it never reaches the route's `console.error` at `:60`,
+and the route still returns `{ ok: true }` with a 200. `grep -rn throwOnError lib/ app/` returns
+**zero hits**, so nothing ambient compensates. Flip this route wholesale to the authenticated client
+and every profile edit silently stops updating the student's verdict, **with a green suite**. The
+copy-refresh and residue legs fail the same way — both only `console.error`.
+
+**MV-172's deliverable on this route is therefore a split, not a flip.** The profile write moves to
+the authenticated client; the three refused legs stay on an explicitly-scoped service-role call.
+**MV-171's new case-scoped scoring route absorbs the `reScoreAssessment` leg only** — the copy-refresh
+and residue-adopt legs are `plan_items` / `case_id` writes, not scoring, and no scoring route can
+carry them. They are named here so no slice assumes the scoring route disposed of all three.
+
+**The route keeps its registry entry either way.**
+`tests/supabase/service-role-exceptions.test.ts:280` requires every module constructing the admin
+client to be registered, and `:293` requires every registered entry to still construct one. **A
+builder cannot keep the admin client and delete the entry**; attempting the retirement produces a red
+suite at best and a silent trust regression at worst.
+
+**Net effect of Stage 3 on the nine: 9 → 8 entries.** **One retires outright (8); three are narrowed
+(3, 4, 9); two are reclassified to `sanctioned` (1, 2); three wait for Stage 4 (5, 6, 7).** Of the
+eight survivors, 3 wait for Stage 4 and 5 are permanent.
 
 **And the list will also GROW.** A counsellor creating a case for a student who has no account still
 needs an assessment scored for that case, and §6.1 refuses to let the client write one. Stage 3 must
 therefore add a **new** server route that runs the scoring engine on behalf of a case — a new
 service-role call site, registered in the list with a justification, per the plan's rule that new
 consultancy features must not add service-role paths *outside* the list. MV-154's framing of the
-list as monotonically shrinking does not survive Stage 3. **Net-net Stage 3 ends at 8 entries.**
+list as monotonically shrinking does not survive Stage 3.
+
+**Net-net Stage 3 ends at 9 entries — the same count it started with.** Stage 3 retires exactly one
+service-role path and adds one. That is the honest number, and stating it plainly is the point: a
+stage that reads as "the enforcement boundary advanced" advanced it by *scope* (writes move onto the
+authenticated client inside `profile/section`, and the case route reaches student data as the
+authenticated user for the first time), not by *count*. A reader who scores Stage 3 on the size of
+this list will conclude it achieved nothing, and will be measuring the wrong thing.
 
 ### 6.3 The consultancy-created row shape
 
@@ -409,6 +525,10 @@ not a helpful message.
 
 Raised, not resolved. Criterion: a cell that contradicts the Stage 1 canonical matrix is a **finding
 for the founder**, not a decision this spec may take.
+
+**Three are blockers: F-1, F-3 and F-8.** F-1 and F-3 are founder decisions this spec declines to
+take; **F-8 is a carve gap this spec closes** (§4 cells 21–23, §9.1 E4/E7). The rest are recorded so
+a slice does not rediscover them mid-build.
 
 ### F-1 `[BLOCKER]` The Stage 3 exit gate names a counsellor doing two things the canonical model forbids
 
@@ -446,7 +566,14 @@ matrix was derived from — gives the counsellor *"accesses assigned cases by de
 *"oversees assignments and case operations"*. Read against that table, the exit gate's "counsellor"
 is loose prose for "consultancy staff", and (a) contradicts nothing. **The spec proceeds on (a)** and
 §8's carve assumes it; if the founder chooses (b), MV-171 gains a predecessor slice and §4 cells 8–9
-change. **This is the one decision in this document that is not the spec's to take.**
+change.
+
+**This is one of two decisions in this document that are not the spec's to take** — the other is
+**F-3**. They differ in kind, and the difference is why F-1 carries a recommendation and F-3 does not:
+here the plan's prose disagrees with two enforcement layers that agree with each other, so reading (a)
+contradicts nothing and can be adopted provisionally. In F-3 every layer agrees and a *new* surface
+is what makes the settled answer uncomfortable — so there is no reading that contradicts nothing, and
+the spec offers none.
 
 ### F-2 `[NEW CELL]` Nobody can create an organization
 
@@ -459,23 +586,73 @@ is recorded here so a slice does not discover it mid-build and improvise a grant
 grants org creation**; provisioning stays a founder/ops action until a stage asks for self-serve
 signup. Marked NEW because Stage 1's canonical matrix has no `org.create` verb at all.
 
-### F-3 `[NEW CELL — trust risk]` A linked student can rewrite their case's `display_name` and `email`
+### F-3 `[BLOCKER — CANONICAL AMENDMENT, FOR THE FOUNDER]` A new Stage 3 surface exposes a settled canonical cell
 
-`cases` grants `authenticated` `UPDATE (archived_at, display_name, email, operational_status)` `[Q3]`,
-`cases_update_accessor` admits the linked student `[Q4]`, and `enforce_case_write_surface` guards
-**only** `archived_at` and `operational_status` `[Q6]`. So `display_name` and `email` are writable by
-the student.
+**The mechanism, measured.** `cases` grants `authenticated`
+`UPDATE (archived_at, display_name, email, operational_status)` `[Q3]`, `cases_update_accessor`
+admits the linked student `[Q4]`, and `enforce_case_write_surface` guards **only** `archived_at` and
+`operational_status` `[Q6]`. So `display_name` and `email` are writable by the linked student.
 
-Those two columns are exactly what MV-170's student list renders. A student could rename their case
-to impersonate another student in a counsellor's list, or change the `email` a counsellor
-corresponds with. This is the concrete instance of the field-allowlist gap that
-`lib/cases/permissions.ts` and `lib/cases/README.md` both record in the abstract, and it is the first
-stage where a surface *displays* those fields to a third party.
+**That omission is the canonical decision, not a gap — and it was taken twice.** The Stage 1 matrix's
+own required change reads (`docs/superpowers/specs/2026-08-02-stage1-canonical-access-matrix.md:68-70`):
+*"split the flat column grant so the student's write surface is **profile fields only**, never
+`operational_status` / `archived_at`."* The migration that built the guard states it in the same
+breath, under the heading *"The canonical access matrix (divergences 2 and 4) **settles** the split"*
+(`supabase/migrations/20260730180000_case_aware_rls_policies.sql:459`): *"display_name, email —
+profile fields. The student's surface, per the plan's 'updates permitted profile fields'; staff hold
+it too, per 'manages the student profile'."* A live Stage 1 test pins it **positively**, not by
+omission: `tests/integration/case-rls.itest.ts:833` — `it("lets the linked student edit profile
+fields on their own case")` — asserting the student's `display_name` write returns no error and the
+value applied.
 
-**Assigned to MV-173**, which owns the allowlist. Two candidate fixes (the slice picks one and
-amends this spec): extend `enforce_case_write_surface` to require `can_staff_case` for both columns,
-or hold the allowlist in the mutation's Zod schema. **The trigger is the stronger option** — it is
-where the sibling rules already live, and it cannot be bypassed by a second caller.
+Note the cell's provenance is *not* divergences 2 and 4 — those are the **denials** of
+`operational_status` / `archived_at`, already spent on cells 10 and 11. Cell 12 traces to the same
+canonical string cell 14 uses: *"updates permitted profile fields"*.
+
+**What IS new is the read side, and it is genuinely new.** Stage 3 is the first stage in which a
+surface *displays* these fields **to a third party**: MV-170's student list. A student could rename
+their case to impersonate another student in a counsellor's list, or change the `email` a counsellor
+corresponds with. No canonical document reasons about a staff-facing list rendering a
+student-writable field, because until Stage 3 no such list existed. **The trust concern is real.**
+
+*Stated honestly about its own evidence:* unlike every other claim in this document, this one is a
+**forecast, not a `[Q]` measurement**. MV-170 has no card dossier yet and no case-list surface exists
+— `display_name` appears in `app/` exactly once, in a comment at `app/api/account/delete/route.ts:20`.
+The risk is a consequence of the carve, not of a captured row.
+
+**Why this spec takes no decision.** Closing it at the write layer moves a canonical cell, which §1
+rule 3 forbids this document from doing, and §5 states the test verbatim: *"If a Stage 1 or Stage 2
+suite needs an edit to stay green, a Stage 3 slice moved a cell and is wrong."* Applying the trigger
+fix turns `case-rls.itest.ts:833` red — that rule's own definition of a slice being wrong.
+
+**The two readings:**
+
+- **(a) The canonical cell stands; mitigate at the read layer.** MV-170's list renders
+  staff-controlled identity, or marks student-edited fields as student-supplied so a counsellor
+  cannot be deceived by one. Moves no cell, breaks no test, and leaves the student the field the
+  plan gives them. Separately and independently, MV-173 still closes the **TypeScript** allowlist
+  gap footnote ¹ describes — `lib/cases/README.md:152-157` already records where that belongs:
+  *"The allowlist belongs with that mutation."*
+- **(b) The canonical cell narrows.** `display_name`/`email` become staff-only via
+  `enforce_case_write_surface`. This is a **canonical matrix amendment**, touching the Stage 1 matrix
+  row, migration `20260730180000`'s stated split, and the Stage 1 pins. **Blast radius, measured so
+  the founder is not guessing:** exactly two assertion-pairs in one file —
+  `case-rls.itest.ts:835-837` and `:905-907`, both writing `display_name`. `cases.email` is written
+  by **no test at all** (it appears only in the grant-list pin at `:556`), so an `email`-only variant
+  breaks zero assertions. `tests/integration/tenant-isolation.itest.ts:1786-1809` is **not** affected
+  — its student probe writes `operational_status`.
+
+**No recommendation is offered, and no cell is moved.** This is deliberately unlike F-1, where the
+plan's prose disagreed with two layers that agreed with each other and the cheap reading contradicted
+nothing. Here the plan, the canonical matrix, the migration and the test **all agree**, and it is a
+new Stage 3 surface that makes the settled answer uncomfortable. That is a founder call, not a slice's
+and not this spec's.
+
+**Removed from MV-173's build scope** (§8.1). The earlier draft of this finding assigned it to MV-173
+and picked the trigger option; that handed a canonical amendment **down** to a slice while F-1 handed
+its equivalent **up** to the founder — the same class of problem under opposite rules. MV-173 keeps
+the case-context indicators and the non-canonical TypeScript allowlist; it does **not** touch the
+`cases` column guard.
 
 ### F-4 `[SCOPE]` "Consultancy-internal notes" has a permission but no column
 
@@ -526,6 +703,64 @@ Recorded so later slices do not re-derive them:
   wrong about the four INSERTs, but a slice sizing the work off "four" will miss `assessments`
   UPDATE/DELETE and `plan_items` DELETE. §6.1 above is the complete list.
 
+### F-8 `[BLOCKER]` Five case-scoped write routes resolve the ACTOR's own case and accept no case id
+
+**Why §6.2's lens could not see these.** That section's inventory is the service-role registry, and
+all five of these already run on the **authenticated** client — so none appears in
+`lib/supabase/service-role-exceptions.ts` (`app/api/shortlist/route.ts` was removed from it by
+MV-157). They are invisible to a nine-path audit and to the ten-verb audit alike, because nothing is
+missing: the grants and the policies are already there.
+
+| Route | Writes | Resolves |
+|---|---|---|
+| `app/api/shortlist/route.ts:46` | `user_program_state` | `resolvePersonalCaseId(data.user.id, supabase)` |
+| `app/api/documents/status/route.ts:33` | `document_status` | same |
+| `app/api/outcomes/prediction/route.ts:28` | `program_predictions` | same |
+| `app/api/outcomes/attempt/route.ts:31` | `application_attempts` | same |
+| `app/api/outcomes/event/route.ts:32` | `outcome_events` | same |
+
+Every one takes **no case id** and resolves the **actor's own personal case**. They serve
+`app/(app)/matches/page.tsx`, `app/(app)/checklist/page.tsx` and
+`app/(app)/checklist/[programId]/page.tsx` — precisely the experience §8.1 scopes MV-172 to render
+under the case route — and the canonical counsellor is defined as *"manages the student profile,
+assessment, matches, plan, and documents."* The migration that granted these tables already names
+three of the five as the authenticated-client paths it exists to serve
+(`…20260802120000….sql:608-612`).
+
+**Two failure modes, and neither is loud:**
+
+1. **Left as-is**, MV-172 renders matches and the checklist in the case route and every write control
+   writes to the **counsellor's own personal case** — or fails when the counsellor has none. RLS
+   cannot catch this: the counsellor legitimately may reach their own case. Grants and policies are
+   in place (`…20260802120000….sql:670,674`; `ups_*_case` / `ds_*_case` / `pp_`/`aa_`/`oe_insert_case`
+   `[Q3, Q4]`), so the write **succeeds** — against the wrong case.
+2. **Given a case id but otherwise unchanged**, the two UPSERT-seam routes refuse.
+   `caseUpsertColumns` (`lib/cases/dual-write.ts:153-160`) returns `null` whenever the case has no
+   `student_user_id`, and its own doc-comment says why (`:147-151`): *"With `owner IS NULL` the
+   trigger does not fire, nothing derives `case_id`, and supplying it needs the `UPDATE(case_id)`
+   grant Stage 2 withholds — **the residual seam spec §4 rule 2 records as a Stage 3 input.**"* So on
+   a student-less case `setObtained` logs *"refused: case has no student_user_id"* and returns
+   `false`, and `upsertProgramState` returns `false`. **Stage 2 handed this forward by name, and the
+   first draft of this spec did not pick it up.**
+
+**Failure mode 2 is BLOCKER-2's defect on two more tables**, and it takes the same resolution: move
+both writers off `.upsert()` to read-then-insert (§2.5's stated Stage 3 writer pattern), because
+`case_id` can never enter an UPDATE grant. §6.3's "one trap" states the *derivation* half of this and
+stops there; the grant half is what actually blocks the write.
+
+**Resolution and ownership.**
+
+- **MV-168** converts `upsertProgramState` and `setObtained` off `.upsert()`, alongside the identical
+  `profiles` conversion (§6.1), so all three land with one pattern and one test.
+- **MV-172** changes the five route signatures to accept and authorize an **explicit case id**
+  instead of resolving the actor's own. The three `outcomes` routes use a plain `INSERT` and need
+  only this half.
+- **§4 cells 21–23** carry the surfaces; **§9.1 E4 and E7** carry the proof.
+
+**E4 is extended rather than left as it was**, because as originally written it asserted only a
+`profiles.sections` update and a `plan_items` insert — so the stage gate could go green with a live
+cross-case write sitting in the checklist. **E7 is added** to pin the negative directly.
+
 ---
 
 ## 8. The slice carve
@@ -538,13 +773,13 @@ allocates **MV-167 upward**.
 | Slice | Bullet | Scope in one line | Depends on | Explicitly NOT in scope |
 |---|---|---|---|---|
 | **MV-167** STAGE 3 UMBRELLA | — | Tracking only: holds the slice map, the DAG, the exit gate, F-1's open decision, and the legal-gate condition. Ships nothing. | — | Any code. Do not build from this card. |
-| **MV-168** CONSULTANCY WRITE GRANTS | prereq | The only SQL in Stage 3: `INSERT` grant+policy on `profiles` and `plan_items`, `UPDATE (is_primary)` grant+policy on `assessments`, each mirroring the five-sibling `WITH CHECK` template (§2.3). Retires 2 of the 4 DEFERRED HALF assertions and rewrites the other 2's comment (§6.1). Amends Stage 2 spec §6. | — | No UI. No route. No `assessments`/`documents` INSERT (refused/deferred — §6.1). No schema change. |
+| **MV-168** CONSULTANCY WRITE GRANTS | prereq | The only SQL in Stage 3: `INSERT` grant+policy on `profiles` and `plan_items`, `UPDATE (is_primary)` grant+policy on `assessments`, each mirroring the five-sibling `WITH CHECK` template (§2.3). **Plus the three `.upsert()` → read-then-insert conversions** the grants depend on — `upsertProfileForCase`, `upsertProgramState`, `setObtained` (§6.1, F-8). Retires 2 of the 4 DEFERRED HALF assertions and rewrites the other 2's comment (§6.1). Amends Stage 2 spec §6. | — | No UI. No route **signature** changes (that is MV-172). No `assessments`/`documents` INSERT (refused/deferred — §6.1). No schema change. |
 | **MV-169** ORG CONTEXT + TEAM MANAGEMENT | 1 | Org selection for a multi-org actor (`getOrgContext`/`requireOrgPermission` wired to a real surface) + team list, role change, deactivate. Owner-only org settings (cell 2). | — | **No org creation (F-2). No invitations (F-5, Stage 5).** No case surfaces. |
 | **MV-170** STUDENT LIST / SEARCH / FILTERS | 2a | The org-scoped case list: search, filter, `operational_status` display. Read-only. Assigned-only for counsellors, all-org for owner/admin (cell 7). | MV-169 | No creation, no assignment (MV-171). No writes at all. |
 | **MV-171** CASE CREATION + ASSIGNMENT | 2b | Create a case with `student_user_id IS NULL`; assign/reassign the single primary counsellor slot; write `operational_status`. Carries **F-1's resolution** — built as an admin surface under reading (a). Adds the case-scoped scoring route (§6.2). | MV-168, MV-170 | No archive (Stage 6). No student invitation (Stage 5). Not a multi-counsellor model (§2.5). |
-| **MV-172** THE CASE ROUTE | 3 | Render the existing MeroVisa experience under an explicit `case` route, for a case that is not the actor's own. Flips `app/api/profile/section` and `app/api/plan/action` onto the authenticated client (§6.2 rows 8–9). | MV-168, MV-171 | No documents model change (Stage 4). No indicators (MV-173). |
-| **MV-173** CASE-CONTEXT INDICATORS + FIELD ALLOWLIST | 4 | Whose case am I in, and is it mine — persistent, unmissable. **Plus F-3**: close the `display_name`/`email` write gap the list surface exposes. | MV-172 | No new data. No notes (F-4). |
-| **MV-174** SERVICE-ROLE RETREAT + STAGE EXIT | exit | Reclassify entries 1–2, narrow 3–4, confirm 5–7 wait for Stage 4, register the new scoring route (§6.2). Prove the exit gate (§9). **Carries the stage exit.** | all | No new surfaces. |
+| **MV-172** THE CASE ROUTE | 3 | Render the existing MeroVisa experience under an explicit `case` route, for a case that is not the actor's own. Flips `app/api/plan/action` onto the authenticated client and **splits** `app/api/profile/section` — its profile write moves, its three refused legs stay service-role (§6.2 entries 8–9). **Plus F-8**: the five case-scoped write routes take an explicit case id instead of the actor's own. | MV-168, MV-171 | No documents model change (Stage 4). No indicators (MV-173). **Does not retire `profile/section`'s registry entry** (§6.2 entry 9). |
+| **MV-173** CASE-CONTEXT INDICATORS + FIELD ALLOWLIST | 4 | Whose case am I in, and is it mine — persistent, unmissable. Plus the **TypeScript** field allowlist of footnote ¹: `lib/cases/permissions.ts` must stop admitting an arbitrary case patch from a student (`lib/cases/README.md:152-157` — *"The allowlist belongs with that mutation"*). | MV-172 | No new data. No notes (F-4). **Not F-3's column guard** — that is a canonical amendment awaiting the founder, not this slice's to take. |
+| **MV-174** SERVICE-ROLE RETREAT + STAGE EXIT | exit | Reclassify entries 1–2, narrow 3–4 **and 9**, confirm 5–7 wait for Stage 4, register the new scoring route (§6.2) — ending at **nine** entries. Prove the exit gate (§9). **Carries the stage exit.** | all | No new surfaces. |
 
 ### 8.2 The DAG, with a stated reason per edge
 
@@ -558,11 +793,11 @@ MV-168 ────────────────────────�
 | Edge | Kind | Why this order is forced |
 |---|---|---|
 | MV-168 → MV-171 | **data** | Creating a case for a student with no account is useless until something can be written into it. Every write MV-171 needs on `profiles` and `plan_items` is `42501` through the authenticated client until the grant exists (§2.3). |
-| MV-168 → MV-172 | **data** | MV-172's whole deliverable is flipping `profile/section` and `plan/action` off service-role. Those flips *are* grants 1 and 5. Without MV-168, MV-172 ships the case route still on service-role — the opposite of the enforcement boundary. |
+| MV-168 → MV-172 | **data** | MV-172 moves `plan/action` off service-role entirely and `profile/section`'s profile write off it (§6.2 entries 8–9). Those moves *are* grants 1 and 5. MV-172's F-8 route changes additionally depend on MV-168's three `.upsert()` conversions: a case-id parameter is useless while `caseUpsertColumns` refuses every student-less case. Without MV-168, MV-172 ships the case route still on service-role — the opposite of the enforcement boundary. |
 | MV-169 → MV-170 | **data** | The case list is scoped by the selected organization. With no org context there is no scope to list within, and for a single-org actor the "selection" is still the object the query keys on. |
 | MV-170 → MV-171 | **code** | Creation and assignment are entered from the list and reuse its org-scoped case query and row component. Building them first means building that scoping twice and reconciling it later. *Stated as a code dependency, not a data one — it could be parallelised at the cost of rework.* |
 | MV-171 → MV-172 | **data** | The case route must be exercised against a case with `student_user_id IS NULL`. MV-171 is what produces one. Before it, the route can only be tested against a personal case — which is the Stage 2 shape and proves nothing new. |
-| MV-172 → MV-173 | **code** | An indicator indicates the route's context. There is nothing to indicate before the route exists. F-3's fix also belongs after the surface that exposes the field. |
+| MV-172 → MV-173 | **code** | An indicator indicates the route's context. There is nothing to indicate before the route exists. *(F-3 no longer contributes to this edge — its fix is a canonical amendment awaiting the founder, not MV-173 work.)* |
 | MV-173 → MV-174 | **gate** | The exit gate asserts across every Stage 3 surface; it cannot be green before the last one lands. |
 | MV-168 → MV-174 | **data** | The exit gate's write criteria (E4) run against the grants. |
 
@@ -604,16 +839,17 @@ Stage 3 is not build progress but **evidence quality** — see §9.2.
 
 Plan line 646: *"an authorized counsellor can create, find, assign, and manage a case without a
 student account."* Under F-1 reading (a), "authorized counsellor" = consultancy staff holding the
-verb. Each criterion is a named test at a named layer; **MV-174 owns all six.**
+verb. Each criterion is a named test at a named layer; **MV-174 owns all seven.**
 
 | # | Criterion | Layer / test |
 |---|---|---|
 | **E1** | An org **admin** creates a case with `organization_id` set and `student_user_id IS NULL`, **through the authenticated client**. | real-DB `tests/integration/stage3-workspace.itest.ts` |
 | **E2** | An **assigned** counsellor sees that case in the org-scoped list; an **active but unassigned** counsellor in the same org does not; an **inactive** member sees nothing. | same suite |
 | **E3** | An admin assigns the counsellor; a second `primary_counsellor` assignment on the same case is refused (`23505`, `case_assignments_primary_idx`). | same suite |
-| **E4** | The assigned counsellor writes `profiles.sections` **and inserts a `plan_items` row** for that case through the authenticated client, with `owner IS NULL` on every row written. | same suite |
+| **E4** | The assigned counsellor writes `profiles.sections`, **inserts a `plan_items` row**, **ticks a `document_status` row and writes a `user_program_state` row** for that case through the authenticated client, with `owner IS NULL` on every row written. | same suite |
 | **E5** | The case route renders for the assigned counsellor and 404s for the unassigned one. | route-level test |
-| **E6** | No `service-role-exceptions.ts` entry is `legacy-owner-scoped` without a named later stage; the list is 8 entries with the dispositions of §6.2. | unit test over the registry metadata |
+| **E6** | No `service-role-exceptions.ts` entry is `legacy-owner-scoped` without a named later stage; §6.2's tracked set is **9** entries — eight survivors plus the new scoring route — with the dispositions of §6.2. | unit test over the registry metadata |
+| **E7** | **No case-scoped write route resolves the actor's own case.** For each of F-8's five routes, a request made by the assigned counsellor in the student's case context writes a row carrying **that case's** id — asserted by reading the written row's `case_id` back, never by a 200. | route-level test + real-DB read-back |
 
 ### 9.2 How each criterion could pass vacuously
 
@@ -627,13 +863,15 @@ available here, so each criterion states its own vacuity condition and its guard
 | E2 | the org holds only one case, or the "unassigned" counsellor has **no membership at all** — then it is a tenancy test, which Stage 1 already passes, not an assignment test | fixture must hold **≥2 cases in the same org**, and the unassigned counsellor must hold an **`active`** membership in it |
 | E3 | the second assignment is never attempted, leaving only the happy path | assert the `23505` explicitly; a green E3 without a refusal is not evidence |
 | E4 | **the case under test has a `student_user_id`** — then `owner` may be non-null and the consultancy row shape is never exercised. *This is the direct analogue of §A2's failure.* | assert `cases.student_user_id IS NULL` **and** `owner IS NULL` on every row created, **and** assert the created-row count is `> 0` (an empty write set satisfies "all rows have `owner IS NULL`" trivially) |
+| E4 (seam half) | **`setObtained` / `upsertProgramState` return `false` rather than throwing.** A test that awaits the call and asserts no exception passes while the write was refused — which is exactly what `caseUpsertColumns` does today on a student-less case (F-8 failure mode 2) | assert **the row exists**, read back by `(case_id, kind)` / `(case_id, program_id)`. Never assert "did not throw", and never trust the boolean alone |
 | E5 | both actors 404 for an unrelated reason (missing route, build error) | the positive half must assert rendered case content, not merely a 200 |
-| E6 | the registry is read as a list of strings and the assertion is `length === 8` | assert **per-entry disposition**, not the count; a count passes after any two-entry swap |
+| E6 | the registry is read as a list of strings and the assertion is `length === 9` | assert **per-entry disposition**, not the count; a count passes after any two-entry swap |
+| E7 | **the counsellor under test has no personal case of their own** — then a mis-scoped write has nowhere to land, and a route that resolves the actor's own case is indistinguishable from one that honours the parameter | the counsellor fixture must itself hold **a personal case with at least one pre-existing row on the same table**, so a wrong-case write is observable as a row on the wrong case rather than as an error |
 
 ### 9.3 The gate's own limit, stated up front
 
 **Every criterion above is proved on seeded test data.** With D-B shut, production holds no
-consultancy organization and no student-less case, so none of E1–E6 says anything about production
+consultancy organization and no student-less case, so none of E1–E7 says anything about production
 behaviour — exactly the `document_status` / anonymous-population vacuity MV-165 flagged and left open
 **[inherited]**.
 
@@ -670,12 +908,36 @@ the cited query. A claim whose query is missing is a defect in this document.
 ## 11. Decision log
 
 - **2026-08-07 — written by the MV-166 spec session.** Grounded in `[Q1]`–`[Q8]` against the local
-  stack at repo migration head; production deliberately not read (§1). Seven findings raised (§7),
-  of which **F-1 is a founder decision this spec explicitly declines to take** and proceeds on
-  reading (a) provisionally. Ten deferred verbs resolved (§6.1) — three granted, four refused
-  permanently, one deferred to Stage 4, two confirmed never. Nine service-role paths dispositioned
-  (§6.2): two retire, two narrow, two reclassify, three wait for Stage 4, **one new entry is added**.
+  stack at repo migration head; production deliberately not read (§1). Ten deferred verbs resolved
+  (§6.1) — three granted, four refused permanently, one deferred to Stage 4, two confirmed never.
   Carve: MV-167 umbrella + MV-168…MV-174, DAG with a reason per edge, no release train (§8.2).
+- **2026-08-07 — revised after adversarial review of the first draft (same card, same PR).** Four
+  corrections, each of which would have sent a slice to build the wrong thing:
+  1. **§6.2 entry 9 narrows, it does not retire.** `app/api/profile/section/route.ts` carries three
+     further legs — `assessments` UPDATE `(result)`, `plan_items` generator-column copy refresh, and
+     `adoptOwnerKeyedResidue`'s `UPDATE (case_id)` — that §6.1 refuses. All three fail **silently**
+     (`re-score.ts:33` discards its error; `throwOnError` appears nowhere in `lib/` or `app/`).
+     §6.1 row 6's "the existing UPDATE grant covers the domain" corrected. **Arithmetic corrected:
+     9 → 8, net-net 9, not 8.**
+  2. **Grant 1 did not unblock its own call site.** The first profile write is `.upsert()`
+     (`lib/profiles/repo.ts:84`), which needs `UPDATE (case_id)` — forbidden by design. Resolved by
+     converting the call site to read-then-insert in MV-168, not by widening the grant.
+  3. **F-8 added.** Five case-scoped write routes resolve the actor's own case and take no case id;
+     §6.2's registry lens was structurally blind to them. Cells 21–23, E4 extended, **E7 added**.
+  4. **F-3 reclassified.** The student's `display_name`/`email` write is a **canonical** decision
+     (`stage1-canonical-access-matrix.md:68-70`; `20260730180000….sql:459`), pinned positively at
+     `case-rls.itest.ts:833`. The first draft called it a NEW cell and picked the fix; that moved a
+     canonical cell, which §1 rule 3 forbids. **Escalated to the founder in F-1's shape, removed from
+     MV-173's scope. Two founder decisions now stand open, not one.**
+
+  Net: **eight findings** (§7), of which **F-1 and F-3 are founder decisions this spec declines to
+  take**; F-1 proceeds on reading (a) provisionally, F-3 offers no recommendation. **Nine
+  service-role paths dispositioned (§6.2): one retires, three narrow, two reclassify, three wait for
+  Stage 4, one new entry is added — net 9 → 9.**
 - **Departures from Stage 2 spec §6, to be amended in MV-168's PR:** `assessments` INSERT **refused**
   (server-side scoring, §6.1) rather than granted; `assessments` UPDATE **narrowed** to `is_primary`;
   `documents` INSERT **deferred to Stage 4** rather than granted in Stage 3.
+- **Picked up from Stage 2 and previously dropped:** `lib/cases/dual-write.ts:147-151` recorded the
+  `owner IS NULL` UPSERT-seam refusal as *"a Stage 3 input"*. It is now carried by **F-8** and
+  MV-168's conversions. A verb handed forward by name and not picked up is how a deferral becomes
+  permanent by accident — the same failure §6.1 opens by warning about.
