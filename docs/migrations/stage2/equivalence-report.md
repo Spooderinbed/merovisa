@@ -181,14 +181,16 @@ second is the uncomfortable one:
 This section previously required the pre-migration snapshot be captured **"before MV-155 first
 mutated the copy"**, making the proven boundary the whole of Stage 2 (pre-MV-155 → post-MV-160).
 **That boundary can never be proven by snapshot diff, and the reason is not that anyone skipped a
-step.** Four independent facts, each measured on 2026-08-07, close it:
+step.** Four independent facts close it. Facts 1-3 were **measured** on 2026-08-07 and are decisive on
+their own; fact 4 is a **search**, and its scope is stated with it rather than dressed as a universal
+negative:
 
 | # | Fact | Consequence |
 | --- | --- | --- |
 | 1 | Production has been **post-MV-155 since 2026-08-02**. | The pre-MV-155 state no longer exists anywhere on the live database. |
 | 2 | The organization (`kryajhnrcukcknuwmtfz`) is on the **free plan** — no automated backups, no PITR. | There is no restore point of any age to roll back to. |
 | 3 | **PITR is not retroactive.** | Upgrading the plan today does not manufacture a 2026-08-01 restore point. Paying more cannot buy the missing artifact. |
-| 4 | A filesystem-wide search on 2026-08-07 (Downloads, Desktop incl. every worktree, Documents, OneDrive\Documents; `.sql`/`.dump`/`.backup`/`.bak`/`.pgdump`) found **no dump of any kind** — 99 hits, all repo rehearsal helpers, all dated 2026-08-03 or later. | No offline copy of the pre-MV-155 state was ever taken. |
+| 4 | A search on 2026-08-07 of Downloads, Desktop (incl. every worktree), Documents and OneDrive\Documents for `.sql`/`.dump`/`.backup`/`.bak`/`.pgdump` found **no pre-MV-155 dump** — 99 hits, all repo rehearsal helpers, all dated 2026-08-03 or later. | **No such dump was found.** Stated as scope, not as a universal negative: it was four directory trees and five extensions, not the whole filesystem, so it cannot exclude an archive (`.zip`/`.tar`), a `.json`/`.csv` export, or a copy held elsewhere. Facts 1-3 are the load-bearing ones; this fact rules out the likely hiding places, not every conceivable one. |
 
 So the requirement is amended to the boundary that **is** reachable, and which is also the one the
 founder gate actually needs: **today's production is the pre-tighten state**, so the two pending
@@ -223,6 +225,14 @@ all ten users because there was nothing to compare, **not** because a comparison
 evidence covering `document_status` is §A1's synthetic corpus. The same caveat applies, for the same
 reason, to the anonymous-assessment population: production carries **0** anonymous rows (§3.0's table), so
 the case-less branch has no live subject either.
+
+**One naming caution, because the same phrase means two different things in this file.** §2 uses
+"pre-tighten → post-tighten" for **§A1's** interval, which crosses `20260805140000` ONLY — §A1 rolls
+back and re-applies that one file, so MV-161 stays applied throughout and §A1 never crosses it. §A2's
+interval crosses **both** pending migrations. The practical consequence: **MV-161's crossing is
+covered by this §A2 run alone and has no CI regression net.** Extending §A1 to roll back and re-apply
+both files is now possible — §3.1 ships the reverse script that was missing — and is the obvious
+follow-up.
 
 ### 3.1 How the pre-state was reached — and the reversal that had to be written
 
