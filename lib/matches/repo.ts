@@ -1,8 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { caseUpsertColumns } from "@/lib/cases/dual-write";
-import { CaseReadError } from "@/lib/cases/errors";
+import { caseWriteColumns } from "@/lib/cases/dual-write";
+import { CaseReadError, isUniqueViolation } from "@/lib/cases/errors";
 
 type DB = SupabaseClient<Database>;
 
@@ -23,40 +23,47 @@ export async function upsertProgramState(
   db: DB,
   input: { caseId: string; programId: string; status: ShortlistStatus; notes?: string | null },
 ): Promise<boolean> {
-  // THE CONFLICT TARGET AND THE PAYLOAD ARE GOVERNED BY OPPOSITE RULES, and they
-  // look alike inside one `.upsert(payload, { onConflict })` call:
+  // MV-168 — INSERT, then UPDATE on a collision. NOT an `.upsert()`, and the
+  // reason is the same one that governs `lib/profiles/repo.ts`:
   //
-  //   TARGET  — `case_id,program_id` names MV-155's `user_program_state_case_
-  //             program_idx`. It is an index column list, not a write, so naming
-  //             case_id is fine. That index is deliberately FULL, not partial:
-  //             PostgREST emits a bare `on_conflict=` column list and Postgres
-  //             infers a PARTIAL unique index only when the statement supplies
-  //             the predicate, so a partial arbiter raises 42P10 (spec §4 rule 1).
+  //   * PostgREST compiles an upsert to `INSERT … ON CONFLICT DO UPDATE SET` and
+  //     puts EVERY payload column in the SET list, checked at plan time. Stage 2
+  //     grants `UPDATE (owner, program_id, status, notes)` here — no `case_id` —
+  //     so a payload naming it is 42501 on the first call. `case_id` is in the
+  //     INSERT grant, and a plain INSERT is only privilege-checked against that.
+  //   * `UPDATE (case_id)` is forbidden by design (…20260802120000….sql:602-604):
+  //     a client that can update it re-points a row into another case.
   //
-  //   PAYLOAD — must NOT contain case_id. PostgREST compiles this to
-  //             `INSERT … ON CONFLICT DO UPDATE SET`, putting every payload
-  //             column in the SET list, and the privilege check happens at plan
-  //             time. Stage 2 grants `UPDATE (owner, program_id, status, notes)`
-  //             on this table — no case_id — so naming it fails 42501 on the
-  //             INSERT branch of the first call, with no row present and neither
-  //             branch reachable. MV-155 §H's definer trigger, qualified
-  //             `when (new.owner is not null)`, derives case_id from owner
-  //             instead and overwrites any supplied value.
-  const ownership = await caseUpsertColumns(db, input.caseId);
+  // SO THE INSERT NAMES `case_id` EXPLICITLY, and the UPDATE branch names neither
+  // axis. MV-155 §H's definer trigger no longer overwrites a supplied value —
+  // MV-159 qualified it `new.case_id is null and new.owner is not null`, so a
+  // supplied `case_id` skips the derive entirely. That change is what makes an
+  // owner-bearing row on an ORG case land where it was told to instead of on the
+  // owner's personal case, and it is why this may move off `caseUpsertColumns`.
+  //
+  // `caseWriteColumns`, not `caseUpsertColumns`: the latter refuses any case with
+  // no `student_user_id` outright, which is every consultancy case. `owner` is
+  // still derived from the case rather than passed in — the dual-write guard is
+  // unchanged, only the shape of what it returns.
+  const ownership = await caseWriteColumns(db, input.caseId);
   if (ownership === null) return false;
 
-  const { error } = await db
+  const mutable = { status: input.status, notes: input.notes ?? null };
+
+  const { error: insertError } = await db
     .from("user_program_state")
-    .upsert(
-      {
-        ...ownership,
-        program_id: input.programId,
-        status: input.status,
-        notes: input.notes ?? null,
-      },
-      { onConflict: "case_id,program_id", ignoreDuplicates: false },
-    );
-  return !error;
+    .insert({ ...ownership, program_id: input.programId, ...mutable } as never);
+  if (!insertError) return true;
+  // The row already exists on this case for this program — `user_program_state_
+  // case_program_idx`. Any other unique violation is a real failure.
+  if (!isUniqueViolation(insertError)) return false;
+
+  const { error: updateError } = await db
+    .from("user_program_state")
+    .update(mutable as never)
+    .eq("case_id", input.caseId)
+    .eq("program_id", input.programId);
+  return !updateError;
 }
 
 export async function deleteProgramState(

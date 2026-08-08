@@ -367,11 +367,40 @@ genuinely concurrent first write resolves instead of failing. The alternatives a
 from the column grants that are the enforcement point**; an insert-then-update pair costs the same
 round trip and leaves a half-written row when the update fails.
 
-**One trap the conversion must not walk into.** `upsertProfileForCase` already treats `23505` as the
-residue signal (`:89-92` → `adoptOwnerKeyedResidue`), and the legacy `profiles_owner_key` unique on
-`owner` is still live. Both collisions raise the same SQLSTATE, so the conversion must distinguish
+**One trap the conversion must not walk into.** ~~`upsertProfileForCase` already treats `23505` as
+the residue signal (`:89-92` → `adoptOwnerKeyedResidue`), and the legacy `profiles_owner_key` unique
+on `owner` is still live. Both collisions raise the same SQLSTATE, so the conversion must distinguish
 the `profiles_case_idx` collision (resolve: re-read and update) from the `profiles_owner_key` one
-(adopt residue, then retry) rather than treating any `23505` as a resolve.
+(adopt residue, then retry) rather than treating any `23505` as a resolve.~~
+
+> **CORRECTED 2026-08-08 BY MV-168 — the premise was stale and the trap does not exist.**
+> `profiles_owner_key` **is not live**. MV-160 §D dropped it — it is in that card's own
+> `DROPPED_OWNER_UNIQUES` list — and made `profiles.case_id` NOT NULL in the same migration, so an
+> owner-set / case-null profile row is not representable and `adoptOwnerKeyedResidue(db, "profiles",
+> …)` can only ever return 0. `tests/integration/case-data-access.itest.ts` already pinned that
+> return value. Read back from the live catalogue, the only uniques on `profiles` are
+> `profiles_case_idx` and `profiles_pkey`.
+>
+> So `23505` on this table has **one** meaning — a concurrent first write on the same case — and one
+> remedy: update the mutable columns onto the row that won. MV-168 implements exactly that and drops
+> the now-unreachable adopt call from this path. `lib/cases/residue.ts` is unchanged and still serves
+> its three other callers; `assessments` is the one adoptable table whose `case_id` is still nullable
+> and where the residue shape therefore remains representable.
+>
+> **The instruction this replaces was written from `lib/profiles/repo.ts`'s own doc comment**, which
+> had described the live schema accurately when it was written and had not been updated when MV-160
+> changed it. A prose claim about the schema is evidence about the past; the catalogue is evidence
+> about now.
+
+> **AMENDED 2026-08-08 BY MV-168 — the conversion is INSERT-first, not read-first.**
+> The resolution above says "read-then-insert". Implemented literally that costs an extra round trip
+> on **exactly the path the grant exists to serve**: `patchProfileSectionForCase` (`:116-133`) already
+> does its own UPDATE and only calls `upsertProfileForCase` when that matched **zero rows** — so the
+> function is reached precisely when there is no row to read. MV-168 therefore INSERTs first and
+> treats `23505` as the resolve, which is the same two-branch semantics with one fewer round trip on
+> the common path and no behavioural difference on the collision path. The trade-off §6.1 recorded
+> ("one extra round trip on the first-ever profile write") is not paid at all. The same shape is used
+> on the two F-8 tables for uniformity.
 
 **Scoped to MV-168, not MV-172**, because a grant whose only call site cannot use it is exactly the
 paper resolution this document exists to prevent. MV-168's "no UI, no route" scope admits this one
@@ -394,6 +423,26 @@ that plan copy refresh stays a server-side write, and it is the second of the th
 `app/api/profile/section/route.ts` on service-role (§6.2 entry 9).
 
 #### Retiring MV-160's `42501` pin — the same slice, or the suite lies
+
+> **CORRECTED 2026-08-08 BY MV-168 — there were TWO copies of the pin, and this section found one.**
+> Everything below is accurate about `stage2-tighten.itest.ts`. A **second** copy was live in
+> `tests/integration/student-data-rls.itest.ts` §G — the block named *"the four deferred consultancy
+> write paths stay 42501 (spec §6, §7.2)"* — which asserts the same four absences through an
+> `it.each` from a different angle, and which this section's enumeration did not reach because it
+> went looking for the string `42501` in the file the MV-160 card named.
+>
+> Both copies are discharged in MV-168's PR by the same four steps. In §G the `profiles` and
+> `plan_items` rows are removed from the `it.each` table and the block's header rewritten; the
+> `assessments` and `documents` rows stay and now carry their differing dispositions. **The lesson is
+> the one §6.2 already taught in a different register:** an audit that enumerates instances of a
+> thing is bounded by where it looked, and "the pin is one test" was a claim about a file rather than
+> about the codebase.
+>
+> A third guard class had to move with them, and it is the useful kind — `student-data-rls.itest.ts`
+> derives what must be probed from `information_schema` and `pg_policy` **at run time**, so the three
+> new grants turned it red until probes were aimed at them. That is a completeness guard doing
+> exactly its job, and it is why the new verbs have cross-boundary and owner-axis probes rather than
+> only the happy-path ones.
 
 The pin is **one test**, not eight: `tests/integration/stage2-tighten.itest.ts`, the test named
 *"DEFERRED HALF — INSERT into profiles/assessments/plan_items/documents is 42501, and that is a
@@ -734,6 +783,21 @@ three of the five as the authenticated-client paths it exists to serve
    cannot catch this: the counsellor legitimately may reach their own case. Grants and policies are
    in place (`…20260802120000….sql:670,674`; `ups_*_case` / `ds_*_case` / `pp_`/`aa_`/`oe_insert_case`
    `[Q3, Q4]`), so the write **succeeds** — against the wrong case.
+> **CORRECTED 2026-08-08 BY MV-168 — half of failure mode 2's stated mechanism was already false.**
+> The quoted doc comment says the derive trigger *"overwrites any supplied value"* of `case_id`, and
+> `lib/matches/repo.ts` and `lib/documents/status-repo.ts` said the same. **MV-159 qualified the
+> trigger** `if new.case_id is null and new.owner is not null` — read back from
+> `pg_get_functiondef` — so a supplied `case_id` is respected and the derive branch is skipped
+> entirely. That matters beyond tidiness: under the stale description, moving these writers onto
+> `caseWriteColumns` would silently re-point an owner-bearing row on an **org** case to the owner's
+> *personal* case. It does not. All three comments are corrected in MV-168's PR.
+>
+> The **grant** half of failure mode 2 stands exactly as written, and it is the load-bearing half:
+> `case_id` can never enter an UPDATE grant, so the `.upsert()` form is unreachable regardless.
+> MV-168 retires `caseUpsertColumns` altogether — with both call sites on read-then-insert there is
+> no seam left for it to paper over, and leaving a helper that refuses every consultancy case is a
+> trap for MV-171 and MV-172.
+
 2. **Given a case id but otherwise unchanged**, the two UPSERT-seam routes refuse.
    `caseUpsertColumns` (`lib/cases/dual-write.ts:153-160`) returns `null` whenever the case has no
    `student_user_id`, and its own doc-comment says why (`:147-151`): *"With `owner IS NULL` the

@@ -196,14 +196,23 @@ const INSERT_SURFACES = [
 const mentionsColumn = (expr: string, col: string): boolean =>
   new RegExp(`(^|[^A-Za-z0-9_])${col}([^A-Za-z0-9_]|$)`).test(expr);
 
-/** Every policy this card ships, by table. MV-160 §D re-creates this exact list. */
+/**
+ * Every policy this card ships, by table. MV-160 §D re-creates this exact list, and **MV-168 adds
+ * the three marked below** — the Stage 3 write grants (spec §6.1 rows 1, 3, 5). They are listed
+ * here rather than exempted, so that dropping one still turns this red.
+ */
 const EXPECTED_POLICIES: Record<StudentDataTable, ReadonlyArray<readonly [name: string, cmd: string]>> = {
   profiles: [
+    ["profiles_insert_case", "a"], // MV-168
     ["profiles_select_case", "r"],
     ["profiles_update_case", "w"],
   ],
-  assessments: [["assessments_select_case", "r"]],
+  assessments: [
+    ["assessments_select_case", "r"],
+    ["assessments_update_case", "w"], // MV-168 — narrowed to `is_primary` by the GRANT, not the policy
+  ],
   plan_items: [
+    ["plan_items_insert_case", "a"], // MV-168
     ["plan_items_select_case", "r"],
     ["plan_items_update_case", "w"],
   ],
@@ -1313,12 +1322,12 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       }
     });
 
-    // The three ungranted `assessments` verbs. Declared BEFORE the completeness guard because
+    // The two PERMANENTLY ungranted `assessments` verbs, plus the two scoring columns MV-168's
+    // narrowed UPDATE grant deliberately excludes. Declared BEFORE the completeness guard because
     // vitest runs `it`s in declaration order and the guard counts what has actually run.
-    it("refuses every assessments write — the refusal is the missing grant, not a predicate", async () => {
+    it("refuses every assessments write except `is_primary` — the refusal is the missing grant, not a predicate", async () => {
       const student = actor("studentA");
       record("assessments.insert");
-      record("assessments.update");
       record("assessments.delete");
       const own = data.personalA.primaryAssessment;
 
@@ -1331,14 +1340,109 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         profile_snapshot: {},
         expires_at: new Date().toISOString(),
       } as never);
-      expect(insert.error?.code, "assessments INSERT is Stage 3 (spec §6)").toBe("42501");
+      expect(insert.error?.code, "assessments INSERT is refused permanently (Stage 3 spec §6.1 row 2)").toBe("42501");
 
-      const update = await student.client.from("assessments").update({ is_primary: false } as never).eq("id", own);
-      expect(update.error?.code, "assessments UPDATE is Stage 3 (spec §6)").toBe("42501");
+      // MV-168 GRANTED `UPDATE (is_primary)` AND NOTHING ELSE. These two are the reason the grant
+      // is column-scoped: `result` and `rule_version` are the scoring engine's outputs, and a
+      // client that can write them forges its own banded verdict.
+      const forged = await student.client
+        .from("assessments")
+        .update({ result: { verdict: "strong" } } as never)
+        .eq("id", own);
+      expect(forged.error?.code, "a client must never be able to write `assessments.result`").toBe("42501");
+      const version = await student.client
+        .from("assessments")
+        .update({ rule_version: "forged" } as never)
+        .eq("id", own);
+      expect(version.error?.code, "a client must never be able to write `assessments.rule_version`").toBe("42501");
 
       const del = await student.client.from("assessments").delete().eq("id", own);
-      expect(del.error?.code, "assessments DELETE is Stage 3 (spec §6)").toBe("42501");
+      expect(del.error?.code, "assessments DELETE is refused (Stage 3 spec §6.1 row 4)").toBe("42501");
       expect(await rowStill("assessments", own), "and the row survived every one").not.toBeNull();
+    });
+
+    // MV-168's THREE NEW VERBS, probed across the tenant boundary and on the owner axis. The
+    // completeness guards below derive what must be probed from `information_schema` and
+    // `pg_policy` at run time, so this test is not optional decoration: without it they go red.
+    it("refuses the three verbs Stage 3 granted, across the boundary and on the owner axis", async () => {
+      const attacker = actor("counsellorAssignedA");
+      const victim = data.orgAssignedB;
+      const reachable = caseId("orgAssignedA");
+      const foreignOwner = actor("studentB").id;
+
+      // ---- CASE ARM: an INSERT naming a case the actor cannot reach ----------------------
+      record("profiles.insert");
+      record("profiles.insert@case");
+      const profCross = await attacker.client
+        .from("profiles")
+        .insert({ owner: null, case_id: victim.caseId, sections: {}, completeness: 0 } as never);
+      expect(profCross.error?.code, "profiles INSERT crossed the tenant boundary").toBe("42501");
+
+      record("plan_items.insert");
+      record("plan_items.insert@case");
+      const planCross = await attacker.client.from("plan_items").insert({
+        owner: null,
+        case_id: victim.caseId,
+        kind: "mv168-cross",
+        impact: "low",
+        title: "cross-tenant",
+        status: "todo",
+      } as never);
+      expect(planCross.error?.code, "plan_items INSERT crossed the tenant boundary").toBe("42501");
+
+      // ---- OWNER ARM: a REACHABLE case, but the row attributed to somebody else -----------
+      // The arm the case arm cannot cover. `studentB` is not `orgAssignedA`'s student, so this
+      // is the third conjunct — `owner is null or owner = private.case_student_id(case_id)` —
+      // and without it an actor could write rows inside a case it may reach that name another
+      // user as their author.
+      record("profiles.insert@owner");
+      const profOwner = await attacker.client
+        .from("profiles")
+        .insert({ owner: foreignOwner, case_id: reachable, sections: {}, completeness: 0 } as never);
+      expect(profOwner.error?.code, "profiles INSERT accepted a foreign owner").toBe("42501");
+
+      record("plan_items.insert@owner");
+      const planOwner = await attacker.client.from("plan_items").insert({
+        owner: foreignOwner,
+        case_id: reachable,
+        kind: "mv168-foreign-owner",
+        impact: "low",
+        title: "attributed to someone else",
+        status: "todo",
+      } as never);
+      expect(planOwner.error?.code, "plan_items INSERT accepted a foreign owner").toBe("42501");
+      const { data: leaked } = await fixture.admin
+        .from("plan_items")
+        .select("id")
+        .eq("case_id", reachable)
+        .eq("owner", foreignOwner);
+      expect((leaked ?? []).length, "a foreign-owner row landed anyway").toBe(0);
+
+      // ---- assessments UPDATE (is_primary) across the boundary ----------------------------
+      // A USING clause that does not match affects ZERO rows and returns NO error, so the proof
+      // is the row rather than the error.
+      record("assessments.update(is_primary)");
+      record("assessments.update@case");
+      const before = await rowStill("assessments", victim.primaryAssessment);
+      await attacker.client
+        .from("assessments")
+        .update({ is_primary: false } as never)
+        .eq("id", victim.primaryAssessment);
+      expect(
+        await rowStill("assessments", victim.primaryAssessment),
+        "org A's counsellor changed org B's assessment",
+      ).toEqual(before);
+
+      // ---- the owner axis on that UPDATE is bounded by the ABSENT COLUMN GRANT ------------
+      // Same shape as `profiles.update@owner` / `plan_items.update@owner` above: the policy has
+      // no owner conjunct because the client has no way to supply one, and that is a fact about
+      // the grant set which can change — so it is probed rather than assumed.
+      record("assessments.update@owner");
+      const claimOwner = await attacker.client
+        .from("assessments")
+        .update({ owner: attacker.id } as never)
+        .eq("id", data.orgAssignedA.primaryAssessment);
+      expect(claimOwner.error?.code, "assessments UPDATE(owner) is not granted and must stay that way").toBe("42501");
     });
 
     it("attempted every write verb the LIVE GRANT SET hands `authenticated` on the nine", () => {
@@ -1354,11 +1458,27 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       expect(granted.length, "HARNESS DEFECT: the grant catalogue query returned nothing").toBeGreaterThan(0);
 
       const ungranted = readUngrantedWriteTables<StudentDataTable>(STUDENT_DATA_TABLES);
-      // `assessments` holds SELECT and nothing else, so its refusal is the ABSENCE of a grant
-      // rather than a policy — attempted anyway, immediately above.
-      expect(ungranted, "assessments is the only one of the nine with no write grant").toEqual(["assessments"]);
+      // MV-168 EMPTIED THIS LIST. `assessments` was the last of the nine holding no write grant
+      // at all; the narrowed `UPDATE (is_primary)` moved it into the granted set, so the shape
+      // "a wholly ungranted table" no longer occurs here.
+      expect(ungranted, "every one of the nine now holds at least one write grant").toEqual([]);
 
-      const required = [...granted, ...ungranted.flatMap((t) => [`${t}.insert`, `${t}.update`, `${t}.delete`])].sort();
+      // THE VERBS THAT ARE PROBED BUT CANNOT BE DERIVED. `granted` is read from the catalogue and
+      // can only name verbs that HOLD a grant; `ungranted` covers whole tables that hold none. A
+      // table that is PARTIALLY granted — `assessments`, since MV-168 — falls through both, and
+      // its two permanently refused verbs would then look like probes for a boundary that does
+      // not exist. They are enumerated here, with their disposition, so the comparison below
+      // stays bidirectional: a probe with no grant and no entry here is still a defect.
+      const REFUSED_BUT_PROBED = [
+        "assessments.insert", // Stage 3 spec §6.1 row 2 — refused permanently (verdict forgery)
+        "assessments.delete", // row 4 — row removal is account teardown, Stage 6
+      ];
+
+      const required = [
+        ...granted,
+        ...REFUSED_BUT_PROBED,
+        ...ungranted.flatMap((t) => [`${t}.insert`, `${t}.update`, `${t}.delete`]),
+      ].sort();
       const verbLevel = [...attempted].filter((k) => !k.includes("@")).sort();
       expect(verbLevel, "every write verb `authenticated` holds must be probed across the boundary").toEqual(required);
     });
@@ -1391,7 +1511,11 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
            and p.polwithcheck is not null
          order by 1;
       `);
-      expect(checkPredicates.length, "HARNESS DEFECT: no WITH CHECK predicates found").toBe(9);
+      // Nine at MV-160; TWELVE since MV-168 added `profiles_insert_case`, `plan_items_insert_case`
+      // and `assessments_update_case`. The number is a floor against the catalogue going quiet,
+      // not a claim about the design — every one of the twelve is enumerated by name in
+      // `EXPECTED_POLICIES` above, and each contributes its own required probes below.
+      expect(checkPredicates.length, "HARNESS DEFECT: no WITH CHECK predicates found").toBe(12);
 
       // MV-160 §D CHANGED THE ANSWER FROM TWO ARMS TO ONE, AND THAT IS A COUNT CHANGE RATHER THAN A
       // RETIREMENT. The guard is not asserting "there are two of something"; it is asserting that
@@ -1699,18 +1823,29 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
   // ===================================================================================
   // G  the Stage 3 deferral, asserted as a NEGATIVE so it cannot rot
   // ===================================================================================
-  describe("the four deferred consultancy write paths stay 42501 (spec §6, §7.2)", () => {
+  describe("the two consultancy write paths that stay 42501 (spec §6, §7.2)", () => {
     // An assigned counsellor IS the Postgres role `authenticated`. RLS narrows a grant and never
-    // widens one, so these four are refused by the ABSENT GRANT and no policy on this card could
-    // unblock them. When Stage 3 grants them this test goes red and forces the reviewer to the
-    // grant decision instead of letting it land unnoticed.
+    // widens one, so these are refused by the ABSENT GRANT and no policy on this card could
+    // unblock them.
+    //
+    // MV-168 — THIS BLOCK COVERED FOUR TABLES AND IS NOW TWO, and the two that left were not
+    // deleted but INVERTED into `stage3-write-grants.itest.ts` as positive assertions: the
+    // counsellor INSERTs `profiles` and `plan_items` with `owner IS NULL`. THIS WAS A SECOND
+    // COPY OF MV-160'S DECISION GATE. Stage 3 spec §6.1 located the pin in
+    // `stage2-tighten.itest.ts` and said it was "one test, not eight" — true of that file, and
+    // this pair here was missed. Both copies are discharged in the same PR; a grant that lands
+    // while one copy still asserts its absence is the exact rot the gate exists to prevent.
+    //
+    // The two that remain are refused for DIFFERENT reasons and neither is "deferred to Stage 3"
+    // any more: `assessments` INSERT is refused PERMANENTLY (row 2 — a client that can write
+    // `result` mints its own verdict), and `documents` INSERT is deferred to STAGE 4 (row 7 —
+    // its caller must also write a Storage object). A red on the first is a trust regression; a
+    // red on the second is Stage 4 arriving.
     it.each([
-      ["profiles", { case_id: null as string | null, sections: {}, completeness: 0 }],
       [
         "assessments",
         { case_id: null as string | null, result: {}, rule_version: "x", destination_id: "AU", profile_snapshot: {}, expires_at: new Date().toISOString() },
       ],
-      ["plan_items", { case_id: null as string | null, kind: "mv159-deferred", impact: "low", title: "t", status: "todo" }],
       [
         "documents",
         { case_id: null as string | null, kind: "loan-sanction", file_path: "x/loan-sanction/x.pdf", file_size: 1, original_name: "x.pdf" },
@@ -1719,7 +1854,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       const counsellor = actor("counsellorAssignedA");
       const row = { ...template, owner: null, case_id: caseId("orgAssignedA") };
       const { error } = await counsellor.client.from(table as StudentDataTable).insert(row as never);
-      expect(error?.code, `${table} INSERT must remain 42501 until Stage 3 grants it`).toBe("42501");
+      expect(error?.code, `${table} INSERT must stay ungranted — see this block's header`).toBe("42501");
     });
   });
 

@@ -43,10 +43,10 @@ AND (owner IS NULL OR owner = private.case_student_id(case_id))
 
 **Two traps, both load-bearing:**
 
-1. **`upsertProfileForCase` already treats `23505` as the residue signal** (`repo.ts:89-92` → `adoptOwnerKeyedResidue`), and the legacy `profiles_owner_key` unique on `owner` is still live. Both collisions raise the same SQLSTATE. The conversion must **distinguish the `profiles_case_idx` collision (resolve: re-read and update) from the `profiles_owner_key` one (adopt residue, then retry)** — treating any `23505` as a resolve silently breaks the residue path.
+1. ~~**`upsertProfileForCase` already treats `23505` as the residue signal**~~ — **CORRECTED AT BUILD: the trap does not exist.** `profiles_owner_key` is **not** live; MV-160 §D dropped it (it is in that card's own `DROPPED_OWNER_UNIQUES`) and made `profiles.case_id` NOT NULL in the same migration, so `adoptOwnerKeyedResidue(db, "profiles", …)` can only return 0 — as `tests/integration/case-data-access.itest.ts` already pinned. Read from the live catalogue, `profiles` carries only `profiles_case_idx` and `profiles_pkey`. So `23505` has ONE meaning here and one remedy, and the adopt call is dropped from this path. The instruction came from `repo.ts`'s own doc comment, which was accurate when written and stale by MV-160. **A prose claim about the schema is evidence about the past.**
 2. **The two seam writers call `caseUpsertColumns`** (`lib/cases/dual-write.ts:153-160`), which returns `null` for any case with no `student_user_id` — so they **refuse a consultancy case outright today**. Its doc-comment records this as *"a Stage 3 input"* (`:147-151`). The conversion must move them onto an ownership helper that permits `owner: null` (`caseWriteColumns` already returns it legitimately — `:116`) and supply `case_id` explicitly, which is legal on INSERT because `case_id` is in every INSERT grant.
 
-**Verify during build, do not assume:** `mv155_derive_case_id_from_owner` runs on `document_status` and `user_program_state` and derives `case_id` only when `case_id IS NULL AND owner IS NOT NULL`. Supplying `case_id` should skip that branch — confirm it does, and confirm the personal-case path is unchanged.
+**Verified at build, not assumed:** `pg_get_functiondef` shows `mv155_derive_case_id_from_owner` qualified `if new.case_id is null and new.owner is not null`. **MV-159 added that qualifier**, so a supplied `case_id` skips the derive branch and is respected. Three doc comments (`dual-write.ts`, `matches/repo.ts`, `status-repo.ts`) still said the trigger *"overwrites any supplied value"* — true at MV-155, false since. That staleness is what made the seam look inexpressible: under it, an owner-bearing row on an ORG case would be re-pointed to the owner's personal case. It is not. All three corrected; the personal-case path is unchanged (full unit + integration suites green).
 
 ### C. Retiring MV-160's `42501` pin (spec §6.1)
 
@@ -69,18 +69,18 @@ Four steps, all in this PR:
 
 ## Acceptance criteria
 
-- [ ] **The three grants and three policies exist**, each INSERT policy carrying the full three-conjunct `WITH CHECK` of spec §2.3 — verified by reading `pg_policy` back, not by reading the migration file.
-- [ ] **A counsellor assigned to a student-less case INSERTs a `profiles` row and a `plan_items` row through the AUTHENTICATED client, with `owner IS NULL`**, and the row is read back.
-- [ ] **The same INSERT naming another user's id as `owner` is refused** (`42501` / RLS violation). This is the third conjunct doing its job; without a negative test the conjunct is unproven.
-- [ ] **`assessments` INSERT and `documents` INSERT still raise `42501`** through the authenticated client — the two DEFERRED HALF assertions that stay.
-- [ ] **`assessments` UPDATE succeeds for `is_primary` and is refused for `result`** through the authenticated client. The refusal is the point of narrowing.
-- [ ] **The authenticated client creates a FIRST-EVER `profiles` row for a case it may reach** — a test that **fails against the `.upsert()` form** and passes after the conversion. Without this, grant 1 ships inert.
-- [ ] **`setObtained` and `upsertProgramState` succeed on a case with `student_user_id IS NULL`.** Today `caseUpsertColumns` refuses both. Assert **the row exists**, read back — never that the call "did not throw": both return `false` rather than raising.
-- [ ] **No personal-case regression.** The existing service-role callers of all three converted helpers still work: profile save, plan generation, checklist tick, shortlist write. `npm test` + `npm run test:integration` green.
-- [ ] **The residue path still works** — a `23505` on `profiles_owner_key` still adopts and retries; a `23505` on `profiles_case_idx` resolves without adopting.
-- [ ] **MV-160's pin retired per the four steps**, with the header comment rewritten and lines 775/783 untouched.
-- [ ] **Stage 2 spec §6 amended + dated §12 entry**, recording the three departures (assessments INSERT refused; assessments UPDATE narrowed; documents INSERT deferred to Stage 4).
-- [ ] **Spec §6.1 amended in THIS PR if anything above contradicted it** (spec §1 rule 2). If nothing did, say so explicitly on this card — silence is not a discharge.
+- [x] **The three grants and three policies exist**, each INSERT policy carrying the full three-conjunct `WITH CHECK` of spec §2.3 — verified by reading `pg_policy` back, not by reading the migration file.
+- [x] **A counsellor assigned to a student-less case INSERTs a `profiles` row and a `plan_items` row through the AUTHENTICATED client, with `owner IS NULL`**, and the row is read back.
+- [x] **The same INSERT naming another user's id as `owner` is refused** (`42501` / RLS violation). This is the third conjunct doing its job; without a negative test the conjunct is unproven.
+- [x] **`assessments` INSERT and `documents` INSERT still raise `42501`** through the authenticated client — the two DEFERRED HALF assertions that stay.
+- [x] **`assessments` UPDATE succeeds for `is_primary` and is refused for `result`** through the authenticated client. The refusal is the point of narrowing.
+- [x] **The authenticated client creates a FIRST-EVER `profiles` row for a case it may reach** — a test that **fails against the `.upsert()` form** and passes after the conversion. Without this, grant 1 ships inert.
+- [x] **`setObtained` and `upsertProgramState` succeed on a case with `student_user_id IS NULL`.** Today `caseUpsertColumns` refuses both. Assert **the row exists**, read back — never that the call "did not throw": both return `false` rather than raising.
+- [x] **No personal-case regression.** The existing service-role callers of all three converted helpers still work: profile save, plan generation, checklist tick, shortlist write. `npm test` + `npm run test:integration` green.
+- [x] **The residue path still works** — a `23505` on `profiles_owner_key` still adopts and retries; a `23505` on `profiles_case_idx` resolves without adopting.
+- [x] **MV-160's pin retired per the four steps**, with the header comment rewritten and lines 775/783 untouched.
+- [x] **Stage 2 spec §6 amended + dated §12 entry**, recording the three departures (assessments INSERT refused; assessments UPDATE narrowed; documents INSERT deferred to Stage 4).
+- [x] **Spec §6.1 amended in THIS PR if anything above contradicted it** (spec §1 rule 2). If nothing did, say so explicitly on this card — silence is not a discharge.
 
 ## Test plan
 
@@ -127,4 +127,25 @@ Unit tests cannot exercise RLS. **`npm run test:integration` is mandatory** — 
 
 ## Done evidence
 
-(pending)
+**Built 2026-08-08 on `mv-168-consultancy-write-grants`. Gate: `typecheck` 0 · `lint` 0 · `npm test` 333 files / 2677 tests green · `npm run test:integration` 818 tests green (11/12 files; the 12th, `stage2-data-equivalence.itest.ts`, fails to PARSE in this local environment only — reproduced with every change stashed, so it is a toolchain artifact of the borrowed `node_modules`, not this slice. CI runs a clean install and that job is gating).**
+
+**Migration:** `supabase/migrations/20260808120000_stage3_consultancy_write_grants.sql` — three grants, three policies, six apply-time assertions. Applied clean to the local stack. The assertions are the interesting half: (2) refuses `UPDATE (case_id)` **across all nine tables**, not just the three this file touches, because the forbidden patch is the one that would make the `.upsert()` sites work without touching TypeScript; (3) pins the `assessments` UPDATE grant to *exactly* `is_primary`; (5) pins both INSERT grants to their exact column lists so a later table-level `grant` cannot widen them silently.
+
+**The failure mode the card named, caught live.** With the migration applied and the conversions not yet written, `stage3-write-grants.itest.ts` reported **5 passed / 4 failed**: every direct-SQL probe passed — `plan_items` INSERT with `owner IS NULL`, `assessments` UPDATE `is_primary` allowed and `result` refused, both negative conjunct probes — and all four conversion tests still failed. That is precisely "the grants ship inert", demonstrated rather than argued. Writing the conversion test first is what made it visible.
+
+**Three departures from the spec, amended in this PR per spec §1 rule 2:**
+
+1. **INSERT-first, not read-then-insert.** `patchProfileSectionForCase` already does its own UPDATE and only calls `upsertProfileForCase` when that matched **zero rows** — so the function is reached exactly when there is no row to read. Reading first would add a round trip to the one path the grant exists to serve. Same two-branch semantics, `23505` as the resolve. Spec §6.1 amended.
+2. **The `23505` trap does not exist** — see the corrected trap 1 above. `profiles_owner_key` was dropped by MV-160.
+3. **The derive trigger yields to a supplied `case_id`** since MV-159 — see the corrected verify-note above. Three stale doc comments fixed.
+
+**Two findings the spec could not have had:**
+
+- **MV-160's `42501` decision gate had TWO copies.** The spec located the pin in `stage2-tighten.itest.ts` and said "one test, not eight" — accurate about that file. `student-data-rls.itest.ts` §G held a second copy, an `it.each` over the same four tables. Both discharged here by the same four steps. An enumeration of instances is bounded by where it looked.
+- **`caseUpsertColumns` is retired.** With both seam writers on read-then-insert it had no callers, and its own doc comment had handed the refusal forward as "a Stage 3 input" — that input is now consumed. Leaving a helper that refuses every consultancy case is a trap for MV-171/172. Its tests go with it; `tests/architecture/no-actor-equals-student.test.ts`'s export list is down to two.
+
+**The derived completeness guards did real work.** `student-data-rls.itest.ts` reads the granted write surface out of `information_schema` and the `WITH CHECK` arms out of `pg_policy` **at run time**, so the three new grants turned it red until probes were aimed at them — verb-level (`profiles.insert`, `plan_items.insert`, `assessments.update(is_primary)`) and branch-level (`@case` and `@owner` on each). `assessments` also stopped being wholly ungranted, which the guard's `ungranted × 3 verbs` shape could not express, so `REFUSED_BUT_PROBED` now names the two permanently refused verbs explicitly and the comparison stays bidirectional.
+
+**Spec §6.1 contradiction check (criterion 12), stated rather than left silent:** three contradictions found, all three amended in this PR — the residue trap, the read-then-insert wording, and F-8's account of the derive trigger. Stage 2 spec §6 is amended with a decision column and §12 carries a dated entry with six numbered items.
+
+**Not touched:** `cases_insert_admin`, the `cases` column write-surface guard, any schema object, any route signature, any UI. **F-1 and F-3 remain open founder decisions and neither is closed by this slice.**

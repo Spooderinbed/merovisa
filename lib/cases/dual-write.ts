@@ -126,35 +126,26 @@ export async function caseBindColumns(
 }
 
 /**
- * The ownership column for an UPSERT payload on `user_program_state` or
- * `document_status` — **`owner` only, never `case_id`**.
+ * ## MV-168 — the UPSERT seam is closed, and `caseUpsertColumns` is gone with it
  *
- * These two tables are the UPSERT seam. MV-155 §H puts a definer trigger on each,
- * qualified `when (new.owner is not null)`, which derives `case_id` from that
- * owner's personal case and overwrites any supplied value — precisely so the
- * client never names the column. It must not, either: PostgREST compiles an
- * upsert to `INSERT … ON CONFLICT DO UPDATE SET` and puts **every payload column
- * in the SET list**, the privilege check happens at plan time, and Stage 2 grants
- * `UPDATE (owner, program_id, status, notes)` / `UPDATE (owner, kind, obtained)`
- * — `case_id` is in neither. A payload carrying it therefore raises **42501 on
- * the INSERT branch of the very first call, with no row present and neither
- * branch reachable** (spec §4.4, §4.6).
+ * A third export used to live here: `caseUpsertColumns`, which returned `owner`
+ * alone and NEVER `case_id`, for the two tables `lib/matches/repo.ts` and
+ * `lib/documents/status-repo.ts` write through. The reason was PostgREST's upsert
+ * compilation — every payload column lands in the `ON CONFLICT DO UPDATE SET`
+ * list, `UPDATE (case_id)` is withheld by design, so a payload naming `case_id`
+ * raised 42501 at plan time on the first call. MV-155 §H's definer trigger derived
+ * the column from `owner` instead.
  *
- * The conflict TARGET is a different thing under opposite rules: it is an index
- * column list rather than a write, so it MAY name `case_id`, and it does. The two
- * look alike inside one `.upsert(payload, { onConflict })` call.
+ * Its cost was stated in its own doc comment and handed forward as **"a Stage 3
+ * input"**: with `owner IS NULL` the trigger does not fire, so it refused every
+ * case that has no `student_user_id` — which is every consultancy case. Stage 3
+ * spec F-8 is that sentence turned into a blocker.
  *
- * A case with no `student_user_id` is refused. With `owner IS NULL` the trigger
- * does not fire, nothing derives `case_id`, and supplying it needs the
- * `UPDATE(case_id)` grant Stage 2 withholds — the residual seam spec §4 rule 2
- * records as a Stage 3 input. No Stage 2 caller hits it; refusing loudly is
- * better than writing a row that trips `_ownership_axis_present`.
+ * MV-168 converted both call sites to read-then-insert. A plain INSERT is
+ * privilege-checked against the INSERT grant, and `case_id` IS in that grant on
+ * both tables, so the client may name it — and MV-159 had already qualified the
+ * derive trigger `new.case_id is null and new.owner is not null`, so a supplied
+ * value is respected rather than overwritten. There is no seam left for a
+ * third helper to paper over: `caseWriteColumns` above serves both, and it is the
+ * one that returns `owner: null` legitimately.
  */
-export async function caseUpsertColumns(
-  db: CaseAuthorizationClient,
-  caseId: string,
-): Promise<{ owner: string } | null> {
-  const ownership = await readCaseOwnership(db, caseId);
-  if (ownership === null || ownership.owner === null) return null;
-  return { owner: ownership.owner };
-}

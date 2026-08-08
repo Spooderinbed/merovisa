@@ -118,6 +118,18 @@ const MV159_POLICIES: ReadonlyArray<readonly [string, string, string]> = [
   ["outcome_events", "oe_delete_case", "d"],
 ];
 
+/**
+ * MV-168's three ADDITIONS. Enumerated separately rather than folded into the list above, because
+ * the assertion these two feed is "MV-159's policies were not DELETED" and that sentence must stay
+ * checkable after later stages add their own. A Stage 4 policy goes in a third list, not in either
+ * of these; a name that vanishes from EITHER list still fails.
+ */
+const MV168_POLICIES: ReadonlyArray<readonly [string, string, string]> = [
+  ["profiles", "profiles_insert_case", "a"],
+  ["plan_items", "plan_items_insert_case", "a"],
+  ["assessments", "assessments_update_case", "w"],
+];
+
 /** The seven superseded owner-keyed uniqueness rules §D drops. Three constraints, four indexes. */
 const DROPPED_OWNER_UNIQUES = [
   "profiles_owner_key",
@@ -656,7 +668,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-160 Stage 2 tighten + exit 
            and p.polname <> 'Service inserts documents'
          order by 1;
       `);
-      const expected = MV159_POLICIES.map(([t, n, c]) => `${t}|${n}|${c}`).sort();
+      const expected = [...MV159_POLICIES, ...MV168_POLICIES].map(([t, n, c]) => `${t}|${n}|${c}`).sort();
       expect(
         live.sort(),
         '"no predicate reads owner" must not be satisfiable by DROPPING a policy instead of ' +
@@ -928,21 +940,30 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-160 Stage 2 tighten + exit 
       await fixture.admin.from("plan_items").update({ status: "todo" } as never).eq("id", Number(consultancy.openPlanItem));
     }, 120_000);
 
-    it("DEFERRED HALF — INSERT into profiles/assessments/plan_items/documents is 42501, and that is a DECISION GATE", async () => {
+    it("REFUSED AND DEFERRED HALF — INSERT into assessments/documents is 42501, for two different reasons", async () => {
       // ---------------------------------------------------------------------------------
       // READ THIS BEFORE "FIXING" A RED HERE.
-      // `authenticated` holds NO INSERT grant on these four. RLS narrows a grant; it never widens
-      // one. The four verbs are deferred to Stage 3 and enumerated in matrix spec §6, behind Stage 0
-      // decision D-B's consent gate. WHEN STAGE 3 GRANTS THEM, THIS TEST GOES RED — that is its
-      // purpose. Its red means "go and make the grant decision", not "the test is broken". Do not
-      // delete it; move it, with the grant, and update matrix spec §6.
+      // `authenticated` holds NO INSERT grant on these two. RLS narrows a grant; it never widens
+      // one. This test began life covering FOUR tables and named all four "deferred to Stage 3".
+      // MV-168 resolved the two that were genuinely deferred and the remaining two are not
+      // deferred at all any more — they have dispositions, and the dispositions differ:
+      //
+      //   assessments INSERT — REFUSED PERMANENTLY (Stage 3 spec §6.1 row 2). `result` and
+      //     `rule_version` are scoring outputs; a client that can write them mints its own
+      //     verdict against the server-side rule. There is no later stage that grants this.
+      //     A red here means somebody granted it — that is a trust regression, not progress.
+      //
+      //   documents INSERT — DEFERRED TO STAGE 4 (row 7), because the only caller must also
+      //     write a Storage object and the bucket policy for that is Stage 4's. A red here
+      //     means "go and make Stage 4's grant decision", not "the test is broken". Do not
+      //     delete it; move it, with the grant, and update the matrix spec.
+      //
+      // THE PROFILES AND PLAN_ITEMS ASSERTIONS WERE NOT DELETED, THEY WERE INVERTED. They live
+      // in `stage3-write-grants.itest.ts` as positive assertions — the counsellor now INSERTs
+      // both with `owner IS NULL`. Deleting a decision gate and granting the verb in the same
+      // PR is the failure mode; moving it is the discharge.
       // ---------------------------------------------------------------------------------
       const c = actor("counsellorAssignedA").client;
-
-      const { error: prof } = await c
-        .from("profiles")
-        .insert({ owner: null, case_id: consultancy.caseId, sections: {}, completeness: 0 } as never);
-      expect(prof?.code, "profiles INSERT must stay ungranted in Stage 2").toBe("42501");
 
       const { error: asmt } = await c.from("assessments").insert({
         owner: null,
@@ -953,12 +974,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-160 Stage 2 tighten + exit 
         is_primary: false,
         profile_snapshot: {},
       } as never);
-      expect(asmt?.code, "assessments INSERT must stay ungranted in Stage 2").toBe("42501");
-
-      const { error: plan } = await c
-        .from("plan_items")
-        .insert({ owner: null, case_id: consultancy.caseId, kind: "x", impact: "low", status: "todo", title: "x" } as never);
-      expect(plan?.code, "plan_items INSERT must stay ungranted in Stage 2").toBe("42501");
+      expect(asmt?.code, "assessments INSERT is refused permanently — a client must not mint a verdict").toBe("42501");
 
       const { error: docs } = await c.from("documents").insert({
         owner: null,
@@ -968,7 +984,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-160 Stage 2 tighten + exit 
         file_size: 1,
         original_name: "x.pdf",
       } as never);
-      expect(docs?.code, "documents INSERT must stay ungranted in Stage 2").toBe("42501");
+      expect(docs?.code, "documents INSERT stays ungranted until Stage 4").toBe("42501");
     }, 120_000);
   });
 });

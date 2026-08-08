@@ -2,7 +2,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
 import { caseWriteColumns } from "@/lib/cases/dual-write";
-import { adoptOwnerKeyedResidue } from "@/lib/cases/residue";
 import { CaseReadError, isUniqueViolation } from "@/lib/cases/errors";
 import type { SectionKey, ProfileSections } from "./sections";
 import { computeCompleteness } from "./completeness";
@@ -45,26 +44,35 @@ export interface UpsertProfileInput {
  * cannot supply an owner that disagrees with the case it also supplied. That
  * single property is the whole of Stage 2's dual-write guard (MV-157 §E).
  *
- * The conflict target is MV-155's `profiles_case_idx`, a FULL unique on
- * `(case_id)` — full precisely so PostgREST's bare `on_conflict=` can infer it.
- * Unlike the two UPSERT-seam tables, `case_id` DOES belong in this payload: there
- * is no definer trigger on `profiles` to derive it, and this path is service-role
- * (Stage 2 grants `authenticated` no INSERT on `profiles` at all — spec §4.1), so
- * the `ON CONFLICT DO UPDATE SET` list is evaluated under service_role's
- * table-level UPDATE.
+ * ## MV-168 — why this is an INSERT with a resolve, and no longer an `.upsert()`
  *
- * ## The MV-155 residue leg
+ * Stage 3 grants `authenticated` `INSERT (owner, case_id, sections, completeness)`
+ * so a counsellor can create the first profile row on a case with no student.
+ * **That grant cannot be reached through an `.upsert()`.** PostgREST compiles one
+ * to `INSERT … ON CONFLICT DO UPDATE SET` and puts every payload column in the SET
+ * list, INCLUDING the conflict target `case_id`, with the privilege check at plan
+ * time — so the INSERT branch raises **42501** on the very first call, with no row
+ * present and neither branch reachable (measured by MV-155, written into
+ * `…20260802120000….sql:630-640`). The obvious patch, `UPDATE (case_id)`, is
+ * forbidden by design at `:602-604`: a client that can update `case_id` re-points
+ * a row into another case.
  *
- * `profiles_owner_key` (unique on `owner`) is still live. A student who has a
- * personal case but whose profile row never received a `case_id` is not a
- * conflict on the `case_id` arbiter, so this takes the INSERT branch and raises
- * **23505** on the legacy owner unique — a hard failure, not the empty state the
- * rest of Stage 2 degrades to. The claim path reaches it directly: STEP 3's
- * `getProfileForCase` cannot see an owner-set / case-null profile, so it decides
- * to bootstrap one. On a 23505 the residue is adopted onto the case and the
- * upsert retried ONCE; if nothing was adopted the collision was something else
- * and the original failure stands. See `lib/cases/residue.ts` for why this is
- * lazy rather than pre-emptive.
+ * So: INSERT, and on a collision UPDATE the mutable columns by `case_id`. The
+ * update payload carries neither `owner` nor `case_id` — both are absent from the
+ * UPDATE grant, and that asymmetry is the barrier, not an oversight.
+ *
+ * ## Why a 23505 here now means exactly one thing
+ *
+ * It used to mean two. `profiles_owner_key` (unique on `owner`) made a
+ * never-backfilled MV-155 residue row collide on the INSERT branch, and the remedy
+ * was to adopt the residue and retry rather than to resolve. **MV-160 dropped that
+ * index and made `profiles.case_id` NOT NULL**, so an owner-set / case-null profile
+ * row is no longer representable and `adoptOwnerKeyedResidue(db, "profiles", …)`
+ * can only return 0 — a fact `tests/integration/case-data-access.itest.ts` already
+ * pins. The only unique left on this table besides the primary key is
+ * `profiles_case_idx`, so a 23505 is a concurrent first write and "re-read and
+ * update" is the whole remedy. The adopt call is gone from this path for that
+ * reason; `lib/cases/residue.ts` still serves its three other callers.
  */
 export async function upsertProfileForCase(
   db: DB,
@@ -73,25 +81,28 @@ export async function upsertProfileForCase(
   const ownership = await caseWriteColumns(db, input.caseId);
   if (ownership === null) return null;
 
-  const payload = {
-    ...ownership,
+  // Split deliberately: the INSERT may name the ownership axis, the UPDATE may not.
+  const mutable = {
     sections: input.sections as unknown as Json,
     completeness: input.completeness,
   };
-  const write = async () =>
-    db
-      .from("profiles")
-      .upsert(payload, { onConflict: "case_id", ignoreDuplicates: false })
-      .select("id")
-      .single();
 
-  let { data, error } = await write();
-  if (isUniqueViolation(error)) {
-    const adopted = await adoptOwnerKeyedResidue(db, "profiles", input.caseId);
-    if (adopted > 0) ({ data, error } = await write());
-  }
-  if (error || !data) return null;
-  return data.id;
+  const created = await db
+    .from("profiles")
+    .insert({ ...ownership, ...mutable } as never)
+    .select("id")
+    .single();
+  if (!created.error && created.data) return (created.data as { id: string }).id;
+  if (!isUniqueViolation(created.error)) return null;
+
+  const resolved = await db
+    .from("profiles")
+    .update(mutable as never)
+    .eq("case_id", input.caseId)
+    .select("id")
+    .maybeSingle();
+  if (resolved.error || !resolved.data) return null;
+  return (resolved.data as { id: string }).id;
 }
 
 export interface PatchResult {
