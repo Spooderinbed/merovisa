@@ -232,7 +232,24 @@ do $$
 declare
   v_policies int;
   v_helpers  int;
+  v_stage3   text;
 begin
+  -- MV-168 ADDED THREE MORE `%_case` POLICIES, NAMED TO THE SAME CONVENTION, so the count below
+  -- reads 27 on a Stage 3 database and this guard refuses — correctly, because the database is
+  -- then not in the state this script was written against. Named explicitly and checked FIRST so
+  -- the operator reads an instruction instead of decoding a count. Stage 3 unwinds before Stage 2:
+  --   MV-168-rollback → MV-161-rollback → MV-160-rollback (R1) → MV-159-rollback (R2).
+  select string_agg(p.polname, ', ' order by p.polname) into v_stage3
+    from pg_policy p
+   where p.polname in ('profiles_insert_case', 'plan_items_insert_case', 'assessments_update_case');
+  if v_stage3 is not null then
+    raise exception 'MV-160 rollback REFUSED: Stage 3 is still applied — % present. Run '
+      'supabase/rehearsal/MV-168-rollback.sql FIRST (Stage 3 unwinds before Stage 2), then this '
+      'script. Unwinding Stage 2 underneath a live Stage 3 grant would leave `authenticated` '
+      'holding INSERT on profiles/plan_items with the policy set restored to a shape that never '
+      'expected it.', v_stage3;
+  end if;
+
   select count(*) into v_policies
     from pg_policy p join pg_class c on c.oid = p.polrelid join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public' and p.polname like '%\_case';

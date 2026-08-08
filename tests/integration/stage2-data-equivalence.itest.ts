@@ -83,6 +83,14 @@ assertLocalStack("stage2-data-equivalence.itest.ts", process.env.SUPABASE_TEST_U
 
 const MIGRATION_PATH = "supabase/migrations/20260805140000_stage2_tighten_case_mandatory.sql";
 const ROLLBACK_PATH = "supabase/rehearsal/MV-160-rollback.sql";
+/**
+ * MV-168 — STAGE 3 UNWINDS BEFORE STAGE 2, and this suite has to walk the same chain an operator
+ * would. R1's Guard 1 counts the `%_case` policies on the nine and expects MV-159's twenty-four;
+ * MV-168's three are named to the same convention, so R1 refuses until they are gone. That refusal
+ * is the guard working — this file reaches the pre-tighten window by REPLAYING the real scripts, so
+ * a chain it cannot walk is a chain an operator could not walk either.
+ */
+const STAGE3_ROLLBACK_PATH = "supabase/rehearsal/MV-168-rollback.sql";
 /** Where §A2 writes its live-data payload. Gitignored, and the ignore is asserted below. */
 const SNAPSHOT_DIR = "docs/migrations/stage2/snapshots/";
 
@@ -347,6 +355,7 @@ describe("MV-160 §A1 — Stage 2 before/after data equivalence (synthetic)", ()
 
     const script = [
       "begin;",
+      unwrapTransaction(readSql(STAGE3_ROLLBACK_PATH), STAGE3_ROLLBACK_PATH),
       unwrapTransaction(readSql(ROLLBACK_PATH), ROLLBACK_PATH),
       probeSql("pre"),
       seedSql(programs[0]!, programs[1]!),
