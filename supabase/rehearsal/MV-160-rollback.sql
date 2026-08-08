@@ -238,7 +238,11 @@ begin
   -- reads 27 on a Stage 3 database and this guard refuses — correctly, because the database is
   -- then not in the state this script was written against. Named explicitly and checked FIRST so
   -- the operator reads an instruction instead of decoding a count. Stage 3 unwinds before Stage 2:
-  --   MV-168-rollback → MV-161-rollback → MV-160-rollback (R1) → MV-159-rollback (R2).
+  --   MV-168-rollback → MV-160-rollback (R1) → MV-159-rollback (R2).
+  -- `MV-161-rollback.sql` is NOT a step in that chain. This script keeps MV-161's P0 pointer bound
+  -- ON PURPOSE — the header above says so and §8 asserts it survived — and MV-161-rollback's own
+  -- Guard 1 refuses until THIS script has already run. Its only sanctioned position is between R1
+  -- and R2 on an offline rehearsal host (`docs/migrations/stage2/equivalence-report.md` §3.1).
   select string_agg(p.polname, ', ' order by p.polname) into v_stage3
     from pg_policy p
    where p.polname in ('profiles_insert_case', 'plan_items_insert_case', 'assessments_update_case');

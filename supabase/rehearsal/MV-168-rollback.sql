@@ -11,7 +11,17 @@
 -- Stage 2 spec §10.1 unwinds strictly reverse-DAG: **R1** (`MV-160-rollback.sql`) before **R2**
 -- (`MV-159-rollback.sql`). MV-168 is Stage 3 and lands after both, so it unwinds FIRST:
 --
---     MV-168-rollback.sql  →  MV-161-rollback.sql  →  MV-160-rollback.sql  →  MV-159-rollback.sql
+--     MV-168-rollback.sql  →  MV-160-rollback.sql (R1)  →  MV-159-rollback.sql (R2)
+--
+-- `MV-161-rollback.sql` IS NOT A STEP IN THAT CHAIN, and reading it in is the mistake this
+-- paragraph exists to prevent. R1 deliberately KEEPS MV-161's P0 pointer bound — its own header
+-- says so and its §8 post-conditions assert the bound survived — so an incident unwind never
+-- touches MV-161 at all. The one position that file has is BETWEEN R1 AND R2 on an OFFLINE
+-- REHEARSAL HOST: that is the order `docs/migrations/stage2/equivalence-report.md` §3.1 records
+-- ("`MV-160-rollback.sql` **then** `MV-161-rollback.sql`"), and its own header (:68-72) says twice
+-- that it is NOT an incident tool. Run it anywhere earlier and it REFUSES rather than misfires:
+-- its Guard 1 (:136-141) raises while `public.program_predictions.case_id` is still NOT NULL, and
+-- this script alters no schema object, so that column is still NOT NULL the moment this commits.
 --
 -- **This is not advisory.** `MV-160-rollback.sql`'s Guard 1 counts the `%_case` policies on the
 -- nine student tables and expects exactly MV-159's twenty-four. MV-168's three are named to the
@@ -36,6 +46,17 @@
 --
 -- ONE transaction, for the reason its two predecessors give: between the `drop policy` and the
 -- revoke, a table is momentarily granted-but-unfiltered, and no other session may observe that.
+
+-- `MV-160-rollback.sql:145`'s and `MV-161-rollback.sql:88`'s line, and it is load-bearing here for
+-- exactly their reason. Every guard in this file works by `raise exception` — Guard 0's two
+-- refusals and §3's four completeness assertions. WITHOUT this, a psql invoked without
+-- `-v ON_ERROR_STOP=1` does not stop at the refusal: it continues, every following statement fails
+-- `25P02`, and the closing `commit;` is executed inside an aborted transaction — which Postgres
+-- turns into a ROLLBACK and reports as `ROLLBACK`, exit code 0. A REFUSAL TO UNWIND WOULD THEN
+-- READ AS A SUCCESSFUL UNWIND to any harness checking the exit code, which is the worst reading
+-- this file can produce. The header's invocation hint at :4 is a hint; setting it IN THE FILE
+-- means the guards cannot be defeated by the way the file is invoked.
+\set ON_ERROR_STOP on
 
 begin;
 

@@ -63,8 +63,9 @@ assertLocalStack("student-data-rls.itest.ts", url);
  * just `uuid`); the second is the signature `has_function_privilege` accepts.
  *
  * `case_student_id` is the round-3 addition and the only one that answers about the OWNER axis
- * rather than the case axis — it is what the five INSERT `WITH CHECK`s and §1b clause (c) both
- * read, so the INSERT and UPDATE halves of "owner may only be the case's own student" cannot drift.
+ * rather than the case axis — it is what the INSERT `WITH CHECK`s (five at MV-159, seven since
+ * MV-168) and §1b clause (c) both read, so the INSERT and UPDATE halves of "owner may only be the
+ * case's own student" cannot drift.
  */
 const NEW_HELPERS: ReadonlyArray<readonly [name: string, identityArgs: string, signature: string]> = [
   ["actor_case_ids", "", "private.actor_case_ids()"],
@@ -80,9 +81,11 @@ const NEW_HELPERS: ReadonlyArray<readonly [name: string, identityArgs: string, s
 ];
 
 /**
- * The OWNER-axis bound the five INSERT `WITH CHECK`s carry, byte-exact as `pg_get_expr` renders it.
- * MV-160 §D re-creates all five and must keep this; §13 (4) of the migration asserts the same
- * property at APPLY time, so a re-creation that drops it cannot even land.
+ * The OWNER-axis bound the INSERT `WITH CHECK`s carry, byte-exact as `pg_get_expr` renders it —
+ * MV-159's five, plus MV-168's `profiles` and `plan_items`, which copy the same conjunct. MV-160 §D
+ * re-creates the five and must keep this; §13 (4) of that migration and §4 (1) of
+ * `20260808120000_stage3_consultancy_write_grants.sql` assert the same property at APPLY time for
+ * the five and the two respectively, so a re-creation that drops it cannot even land.
  */
 const OWNER_BOUND_INSERT = "(owner IS NULL) OR (owner = private.case_student_id(case_id))";
 
@@ -176,15 +179,45 @@ const CLIENT_WRITABLE_EXEMPTIONS: Readonly<Record<string, string>> = {
   "outcome_events.occurred_at": "payload: the student's report of when it happened",
   "outcome_events.occurred_on": "payload: the student's report of the date it happened",
   "outcome_events.reason_code": "payload: the student's stated reason on a refusal or withdrawal",
+
+  // ---- MV-168 (Stage 3 slice 1) OPENED TWO MORE INSERT SURFACES, and these nine columns are the
+  // whole of what it newly made client-writable. Three of them — `profiles.sections`,
+  // `profiles.completeness`, `plan_items.status` — the client could ALREADY write, because Stage 2
+  // left `authenticated` an UPDATE grant on each; for those the INSERT grant adds a verb, not a
+  // column. The other six are new. All nine are free for the same reason the five older surfaces'
+  // payload columns are: the row is already pinned to a case the actor may reach and to that
+  // case's own student by the two conjuncts above them, so what the row SAYS is self-scoped.
+  "profiles.sections": "payload: the student's own 13-section profile jsonb; already UPDATE-granted, so INSERT adds a verb not a column",
+  "profiles.completeness": "payload: the derived completeness meter; already UPDATE-granted, and it steers no verdict",
+  "plan_items.kind": "payload: which plan step this is; no CHECK, and the step is self-scoped to the actor's own reachable case",
+  "plan_items.impact": "payload; CHECK-constrained to high/medium/low",
+  "plan_items.title": "payload: the step's own headline text",
+  "plan_items.body": "payload: the step's own body text",
+  // The INSERT grant deliberately omits `completed_at`/`started_at` (migration §2), so a row created
+  // `status='done'` carries no client-chosen completion TIME. The status itself was already
+  // client-writable through the Stage 2 UPDATE grant, so this buys nothing new.
+  "plan_items.status": "payload; CHECK-constrained to todo/done/dismissed and already UPDATE-granted; the timestamps stay ungranted",
+  "plan_items.lift_estimate": "payload: the step's own estimated lift, free text the student reads",
+  "plan_items.time_estimate": "payload: the step's own estimated time, free text the student reads",
 };
 
-/** The five tables the enumeration pass covers — the ones `authenticated` may INSERT into. */
+/**
+ * The tables the enumeration pass covers — the ones `authenticated` may INSERT into.
+ *
+ * SEVEN, NOT FIVE, since MV-168. The first five are MV-159's; `profiles` and `plan_items` are the
+ * Stage 3 write grants (spec §6.1 rows 1 and 5). They are LISTED rather than left out, because
+ * leaving them out is exactly the failure this guard exists to prevent: MV-168 made nine columns
+ * client-writable, and a five-table list would have enumerated none of them while still reading as
+ * a complete enumeration.
+ */
 const INSERT_SURFACES = [
   "user_program_state",
   "document_status",
   "program_predictions",
   "application_attempts",
   "outcome_events",
+  "profiles", // MV-168
+  "plan_items", // MV-168
 ] as const;
 
 /**
@@ -262,13 +295,20 @@ const EXPECTED_POLICIES: Record<StudentDataTable, ReadonlyArray<readonly [name: 
  * §F (`ownershipArms`), which fails both if that arm is lost and if a second arm ever reappears.
  */
 
-/** The five INSERT policies — the ones whose WITH CHECK carries the round-3 owner-axis bound. */
+/**
+ * The INSERT policies whose WITH CHECK carries the round-3 owner-axis bound — SEVEN since MV-168,
+ * which copied the same three-conjunct template onto `profiles` and `plan_items`. Listed here for
+ * the reason the five were: the bound is invisible to every legitimate caller, so only an
+ * enumeration keeps a later re-creation from dropping it.
+ */
 const INSERT_POLICIES: ReadonlySet<string> = new Set([
   "user_program_state.ups_insert_case",
   "document_status.ds_insert_case",
   "program_predictions.pp_insert_case",
   "application_attempts.aa_insert_case",
   "outcome_events.oe_insert_case",
+  "profiles.profiles_insert_case", // MV-168
+  "plan_items.plan_items_insert_case", // MV-168
 ]);
 
 /**
@@ -1241,10 +1281,11 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
     }, 120_000);
 
     // The STRUCTURAL half of the same property. The behavioural probe above proves the bound
-    // works; this proves it is still WRITTEN, on all five, so MV-160 §D's re-creation cannot drop
-    // it silently. Both halves are needed for the reason §F2 records: a negative-only probe
+    // works; this proves it is still WRITTEN, on all seven, so MV-160 §D's re-creation cannot drop
+    // it silently. §D re-creates MV-159's five only — MV-168's two are covered here because a
+    // re-creation is not the only way a conjunct goes missing. Both halves are needed for the reason §F2 records: a negative-only probe
     // cannot tell "correctly denied" from "denied because the policy is missing".
-    it("carries the OWNER-axis bound in all five INSERT predicates — what MV-160 §D must keep", () => {
+    it("carries the OWNER-axis bound in all seven INSERT predicates — what MV-160 §D must keep", () => {
       const withChecks = sqlLines(`
         select c.relname || '.' || p.polname || '|' ||
                replace(replace(pg_get_expr(p.polwithcheck, p.polrelid), e'\\n', ' '), '  ', ' ')
@@ -1255,7 +1296,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
            and c.relname || '.' || p.polname in (${[...INSERT_POLICIES].map((p) => `'${p}'`).join(",")})
          order by 1;
       `);
-      expect(withChecks.length, "all five INSERT policies must exist").toBe(5);
+      expect(withChecks.length, "all seven INSERT policies must exist").toBe(INSERT_POLICIES.size);
       for (const line of withChecks) {
         const [name, ...rest] = line.split("|");
         expect(rest.join("|"), `${name}: the owner-axis bound is missing or reshaped`).toContain(OWNER_BOUND_INSERT);
@@ -1540,10 +1581,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
         // THE OWNER AXIS DID NOT LEAVE THE SURFACE WHEN IT LEFT THE DISJUNCTION, so its probe is
         // still required on every one of the nine — derived from the catalogue's own predicate list
         // rather than hand-written, exactly like the arms above. What changed is only WHERE the
-        // axis is bounded, which is why it can no longer be READ OFF the disjunction: on the five
+        // axis is bounded, which is why it can no longer be READ OFF the disjunction: on the SEVEN
         // INSERTs it is the `owner is null or owner = private.case_student_id(case_id)` conjunct
-        // (asserted structurally by the OWNER-axis test above); on the two upsert-seam UPDATEs it is
-        // MV-155 §H's trigger guard; on `profiles` / `plan_items` it is the absent column grant.
+        // (asserted structurally by the OWNER-axis test above — MV-168 copied that conjunct onto
+        // `profiles` and `plan_items` along with the grant); on the two upsert-seam UPDATEs it is
+        // MV-155 §H's trigger guard; on the `profiles` / `plan_items` UPDATEs it is still the
+        // absent column grant, which MV-168 did NOT widen — `owner` is in both INSERT lists and in
+        // neither UPDATE list.
         // A client can still steer `owner` on all of them, so all of them still need a probe.
         requiredBranches.add(`${table}.${verb}@owner`);
       }
@@ -1579,7 +1623,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
     // time. Nothing here is a hand-written list of what the schema is believed to contain — the only
     // hand-written thing is the EXEMPTIONS, and the assertions below make a stale exemption fail
     // just as loudly as a missing one, so the list cannot rot into a rubber stamp.
-    it("bounds or explicitly exempts every CLIENT-WRITABLE column on all five INSERT surfaces", () => {
+    it("bounds or explicitly exempts every CLIENT-WRITABLE column on all seven INSERT surfaces", () => {
       const rows = sqlLines(`
         with pol as (
           select c.relname as tbl,
@@ -1609,7 +1653,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
       const tablesSeen = new Set(rows.map((r) => r.split("|")[0]));
       expect(
         [...tablesSeen].sort(),
-        "every one of the five INSERT surfaces must contribute columns",
+        "every one of the seven INSERT surfaces must contribute columns",
       ).toEqual([...INSERT_SURFACES].sort());
 
       const bound: string[] = [];

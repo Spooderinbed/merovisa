@@ -176,18 +176,41 @@ begin
       'them forges its own verdict', coalesce(v_cols, '<none>');
   end if;
 
-  -- (4) `assessments` still has NO INSERT and NO DELETE grant. Row 2 refuses INSERT permanently
-  --     and row 4 refuses DELETE; both are the ABSENCE of a grant, which is the kind of fact
-  --     that disappears without anybody deciding to remove it.
-  select string_agg(privilege_type, ', ' order by privilege_type) into v_bad
-    from information_schema.column_privileges
-   where grantee = 'authenticated'
-     and table_schema = 'public'
-     and table_name = 'assessments'
-     and privilege_type in ('INSERT', 'DELETE');
+  -- (4) THE THREE PERMANENT REFUSALS, asserted as the ABSENCE of a grant — which is the kind of
+  --     fact that disappears without anybody deciding to remove it. Spec §6.1 row 2 refuses
+  --     `assessments` INSERT, row 4 refuses `assessments` DELETE, row 6 refuses `plan_items`
+  --     DELETE.
+  --
+  --     NOT READ FROM `column_privileges`, AND THAT IS THE WHOLE POINT OF THIS BLOCK'S SHAPE.
+  --     That view is per-column, and Postgres only ever files SELECT/INSERT/UPDATE/REFERENCES in
+  --     it — measured on the local stack, not assumed: `select distinct privilege_type from
+  --     information_schema.column_privileges` returns exactly those four over the whole catalogue.
+  --     **DELETE IS TABLE-LEVEL AND NEVER APPEARS THERE**, so `privilege_type in ('INSERT',
+  --     'DELETE')` is not a strict filter, it is a filter that reduces to `= 'INSERT'` and can
+  --     never fail on the DELETE half. `tests/integration/fixtures/tenancy.ts:128` records exactly
+  --     this ("DELETE is table-level, from `role_table_grants` — it has no column granularity in
+  --     SQL"), and `supabase/rehearsal/MV-168-rollback.sql` §3 (2) records its mirror image: a
+  --     column-scoped grant writes no row in the TABLE-level catalogue. Neither catalogue answers
+  --     both verbs, which is why one query for both was always going to be half blind.
+  --
+  --     `has_*_privilege` rather than `role_table_grants`, because these three assertions are
+  --     about what a client CAN DO and not about which GRANT statement was typed. Measured: a
+  --     `grant delete on public.assessments to public` is INVISIBLE to `role_table_grants` filtered
+  --     on `grantee = 'authenticated'` and is caught here; and `has_ANY_COLUMN_privilege` is the
+  --     INSERT form because a COLUMN-scoped `grant insert (is_primary)` — the exact shape rows 1
+  --     and 5 above use — leaves `has_table_privilege` false while the client can very much
+  --     insert. Both mutations were run against the local stack and both flip this block from
+  --     silent to raising.
+  v_bad := nullif(concat_ws(', ',
+    case when has_any_column_privilege('authenticated', 'public.assessments', 'INSERT')
+         then 'assessments INSERT' end,
+    case when has_table_privilege('authenticated', 'public.assessments', 'DELETE')
+         then 'assessments DELETE' end,
+    case when has_table_privilege('authenticated', 'public.plan_items', 'DELETE')
+         then 'plan_items DELETE' end), '');
   if v_bad is not null then
-    raise exception 'MV-168: `authenticated` acquired % on assessments — spec §6.1 rows 2 and 4 '
-      'refuse both permanently', v_bad;
+    raise exception 'MV-168: `authenticated` acquired % — spec §6.1 rows 2, 4 and 6 refuse '
+      'assessments INSERT, assessments DELETE and plan_items DELETE permanently', v_bad;
   end if;
 
   -- (5) the two new INSERT grants did not leak past their enumerated column lists. A later

@@ -77,7 +77,7 @@ Four steps, all in this PR:
 - [x] **The authenticated client creates a FIRST-EVER `profiles` row for a case it may reach** — a test that **fails against the `.upsert()` form** and passes after the conversion. Without this, grant 1 ships inert.
 - [x] **`setObtained` and `upsertProgramState` succeed on a case with `student_user_id IS NULL`.** Today `caseUpsertColumns` refuses both. Assert **the row exists**, read back — never that the call "did not throw": both return `false` rather than raising.
 - [x] **No personal-case regression.** The existing service-role callers of all three converted helpers still work: profile save, plan generation, checklist tick, shortlist write. `npm test` + `npm run test:integration` green.
-- [x] **The residue path still works** — a `23505` on `profiles_owner_key` still adopts and retries; a `23505` on `profiles_case_idx` resolves without adopting.
+- [x] **The residue path still works** — ~~a `23505` on `profiles_owner_key` still adopts and retries~~; **CORRECTED AT BUILD, see trap 1 above: `profiles_owner_key` is not live (MV-160 §D dropped it), so it has no adopt-and-retry branch to exercise.** What remains and is verified: a `23505` on `profiles_case_idx` resolves without adopting. Re-ticked against the corrected statement rather than the original one, which the build's own finding falsified.
 - [x] **MV-160's pin retired per the four steps**, with the header comment rewritten and lines 775/783 untouched.
 - [x] **Stage 2 spec §6 amended + dated §12 entry**, recording the three departures (assessments INSERT refused; assessments UPDATE narrowed; documents INSERT deferred to Stage 4).
 - [x] **Spec §6.1 amended in THIS PR if anything above contradicted it** (spec §1 rule 2). If nothing did, say so explicitly on this card — silence is not a discharge.
@@ -159,3 +159,53 @@ Verified by driving the exact SQL the suite drives, through `psql`, since the su
 **Process note, recorded because it cost three CI cycles.** Both rollback-chain misses came from the same root: `stage2-data-equivalence.itest.ts` cannot execute locally, so it was being fixed by reading rather than by running. The SQL chain itself was verified directly through `psql`; what could not be verified that way was *where the test calls it from*, and that is precisely what both misses were. When a suite is unrunnable locally, grep its call sites before the first push rather than after the first red.
 
 **Not touched:** `cases_insert_admin`, the `cases` column write-surface guard, any schema object, any route signature, any UI. **F-1 and F-3 remain open founder decisions and neither is closed by this slice.**
+
+## Round 4 — five defects from the adversarial review, fixed on the same branch (2026-08-08)
+
+A 23-agent adversarial review (4 lenses, skeptics defaulting to `refuted=true`) raised 19 findings against PR #134; 14 were refuted. **The grants, the three RLS policies, the three write-path conversions and the `stage2-tighten` guard changes all survived untouched.** The five that stood are below, each with the measurement rather than the argument. Every measurement was taken against the local `supabase_db_merovisa` stack with MV-168 applied, and the stack was restored to `3 policies / 14 granted columns` afterwards.
+
+**1 — `MV-168-rollback.sql` had no in-file `\set ON_ERROR_STOP on`, so a REFUSAL exited 0.** Both predecessors carry the line (`MV-160-rollback.sql:145`, `MV-161-rollback.sql:88`) and MV-161's explains why in-file placement is load-bearing. Every guard in the Stage 3 rollback works by `raise exception`; without the setting, a psql invoked without `-v ON_ERROR_STOP=1` continues past the refusal, the following statements fail `25P02`, and `commit;` inside an aborted transaction is reported as `ROLLBACK` with **exit code 0** — a refusal to unwind reading as a successful unwind.
+
+*A/B measured, not argued.* Two copies of the script differing by exactly that one line (183 vs 184 lines), both run with **no** `-v` flag against a database where Guard 0 refuses:
+
+| variant | psql exit |
+|---|---|
+| without `\set` (pre-fix shape) | **0** — plus a visible `25P02` cascade |
+| with `\set` (shipped) | **3** |
+
+The same fixed script run against an *applied* MV-168, still with no `-v` flag, unwinds cleanly and exits 0 — so the setting bites only on the refusal path.
+
+**2 — both new rollback-chain notes prescribed an order `MV-161-rollback.sql` hard-refuses.** `MV-168-rollback.sql:14` and the comment this PR added at `MV-160-rollback.sql:241` both read *MV-168 → MV-161 → MV-160 → MV-159*. `MV-161-rollback.sql:25` says the opposite in words (*"RUN IT AFTER `MV-160-rollback.sql`, NEVER BEFORE"*) and its Guard 1 (`:136-141`) enforces it by raising while `program_predictions.case_id` is still NOT NULL — which it still is after the Stage 3 rollback, since that script alters no schema object. Version numbers agree: MV-161 is `20260805120000` and MV-160 is `20260805140000`, so MV-161 applied earlier and unwinds later.
+
+Corroborated by two artifacts nobody had to re-derive: `docs/migrations/stage2/equivalence-report.md:24` already records the pre-state as *"`MV-160-rollback.sql` **then** `MV-161-rollback.sql`"*, and the only executable chain in the tree — `stage2-data-equivalence.itest.ts:358-359` — runs `MV-168-rollback` then `MV-160-rollback` and never touches MV-161 at all. **So the code was right and only the two comments were wrong.** Both now read `MV-168-rollback → MV-160-rollback (R1) → MV-159-rollback (R2)`, and both state plainly that `MV-161-rollback.sql` is *not a step in that chain*: R1 keeps MV-161's P0 fix on purpose, and MV-161-rollback's own header (`:68-72`) says twice that it is a rehearsal-host tool and **not** an incident tool. The runtime exception R1 emits at `:246-251` was already correct — it names only `MV-168-rollback.sql` — and was left alone.
+
+**3 — apply-time assertion (4)'s DELETE half was dead, so two of the migration's four permanent refusals had no detector.** The block read `information_schema.column_privileges` with `privilege_type in ('INSERT', 'DELETE')`. That view is per-column; measured over the whole catalogue, `select distinct privilege_type from information_schema.column_privileges` returns exactly `INSERT, REFERENCES, SELECT, UPDATE` — **DELETE never appears**, so the filter reduced to `= 'INSERT'`. Demonstrated directly: with `grant delete on public.assessments to authenticated` in force, the shipped query still returned `<none>`.
+
+Rewritten to `has_any_column_privilege` for INSERT and `has_table_privilege` for DELETE, and extended to cover **`plan_items` DELETE (spec §6.1 row 6), which was never asserted at all**. Effective-privilege functions rather than `role_table_grants` because these assertions are about what a client can *do*: measured, a `grant delete on public.assessments to public` is invisible to `role_table_grants` filtered on `grantee = 'authenticated'`, and a column-scoped `grant insert (is_primary)` leaves `has_table_privilege` false while the client can very much insert. Mutation-tested — the migration re-applies clean (exit 0), and each of the three grants makes it raise:
+
+| mutation | result |
+|---|---|
+| `grant insert (is_primary) on public.assessments to authenticated` | `ERROR: MV-168: authenticated acquired assessments INSERT …` |
+| `grant delete on public.assessments to public` | `ERROR: … acquired assessments DELETE …` |
+| `grant delete on public.plan_items to authenticated` | `ERROR: … acquired plan_items DELETE …` |
+
+**4 — `student-data-rls.itest.ts`'s column-axis guard was still scoped to the Stage 2 five, so it saw none of the nine columns MV-168 newly made client-writable.** `INSERT_SURFACES` now has seven entries; the nine free columns (`profiles.sections`, `profiles.completeness`, `plan_items.kind/impact/title/body/status/lift_estimate/time_estimate`) are each recorded in `CLIENT_WRITABLE_EXEMPTIONS` with a reason, and `owner`/`case_id` are asserted **bound** on both new surfaces. `INSERT_POLICIES` goes to seven for the same staleness — measured, all seven `WITH CHECK`s carry `(owner IS NULL) OR (owner = private.case_student_id(case_id))` byte-exact. Three of the nine (`profiles.sections`, `profiles.completeness`, `plan_items.status`) were **already** client-writable through Stage 2's UPDATE grants, so for those the INSERT grant adds a verb and not a column; that is recorded in the exemptions rather than glossed.
+
+Both extended guards were mutation-tested rather than trusted for going green:
+
+| mutation | result |
+|---|---|
+| remove the `plan_items.title` exemption | RED — *"a client may write these columns and NO policy clause mentions them… expected `[ 'plan_items.title' ]` to deeply equal `[]`"* |
+| re-create `profiles_insert_case` without its owner conjunct | RED — *"profiles.profiles_insert_case: the owner-axis bound is missing or reshaped"* |
+
+The database was restored from the migration after each. The stale `five` prose is gone from every site it had become false at: `student-data-rls.itest.ts` lines 66, 83, 181, 265, the two test titles, the non-vacuity message, and the branch-completeness comment that still claimed `owner` on `profiles`/`plan_items` was bounded by *"the absent column grant"* — true of their UPDATE grants, which MV-168 did not widen, and false of their INSERT grants, which now carry the conjunct. `stage2-tighten.itest.ts:80`'s constant keeps its five (they are Stage 2's) and its doc comment now says so instead of claiming to be the whole INSERT surface.
+
+**5 — nothing to fix in `docs/`.** Grepped for both classes. The wrong chain appears in **no** doc — only in the two SQL comments fixed above. No `docs/` file carries a "five INSERT surfaces" claim this change falsifies; the Stage 3 spec's *"all five tables"* at `:249` is about a different set and stays true. Recorded rather than left silent, since an empty result and an unrun grep read identically on a card.
+
+**Also corrected:** acceptance criterion 9 was ticked against a residue path the build's own trap-1 correction had already established does not exist (`profiles_owner_key` is not live — MV-160 §D dropped it). The criterion now states the corrected behaviour and is ticked against that.
+
+**Round 4 gate, measured on this branch:** `npm run typecheck` **exit 0** · `npm run lint` **exit 0** · `npm test` **`Test Files 333 passed (333)` / `Tests 2677 passed (2677)`** · `node docs/kanban/build.mjs` **exit 0**.
+
+**`npm run test:integration` locally: `Tests 818 passed (818)`, 11 of 12 files.** The 12th, `stage2-data-equivalence.itest.ts`, fails to *collect* with `SyntaxError: Invalid or unexpected token` — **reproduced on a second worktree checked out at the unmodified branch tip (`8d9ffab`, `git status` clean), so it is not this round's doing.** Root cause identified rather than left as "a toolchain artifact": that file imports `scripts/stage2/capture-read-path-snapshot.mjs` (`:79`), whose first line is a `#!/usr/bin/env node` shebang — the known local parse trap. CI runs a clean install on Linux and that job is gating.
+
+Since that one unrunnable suite is the only executable consumer of the rollback scripts, its chain was driven by hand through `psql` exactly as the suite builds it — `unwrapTransaction` applied to both rollback files (each still exactly one `begin;`/`commit;`, so the harness's own shape check passes), concatenated inside one aborted transaction: **`PRE-TIGHTEN-REACHED` → `RE-APPLY-OK` → `ROLLBACK`, exit 0.** The `\set` addition is a no-op there because the suite already invokes psql with `-v ON_ERROR_STOP=1` (`:169`).

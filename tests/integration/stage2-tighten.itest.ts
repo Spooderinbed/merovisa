@@ -77,7 +77,11 @@ const NOT_NULL_EIGHT = [
 /** All nine migrated tables. */
 const NINE = [...NOT_NULL_EIGHT, "assessments"] as const;
 
-/** The five surfaces `authenticated` may INSERT into — the ones carrying the owner-axis bound. */
+/**
+ * MV-159's five INSERT surfaces — the ones THIS card tightens and whose owner-axis bound it must
+ * keep. Not the whole set `authenticated` may INSERT into any more: MV-168 added `profiles` and
+ * `plan_items`, which are Stage 3's to guard and are enumerated in `student-data-rls.itest.ts`.
+ */
 const INSERT_SURFACES = [
   "user_program_state",
   "document_status",
