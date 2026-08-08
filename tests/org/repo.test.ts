@@ -45,9 +45,14 @@ describe("listActorOrganizations — cell 1, org selection", () => {
         { id: "m-b", organization_id: ORG_B, user_id: ACTOR, role: "counsellor", status: "active" },
         { id: "m-a", organization_id: ORG_A, user_id: ACTOR, role: "owner", status: "active" },
       ],
+      // Seeded OUT of alphabetical order, and that is the whole point: the output
+      // order comes from these rows, not from the memberships above. While this
+      // fixture was pre-sorted, shuffling only the memberships proved nothing —
+      // `.sort()` could be deleted from the repository and the assertion below
+      // still passed.
       organizations: [
-        { id: ORG_A, name: "Anadi Education", slug: "anadi" },
         { id: ORG_B, name: "Bagmati Overseas", slug: "bagmati" },
+        { id: ORG_A, name: "Anadi Education", slug: "anadi" },
       ],
     });
 

@@ -65,14 +65,58 @@ function isServerOnlyModule(lines: string[]): boolean {
   return lines.some((line) => /^import\s+["']server-only["'];?\s*$/.test(line.trim()));
 }
 
-/** First-party import specifiers only — `@/…` and relative. */
+/**
+ * A whole import or re-export statement, however many lines it is spread over.
+ * Group 2 is the module specifier.
+ *
+ * The between-part forbids `(`, `)` and `=` as well as `;` and quotes, and that
+ * is load-bearing: without them `export function foo() {` matches `export`, runs
+ * across the newlines into the body, and reports the first string it finds there
+ * as an import. Requiring `from` to be followed by nothing but whitespace before
+ * the quote is what keeps `r.from === "x"` out for the same reason. Both were
+ * measured against this tree — the pattern captures 1606 specifiers across
+ * `app`/`components`/`lib` and every one of them is a real module path.
+ *
+ * `\b` rather than required whitespace after the keyword, so the space-free
+ * `import{a}from"./x"` is seen too. It costs nothing here — Prettier never emits
+ * that form, and both variants capture the same 1606 — but a scan that silently
+ * skips a spelling is the exact defect this function was rewritten to fix.
+ */
+const IMPORT_STATEMENT = /^[ \t]*(?:import|export)\b[^;'"`()=]*?(?:from[ \t\r\n]*)?(['"])([^'"\n]+)\1/gm;
+
+/** Block comments that open a line — every doc comment in this tree, and any commented-out import. */
+const LEADING_BLOCK_COMMENT = /^[ \t]*\/\*[\s\S]*?\*\//gm;
+
+/**
+ * First-party import specifiers only — `@/…` and relative.
+ *
+ * WHOLE-FILE, NOT PER-LINE. The per-line scan this replaces required the keyword
+ * and the `from "…"` on one physical line, so a Prettier-wrapped import matched
+ * NEITHER half: `import {` carries no `from`, and `} from "…";` does not begin
+ * with `import`. Wrapping is the dominant style here, so this was not a corner
+ * case — `lib/cases/context.ts` wraps its `./permissions` import, and every
+ * transitive chain through that edge was invisible, including chains into the
+ * `server-only` permission matrix this suite exists to guard. Repo-wide the
+ * per-line scan saw 1266 first-party edges where there are 1299.
+ *
+ * The vacuity test below could not have caught it: it counts client and
+ * server-only modules, and both of those are found by single-line DIRECTIVE
+ * regexes that a wrapped import does not affect.
+ *
+ * Line comments need no stripping — `^[ \t]*` admits only spaces and tabs before
+ * the keyword, so `// import { X } from "./y"` can never match.
+ */
 function importsOf(lines: string[]): string[] {
+  // The lines were split on /\r?\n/, so this join is LF-clean on a CRLF checkout.
+  const source = lines.join("\n").replace(LEADING_BLOCK_COMMENT, "");
   const specifiers: string[] = [];
-  for (const line of lines) {
-    const match = line.match(/^\s*(?:import|export)\b[^"']*from\s+["']([^"']+)["']/);
-    if (match?.[1]) specifiers.push(match[1]);
+  for (const match of source.matchAll(IMPORT_STATEMENT)) {
+    const specifier = match[2];
+    if (specifier && (specifier.startsWith("@/") || specifier.startsWith("."))) {
+      specifiers.push(specifier);
+    }
   }
-  return specifiers.filter((s) => s.startsWith("@/") || s.startsWith("."));
+  return specifiers;
 }
 
 // Resolution is a Set lookup over the files `walk` already found, not a `statSync`

@@ -167,3 +167,145 @@ an empty list.
   `authenticated`, and the fix is a schema change §5 forbids. Flagged to MV-170, proposed for Stage 5.
 - **§11 decision-log entry** — the self-mutation refusal, recorded as strictly narrower than the
   canonical cell so a later slice reading only the matrix does not "fix" it back open.
+
+## Adversarial review remediation — 2026-08-08
+
+An adversarial review of the open PR raised 18 findings. **13 were refuted.** The access-control
+core — cross-tenant isolation, the privilege-escalation carve-out, the self-lockout guard — survived
+review entirely and was **not touched**. The five confirmed defects were all in the safety net and
+the error-reporting layer, i.e. in what the code *proves* and what it *says*, never in what it
+allows.
+
+| # | Sev | Defect | Fix |
+|---|---|---|---|
+| 1 | MED | The client/server-boundary guard was blind to wrapped imports | `importsOf` is whole-file, not per-line |
+| 2 | MED | A 401 or a 500 was reported to the user as an authorization refusal | `components/workspace/save-error.ts` + per-surface branches |
+| 3 | LOW | Every 422 was blamed on the web-address field | The form reads the route's `issues.fieldErrors` |
+| 4 | LOW | The `.strict()` test did not pin `.strict()` | A case carrying a granted key *alongside* an ungranted one |
+| 5 | LOW | The sort assertion was vacuous | The `organizations` fixture is seeded out of order |
+
+### 1 — the boundary guard could not see the regression it was written for
+
+`importsOf` matched per line with a regex requiring the keyword and `from "…"` on the **same** line.
+A Prettier-wrapped import matches neither half: `import {` carries no `from`, and `} from "…";` does
+not begin with `import`. Wrapping is the dominant style here, so this was not a corner case —
+`lib/cases/context.ts` wraps its `./permissions` import, and **every transitive chain through that
+edge was invisible**, including chains into the very `server-only` matrix the suite exists to guard.
+The vacuity assertion could not have caught it: it counts client and server-only modules, both found
+by single-line DIRECTIVE regexes that a wrapped import does not disturb.
+
+Measured on this tree: the per-line scan saw **1266** first-party edges where there are **1299**.
+The four `lib/cases/* → ./permissions` edges were among the 33 missed.
+
+The replacement joins the (already `/\r?\n/`-split) lines, strips block comments that open a line,
+and matches statements across newlines. Two constraints in the pattern are load-bearing and were
+arrived at by measurement, not by taste — a first attempt over-matched badly:
+
+- the between-part forbids `(`, `)` and `=`, without which `export function foo() {` matches
+  `export`, runs across the newlines into the body, and reports the first string literal it finds
+  there as an import (observed: `components/layout/logo.tsx :: "/"`);
+- `from` must be followed by nothing but whitespace before the quote, which is what keeps
+  `r.from === "x"` out.
+
+Validated repo-wide before landing: **1606 captures across `app`/`components`/`lib`, every one a
+real module specifier; zero edges lost that the old scan saw; zero pre-existing violations**, so the
+guard got sharper without moving the goalposts under existing code. The keyword is followed by `\b`
+rather than by required whitespace, so the space-free `import{a}from"./x"` is seen too — both
+variants capture the same 1606 here, but a scan that silently skips a spelling is precisely the
+defect being fixed.
+
+**Mutation-tested.** Injecting the wrapped form of the exact regression the doc-comment names into
+`components/workspace/team-member-row.tsx`:
+
+```
+import {
+  MEMBERSHIP_ROLES,
+  MEMBERSHIP_STATUSES,
+} from "@/lib/cases/permissions";
+```
+
+turns the suite **red**, naming the chain
+`components\workspace\team-member-row.tsx → lib\cases\permissions.ts`. The old per-line scan was
+confirmed blind to the same injection in the same run — it saw only `@/components/ui/button`.
+Injection removed, suite green, `git status` clean.
+
+### 2 / 3 — an expired session is not a refusal, and a bad name is not a bad slug
+
+The catch-all `else if (!res.ok)` mapped every remaining status to *"That change was not allowed."*
+But the routes return **401** for an expired session and **500** for a genuine write failure —
+`lib/org/repo.ts` maps every PostgREST code other than 42501/23505 to `write-failed` (check
+constraints, timeouts, connection failures), and its two thrown-client catches land there too.
+`team-member-row.tsx` had **no status branches at all**, so 401, 403, 404 and both 500s rendered
+identically. An owner whose session had lapsed was told they lacked permission; a transient outage
+was indistinguishable from a real denial. Neither reader could tell whether to retry or to escalate.
+
+This is the write-side spelling of a rule the read side already states — `app/(app)/workspace/page.tsx`
+keeps "the lookup failed" and "you belong to nothing" from rendering the same, and
+`checkOrgPermission` deliberately keeps "lookup failed" distinct from "this role may not do this".
+403 keeps its original sentence, because for a 403 it was always true; the defect was applying it to
+everything else.
+
+For the 422s, the form mapped the **status** to one fixed sentence about the web address, while the
+route 422s an empty-after-trim name, a name over 120 chars, a bad slug, **or** an unknown key.
+Clearing the Organization name pointed the owner at a field that was untouched and correct. The form
+now reads `issues.fieldErrors` and attributes the message to the field the route actually rejected.
+
+**The `issues` shape is pinned at the route, not only in a component fixture** — a fixture agrees
+with itself, and a Zod upgrade that reshaped `flatten()` would leave the form quietly
+mis-attributing again. `tests/api/org-routes.test.ts` now asserts that `PATCH {name:"", slug:"anadi"}`
+returns `fieldErrors` keyed exactly `["name"]`.
+
+New coverage: `tests/components/workspace/org-settings-form.test.tsx` (9) and
+`tests/components/workspace/team-member-row.test.tsx` (5). **Not vacuous** — restoring the two old
+catch-alls fails **8 of the 14**; the 6 that survive are the cases the old code already got right
+(a genuine 403, a 409, a slug-only 422, the happy paths).
+
+### 4 — the `.strict()` test never reached `.strict()`
+
+Every ungranted-column body in the loop (`{status:"suspended"}`, `{id:"another-org"}`) carried
+**only** the unknown key, so the trailing `.refine()` — "provide a name or a slug" — refused it
+first. Added `{ name: "Anadi Global", status: "suspended" }`, which satisfies the refine so
+`.strict()` is the only thing that can reject it.
+
+**Mutation-tested.** With `.strict()` deleted from `app/api/org/[organizationId]/route.ts`, the new
+case returns **200** with the ungranted column silently stripped and the client told it saved
+(`expected 200 to be 422`) — while the five pre-existing bodies all stayed green, which is the
+measurement that proves they never exercised `.strict()`. Restored, green.
+
+### 5 — the sort assertion was satisfied by the fixture
+
+The `organizations` fixture was already alphabetical (`Anadi`, `Bagmati`); only the *memberships*
+array was shuffled, and memberships never determine output order — the `organizations` rows do.
+Fixture reseeded Bagmati-before-Anadi.
+
+**Mutation-tested.** With `.sort(…)` deleted from `lib/org/repo.ts:120`, the test fails with Bagmati
+returned first. Restored, green.
+
+### Gate — 2026-08-08 (post-remediation)
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | **exit 0** |
+| `npm run lint` | **exit 0** |
+| `npm test` | **exit 0 — 340/340 files, 2748/2748 tests, 47.8s** |
+
+The three `Test timed out in 5000ms` failures recorded in the gate above **did not recur**: this run
+was the plain `npm test` at the default 5s timeout, with no `--testTimeout` override, which supports
+the earlier reading that they were I/O contention on the OneDrive-backed tree rather than a defect.
+
+**+15 tests** on this branch (2733 → 2748). `git status --porcelain` clean at commit; no
+mutation-test edit survived into it.
+
+### Files changed by the remediation
+
+- `tests/architecture/client-server-boundary.test.ts` — whole-file `importsOf` (#1)
+- `components/workspace/save-error.ts` — **new**, HTTP status → what the person should do (#2)
+- `components/workspace/org-settings-form.tsx` — status branches + field attribution (#2, #3)
+- `components/workspace/team-member-row.tsx` — status branches, incl. its own 404 (#2)
+- `tests/components/workspace/org-settings-form.test.tsx` — **new** (9)
+- `tests/components/workspace/team-member-row.test.tsx` — **new** (5)
+- `tests/api/org-routes.test.ts` — the `.strict()` case (#4) + the `fieldErrors` shape contract (#3)
+- `tests/org/repo.test.ts` — fixture seeded out of order (#5)
+
+**Untouched, by instruction and on the merits:** `lib/org/membership-change.ts`,
+`lib/cases/require-org-permission.ts`, and the gates in both routes.

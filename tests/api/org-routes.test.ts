@@ -116,11 +116,33 @@ describe("PATCH /api/org/[organizationId] — cell 2, owner-only settings", () =
       { slug: "-leading" },
       { status: "suspended" },
       { id: "another-org" },
+      // The only body here that actually exercises `.strict()`. Every case above
+      // carries ONLY the ungranted key, so the trailing `.refine()` — "provide a
+      // name or a slug" — refuses it first and `.strict()` is never reached:
+      // measured, deleting `.strict()` from the route leaves all of them green.
+      // This one satisfies the refine, so a schema that merely STRIPS `status`
+      // returns 200 and tells the owner it saved a column outside
+      // `grant update (name, slug)`.
+      { name: "Anadi Global", status: "suspended" },
     ]) {
       const response = await patchOrgRequest(body);
       expect(response.status, JSON.stringify(body)).toBe(422);
     }
     expect(renameOrganization).not.toHaveBeenCalled();
+  });
+
+  it("names the field it rejected, so the form can attribute the message", async () => {
+    // `components/workspace/org-settings-form.tsx` reads `issues.fieldErrors` to
+    // decide WHICH field to blame — it used to blame the web address for every
+    // 422, including an empty organization name. Pinning the shape here rather
+    // than only in a component fixture is the point: a fixture agrees with
+    // itself, and a Zod upgrade that reshaped `flatten()` would leave the form
+    // quietly mis-attributing again.
+    grant({ "org.settings": true });
+    const response = await patchOrgRequest({ name: "", slug: "anadi" });
+    expect(response.status).toBe(422);
+    const body = (await response.json()) as { issues: { fieldErrors: Record<string, string[]> } };
+    expect(Object.keys(body.issues.fieldErrors)).toEqual(["name"]);
   });
 
   it("409s a slug another tenant already holds", async () => {

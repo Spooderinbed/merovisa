@@ -9,11 +9,11 @@
 
 ### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-08 07:38 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-08 11:00 UTC. **Not board state** — never written to board.json.
 
 | Card | PR | | CI | Review | Touches |
 |---|---|---|---|---|---|
-| **MV-169** | [#135](https://github.com/Spooderinbed/merovisa/pull/135) | open | pending 2/4 | — | tests · app · docs · components |
+| **MV-169** | [#135](https://github.com/Spooderinbed/merovisa/pull/135) | open | passing 4/4 | — | tests · app · docs · components |
 
 
 ## Backlog — 20
@@ -49,7 +49,7 @@ _empty_
 
 ## In review (WIP 3) — 1
 
-- **MV-169** · P1 · [Stage 3 slice 2 — org context, org selection, and team management](cards/MV-169-org-context-team-management.md) — _Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4._ · [#135](https://github.com/Spooderinbed/merovisa/pull/135) open, ci pending
+- **MV-169** · P1 · [Stage 3 slice 2 — org context, org selection, and team management](cards/MV-169-org-context-team-management.md) — _Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4._ · [#135](https://github.com/Spooderinbed/merovisa/pull/135) open, ci passing
 
 ## Blocked — 3
 

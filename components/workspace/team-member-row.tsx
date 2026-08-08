@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { saveErrorMessage } from "./save-error";
 
 /**
  * One membership, with the two controls cell 5 allows: change the role, or
@@ -70,7 +71,16 @@ export function TeamMemberRow({
         body: JSON.stringify(change),
       });
       if (!res.ok) {
-        setError("That change was not allowed.");
+        // This row had no status branches at all, so 401, 403, 404 and both of
+        // the route's 500s all read as "that change was not allowed" — a refusal
+        // of the person rather than of the request. A 404 is its own outcome
+        // here: the route returns it when the membership is not in this
+        // organization, which from this row means the team moved underneath it.
+        setError(
+          res.status === 404
+            ? "That member is no longer in this organization. Refresh to see the current team."
+            : saveErrorMessage(res.status),
+        );
         setBusy(false);
         return;
       }
