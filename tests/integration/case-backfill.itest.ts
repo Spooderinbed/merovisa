@@ -101,6 +101,10 @@ const NINE = [
  * `case_id` appears in every INSERT list and in NO update list. That asymmetry is the point.
  */
 const EXPECTED_WRITE_SURFACE: ReadonlyArray<string> = [
+  // MV-168 — Stage 3 spec §6.1 row 3. The ONLY `assessments` write grant, and narrowed on purpose:
+  // `result` and `rule_version` are the scoring engine's outputs and a client that can write them
+  // mints its own verdict. `assessments` INSERT and DELETE stay ungranted (rows 2 and 4).
+  "assessments.update(is_primary)",
   "application_attempts.insert(case_id)",
   "application_attempts.insert(created_at)",
   "application_attempts.insert(destination)",
@@ -134,9 +138,27 @@ const EXPECTED_WRITE_SURFACE: ReadonlyArray<string> = [
   "outcome_events.insert(supersedes_event_id)",
   "outcome_events.insert(verified_at)",
   "outcome_events.insert(verified_by)",
+  // MV-168 — Stage 3 spec §6.1 row 5. The generator's copy columns (`impact`, `title`, `body`, …)
+  // are grantable on INSERT but stay OUT of the UPDATE list: a client that can create a plan item
+  // may not later rewrite MeroVisa's advice on one.
+  "plan_items.insert(body)",
+  "plan_items.insert(case_id)",
+  "plan_items.insert(impact)",
+  "plan_items.insert(kind)",
+  "plan_items.insert(lift_estimate)",
+  "plan_items.insert(owner)",
+  "plan_items.insert(status)",
+  "plan_items.insert(time_estimate)",
+  "plan_items.insert(title)",
   "plan_items.update(completed_at)",
   "plan_items.update(started_at)",
   "plan_items.update(status)",
+  // MV-168 — row 1. `created_at`/`updated_at` stay ungranted; they are the server's account of
+  // when something happened, not the client's.
+  "profiles.insert(case_id)",
+  "profiles.insert(completeness)",
+  "profiles.insert(owner)",
+  "profiles.insert(sections)",
   "profiles.update(completeness)",
   "profiles.update(sections)",
   "program_predictions.insert(assessment_id)",

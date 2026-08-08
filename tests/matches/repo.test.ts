@@ -16,11 +16,12 @@ const CASE_ROW = { data: { id: CASE, student_user_id: STUDENT }, error: null };
 const ORG_CASE_ROW = { data: { id: CASE, student_user_id: null }, error: null };
 
 describe("matches repo", () => {
-  it("upsertProgramState conflicts on the CASE-scoped index", async () => {
-    // MV-155 shipped `user_program_state_case_program_idx` FULL (not partial) so
-    // PostgREST's bare `on_conflict=` can infer it. Pointing this string at the
-    // legacy owner index would silently keep the write owner-scoped while every
-    // read has moved to case_id.
+  it("upsertProgramState INSERTs, naming case_id explicitly — never an upsert", async () => {
+    // MV-168. An `.upsert()` compiles to `INSERT … ON CONFLICT DO UPDATE SET` with EVERY payload
+    // column in the SET list, checked at plan time; `case_id` is in this table's INSERT grant and
+    // not its UPDATE grant, so the upsert form is 42501 on the first call and a plain INSERT is
+    // not. `UPDATE (case_id)` is forbidden by design, so the fix has to be here rather than in
+    // the grant.
     const { client, calls } = fakeSupabase([CASE_ROW, { data: null, error: null }]);
 
     const ok = await upsertProgramState(client, {
@@ -30,34 +31,48 @@ describe("matches repo", () => {
     });
 
     expect(ok).toBe(true);
-    const upsert = calls.find((c) => c.method === "upsert");
-    expect(upsert?.args[1]).toMatchObject({ onConflict: "case_id,program_id" });
-  });
-
-  it("upsertProgramState writes owner but NOT case_id in the payload", async () => {
-    // The conflict TARGET names case_id; the PAYLOAD must not. PostgREST puts
-    // every payload column in the `ON CONFLICT DO UPDATE SET` list, and Stage 2
-    // grants no UPDATE(case_id) — so naming it is a 42501 on the first call.
-    // MV-155 §H's definer trigger derives case_id from owner instead.
-    const { client, calls } = fakeSupabase([CASE_ROW, { data: null, error: null }]);
-
-    await upsertProgramState(client, { caseId: CASE, programId: "p1", status: "shortlisted" });
-
-    const payload = calls.find((c) => c.method === "upsert")?.args[0] as Record<string, unknown>;
-    expect(payload).not.toHaveProperty("case_id");
+    expect(calls.some((c) => c.method === "upsert")).toBe(false);
+    const payload = calls.find((c) => c.method === "insert")?.args[0] as Record<string, unknown>;
+    expect(payload.case_id).toBe(CASE);
     expect(payload.owner).toBe(STUDENT);
+    expect(payload.program_id).toBe("p1");
   });
 
-  it("upsertProgramState refuses a case with no student user", async () => {
-    // Stage 2 cannot express the consultancy upsert (spec §4 rule 2): the trigger
-    // does not fire with owner NULL and supplying case_id needs a grant Stage 2
-    // withholds. Refuse rather than write a row that trips the ownership check.
-    const { client, calls } = fakeSupabase([ORG_CASE_ROW]);
+  it("upsertProgramState resolves a 23505 by UPDATING, and that update names neither ownership column", async () => {
+    // The row already exists on this case for this program. The resolve branch may not name
+    // `case_id` (absent from the UPDATE grant) nor `owner` (write-once, enforced by MV-155 §H's
+    // trigger clause (c)).
+    const { client, calls } = fakeSupabase([
+      CASE_ROW,
+      { data: null, error: { code: "23505", message: "duplicate key" } },
+      { data: null, error: null },
+    ]);
+
+    const ok = await upsertProgramState(client, { caseId: CASE, programId: "p1", status: "applied" });
+
+    expect(ok).toBe(true);
+    const patch = calls.find((c) => c.method === "update")?.args[0] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty("case_id");
+    expect(patch).not.toHaveProperty("owner");
+    expect(patch.status).toBe("applied");
+    const eqs = calls.filter((c) => c.method === "eq").map((c) => c.args[0]);
+    expect(eqs).toContain("case_id");
+    expect(eqs).toContain("program_id");
+  });
+
+  it("upsertProgramState SERVES a case with no student user — owner NULL, case_id supplied", async () => {
+    // THE INVERSION. Stage 2 could not express the consultancy shortlist write: `caseUpsertColumns`
+    // returned null for a student-less case and this returned `false` — silently, since the route
+    // still answered 200. Stage 3 grants `INSERT (…, case_id, owner)` and the policy admits
+    // `owner IS NULL`, so the write lands.
+    const { client, calls } = fakeSupabase([ORG_CASE_ROW, { data: null, error: null }]);
 
     expect(
       await upsertProgramState(client, { caseId: CASE, programId: "p1", status: "shortlisted" }),
-    ).toBe(false);
-    expect(calls.some((c) => c.method === "upsert")).toBe(false);
+    ).toBe(true);
+    const payload = calls.find((c) => c.method === "insert")?.args[0] as Record<string, unknown>;
+    expect(payload.owner).toBeNull();
+    expect(payload.case_id).toBe(CASE);
   });
 
   it("upsertProgramState returns false on error", async () => {

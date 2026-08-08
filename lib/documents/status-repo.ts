@@ -1,8 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { caseUpsertColumns } from "@/lib/cases/dual-write";
-import { CaseReadError } from "@/lib/cases/errors";
+import { caseWriteColumns } from "@/lib/cases/dual-write";
+import { CaseReadError, isUniqueViolation } from "@/lib/cases/errors";
 import type { DocumentKind } from "./types";
 
 type DB = SupabaseClient<Database>;
@@ -50,29 +50,39 @@ export async function setObtained(
   obtained: boolean,
 ): Promise<boolean> {
   if (obtained) {
-    // THE CONFLICT TARGET AND THE PAYLOAD FOLLOW OPPOSITE RULES here (see the
-    // same note in lib/matches/repo.ts):
+    // MV-168 — INSERT, then UPDATE on a collision, for the reason spelled out in
+    // `lib/matches/repo.ts`: an `.upsert()` puts every payload column in the
+    // `ON CONFLICT DO UPDATE SET` list, `case_id` is in this table's INSERT grant
+    // but not its UPDATE grant, and `UPDATE (case_id)` is forbidden by design. So
+    // the INSERT names `case_id` and the UPDATE branch names neither ownership
+    // column. This route runs on the AUTHENTICATED client, so getting it wrong
+    // takes the live checklist down.
     //
-    //   TARGET  — `case_id,kind` names MV-155's `document_status_case_kind_idx`,
-    //             which is FULL rather than partial precisely so PostgREST's bare
-    //             `on_conflict=` can infer it (a partial arbiter → 42P10).
-    //   PAYLOAD — carries `owner`, never `case_id`. Stage 2 grants
-    //             `UPDATE (owner, kind, obtained)` on this table; PostgREST puts
-    //             every payload column in the `ON CONFLICT DO UPDATE SET` list
-    //             and checks privileges at plan time, so naming case_id is a
-    //             42501 on the first call. MV-155 §H's definer trigger derives it
-    //             from owner. This route runs on the AUTHENTICATED client today,
-    //             so getting it wrong takes the live checklist down.
-    const ownership = await caseUpsertColumns(db, caseId);
+    // `caseWriteColumns` rather than `caseUpsertColumns`: the latter refuses a
+    // case with no `student_user_id`, which used to make this return `false` for
+    // every consultancy case — the silent-drop this function's own doc comment
+    // above was written about.
+    const ownership = await caseWriteColumns(db, caseId);
     if (ownership === null) {
-      console.error("[document_status] refused: case has no student_user_id", { caseId, kind });
+      console.error("[document_status] refused: case is unreadable", { caseId, kind });
       return false;
     }
-    const { error } = await db
+    const { error: insertError } = await db
       .from("document_status")
-      .upsert({ ...ownership, kind, obtained: true }, { onConflict: "case_id,kind" });
-    if (error) {
-      console.error("[document_status] obtained upsert failed", { caseId, kind, error });
+      .insert({ ...ownership, kind, obtained: true } as never);
+    if (!insertError) return true;
+    // Already ticked — `document_status_case_kind_idx`. Anything else is a failure.
+    if (!isUniqueViolation(insertError)) {
+      console.error("[document_status] obtained insert failed", { caseId, kind, error: insertError });
+      return false;
+    }
+    const { error: updateError } = await db
+      .from("document_status")
+      .update({ obtained: true } as never)
+      .eq("case_id", caseId)
+      .eq("kind", kind);
+    if (updateError) {
+      console.error("[document_status] obtained resolve failed", { caseId, kind, error: updateError });
       return false;
     }
     return true;

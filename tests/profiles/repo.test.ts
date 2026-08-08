@@ -40,7 +40,11 @@ describe("getProfileForCase", () => {
 });
 
 describe("upsertProfileForCase", () => {
-  it("dual-writes case_id and the derived owner, conflicting on the case index", async () => {
+  it("INSERTs the ownership axis and the mutable columns — never an upsert", async () => {
+    // MV-168. The `.upsert()` this replaced put `case_id` in the `ON CONFLICT DO UPDATE SET`
+    // list, and `UPDATE (case_id)` is withheld by design, so it raised 42501 at plan time on the
+    // FIRST call — with no row present and neither branch reachable. Stage 3's INSERT grant is
+    // only reachable through a plain INSERT.
     const { client, calls } = fakeSupabase([CASE_ROW, { data: { id: "p1" }, error: null }]);
 
     const id = await upsertProfileForCase(client, {
@@ -50,9 +54,43 @@ describe("upsertProfileForCase", () => {
     });
 
     expect(id).toBe("p1");
-    const upsert = calls.find((c) => c.method === "upsert");
-    expect(upsert?.args[0]).toMatchObject({ case_id: CASE, owner: STUDENT });
-    expect(upsert?.args[1]).toMatchObject({ onConflict: "case_id" });
+    expect(calls.some((c) => c.method === "upsert")).toBe(false);
+    const payload = calls.find((c) => c.method === "insert")?.args[0] as Record<string, unknown>;
+    expect(payload).toMatchObject({ case_id: CASE, owner: STUDENT, completeness: 8 });
+  });
+
+  it("INSERTs `owner: null` for a case with no student — the consultancy shape", async () => {
+    const { client, calls } = fakeSupabase([
+      { data: { id: CASE, student_user_id: null }, error: null },
+      { data: { id: "p1" }, error: null },
+    ]);
+
+    expect(
+      await upsertProfileForCase(client, { caseId: CASE, sections: {}, completeness: 0 }),
+    ).toBe("p1");
+    const payload = calls.find((c) => c.method === "insert")?.args[0] as Record<string, unknown>;
+    expect(payload).toMatchObject({ case_id: CASE, owner: null });
+  });
+
+  it("resolves a 23505 by UPDATING, and that update names neither ownership column", async () => {
+    // Since MV-160 dropped `profiles_owner_key` and made `case_id` NOT NULL, `profiles_case_idx`
+    // is the only unique left besides the primary key — so a 23505 here means "somebody created
+    // this case's profile concurrently" and the remedy is to write the mutable columns onto it.
+    // It used to mean two things with opposite remedies, which is why this is asserted rather
+    // than assumed.
+    const { client, calls } = fakeSupabase([
+      CASE_ROW,
+      { data: null, error: { code: "23505", message: "duplicate key" } },
+      { data: { id: "p1" }, error: null },
+    ]);
+
+    expect(
+      await upsertProfileForCase(client, { caseId: CASE, sections: {}, completeness: 3 }),
+    ).toBe("p1");
+    const patch = calls.find((c) => c.method === "update")?.args[0] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty("case_id");
+    expect(patch).not.toHaveProperty("owner");
+    expect(patch).toMatchObject({ completeness: 3 });
   });
 
   it("returns null when the case cannot be resolved rather than writing an unowned row", async () => {
@@ -61,11 +99,11 @@ describe("upsertProfileForCase", () => {
     expect(
       await upsertProfileForCase(client, { caseId: CASE, sections: {}, completeness: 0 }),
     ).toBeNull();
-    expect(calls.some((c) => c.method === "upsert")).toBe(false);
+    expect(calls.some((c) => c.method === "insert")).toBe(false);
   });
 
-  it("returns null when the upsert errors", async () => {
-    const { client } = fakeSupabase([CASE_ROW, { data: null, error: { message: "duplicate" } }]);
+  it("returns null when the insert fails for a reason that is not a unique violation", async () => {
+    const { client } = fakeSupabase([CASE_ROW, { data: null, error: { code: "42501", message: "denied" } }]);
     expect(
       await upsertProfileForCase(client, { caseId: CASE, sections: {}, completeness: 0 }),
     ).toBeNull();
@@ -83,9 +121,10 @@ describe("patchProfileSectionForCase", () => {
     expect(calls.some((c) => c.method === "eq" && c.args[0] === "case_id" && c.args[1] === CASE)).toBe(true);
   });
 
-  it("upserts when the UPDATE matches 0 rows (no profile row exists)", async () => {
+  it("INSERTs when the UPDATE matches 0 rows (no profile row exists)", async () => {
     // data:[] is a 0-row update; the fallback then needs the `cases` lookup and
-    // the upsert to answer, in that order.
+    // the insert to answer, in that order. THIS IS THE FIRST-EVER-SAVE PATH, and the one Stage 3
+    // grant 1 exists for — it reaches `upsertProfileForCase` precisely when there is no row.
     const { client, calls } = fakeSupabase([
       { data: [], error: null },
       { data: [], error: null },
@@ -97,7 +136,7 @@ describe("patchProfileSectionForCase", () => {
 
     expect(typeof result.completeness).toBe("number");
     expect(calls.some((c) => c.method === "update")).toBe(true);
-    expect(calls.some((c) => c.method === "upsert")).toBe(true);
+    expect(calls.some((c) => c.method === "insert")).toBe(true);
   });
 
   it("throws when the UPDATE returns an error", async () => {
@@ -124,7 +163,7 @@ describe("patchProfileSectionForCase", () => {
     ).rejects.toBeInstanceOf(CaseReadError);
   });
 
-  it("throws when the new-profile upsert fallback fails to write", async () => {
+  it("throws when the new-profile insert fallback fails to write", async () => {
     // A genuinely failed first-ever save must surface, not resolve as success
     // (MV-02 no silent failures).
     const { client } = fakeSupabase({ data: null, error: null });

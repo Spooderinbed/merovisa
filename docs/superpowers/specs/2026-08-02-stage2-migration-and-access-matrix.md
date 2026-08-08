@@ -817,18 +817,35 @@ Recorded so a reviewer can tell an omission from an oversight.
 The consultancy write surface. Every one of these is blocked **by the absent `authenticated`
 grant**, not by an RLS predicate, so no policy Stage 2 can write will unblock them.
 
-| Table | Verb | Blocked by | Stage 3 must grant |
-|---|---|---|---|
-| `profiles` | INSERT | no grant, no INSERT policy | `INSERT (owner, case_id, sections, completeness)` + `profiles_insert_case` |
-| `assessments` | INSERT | no grant, no INSERT policy | `INSERT (…, case_id)` + `assessments_insert_case` |
-| `assessments` | UPDATE | no grant, no UPDATE policy | `UPDATE (is_primary, …)` + `assessments_update_case` |
-| `assessments` | DELETE | no grant, no DELETE policy | only if the domain needs it |
-| `plan_items` | INSERT | no grant, no INSERT policy | `INSERT (owner, case_id, kind, impact, title, body, …)` + `plan_items_insert_case` |
-| `plan_items` | DELETE | no grant, no DELETE policy | only if the domain needs it |
-| `documents` | INSERT | no grant; INSERT policy is `service_role`-only | `INSERT (…, case_id)` + `documents_insert_case` |
-| `documents` | UPDATE | no grant, no UPDATE policy | probably never — Stage 4 replaces the model |
-| `program_predictions` | UPDATE | grant absent **and** immutability trigger | **never** |
-| `application_attempts` / `outcome_events` | UPDATE | grant absent by design | **never** (append-only) |
+**AMENDED 2026-08-08 BY MV-168.** The "Stage 3 must grant" column was a *proposal* written before
+anyone had costed the columns. Stage 3 spec §6.1 dispositioned all ten and MV-168 shipped the three
+it granted. The final column below is now the DECISION, and three of them depart from what this
+table originally proposed — each departure is stated in §12's dated entry.
+
+| # | Table | Verb | Blocked by | **Resolution (MV-168, 2026-08-08)** |
+|---|---|---|---|---|
+| 1 | `profiles` | INSERT | no grant, no INSERT policy | **GRANTED** — `INSERT (owner, case_id, sections, completeness)` + `profiles_insert_case`. As proposed. |
+| 2 | `assessments` | INSERT | no grant, no INSERT policy | **REFUSED PERMANENTLY** ⟂ — a grant would let a client write `result`/`rule_version` and mint its own verdict. `app/api/assess/route.ts` stays service-role for good. |
+| 3 | `assessments` | UPDATE | no grant, no UPDATE policy | **GRANTED, NARROWED** ⟂ — `UPDATE (is_primary)` and nothing else, + `assessments_update_case`. The "…" in the original proposal is exactly what row 2 refuses. |
+| 4 | `assessments` | DELETE | no grant, no DELETE policy | **REFUSED** — no domain need; row removal is account teardown (Stage 6). |
+| 5 | `plan_items` | INSERT | no grant, no INSERT policy | **GRANTED** — `INSERT (owner, case_id, kind, impact, title, body, status, lift_estimate, time_estimate)` + `plan_items_insert_case`. |
+| 6 | `plan_items` | DELETE | no grant, no DELETE policy | **REFUSED** — plan items are dismissed (`status='dismissed'`), never deleted. |
+| 7 | `documents` | INSERT | no grant; INSERT policy is `service_role`-only | **DEFERRED TO STAGE 4** ⟂ — the only caller must also write a Storage object, and that bucket policy is Stage 4's. Granting the row INSERT alone retires no service-role path. |
+| 8 | `documents` | UPDATE | no grant, no UPDATE policy | **NEVER** — Stage 4 replaces the model. Confirmed. |
+| 9 | `program_predictions` | UPDATE | grant absent **and** immutability trigger | **NEVER** — append-only. Confirmed live. |
+| 10 | `application_attempts` / `outcome_events` | UPDATE | grant absent by design | **NEVER** — append-only. Confirmed live. |
+
+⟂ = departs from what this table originally proposed.
+
+**A grant alone did not unblock row 1, and that is the slice's larger half.** All three of
+`upsertProfileForCase`, `upsertProgramState` and `setObtained` reached their tables through
+`.upsert()`, which PostgREST compiles to `INSERT … ON CONFLICT DO UPDATE SET` with **every payload
+column in the SET list**, privilege-checked at plan time. `case_id` is in every INSERT grant and in
+no UPDATE grant — §7.2's asymmetry, which MV-168 does not weaken — so the upsert form raises `42501`
+on the INSERT branch of the first call, with no row present and neither branch reachable. MV-168
+converted all three to INSERT-with-a-`23505`-resolve in the same PR. The evidence that this was not
+theoretical: with the migration applied and the conversions not yet written, every direct-SQL probe
+in `stage3-write-grants.itest.ts` passed and all four conversion tests still failed.
 
 ---
 
@@ -1793,3 +1810,63 @@ D-A work item 1 is satisfied for the current schema.
   by one. Both mutations measured red: deleting the module, and unhooking one repository from it.
   **No access-control cell changed.** Both edits correct a claim about data-shape or source
   structure; the matrix is untouched.
+
+---
+
+**2026-08-08 — MV-168 discharged §6's ten deferrals; three departed from what §6 proposed.**
+The table in §6 is amended above with the decision column; this entry records the departures and
+the two live findings that changed the shape of the slice.
+
+**(1) `assessments` INSERT is refused permanently, not granted.** §6 proposed `INSERT (…, case_id)`.
+Measured, the grantable set includes `result` and `rule_version`, both `NOT NULL`. Granting the verb
+in any useful form hands a signed-in actor the ability to write an arbitrary banded verdict for a
+case they can already reach. The scoring engine is server-side, rule-based and versioned by
+architecture rule, and a verdict a client can forge is the trust property this product sells. There
+is no later stage that grants this; `app/api/assess/route.ts` is reclassified from
+`legacy-owner-scoped` to a **sanctioned permanent** service-role exception.
+
+**(2) `assessments` UPDATE is narrowed to `is_primary`.** §6 proposed `UPDATE (is_primary, …)`. The
+"…" is the same set (1) refuses. `is_primary` alone is a *user choice* — which assessment leads —
+already governed by the partial unique `assessments_case_primary_idx`, so the database keeps "one
+primary per case" whoever writes it. The re-score stays on service-role in
+`app/api/assess/refresh/route.ts`. The migration asserts the grant is **exactly** `is_primary` at
+apply time, so a later widening fails its own apply rather than landing quietly.
+
+**(3) `documents` INSERT is deferred to Stage 4, with a reason rather than by silence.** Its only
+caller must also write a Storage object; the bucket policy that would let the authenticated client
+do that is Stage 4's, and §8 pinned object paths owner-keyed through Stage 3. Granting the row
+INSERT alone would widen the write surface and retire no service-role path.
+
+**(4) FINDING — MV-160's `42501` decision gate had TWO copies, and only one was known.** Stage 3
+spec §6.1 located the pin in `tests/integration/stage2-tighten.itest.ts` ("one test, not eight") and
+said so precisely. A second copy was live in `tests/integration/student-data-rls.itest.ts` §G, "the
+four deferred consultancy write paths stay 42501", asserting the same four absences from a different
+angle. Both are discharged in MV-168's PR: the `profiles` and `plan_items` assertions were **inverted
+into positive assertions** in `stage3-write-grants.itest.ts`, and the `assessments` / `documents`
+ones stay green with their headers rewritten to name their now-different dispositions. A grant that
+lands while a copy of its gate still asserts the absence is exactly the rot the gate exists to
+prevent — and an enumeration of "the pin" that misses a copy cannot see that.
+
+**(5) FINDING — MV-159 already made the derive trigger yield to a supplied `case_id`, and three
+doc comments still said the opposite.** `private.mv155_derive_case_id_from_owner` is qualified
+`if new.case_id is null and new.owner is not null`. `lib/cases/dual-write.ts`, `lib/matches/repo.ts`
+and `lib/documents/status-repo.ts` all described it as deriving `case_id` from `owner` and
+*"overwriting any supplied value"* — true at MV-155, false since MV-159. The stale version is what
+made the seam look inexpressible: it implied that an owner-bearing row on an **org** case would be
+silently re-pointed to the owner's personal case. It would not be. All three comments are corrected,
+and `caseUpsertColumns` — the helper the seam existed for, which refused every case with no
+`student_user_id` — is retired with its call sites.
+
+**(6) FINDING — the `profiles` residue leg was already dead.** Stage 3 spec §6.1 warned that
+`23505` on `profiles` is overloaded, because `upsertProfileForCase` treated it as the MV-155 residue
+signal and *"the legacy `profiles_owner_key` unique on `owner` is still live"*. It is not: MV-160 §D
+dropped it (it is in that card's own `DROPPED_OWNER_UNIQUES`) and made `profiles.case_id` NOT NULL,
+so an owner-set / case-null profile row is no longer representable and
+`adoptOwnerKeyedResidue(db, "profiles", …)` can only return 0 — which
+`tests/integration/case-data-access.itest.ts` already pins. `profiles_case_idx` is now the only
+unique on the table besides the primary key, so `23505` has exactly one meaning and one remedy. The
+adopt call is gone from that path; `lib/cases/residue.ts` still serves its three other callers, and
+`assessments` is the one adoptable table where the residue shape remains representable.
+
+**No canonical access-control cell moved.** F-1 and F-3 remain open founder decisions and MV-168
+touches neither `cases_insert_admin` nor the `cases` column write-surface guard.

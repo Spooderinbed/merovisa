@@ -343,7 +343,9 @@ const OWNER_PAYLOAD_ALLOW_LIST: ReadonlyArray<{ path: string; reason: string }> 
  * exports and its importers instead.
  */
 const DUAL_WRITE_MODULE = "lib/cases/dual-write.ts";
-const DUAL_WRITE_EXPORTS = ["caseWriteColumns", "caseBindColumns", "caseUpsertColumns"] as const;
+// MV-168 retired `caseUpsertColumns` — the upsert seam it existed for is gone, and the module's
+// own header records why. Two exports, both still the deriving choke point.
+const DUAL_WRITE_EXPORTS = ["caseWriteColumns", "caseBindColumns"] as const;
 const DUAL_WRITE_CONSUMERS = [
   "lib/profiles/repo.ts",
   "lib/documents/repo.ts",
