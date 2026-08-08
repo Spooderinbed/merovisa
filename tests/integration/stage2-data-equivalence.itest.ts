@@ -613,6 +613,13 @@ describe("MV-160 §A1 — Stage 2 before/after data equivalence (synthetic)", ()
         psql(
           [
             "begin;",
+            // Same chain as the suite's own reach for the pre-tighten window: Stage 3 unwinds
+            // before Stage 2, or R1's guard refuses and THIS TEST PASSES A DIFFERENT ERROR OFF AS
+            // ITS OWN. That is the failure this mutation test is least able to notice by itself —
+            // it asserts only that the apply raised something, then that the something matches
+            // a not-null pattern, so a refusal one step earlier looks like a near miss rather
+            // than a wrong experiment. Both `expect`s below are why it was caught at all.
+            unwrapTransaction(readSql(STAGE3_ROLLBACK_PATH), STAGE3_ROLLBACK_PATH),
             unwrapTransaction(readSql(ROLLBACK_PATH), ROLLBACK_PATH),
             seedSql(programs[0]!, programs[1]!),
             sweepless,
