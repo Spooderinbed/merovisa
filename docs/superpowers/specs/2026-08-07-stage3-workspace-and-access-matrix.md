@@ -577,7 +577,8 @@ for the founder**, not a decision this spec may take.
 
 **Three are blockers: F-1, F-3 and F-8.** F-1 and F-3 are founder decisions this spec declines to
 take; **F-8 is a carve gap this spec closes** (§4 cells 21–23, §9.1 E4/E7). The rest are recorded so
-a slice does not rediscover them mid-build.
+a slice does not rediscover them mid-build. **F-9 was added by MV-169's build**, per §1 rule 2 — a
+slice that finds the document incomplete amends it in its own PR.
 
 ### F-1 `[BLOCKER]` The Stage 3 exit gate names a counsellor doing two things the canonical model forbids
 
@@ -825,6 +826,23 @@ stops there; the grant half is what actually blocks the write.
 `profiles.sections` update and a `plan_items` insert — so the stage gate could go green with a live
 cross-case write sitting in the checklist. **E7 is added** to pin the negative directly.
 
+### F-9 `[SURFACE LIMIT]` The team list can show no names — added by MV-169's build
+
+`organization_memberships` carries `user_id` and nothing else identifying, and `auth.users` is not
+readable by `authenticated` `[Q2, Q3]`. There is no other staff-identity source in the schema:
+`cases.display_name` / `cases.email` describe the **student** of one case, not a staff member.
+
+So cell 4's list can render a role, a status, a "you" marker and a truncated user id — and that is
+the whole of it. An admin managing a five-person team sees five hex prefixes.
+
+**Not fixable inside Stage 3.** Every remedy is a schema change (a `staff_profiles` table, or a
+`display_name` column on the membership) and §5 says Stage 3 ships **no migration that adds or
+alters a column**. Recorded here so MV-170 does not rediscover it and improvise one, and so the
+founder can see the real shape of what F-5 already called thin: Stage 3 team management is *role
+change and deactivation, performed against opaque identifiers*. The natural home for the fix is
+**Stage 5**, which introduces invitations and therefore already has to carry a name and an email
+address for a person who is not yet a user.
+
 ---
 
 ## 8. The slice carve
@@ -1005,3 +1023,17 @@ the cited query. A claim whose query is missing is a defect in this document.
   `owner IS NULL` UPSERT-seam refusal as *"a Stage 3 input"*. It is now carried by **F-8** and
   MV-168's conversions. A verb handed forward by name and not picked up is how a deferral becomes
   permanent by accident — the same failure §6.1 opens by warning about.
+- **2026-08-08 — amended by MV-169's build (§1 rule 2).** Two additions, neither of which moves a
+  cell:
+  1. **F-9 added** — cell 4's team list can render no names, because no staff-identity source is
+     readable by `authenticated`. Not fixable in Stage 3 (§5 forbids the migration); flagged to
+     MV-170 and proposed for Stage 5.
+  2. **A self-mutation refusal on cell 5, at the app layer only.** The database permits an owner to
+     deactivate their own membership. With **F-2** (nobody can create an organization) and **F-5**
+     (nobody can invite), that is a permanent lockout with no in-product repair — the tenant needs a
+     service-role/ops intervention to get an administrator back. `decideMembershipChange` therefore
+     refuses any change whose target is the actor's own row. This is **strictly narrower** than the
+     canonical cell and moves nothing: the same shape as MV-173's TypeScript field allowlist, which
+     §4 footnote ¹ already endorses as the right layer for a restriction Postgres does not express.
+     Recorded here rather than left in the code so a later slice reading only the matrix does not
+     "fix" it back open.

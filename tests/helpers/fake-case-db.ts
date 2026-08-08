@@ -50,18 +50,30 @@ export type FakeCaseDbOptions = {
    * "resolved on the retry" from "returned a stale first read".
    */
   appearAfterInsert?: CaseDbFixture;
+  /**
+   * Tables whose UPDATE answers with a PostgREST error. `code` matters: `42501`
+   * is a column-grant violation, `23505` a unique-constraint collision.
+   *
+   * NOTE an update refused by RLS is NOT an error — Postgres reports it as zero
+   * rows affected. That case is modelled by the filters matching no row, which is
+   * what lets a test tell "the write was denied" from "the write failed".
+   */
+  updateError?: Partial<Record<CaseDbTable, { code?: string; message: string }>>;
 };
 
 export type RecordedQuery = { table: string; filters: Array<[string, unknown]> };
 export type RecordedInsert = { table: string; row: Record<string, unknown> };
+export type RecordedUpdate = { table: string; patch: Record<string, unknown> };
 
 type Row = Record<string, unknown>;
 
 export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptions = {}) {
   const queries: RecordedQuery[] = [];
   const inserts: RecordedInsert[] = [];
+  const updates: RecordedUpdate[] = [];
   const errorOn = options.errorOn ?? {};
   const insertError = options.insertError ?? {};
+  const updateError = options.updateError ?? {};
   const throwOn = new Set<string>(options.throwOn ?? []);
   // Mutable so an insert can make its own row readable to a later query, which is
   // what lets a test distinguish "read it back" from "returned what it wrote".
@@ -87,6 +99,15 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
       }
       if (insertFailure) return { data: null, error: insertFailure };
       if (inserted) return { data: mode === "one" ? inserted : [inserted], error: null };
+      if (updatePatch !== null) {
+        const failure = updateError[table as CaseDbTable];
+        if (failure) return { data: null, error: failure };
+        // An UPDATE the policy refuses is not an error — it matches no row and
+        // reports zero affected. `rowsFor()` returning [] IS that case.
+        const touched = rowsFor().map((row) => Object.assign(row, updatePatch));
+        if (mode === "one") return { data: touched[0] ?? null, error: null };
+        return { data: touched, error: null };
+      }
       const failure = errorOn[table as CaseDbTable];
       if (failure) {
         return { data: null, error: failure };
@@ -102,6 +123,8 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
     // (unless it errored) makes that row visible to every later query.
     let inserted: Row | null = null;
     let insertFailure: { code?: string; message: string } | null = null;
+    // An update resolves from the rows its filters matched, patched in place.
+    let updatePatch: Row | null = null;
 
     // PostgREST builders are chainable AND awaitable; every chain method returns
     // the same builder and only a terminal (or an await) resolves.
@@ -126,6 +149,11 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
       rows[table] = [...(rows[table] ?? []), inserted];
       return builder;
     });
+    builder.update = vi.fn((patch: Row) => {
+      updatePatch = patch;
+      updates.push({ table, patch });
+      return builder;
+    });
     for (const method of ["eq", "is"]) {
       builder[method] = vi.fn((column: string, value: unknown) => {
         filters.push([column, value]);
@@ -139,7 +167,7 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
   });
 
   const client = { from } as unknown as SupabaseClient<Database>;
-  return { client, queries, inserts, from };
+  return { client, queries, inserts, updates, from };
 }
 
 /** Did the fake see a query against `table` carrying every one of `filters`? */

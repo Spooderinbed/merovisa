@@ -9,9 +9,11 @@
 
 ### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-08 07:08 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-08 07:36 UTC. **Not board state** — never written to board.json.
 
 _No open PRs._
+
+> ⚠️ MV-169 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 20
@@ -41,13 +43,13 @@ _No open PRs._
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-169** · P1 · [Stage 3 slice 2 — org context, org selection, and team management](cards/MV-169-org-context-team-management.md) — _Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-169** · P1 · [Stage 3 slice 2 — org context, org selection, and team management](cards/MV-169-org-context-team-management.md) — _Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4._
 
 ## Blocked — 3
 

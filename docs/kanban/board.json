@@ -2079,7 +2079,7 @@
     },
     {
       "id": "MV-169",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-169-org-context-team-management.md",

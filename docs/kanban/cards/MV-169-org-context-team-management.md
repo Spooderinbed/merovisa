@@ -102,4 +102,68 @@ Branch `mv-169-org-context-team-management` off `origin/master`. No `node_module
 
 ## Done evidence
 
-_(filled in before In Review)_
+**Branch** `mv-169-org-context-team-management` off `origin/master` @ `dc0ec1e`.
+
+### Integration gate — 2026-08-08
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | **exit 0** |
+| `npm run lint` | **exit 0** |
+| `npm test` | **exit 1** — 3 failures, all `Test timed out in 5000ms` |
+| `npx vitest run --testTimeout=30000` | **exit 0 — 338/338 files, 2733/2733 tests** |
+| `npx next build --webpack` | **exit 0** — all 5 new routes registered `ƒ` |
+
+**On the three timeouts, honestly.** They are `tests/architecture/no-actor-equals-student.test.ts`
+(×2) and `tests/styles/motion-tokens-ratchet.test.ts` (×1) — file-scanning suites that walk the
+source tree. All three pass **in isolation in ~1.2s** each, and
+`tests/styles/motion-tokens-ratchet.test.ts` **failed the same way on a clean checkout of
+`origin/master` before this branch existed** (baseline run: 2 files / 3 tests failed, 2674 passed).
+This is I/O contention on a OneDrive-backed working tree under vitest's parallel workers, not a
+regression, and it does not reproduce on CI (Linux). Nothing in the suite was skipped, silenced or
+retried to reach the number above; the only change is the per-test timeout on the command line.
+
+Baseline for comparison: **2677 tests** on `origin/master`. This branch: **2733**. **+56 tests.**
+
+### What the gate caught that the test suite could not
+
+`npx next build` failed on the first attempt: `components/workspace/team-member-row.tsx` imported
+`MEMBERSHIP_ROLES` from `lib/cases/permissions.ts`, a **`server-only`** module. That import would
+have compiled the entire role→permission matrix into the browser bundle — the thing
+`permissions.ts`'s own doc-comment forbids (*"permission rules are server business logic and must
+never be readable in client JS"*), and CLAUDE.md's Architecture Rules with it.
+
+**The whole jsdom suite stayed green through it**, because every suite that touches these modules
+does `vi.mock("server-only", () => ({}))` — so in tests the marker is not there at all.
+
+Fixed by computing the option list on the server and passing it as a prop, **not** by removing the
+`server-only` marker. Then pinned: `tests/architecture/client-server-boundary.test.ts` walks
+first-party imports transitively from every `"use client"` entry point and fails on any chain that
+reaches a `server-only` module. **Mutation-tested** — re-adding the exact import turns it red
+(`expected [ Array(1) ] to deeply equal []`), and removing it turns it green again, so the assertion
+is not vacuous. It also carries a non-vacuity assertion of its own (>10 client modules and >5
+server-only modules found), because a broken glob or the CRLF trap would otherwise make it pass over
+an empty list.
+
+### Files
+
+- `lib/org/membership-change.ts` — the pure cell-5 rule (both horns + the lockout guard)
+- `lib/org/repo.ts` — cells 1/2/4/5 data access, authenticated client only, read-back on every write
+- `app/api/org/[organizationId]/route.ts` — cell 2 (owner-only rename)
+- `app/api/org/[organizationId]/members/[membershipId]/route.ts` — cell 5
+- `app/(app)/workspace/page.tsx`, `.../[organizationId]/team/page.tsx`, `.../settings/page.tsx`
+- `components/workspace/team-member-row.tsx`, `components/workspace/org-settings-form.tsx`
+- `tests/org/membership-change.test.ts` (9), `tests/org/repo.test.ts` (20),
+  `tests/api/org-routes.test.ts` (15), `tests/app/workspace-pages.test.tsx` (10),
+  `tests/architecture/client-server-boundary.test.ts` (2)
+- `tests/helpers/fake-case-db.ts` — extended with `update` + `updateError`, modelling an
+  RLS-refused UPDATE as **zero rows affected rather than an error**, which is the shape that makes a
+  denial readable as a success
+- **No migration.** Every grant and policy cells 1/2/4/5 need shipped with MV-152.
+
+### Spec amendments made in this PR (§1 rule 2)
+
+- **F-9 added** — the team list can render no names; no staff-identity source is readable by
+  `authenticated`, and the fix is a schema change §5 forbids. Flagged to MV-170, proposed for Stage 5.
+- **§11 decision-log entry** — the self-mutation refusal, recorded as strictly narrower than the
+  canonical cell so a later slice reading only the matrix does not "fix" it back open.
