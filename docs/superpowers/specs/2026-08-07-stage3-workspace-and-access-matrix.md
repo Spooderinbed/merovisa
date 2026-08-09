@@ -704,6 +704,35 @@ its equivalent **up** to the founder — the same class of problem under opposit
 the case-context indicators and the non-canonical TypeScript allowlist; it does **not** touch the
 `cases` column guard.
 
+> **READING (a)'s READ-LAYER HALF IS BUILT, 2026-08-09 BY MV-170. The founder decision is UNCHANGED
+> and still open.** The forecast above has become a live surface, so what exists is worth stating
+> precisely before the call is taken.
+>
+> **"A student edited this" is not knowable and is not claimed.** There is no provenance column on
+> `cases`, and adding one is a schema change §5 forbids. What *is* exactly knowable is whether a
+> student **can** write these fields: `cases_update_accessor`'s student disjunct is
+> `student_user_id = (select auth.uid())` (`…20260730180000….sql:432`), which no actor satisfies when
+> that column is null. So MV-170's list marks each row from one column:
+>
+> | Case shape | Who may write `display_name` / `email` | Marker rendered |
+> |---|---|---|
+> | `student_user_id IS NOT NULL` | staff **and** the linked student | **Self-reported** |
+> | `student_user_id IS NULL` | staff only | **No student account** |
+>
+> plus one sentence next to the list: *"Self-reported means the student has an account and can edit
+> their own name and email address. Read those as the student's words, not as a verified identity."*
+>
+> **This moves no cell and edits no Stage 1 test** — the measurement §5's rule turns on. It is
+> presentation over a column the list already reads.
+>
+> **What it does not do, and what the founder is still deciding.** A marker tells a counsellor to
+> distrust a name; it does not stop the name being written. Reading (b) — narrowing
+> `display_name`/`email` to staff via `enforce_case_write_surface` — remains the only option that
+> closes the write, and its blast radius is still the two assertion-pairs measured above
+> (`case-rls.itest.ts:835-837`, `:905-907`), with `cases.email` written by no test at all. **Taking
+> (b) later does not require undoing anything MV-170 shipped:** under (b) every row would simply be
+> staff-controlled, and the marker becomes redundant rather than wrong.
+
 ### F-4 `[SCOPE]` "Consultancy-internal notes" has a permission but no column
 
 `CASE_PERMISSION_MATRIX` carries `case.notes.internal` for owner/admin/counsellor and `deny` for
@@ -842,6 +871,21 @@ founder can see the real shape of what F-5 already called thin: Stage 3 team man
 change and deactivation, performed against opaque identifiers*. The natural home for the fix is
 **Stage 5**, which introduces invitations and therefore already has to carry a name and an email
 address for a person who is not yet a user.
+
+> **CHECKED AGAINST THE STUDENT LIST 2026-08-09 BY MV-170 — this limit does NOT carry over, and no
+> column was improvised.** F-9 is a statement about `organization_memberships`, which carries
+> `user_id` and nothing else identifying. `public.cases` is not in that position: it carries
+> `display_name text not null`, `email text` and `operational_status text not null` as its **own**
+> columns (`20260730120000_stage1_tenancy_core.sql:92-96`), `grant select … on public.cases to
+> authenticated` is table-level (`…20260730180000….sql:684`), and `cases_select_accessor` decides
+> **rows**, not columns. So cell 7's list renders real names, real email addresses and a real status
+> with no schema change at all.
+>
+> The generalisation to avoid is "Stage 3 surfaces cannot show names". The true statement is
+> narrower: **staff have no readable identity; students do, because their identity is a column on the
+> case rather than a row in `auth.users`.** MV-170 renders no `student_user_id` — a raw Auth user id
+> is no use to a counsellor and does not belong in markup — so the only identity on the surface is
+> the case's own.
 
 ---
 
@@ -1037,3 +1081,19 @@ the cited query. A claim whose query is missing is a defect in this document.
      §4 footnote ¹ already endorses as the right layer for a restriction Postgres does not express.
      Recorded here rather than left in the code so a later slice reading only the matrix does not
      "fix" it back open.
+- **2026-08-09 — amended by MV-170's build (§1 rule 2).** Three additions, none of which moves a
+  cell:
+  1. **F-9 checked against cell 7 and closed for it.** The team list's name-blindness is a fact about
+     `organization_memberships`, not about Stage 3. `cases` carries `display_name`/`email`/
+     `operational_status` as its own table-level-`select`-granted columns, so the student list renders
+     real identity with no schema change. The generalisation "Stage 3 surfaces cannot show names" is
+     **false** and is the thing this entry exists to stop.
+  2. **F-3 reading (a)'s read-layer half is built, and the founder call is untouched.** The marker is
+     derived from nullness of `student_user_id` — "a student *can* write this" — rather than from a
+     provenance column, because provenance is not representable without a migration §5 forbids.
+     Reading (b) remains open, and adopting it later makes the marker redundant rather than wrong.
+  3. **A search term never enters a PostgREST filter as structure.** MV-170 searches two columns,
+     which PostgREST expresses only through the `.or()` string DSL, where a comma or a parenthesis
+     typed into a search box changes the shape of the query. The status filter — a value from the
+     check-constrained vocabulary, validated first — is applied by the database; the free-text term is
+     applied in TypeScript. Recorded so MV-171 and MV-172 do not "optimise" the search into `.or()`.

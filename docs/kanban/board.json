@@ -2079,25 +2079,25 @@
     },
     {
       "id": "MV-169",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-169-org-context-team-management.md",
       "title": "Stage 3 slice 2 — org context, org selection, and team management",
-      "summary": "Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4.",
+      "summary": "Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4. MERGED to production as PR #135 (master 6a40b4d) on 2026-08-09.",
       "created": "2026-08-07",
-      "entered": "2026-08-08"
+      "entered": "2026-08-09"
     },
     {
       "id": "MV-170",
-      "col": "backlog",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
-      "file": null,
+      "file": "cards/MV-170-student-list-search-filters.md",
       "title": "Stage 3 slice 3 — student list, search, filters, and statuses",
-      "summary": "Plan bullet 2a. The org-scoped case list with search, filter and operational_status display. READ-ONLY — no creation, no assignment, no writes at all (MV-171 owns those). Assigned-only for counsellors, all-org for owner/admin, nothing for an unassigned counsellor or an inactive membership (cases_select_accessor → admin-org ∪ assigned ∪ own; access matrix cell 7). Depends on MV-169: the list is scoped by the selected organization, so with no org context there is no scope to list within. TEST TRAP recorded in the spec's exit-gate vacuity table: a fixture with only ONE case, or an 'unassigned' counsellor who holds no membership at all, turns this into a tenancy test that Stage 1 already passes — the fixture must hold at least two cases in the SAME org with the unassigned counsellor holding an ACTIVE membership. This slice is also what first exposes F-3 (a linked student can rewrite the display_name and email this list shows a counsellor); the fix lands in MV-173, in the same stage that creates the exposure.",
+      "summary": "Plan bullet 2a. The org-scoped case list with search, filter and operational_status display. READ-ONLY — no creation, no assignment, no writes at all (MV-171 owns those). Assigned-only for counsellors, all-org for owner/admin, nothing for an unassigned counsellor or an inactive membership (cases_select_accessor → admin-org ∪ assigned ∪ own; access matrix cell 7). Depends on MV-169: the list is scoped by the selected organization, so with no org context there is no scope to list within. TEST TRAP recorded in the spec's exit-gate vacuity table: a fixture with only ONE case, or an 'unassigned' counsellor who holds no membership at all, turns this into a tenancy test that Stage 1 already passes — the fixture must hold at least two cases in the SAME org with the unassigned counsellor holding an ACTIVE membership. This slice is also what first exposes F-3 (a linked student can rewrite the display_name and email this list shows a counsellor). CORRECTED 2026-08-09: the spec's revision REMOVED F-3 from MV-173's scope — narrowing the canonical cell (reading (b)) is an open FOUNDER call, and what MV-170 owns is reading (a)'s read-layer mitigation, which it ships. F-9 was checked against this surface and does NOT carry over: unlike organization_memberships, public.cases holds display_name/email/operational_status as its own table-level-select-granted columns, so the student list renders real names and needs no new column.",
       "created": "2026-08-07",
-      "entered": "2026-08-07"
+      "entered": "2026-08-09"
     },
     {
       "id": "MV-171",
