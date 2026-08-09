@@ -9,11 +9,11 @@
 
 ### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-09 03:17 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-09 03:29 UTC. **Not board state** — never written to board.json.
 
 | Card | PR | | CI | Review | Touches |
 |---|---|---|---|---|---|
-| **MV-170** | [#136](https://github.com/Spooderinbed/merovisa/pull/136) | open | pending 2/4 | — | docs · tests · app · lib |
+| **MV-170** | [#136](https://github.com/Spooderinbed/merovisa/pull/136) | open | passing 4/4 | — | docs · tests · app · lib |
 
 
 ## Backlog — 19
@@ -48,7 +48,7 @@ _empty_
 
 ## In review (WIP 3) — 1
 
-- **MV-170** · P1 · [Stage 3 slice 3 — student list, search, filters, and statuses](cards/MV-170-student-list-search-filters.md) — _Plan bullet 2a. The org-scoped case list with search, filter and operational_status display. READ-ONLY — no creation, no assignment, no writes at all (MV-171 owns those). Assigned-only for counsellors, all-org for owner/admin, nothing for an unassigned counsellor or an inactive membership (cases_select_accessor → admin-org ∪ assigned ∪ own; access matrix cell 7). Depends on MV-169: the list is scoped by the selected organization, so with no org context there is no scope to list within. TEST TRAP recorded in the spec's exit-gate vacuity table: a fixture with only ONE case, or an 'unassigned' counsellor who holds no membership at all, turns this into a tenancy test that Stage 1 already passes — the fixture must hold at least two cases in the SAME org with the unassigned counsellor holding an ACTIVE membership. This slice is also what first exposes F-3 (a linked student can rewrite the display_name and email this list shows a counsellor). CORRECTED 2026-08-09: the spec's revision REMOVED F-3 from MV-173's scope — narrowing the canonical cell (reading (b)) is an open FOUNDER call, and what MV-170 owns is reading (a)'s read-layer mitigation, which it ships. F-9 was checked against this surface and does NOT carry over: unlike organization_memberships, public.cases holds display_name/email/operational_status as its own table-level-select-granted columns, so the student list renders real names and needs no new column._ · [#136](https://github.com/Spooderinbed/merovisa/pull/136) open, ci pending
+- **MV-170** · P1 · [Stage 3 slice 3 — student list, search, filters, and statuses](cards/MV-170-student-list-search-filters.md) — _Plan bullet 2a. The org-scoped case list with search, filter and operational_status display. READ-ONLY — no creation, no assignment, no writes at all (MV-171 owns those). Assigned-only for counsellors, all-org for owner/admin, nothing for an unassigned counsellor or an inactive membership (cases_select_accessor → admin-org ∪ assigned ∪ own; access matrix cell 7). Depends on MV-169: the list is scoped by the selected organization, so with no org context there is no scope to list within. TEST TRAP recorded in the spec's exit-gate vacuity table: a fixture with only ONE case, or an 'unassigned' counsellor who holds no membership at all, turns this into a tenancy test that Stage 1 already passes — the fixture must hold at least two cases in the SAME org with the unassigned counsellor holding an ACTIVE membership. This slice is also what first exposes F-3 (a linked student can rewrite the display_name and email this list shows a counsellor). CORRECTED 2026-08-09: the spec's revision REMOVED F-3 from MV-173's scope — narrowing the canonical cell (reading (b)) is an open FOUNDER call, and what MV-170 owns is reading (a)'s read-layer mitigation, which it ships. F-9 was checked against this surface and does NOT carry over: unlike organization_memberships, public.cases holds display_name/email/operational_status as its own table-level-select-granted columns, so the student list renders real names and needs no new column._ · [#136](https://github.com/Spooderinbed/merovisa/pull/136) open, ci passing
 
 ## Blocked — 3
 
