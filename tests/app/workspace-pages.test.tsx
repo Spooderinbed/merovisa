@@ -360,6 +360,28 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     );
   });
 
+  it("takes the first value of a repeated parameter instead of 500ing on the array", async () => {
+    // `?q=a&q=b` is a hand-crafted URL, but Next hands a repeated search
+    // parameter through as `string[]`, and `.trim()` on an array throws — which
+    // would turn a malformed link into a server error page rather than a list.
+    grantList("all-org");
+    listOrgCases.mockResolvedValue({ ok: true, data: CASES });
+    render(
+      await StudentsPage({
+        params,
+        searchParams: Promise.resolve({ q: ["Rai", "Gurung"], status: ["closed", "new"] }),
+      }),
+    );
+
+    expect(listOrgCases).toHaveBeenCalledWith(
+      ACTOR,
+      ORG,
+      "all-org",
+      { query: "Rai", status: "closed" },
+      expect.anything(),
+    );
+  });
+
   it("tells the admin that adding a student comes later, rather than offering a control", async () => {
     // The team page's F-5 lesson: silence here lets an admin conclude the button
     // is broken. Case creation is MV-171.

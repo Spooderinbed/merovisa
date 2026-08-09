@@ -179,7 +179,37 @@ against `tests/cases/list-repo.test.ts`:
 | tell a counsellor the list is the organization's | **RED** |
 | render a lookup failure as an empty organization | **RED** |
 
-All twelve restored; `git status --porcelain` clean, no mutation edit survived into a commit.
+All restored; `git status --porcelain` clean, no mutation edit survived into a commit.
+
+### Self-review pass — 2026-08-09, after the first gate
+
+Two defects found by re-reading the diff rather than by a failing test. Both are in the new code.
+
+1. **A repeated search parameter would have 500'd the page.** Next hands `?q=a&q=b` through as
+   `string[]`, and `(sp.q ?? "").trim()` throws `TypeError` on an array — turning a malformed link
+   into a server error page instead of a list. The page's `searchParams` type said `string`, which
+   was a claim about the URL rather than about Next. Fixed by widening the type to the truthful
+   `string | string[]` and collapsing to the first value. Pinned by a test that **fails with
+   `TypeError: (sp.q ?? "").trim is not a function`** against the old code (mutation 8).
+   *The same latent shape exists on `app/(marketing)/auth/page.tsx` and `app/(focused)/assess/page.tsx`,
+   which declare `searchParams` the same way. Neither calls a string method on the value, so neither
+   throws today — noted, not changed, because it is not this slice's code.*
+2. **A redundant `as CaseListScope` cast.** TypeScript narrows through `notFound()`'s `never` return,
+   so the cast was doing nothing except standing ready to hide a real error the day `PermissionScope`
+   gains a member. Removed; `npm run typecheck` exits 0 without it, which is the measurement that
+   proves it was redundant rather than load-bearing.
+
+### Gate — 2026-08-09 (post-self-review)
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | **exit 0** |
+| `npm run lint` | **exit 0** |
+| `npm test` | **exit 0 — 342/342 files, 2791/2791 tests** |
+| GitHub Actions on PR #136 | **`validate` pass · `integration` pass · Vercel pass** |
+
+The `integration` job has been gating since 2026-08-03, so its green tick is evidence rather than
+decoration. **+43 tests** overall (2748 → 2791).
 
 ### What was NOT verified, and why
 

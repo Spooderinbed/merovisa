@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkOrgPermission } from "@/lib/cases/require-org-permission";
-import { listOrgCases, type CaseListScope, type OrgCaseSummary } from "@/lib/cases/list-repo";
+import { listOrgCases, type OrgCaseSummary } from "@/lib/cases/list-repo";
 import {
   OPERATIONAL_STATUSES,
   OPERATIONAL_STATUS_LABELS,
@@ -35,12 +35,20 @@ import { Input, Select } from "@/components/ui/input";
  * readable by the server component that renders it.
  */
 
+/**
+ * A repeated search parameter (`?q=a&q=b`) reaches a page as `string[]`. Taking
+ * the first value keeps a hand-crafted URL a list rather than a server error.
+ */
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export default async function StudentsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ organizationId: string }>;
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string | string[]; status?: string | string[] }>;
 }) {
   const { organizationId } = await params;
   const sp = await searchParams;
@@ -54,17 +62,18 @@ export default async function StudentsPage({
   const scope = list.decision.requiredScope;
   if (scope !== "all-org" && scope !== "assigned") notFound();
 
-  const query = (sp.q ?? "").trim();
+  const query = (first(sp.q) ?? "").trim();
   // An unknown status can only come from a hand-edited query string. It is
   // dropped rather than queried, and the form below then shows "Any status" —
   // which is what the page is actually showing.
-  const status = isOperationalStatus(sp.status) ? sp.status : undefined;
+  const rawStatus = first(sp.status);
+  const status = isOperationalStatus(rawStatus) ? rawStatus : undefined;
   const isFiltered = query !== "" || status !== undefined;
 
   const cases = await listOrgCases(
     data.user.id,
     organizationId,
-    scope as CaseListScope,
+    scope,
     { query, status },
     supabase,
   );
