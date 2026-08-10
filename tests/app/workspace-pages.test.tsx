@@ -501,13 +501,18 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     );
   });
 
-  it("tells the admin that adding a student comes later, rather than offering a control", async () => {
-    // The team page's F-5 lesson: silence here lets an admin conclude the button
-    // is broken. Case creation is MV-171.
+  it("offers no create control to a viewer who may not create — and no longer says it comes later", async () => {
+    // MV-170 asserted the placeholder ("Adding a student comes later") because
+    // case creation was MV-171's. MV-171 shipped it, so the placeholder is gone
+    // and the honest assertion is the one below: `grantList` allows `case.list`
+    // and denies everything else, so this viewer sees the list and no control.
+    // The positive case — an owner or admin IS offered it — lives in
+    // `tests/app/case-pages.test.tsx` with the rest of MV-171's surfaces.
     grantList("all-org");
     listOrgCases.mockResolvedValue(listed(CASES));
     render(await StudentsPage({ params, searchParams: noSearch }));
-    expect(screen.getByText(/Adding a student comes later/i)).toBeTruthy();
+    expect(screen.queryByText(/comes later/i)).toBeNull();
+    expect(screen.queryByRole("link", { name: /add a student/i })).toBeNull();
   });
 
   it("clears the CONTROLS as well as the URL, so the next Apply does not re-submit a dropped filter", async () => {

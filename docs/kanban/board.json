@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07",
+  "updated": "2026-08-10",
   "staleDays": 7,
   "columns": [
     {
@@ -2101,14 +2101,14 @@
     },
     {
       "id": "MV-171",
-      "col": "backlog",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
-      "file": null,
+      "file": "cards/MV-171-case-creation-assignment.md",
       "title": "Stage 3 slice 4 — case creation and assignment (carries the F-1 decision)",
-      "summary": "Plan bullet 2b. Create a case with organization_id set and student_user_id NULL through the AUTHENTICATED client; assign/reassign the primary counsellor; write operational_status (gated by the cases_write_surface_guard trigger → can_staff_case). Also adds the case-scoped scoring route, because a case needs an assessment and spec §6.1 refuses to let the client write one — a NEW service-role registry entry, deliberately registered, which is why Stage 3 ends at 8 entries rather than 7. BLOCKED ON FOUNDER DECISION F-1 (MV-168/169/170 are not): the plan's exit gate says an authorized COUNSELLOR can create and assign, but BOTH enforcement layers deny a counsellor exactly those two verbs — cases_insert_admin and case_assignments_insert_admin require is_org_admin, and CASE_PERMISSION_MATRIX.counsellor sets case.create and case.assign to 'deny' with the comment 'Widening this is a deliberate later decision, not a convenience'. The layers AGREE; it is the plan's prose that disagrees. Reading (a) = 'counsellor' is loose prose for consultancy staff, build for owner/admin, nothing moves (spec's recommendation). Reading (b) widens the role and MOVES A CANONICAL CELL, needing its own slice plus edits to the Stage 1 suites. NOT a multi-counsellor model: case_assignments_primary_idx allows at most one primary counsellor per case and assignment_role is restricted to that single literal. No archive (Stage 6), no student invitation (Stage 5).",
+      "summary": "Plan bullet 2b. Create a case with organization_id set and student_user_id NULL through the AUTHENTICATED client; assign/reassign the primary counsellor; write operational_status (gated by the cases_write_surface_guard trigger → can_staff_case, which never fires on INSERT). Also adds the case-scoped scoring route, because a case needs an assessment and spec §6.1 refuses to let the client write one — a NEW service-role registry entry, deliberately registered, which is why Stage 3 ends at 8 entries rather than 7. FOUNDER DECISION F-1 IS TAKEN (2026-08-10): reading (a) — 'counsellor' in the plan's exit gate was loose prose for consultancy staff, so this is an OWNER/ADMIN surface and nothing moves. cases_insert_admin, case_assignments_insert_admin and CASE_PERMISSION_MATRIX.counsellor are all untouched; widening to counsellors later is its own carded slice with its own migration and Stage 1 test edits. NOT a multi-counsellor model: case_assignments_primary_idx allows at most one primary counsellor per case and assignment_role is restricted to that single literal, so reassignment is delete+insert (there is no UPDATE grant or policy). No migration. No archive (Stage 6), no student invitation (Stage 5), no notes (F-4 — the permission exists, the column does not).",
       "created": "2026-08-07",
-      "entered": "2026-08-07"
+      "entered": "2026-08-10"
     },
     {
       "id": "MV-172",

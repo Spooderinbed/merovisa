@@ -580,7 +580,28 @@ take; **F-8 is a carve gap this spec closes** (§4 cells 21–23, §9.1 E4/E7). 
 a slice does not rediscover them mid-build. **F-9 was added by MV-169's build**, per §1 rule 2 — a
 slice that finds the document incomplete amends it in its own PR.
 
-### F-1 `[BLOCKER]` The Stage 3 exit gate names a counsellor doing two things the canonical model forbids
+### F-1 `[DECIDED — 2026-08-10, reading (a)]` The Stage 3 exit gate names a counsellor doing two things the canonical model forbids
+
+> **THE FOUNDER DECIDED THIS ON 2026-08-10: reading (a).** "Counsellor" in the plan's exit gate is
+> loose prose for *consultancy staff*; case creation and assignment are an **owner/admin** surface.
+> Nothing moves. `cases_insert_admin`, `case_assignments_insert_admin` and
+> `CASE_PERMISSION_MATRIX.counsellor` are all unchanged, and MV-171 built against them as they are —
+> the slice shipped **no migration and no matrix edit** (§5's "Stage 3 ships no migration that adds
+> or alters a column" held with room to spare: MV-171's only SQL-adjacent change was none at all).
+> `lib/cases/permissions.ts:168-169`'s comment — *"Widening this is a deliberate later decision, not
+> a convenience"* — is now a **recorded decision** rather than an open question.
+>
+> **Widening to counsellors later is its own carded slice**, and this is what it would cost: a
+> migration replacing both INSERT policies, a `CASE_PERMISSION_MATRIX` edit, and edits to the Stage 1
+> suites that pin all three — `tests/integration/case-rls.itest.ts:818` (counsellor case creation
+> refused) and `:1013` (counsellor self-assignment refused), plus `tests/cases/permissions.test.ts`.
+> A slice that finds those tests red has moved a canonical cell and is wrong unless that is exactly
+> what it was carded to do.
+>
+> **F-3 remains open.** This document had two founder decisions outstanding; it now has one.
+>
+> The original finding is preserved below, unedited, because the reasoning is what the decision was
+> taken against.
 
 The plan's exit gate (line 646): *"an authorized **counsellor** can **create**, find, **assign**, and
 manage a case without a student account."*
@@ -1097,3 +1118,35 @@ the cited query. A claim whose query is missing is a defect in this document.
      typed into a search box changes the shape of the query. The status filter — a value from the
      check-constrained vocabulary, validated first — is applied by the database; the free-text term is
      applied in TypeScript. Recorded so MV-171 and MV-172 do not "optimise" the search into `.or()`.
+- **2026-08-10 — F-1 DECIDED BY THE FOUNDER: reading (a), owner/admin only.** Recorded in §7 F-1
+  above. One of the two open founder decisions closes; **F-3 remains open**. Nothing moved: both
+  enforcement layers already implemented reading (a), so MV-171 built against them unchanged.
+- **2026-08-10 — amended by MV-171's build (§1 rule 2).** Four additions, none of which moves a cell:
+  1. **The write-surface trigger never fires on INSERT**, so cell 10's guard does not reach a newly
+     created case. `cases_write_surface_guard` is `BEFORE UPDATE … FOR EACH ROW` (§2.4). MV-171
+     therefore does **not** name `operational_status` on insert and lets the `'new'` default apply —
+     naming it would put a client-supplied value in a column with no guard behind it. Recorded
+     because §2.4 describes what the trigger refuses without stating when it runs, and a slice
+     reading only that section would assume the column was protected on both verbs.
+  2. **Reassignment is delete-then-insert, and the app checks the assignee's membership FIRST.**
+     `case_assignments_insert_admin`'s `is_case_org_member` conjunct would refuse a non-member or an
+     inactive member anyway — but only *after* the previous assignment had been deleted, leaving the
+     case with nobody on it. The app-layer pre-check turns the predictable failure into a no-op. This
+     is **strictly narrower** than the policy and moves nothing, the same shape as MV-169's
+     self-mutation refusal. What remains is an infrastructure failure between the two writes, and the
+     result type names that outcome (`leftUnassigned`) rather than reporting a generic failure that
+     reads as "nothing happened".
+  3. **The service-role registry GREW to 16 entries**, exactly as §6.2 forecast. The new one is
+     `app/api/cases/[caseId]/assess/route.ts`, registered `sanctioned` — not `legacy-owner-scoped`,
+     because it is not waiting on a grant a later stage will deliver. It authorizes with
+     `checkCasePermission` on the **authenticated** client *before* `createSupabaseAdminClient` is
+     called, and `tests/api/case-routes.test.ts` pins that ordering by asserting the admin client was
+     never constructed on a denial. Its intake surface is MV-172's; shipping the capability ahead of
+     its caller is the same shape as MV-168 shipping grants ahead of theirs.
+  4. **An assignment picker cannot show names either — F-9 reaches cell 9.** MV-170 closed F-9 for
+     the *student* list because `cases` carries `display_name` as its own column. `case_assignments`
+     does not: it holds `user_id`, and the picker has to name **staff**, which is exactly the surface
+     F-9 describes. MV-171's picker therefore labels members by role plus the same 8-character
+     reference MV-169's team page shows — so an admin can match a picker entry to the person on the
+     team page — and says out loud that names are unavailable. **The form value is the membership id,
+     never the Auth user id.** F-9 stands for staff-identity surfaces and is closed only for cell 7.

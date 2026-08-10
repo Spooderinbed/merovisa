@@ -239,6 +239,15 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     auditEvent: null,
   },
   {
+    path: "app/api/cases/[caseId]/assess/route.ts",
+    status: "sanctioned",
+    justification:
+      "MV-171, and the one entry Stage 3 ADDS rather than retires — admitted, not hidden. A consultancy creates a case for a student who has no account, and that case needs an assessment; Stage 3 spec §6.1 REFUSES `assessments` INSERT to `authenticated` PERMANENTLY, because `result` and `rule_version` are scoring outputs and a client that can write them mints its own verdict against the server-side rule — the trust property this product sells. A column-scoped grant excluding those two does not rescue the verb either: both are NOT NULL, so it would be ungrantable in a useful form. `20260808120000_stage3_consultancy_write_grants.sql:18-22` records the same refusal in SQL and asserts it at apply time. This is therefore `sanctioned` rather than `legacy-owner-scoped`: it is not waiting on a grant that a later stage will deliver, it is the shape the refusal requires, and MV-154's framing of this list as monotonically shrinking does not survive Stage 3.",
+    requiredCaseCheck:
+      "checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client, and it runs BEFORE createSupabaseAdminClient is ever called — a route that builds the service-role client first has already bypassed RLS by the time it asks whether it was allowed to, and no assertion on its response body would notice. `tests/api/case-routes.test.ts` pins the ordering by asserting createSupabaseAdminClient was never called on a denial. The case id comes from the path segment and is authorized against, never trusted. Service-role is used for exactly two things: the catalogue read (non-tenant `programs`/`universities`) and the `assessments` INSERT itself. The primary-assessment lookup deliberately stays on the authenticated client, because staff reach the case through actor_case_ids() and nothing about that read needs RLS bypassed. Ownership columns are DERIVED from the case via caseWriteColumns — never from the session — so a counsellor's own id cannot become the `owner` of a student's assessment; for a consultancy case it correctly yields `owner: null` (spec §6.3).",
+    auditEvent: null,
+  },
+  {
     path: "scripts/stage2/capture-read-path-snapshot.mjs",
     status: "sanctioned",
     justification:

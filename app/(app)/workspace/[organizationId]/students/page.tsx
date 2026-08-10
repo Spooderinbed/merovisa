@@ -88,6 +88,13 @@ export default async function StudentsPage({
   const scope = list.decision.requiredScope;
   if (scope !== "all-org" && scope !== "assigned") notFound();
 
+  // MV-171, cell 8. Asked separately because it answers differently for the same
+  // person: every staff role gets SOME list, and only an owner or admin may
+  // create (F-1, decided 2026-08-10). Hiding the control is presentation — the
+  // route re-decides, and `cases_insert_admin` decides again.
+  const create = await checkOrgPermission(data.user.id, organizationId, "case.create", supabase);
+  const canCreate = create.decision.allowed;
+
   const query = (first(sp.q) ?? "").trim();
   // An unknown status can only come from a hand-edited query string. It is
   // dropped rather than queried, and the form below then shows "Any status" —
@@ -115,13 +122,16 @@ export default async function StudentsPage({
           : "Every student this organization is working with."
       }
     >
-      <Card as="section" padding="lg" className="flex flex-col gap-2">
-        <h2 className="text-title font-medium">Adding a student comes later</h2>
-        <p className="max-w-[64ch] text-body text-ink-soft">
-          Creating a case and assigning a counsellor are not built yet. This page finds the students
-          who are already here.
-        </p>
-      </Card>
+      {canCreate ? (
+        <div>
+          <Link
+            href={`/workspace/${organizationId}/students/new`}
+            className="inline-flex items-center rounded-pill border border-line px-4 py-2 text-control text-ink hover:border-primary"
+          >
+            Add a student
+          </Link>
+        </div>
+      ) : null}
 
       {/*
         The `key` is what makes "Clear" clear the CONTROLS as well as the URL.
@@ -211,7 +221,7 @@ export default async function StudentsPage({
           <ul className="flex flex-col gap-3">
             {cases.data.map((row) => (
               <li key={row.id}>
-                <StudentRow row={row} />
+                <StudentRow row={row} organizationId={organizationId} />
               </li>
             ))}
           </ul>
@@ -255,10 +265,12 @@ function LookupFailedCard() {
 }
 
 /**
- * One case. Not a link: the case route is MV-172, and a link to a 404 would be a
- * worse lie than no link.
+ * One case. The ROW is still not a link — the case route that shows a student's
+ * profile, matches and plan is MV-172's, and a link to a 404 would be a worse lie
+ * than no link. What it now carries is a link to MV-171's manage surface, which
+ * does exist: the status and the primary counsellor, and nothing else.
  */
-function StudentRow({ row }: { row: OrgCaseSummary }) {
+function StudentRow({ row, organizationId }: { row: OrgCaseSummary; organizationId: string }) {
   return (
     <Card as="article" padding="lg" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -269,6 +281,14 @@ function StudentRow({ row }: { row: OrgCaseSummary }) {
       <p className="text-meta text-ink-soft">
         {row.email ?? "No email address on file"} · {operationalStatusLabel(row.operationalStatus)}
       </p>
+      <div>
+        <Link
+          href={`/workspace/${organizationId}/students/${row.id}/manage`}
+          className="text-meta text-primary underline underline-offset-4"
+        >
+          Manage
+        </Link>
+      </div>
     </Card>
   );
 }
