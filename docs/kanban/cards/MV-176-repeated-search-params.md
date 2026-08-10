@@ -153,10 +153,25 @@ piece of the fix was deleted, the suite re-run, and the piece restored.
 
 All restored; `git status --porcelain` clean afterwards, no mutation edit survived into a commit.
 
-### What these tests do not prove
+### The premise, measured against live production
 
-They are jsdom tests calling the page functions directly, so they prove what each page *does with*
-a `string[]` — not that Next produces one. That half rests on Next's own published type
-(`SearchParams`, quoted above), read out of the installed package rather than from memory. No dev
-server was run: this change has no rendered output to look at, and the `jsdom is blind to layout`
-lesson is about CSS and timing, neither of which is in this diff.
+The tests are jsdom tests calling the page functions directly, so they prove what each page *does
+with* a `string[]` — not that Next produces one. That half was measured on **live production**
+(`https://merovisa.vercel.app`, i.e. `master`, pre-fix), anonymously, with the control run first:
+
+| URL | Rendered |
+|---|---|
+| `/assess?error=expired` | **"This assessment has expired"** — the recovery surface |
+| `/assess?error=expired&error=auth` | **the normal 9-step wizard** — the parameter was silently dropped |
+
+The control is what makes it evidence rather than a coincidence: the single-value form proves the
+query string reaches the page at all, so the repeated form rendering something *different* can only
+be the array. Next hands `string[]` through on a real deployment, exactly as its type says.
+
+The post-fix half of that A/B could **not** be run: the Vercel preview for this PR sits behind
+Vercel Authentication, and signing into it is not something an agent should do. The crash itself is
+likewise not anonymously reproducible — `safeNext` is only reached inside the `if (data.user)`
+branch, so demonstrating the 500 needs a signed-in session.
+
+No dev server was run: this change has no rendered output to look at, and the `jsdom is blind to
+layout` lesson is about CSS and timing, neither of which is in this diff.
