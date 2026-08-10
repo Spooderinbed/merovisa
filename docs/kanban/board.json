@@ -2101,7 +2101,7 @@
     },
     {
       "id": "MV-171",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-171-case-creation-assignment.md",

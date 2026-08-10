@@ -9,13 +9,15 @@
 
 ### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-10 12:00 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-10 12:04 UTC. **Not board state** — never written to board.json.
 
 | Card | PR | | CI | Review | Touches |
 |---|---|---|---|---|---|
 | **MV-170** | [#136](https://github.com/Spooderinbed/merovisa/pull/136) | open | passing 4/4 | — | docs · tests · app · lib |
 
 _1 open PR matches no card: [#137](https://github.com/Spooderinbed/merovisa/pull/137)._
+
+> ⚠️ MV-171 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 18
@@ -43,13 +45,14 @@ _1 open PR matches no card: [#137](https://github.com/Spooderinbed/merovisa/pull
 
 _empty_
 
-## In progress (WIP 1) — 1
+## In progress (WIP 1) — 0
 
-- **MV-171** · P1 · [Stage 3 slice 4 — case creation and assignment (carries the F-1 decision)](cards/MV-171-case-creation-assignment.md) — _Plan bullet 2b. Create a case with organization_id set and student_user_id NULL through the AUTHENTICATED client; assign/reassign the primary counsellor; write operational_status (gated by the cases_write_surface_guard trigger → can_staff_case, which never fires on INSERT). Also adds the case-scoped scoring route, because a case needs an assessment and spec §6.1 refuses to let the client write one — a NEW service-role registry entry, deliberately registered, which is why Stage 3 ends at 8 entries rather than 7. FOUNDER DECISION F-1 IS TAKEN (2026-08-10): reading (a) — 'counsellor' in the plan's exit gate was loose prose for consultancy staff, so this is an OWNER/ADMIN surface and nothing moves. cases_insert_admin, case_assignments_insert_admin and CASE_PERMISSION_MATRIX.counsellor are all untouched; widening to counsellors later is its own carded slice with its own migration and Stage 1 test edits. NOT a multi-counsellor model: case_assignments_primary_idx allows at most one primary counsellor per case and assignment_role is restricted to that single literal, so reassignment is delete+insert (there is no UPDATE grant or policy). No migration. No archive (Stage 6), no student invitation (Stage 5), no notes (F-4 — the permission exists, the column does not)._
+_empty_
 
-## In review (WIP 3) — 1
+## In review (WIP 3) — 2
 
 - **MV-170** · P1 · [Stage 3 slice 3 — student list, search, filters, and statuses](cards/MV-170-student-list-search-filters.md) — _Plan bullet 2a. The org-scoped case list with search, filter and operational_status display. READ-ONLY — no creation, no assignment, no writes at all (MV-171 owns those). Assigned-only for counsellors, all-org for owner/admin, nothing for an unassigned counsellor or an inactive membership (cases_select_accessor → admin-org ∪ assigned ∪ own; access matrix cell 7). Depends on MV-169: the list is scoped by the selected organization, so with no org context there is no scope to list within. TEST TRAP recorded in the spec's exit-gate vacuity table: a fixture with only ONE case, or an 'unassigned' counsellor who holds no membership at all, turns this into a tenancy test that Stage 1 already passes — the fixture must hold at least two cases in the SAME org with the unassigned counsellor holding an ACTIVE membership. This slice is also what first exposes F-3 (a linked student can rewrite the display_name and email this list shows a counsellor). CORRECTED 2026-08-09: the spec's revision REMOVED F-3 from MV-173's scope — narrowing the canonical cell (reading (b)) is an open FOUNDER call, and what MV-170 owns is reading (a)'s read-layer mitigation, which it ships. F-9 was checked against this surface and does NOT carry over: unlike organization_memberships, public.cases holds display_name/email/operational_status as its own table-level-select-granted columns, so the student list renders real names and needs no new column. ADVERSARIAL REVIEW 2026-08-10 (65 agents, 23 findings → 8 distinct defects, all in this slice's own new code; NO cross-tenant leak, NO scope escalation, NO PII in markup, NO migration — the access-control core is sound and was left alone, then mutation-tested as a control): D1 notFound() collapsed 'the permission lookup failed' into 'you have no access', so a Supabase blip told a legitimate owner their organization does not exist — fixed here AND on MV-169's team + settings pages, which shipped the same shape to production · D2 a searched student name reached PostHog via ?q= in $current_url/$referrer, now sanitized in analytics-provider and the analytics spec's 'routes carry no sensitive params' premise struck · D3 the empty state blamed the filters for a list that was empty before they ran, so listOrgCases now reports scopeIsEmpty and the page branches on it rather than on the query string · D4 'Clear' left stale values in the controls that the next Apply re-submitted · D5 the result set was silently capped by max_rows with no order by, now ordered, capped at LIST_ROW_CAP=500, detected and disclosed (still NO pagination — Stage 7's) · D6 three vacuous/missing test assertions, each now tied to the row that produced it · D7+D8 card corrections (the card described a search design that was never built, and certified a safety app/(marketing)/auth/page.tsx does not have — noted for its own chip, not fixed here). Gate green UNPIPED: typecheck 0, lint 0, 2821/2821 tests. 25 mutations run, all RED._ · [#136](https://github.com/Spooderinbed/merovisa/pull/136) open, ci passing
+- **MV-171** · P1 · [Stage 3 slice 4 — case creation and assignment (carries the F-1 decision)](cards/MV-171-case-creation-assignment.md) — _Plan bullet 2b. Create a case with organization_id set and student_user_id NULL through the AUTHENTICATED client; assign/reassign the primary counsellor; write operational_status (gated by the cases_write_surface_guard trigger → can_staff_case, which never fires on INSERT). Also adds the case-scoped scoring route, because a case needs an assessment and spec §6.1 refuses to let the client write one — a NEW service-role registry entry, deliberately registered, which is why Stage 3 ends at 8 entries rather than 7. FOUNDER DECISION F-1 IS TAKEN (2026-08-10): reading (a) — 'counsellor' in the plan's exit gate was loose prose for consultancy staff, so this is an OWNER/ADMIN surface and nothing moves. cases_insert_admin, case_assignments_insert_admin and CASE_PERMISSION_MATRIX.counsellor are all untouched; widening to counsellors later is its own carded slice with its own migration and Stage 1 test edits. NOT a multi-counsellor model: case_assignments_primary_idx allows at most one primary counsellor per case and assignment_role is restricted to that single literal, so reassignment is delete+insert (there is no UPDATE grant or policy). No migration. No archive (Stage 6), no student invitation (Stage 5), no notes (F-4 — the permission exists, the column does not)._
 
 ## Blocked — 3
 

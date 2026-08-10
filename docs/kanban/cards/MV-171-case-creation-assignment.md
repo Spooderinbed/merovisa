@@ -164,8 +164,143 @@ Branch `mv-171-case-creation-assignment` off **`origin/mv-170-student-list`** (P
 - **2026-08-10 — any active member may hold the primary slot, not only the `counsellor` role.** `is_case_org_member` does not filter role, and an owner or admin carrying cases directly is the normal shape of a small consultancy. Narrowing it to `counsellor` in the app layer would be a restriction the model does not ask for.
 - **2026-08-10 — a created case does not name `operational_status`.** The column defaults to `'new'`, and the write-surface trigger does not fire on INSERT, so naming it would add a client-supplied value with no guard behind it for no gain.
 - **2026-08-10 — the scoring route ships without its intake UI, and that is deliberate.** Spec §6.2 requires Stage 3 to add it; the surface that will call it is MV-172's case route. Shipping the capability with tests, ahead of its caller, is the same shape as MV-168 shipping grants ahead of theirs.
-- **2026-08-10 — MV-170's `students/page.tsx:61` collapse is NOT fixed here.** A `checkOrgPermission` denial whose reason is `lookup-failed` renders `notFound()` on that page. It is MV-170's review defect, a fix session is on that branch, and editing the same lines from a stacked branch would conflict. This slice's own pages do not copy the shape.
+- **2026-08-10 — MV-170's `students/page.tsx:61` collapse was left to its own fix session, and that session landed it.** A `checkOrgPermission` denial whose reason is `lookup-failed` used to render `notFound()` on that page. It was MV-170's review defect; editing the same lines from a stacked branch would only have conflicted. The fix arrived on `mv-170-student-list` while this slice was building (`StudentsShell` + `LookupFailedCard`), and **this branch rebased onto it rather than merging master in**. MV-171's own pages were written to the corrected shape from the start.
+- **2026-08-10 — one guard was found untested by MUTATION TESTING, not by review, and the gap was real.** Deleting the zero-rows check on the assignment DELETE left the suite green: the only refused-delete test modelled a `42501`, and a policy refusal is not an error. The branch is reachable — an assigned counsellor passes `case_assignments_select_accessor` and so can READ the assignment row, while `case_assignments_delete_admin` requires `can_manage_case` — and without the check the code would go on to insert, leaving two primary-counsellor rows the partial unique index exists to forbid. Closed by a new test plus a `deleteRefused` switch on `fakeCaseDb`, which needed to be its own option because "readable but not deletable" is a different fact from "the filters matched no row".
+- **2026-08-10 — the mutation harness itself had a reporting bug worth recording.** A mutation that produces a SYNTAX ERROR makes vitest run no tests at all; grepping the output for "N failed" then finds nothing and reports GREEN — i.e. "this guard is untested" when the truth is "that mutation was invalid". One of the two greens in the first pass was exactly that. The harness now requires that tests actually ran before it will call anything green or red, and an invalid mutation is reported as INVALID rather than as evidence.
 
 ## Done evidence
 
-_To be completed when the gate is green._
+**Branch** `mv-171-case-creation-assignment`, **rebased onto `origin/mv-170-student-list`** after
+that branch's fix session landed two commits mid-build. Rebased, never merged — merging master into
+a stacked branch is what the brief forbade and what would have made this diff unreadable.
+
+### Integration gate — 2026-08-10 (post-rebase)
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | **exit 0** |
+| `npm run lint` | **exit 0** |
+| `npm test` | **exit 0 — 347/347 files, 2920/2920 tests** |
+| `npx next build --webpack` | **exit 0** — all six new routes registered |
+
+Exit codes were read from **unpiped** runs. Piping the gate through `tail` reports the exit status
+of `tail`, which is how a red gate reads as green — and this session hit that trap once already, on
+a baseline run that reported exit 0 while the summary line said `1 failed`.
+
+**+99 tests from this slice**, and the arithmetic is the cross-check rather than the claim:
+36 in `tests/cases/write-repo.test.ts` + 39 in `tests/api/case-routes.test.ts` + 24 in
+`tests/app/case-pages.test.tsx` = 99. Measured against the pre-rebase base (`43c558a`, 2791 tests)
+the suite read 2890. The remaining 30 (2890 → 2920) are MV-170's fix session's, which arrived in the
+rebase.
+
+`npx next build --webpack` is run because it is the only thing that caught MV-169's `server-only`
+bundle leak. Both new client components import `lib/cases/operational-status` — the one module in
+`lib/cases/` deliberately NOT marked `server-only` — and neither imports `lib/cases/permissions` or
+`lib/cases/write-repo`. `tests/architecture/client-server-boundary.test.ts` stayed green and was
+**not** weakened.
+
+*(One build attempt failed with `EBUSY: resource busy or locked` on `app/(app)/workspace/page.tsx`, a
+file this slice does not touch — a transient Windows/OneDrive lock. Re-run: exit 0. Recorded because
+a reader who sees it in a log should know it is not a code failure.)*
+
+### Mutation tests — every guard was deleted and the suite watched to go red
+
+A test asserting only that something is denied passes identically against a **missing** guard, so
+each guard below was removed, the suite re-run, and the guard restored.
+
+`lib/cases/write-repo.ts` against `tests/cases/write-repo.test.ts`:
+
+| Mutation | Result |
+|---|---|
+| stop destructuring the insert `error` (create) | **RED** — 1 failed |
+| name `student_user_id` on the create payload | **RED** — 1 failed |
+| drop the blank-display-name guard | **RED** — 1 failed |
+| drop the `operational_status` vocabulary guard | **RED** — 1 failed |
+| drop the zero-rows denial on the status update | **RED** — 1 failed |
+| drop the `assignment_role` filter when reading the primary | **RED** — 1 failed |
+| drop the active-membership pre-check | **RED** — 1 failed |
+| drop the same-counsellor no-op | **RED** — 1 failed |
+| hard-code `leftUnassigned: false` | **RED** — 1 failed |
+| drop the zero-rows denial on the assignment delete | **GREEN → gap closed → RED** (see below) |
+| drop the personal-case refusal | **RED** — 1 failed |
+| drop the unknown-case refusal | **RED** — 1 failed |
+
+The routes against `tests/api/case-routes.test.ts`:
+
+| Mutation | Result |
+|---|---|
+| gate creation on `case.list` instead of `case.create` | **RED** — 3 failed |
+| drop `.strict()` from the create schema | **RED** — 1 failed |
+| map `lookup-failed` to 403 instead of 500 | **RED** — 1 failed |
+| map `unknown-case` to 403 instead of 404 | **RED** — 2 failed |
+| build the admin client BEFORE authorizing (scoring route) | **RED** — 1 failed |
+| stop checking the assessment insert's `error` | **RED** — 1 failed |
+| drop the ownership-null refusal | **RED** — 1 failed |
+
+The manage page against `tests/app/case-pages.test.tsx`:
+
+| Mutation | Result |
+|---|---|
+| drop the organization-match check | **RED** — 1 failed |
+| render `notFound()` on a failed permission check | **RED** — 1 failed |
+| treat a failed assignment read as "nobody assigned" | **RED** — 1 failed |
+| offer inactive members in the picker | **RED** — 1 failed |
+
+**23 mutations, all RED after the gap below was closed.** All restored;
+`git status --porcelain` clean, no mutation edit survived into a commit.
+
+**The one genuine GREEN, and what it found.** Deleting the zero-rows check on the assignment DELETE
+left the suite green — the only refused-delete test modelled a `42501`, and a policy refusal is not
+an error. That branch is reachable in production, not theoretical: an assigned counsellor passes
+`case_assignments_select_accessor` and can READ the assignment row, while
+`case_assignments_delete_admin` requires `can_manage_case`, so their delete removes nothing and
+raises nothing — and without the check the code would go on to insert, leaving the case with two
+primary-counsellor rows the partial unique index exists to forbid. Closed by a new test plus a
+`deleteRefused` switch on `fakeCaseDb`.
+
+**A second GREEN was a harness artifact, and it is worth naming.** The mutation produced a syntax
+error, vitest ran no tests, and grepping for "N failed" found nothing and reported GREEN. The
+harness now requires that tests actually ran; re-run with a correct substitution, that guard is
+**RED**. A mutation harness that cannot tell "the guard is untested" from "the mutation was
+invalid" produces exactly the false confidence it exists to remove.
+
+### What was NOT verified, and why
+
+- **No live browser pass.** The surface is unreachable without an authenticated actor holding an
+  **active** membership in an organization that holds cases, and no consultancy organization exists
+  in any environment — the Stage 0 D-B legal gate is shut (spec §8.3, §9.3). A dev-server pass could
+  only have shown the sign-in redirect. `next dev` also cannot start in this worktree: Turbopack
+  rejects the junctioned `node_modules`, and `npx next build --webpack` was run instead.
+- **No integration test was added.** Cells 8/9/10's SQL half is already pinned by
+  `tests/integration/case-rls.itest.ts:789` (admin creates in own org, `42501` cross-org), `:809`
+  (pre-linking a stranger refused), `:818` (**counsellor creation refused — F-1's decision, unmoved**),
+  `:993`/`:1013` (assignment), and `:832-955` (the column write surface). **None of those files
+  changed**, which is itself the evidence that F-1 reading (a) moved no canonical cell: a slice that
+  had widened the counsellor would have turned `:818` and `:1013` red.
+- **The scoring route has no caller yet**, by decision — its intake surface is MV-172's case route.
+  It is proven at the route level, including the ordering property that matters (authorize on the
+  authenticated client before the admin client exists).
+- **No migration.** `git status --porcelain -- supabase/` was empty at commit time. Nothing here
+  adds, alters or drops a column, a grant or a policy.
+
+### Files
+
+- `lib/cases/write-repo.ts` — **new**; `createOrgCase`, `setCaseOperationalStatus`, `readOrgCase`,
+  `readPrimaryCounsellor`, `assignPrimaryCounsellor`. Authenticated client only.
+- `lib/cases/route-denial.ts` — **new**; one denial→status mapping shared by the three case-scoped
+  routes, so the three outcomes cannot diverge in three copies of the same `if`.
+- `app/api/org/[organizationId]/cases/route.ts` · `app/api/cases/[caseId]/route.ts` ·
+  `app/api/cases/[caseId]/assignment/route.ts` · `app/api/cases/[caseId]/assess/route.ts` — **new**
+- `app/(app)/workspace/[organizationId]/students/new/page.tsx` ·
+  `app/(app)/workspace/[organizationId]/students/[caseId]/manage/page.tsx` — **new**
+- `components/workspace/case-create-form.tsx` · `components/workspace/case-manage-controls.tsx` — **new**
+- `app/(app)/workspace/[organizationId]/students/page.tsx` — the create control and the per-row
+  Manage link replace MV-170's "Adding a student comes later" placeholder
+- `lib/supabase/service-role-exceptions.ts` — **one new entry**, `sanctioned`: 15 → 16
+- `tests/helpers/fake-case-db.ts` — `delete` support, `deleteError`, `deleteRefused`, `deletes`, `rows`
+- `tests/cases/write-repo.test.ts` (36), `tests/api/case-routes.test.ts` (39),
+  `tests/app/case-pages.test.tsx` (24); `tests/app/workspace-pages.test.tsx` — MV-170's
+  placeholder assertion replaced with the one MV-171 makes true
+- `docs/superpowers/specs/2026-08-07-stage3-workspace-and-access-matrix.md` — F-1 recorded as
+  decided, plus four build findings in the decision log (spec §1 rule 2)
+- **No migration.**
