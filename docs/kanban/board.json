@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07",
+  "updated": "2026-08-10",
   "staleDays": 7,
   "columns": [
     {
@@ -2142,6 +2142,17 @@
       "summary": "CARRIES THE STAGE EXIT. Completes the service-role disposition (spec §6.2): reclassify entries 1 and 2 to 'sanctioned' (F-6 — app/(focused)/assessment/[id]/page.tsx serves an UNAUTHENTICATED visitor so no grant to authenticated can ever retire it, and app/api/account/delete/route.ts says 'DELIBERATELY still owner-keyed' in its own justification; both are permanent designs mislabelled as grandfathered, so the list currently reports two entries as awaiting a migration that will never come), narrow entries 3, 4 AND 9 (app/api/profile/section/route.ts does NOT retire — reScoreAssessment, the plan copy refresh and adoptOwnerKeyedResidue are all refused by spec §6.1, and service-role-exceptions.test.ts:280/:293 pin both horns, so a builder cannot keep the admin client and delete the entry), confirm 5-7 wait for Stage 4's Storage policies, and register the new case-scoped scoring route. Net 9 → 9 — the same count it started with, one retired and one added — and the growth is admitted rather than hidden: MV-154's framing of the list as monotonically shrinking does not survive Stage 3, and the stage is scored on scope, not on list size. THEN proves the exit gate — seven criteria E1-E7 at named layers (spec §9.1), each shipping the vacuity guard from §9.2. E4 is the direct analogue of the Stage 2 §A2 vacuity MV-165 recorded honestly: it passes trivially if the case under test has a student_user_id, or on an empty write set, so it must assert cases.student_user_id IS NULL, owner IS NULL on every row written, AND a created-row count > 0. E1 must assert the actor's JWT role is 'authenticated' (a test run as service_role bypasses every policy and proves nothing). E6 must assert per-entry disposition, never a count (the tracked set is 9 at exit). E7 pins F-8: each case-scoped write route must write the STUDENT'S case id, read back from the row — and the counsellor fixture must itself hold a personal case with a row on the same table, or a wrong-case write has nowhere to land and the test proves nothing. AND THE EXIT MUST NOT OVERCLAIM (spec §9.3): with D-B shut, production holds no consultancy org and no student-less case, so a green Stage 3 licenses 'the mechanism is built and proven under RLS as the authenticated user' and NEVER 'it works for real students' — that is earned in Stage 7's pilot.",
       "created": "2026-08-07",
       "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-176",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-176-repeated-search-params.md",
+      "title": "A repeated query parameter 500s the sign-in page",
+      "summary": "Confirmed defect on a page LIVE IN PRODUCTION, found while reviewing MV-170 (PR #136) but outside that slice. Next hands a repeated query parameter through as string[] (its own SearchParams type is {[key:string]: string | string[] | undefined}), but app/(marketing)/auth/page.tsx declared searchParams as {next?: string; assessment?: string} — a claim about the URL, not about Next, and one TypeScript cannot check across a framework boundary. So /auth?next=/a&next=/b reached safeNext, which calls input.startsWith, and 500d the sign-in page; ?next= alone did the same because [] is truthy; the array also flowed into AuthCards nextPath prop typed string; and a repeated ?assessment= silently signed NO claim (String([a,b]) is \"a,b\", which fails the id shape check), costing a visitor from anonymous results the assessment the token binds. A CRASH, NOT A SECURITY HOLE — safeNext returning null is already the safe path and the throw precedes the redirect, so no unsafe destination was ever followed; the redirect-safety logic is correct and is NOT restructured. Fix matches MV-170s own approach: widen both declared types to the truthful union and collapse to the first value at the boundary, via ONE shared lib/http/search-params.ts first() rather than a third private copy; an empty array reads as ABSENT, not \"\". app/(focused)/assess/page.tsx never called a string method on a search param so it never threw — a repeated ?new=/?error= was silently IGNORED instead; it now honours the first value, which is the one behaviour delta in the card and is flagged for the founder rather than buried. MV-170s private first() is behaviourally identical and lives on OPEN PR #136, not on master, so it is deliberately not in this diff: whichever of the two PRs merges second swaps it for the import (one-line, same behaviour). Red test came first and failed with the production error verbatim — TypeError: input.startsWith is not a function; six mutations (helper x3, /auth x2, /assess x1) each re-run RED. Gate green unpiped: typecheck 0, lint 0, test 0 (342 files, 2769 tests, +21), build 0.",
+      "created": "2026-08-10",
+      "entered": "2026-08-10"
     }
   ]
 }
