@@ -6,9 +6,21 @@ import { AssessFlow } from "@/components/assess/assess-flow";
 import { AssessInterstitial } from "@/components/assess/assess-interstitial";
 import { ClaimFailure } from "@/components/assess/claim-failure";
 import { isClaimErrorCode } from "@/lib/auth/claim-error";
+import { first } from "@/lib/http/search-params";
 
-export default async function AssessPage({ searchParams }: { searchParams: Promise<{ new?: string; error?: string }> }) {
+export default async function AssessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string | string[]; error?: string | string[] }>;
+}) {
   const sp = await searchParams;
+  // Same collapse as /auth (MV-176). Nothing here calls a string method on a
+  // search param, so a repeated one never crashed this page — it was silently
+  // ignored instead, because an array is neither `"1"` nor a known error code.
+  // Honouring the first value is what the URL actually asked for.
+  const fresh = first(sp.new) === "1";
+  const error = first(sp.error);
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
 
@@ -16,11 +28,11 @@ export default async function AssessPage({ searchParams }: { searchParams: Promi
   // honest, recoverable state before the normal fork, so the most motivated user in the
   // funnel gets a path forward instead of a silent `?new`-only wizard. An unrecognised
   // code is ignored — recovery is tailored to whether they ended up signed in.
-  if (isClaimErrorCode(sp.error)) {
-    return <ClaimFailure reason={sp.error} signedIn={Boolean(data.user)} />;
+  if (isClaimErrorCode(error)) {
+    return <ClaimFailure reason={error} signedIn={Boolean(data.user)} />;
   }
 
-  if (!data.user) return <AssessFlow fresh={sp.new === "1"} />;
+  if (!data.user) return <AssessFlow fresh={fresh} />;
 
   // MV-157: a signed-in visitor's interstitial is keyed on their case. No case (or
   // no `case.read` on it) means no primary to offer — fall through to the wizard,
@@ -32,7 +44,7 @@ export default async function AssessPage({ searchParams }: { searchParams: Promi
   const primary = caseId === null || !allowed
     ? null
     : await getPrimaryAssessmentForCase(supabase, caseId);
-  if (!primary || sp.new === "1") return <AssessFlow signedIn fresh={sp.new === "1"} />;
+  if (!primary || fresh) return <AssessFlow signedIn fresh={fresh} />;
 
   return (
     <AssessInterstitial
