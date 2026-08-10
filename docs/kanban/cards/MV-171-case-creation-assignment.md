@@ -264,6 +264,28 @@ harness now requires that tests actually ran; re-run with a correct substitution
 **RED**. A mutation harness that cannot tell "the guard is untested" from "the mutation was
 invalid" produces exactly the false confidence it exists to remove.
 
+### GitHub Actions did not run on this PR, and that is a configuration fact, not a failure
+
+`.github/workflows/ci.yml:5-7` triggers on `pull_request: branches: [main, master]`. **PR #138
+targets `mv-170-student-list`**, as the brief required so the diff reads clean — so `validate` and
+`integration` **were never queued**. `gh pr checks 138` shows only the two Vercel checks (both pass);
+the check-runs API for the head commit confirms no `validate` and no `integration` exist to be green
+or red.
+
+This is worth stating plainly rather than reporting "checks pass":
+
+- **The local gate is the evidence for this slice** — typecheck, lint, the full 2920-test suite and
+  `next build --webpack`, all unpiped, all exit 0. That covers everything `validate` runs.
+- **`integration` is the one job with no local substitute here.** It self-hosts its own Supabase
+  stack, and Docker is not running on this machine (`npm run test:integration` could not be attempted).
+  Its relevance to this slice is bounded by a fact the diff makes checkable: **MV-171 ships no SQL** —
+  no migration, no grant, no policy, and no edit to any `tests/integration/*.itest.ts`. There is
+  nothing in it for the RLS/grant assertions to disagree with.
+- **Both jobs will run the moment the PR is retargeted to `master`**, which is the merge step the PR
+  description already instructs (retarget this PR first, *then* merge #136 — `--delete-branch` on a
+  base PR closes its dependents). **The founder should read a green `validate` + `integration` there
+  before merging; this card does not claim one.**
+
 ### What was NOT verified, and why
 
 - **No live browser pass.** The surface is unreachable without an authenticated actor holding an
