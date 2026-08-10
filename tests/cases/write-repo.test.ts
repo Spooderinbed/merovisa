@@ -484,6 +484,25 @@ describe("assignPrimaryCounsellor — cell 9", () => {
     expect(db.inserts).toHaveLength(0);
   });
 
+  test("a delete the POLICY refuses — zero rows, no error — is a denial, not a replacement", async () => {
+    // Found by mutation testing, not by review: deleting the zero-rows check
+    // left the suite GREEN, because the only refused-delete test modelled a
+    // `42501`. This is the OTHER refusal, and it is reachable — an assigned
+    // counsellor passes `case_assignments_select_accessor` and so can READ the
+    // assignment row, but `case_assignments_delete_admin` requires
+    // `can_manage_case`, so their delete affects zero rows and raises nothing.
+    // Without the check the route would go on to insert, and the case would end
+    // up with two primary-counsellor rows the unique index exists to forbid.
+    const db = fakeCaseDb(assignedFixture(), { deleteRefused: ["case_assignments"] });
+
+    const result = await assignPrimaryCounsellor(CASE, MEMBERSHIP_B, db.client);
+
+    expect(result).toEqual({ ok: false, reason: "denied", leftUnassigned: false });
+    expect(db.inserts).toHaveLength(0);
+    // The row the delete did not remove is still there.
+    expect(db.rows["case_assignments"]).toHaveLength(1);
+  });
+
   test("an insert that fails AFTER the delete succeeded reports the case as unassigned", async () => {
     // The honest branch. The unique index forces delete-then-insert, so this
     // window exists; the result names the state the case is actually in rather

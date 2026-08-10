@@ -60,11 +60,21 @@ export type FakeCaseDbOptions = {
    */
   updateError?: Partial<Record<CaseDbTable, { code?: string; message: string }>>;
   /**
-   * Tables whose DELETE answers with a PostgREST error. Same reading as
-   * `updateError`: a delete the policy refuses is zero rows affected, not an
-   * error, and is modelled by the filters matching no row.
+   * Tables whose DELETE answers with a PostgREST error — a column/table grant
+   * violation (`42501`).
    */
   deleteError?: Partial<Record<CaseDbTable, { code?: string; message: string }>>;
+  /**
+   * Tables whose DELETE is refused by POLICY rather than by grant: it affects
+   * **zero rows and raises nothing**, which is how Postgres reports an RLS
+   * refusal. This is NOT the same as the filters matching no row, and modelling
+   * it needs its own switch — a row can be READABLE and not DELETABLE. On
+   * `case_assignments` that is a real shape: `case_assignments_select_accessor`
+   * admits any staff member of the case, while `case_assignments_delete_admin`
+   * requires `can_manage_case`. So an assigned counsellor sees the assignment
+   * row they cannot remove.
+   */
+  deleteRefused?: CaseDbTable[];
 };
 
 export type RecordedQuery = {
@@ -94,6 +104,7 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
   const insertError = options.insertError ?? {};
   const updateError = options.updateError ?? {};
   const deleteError = options.deleteError ?? {};
+  const deleteRefused = new Set<string>(options.deleteRefused ?? []);
   const throwOn = new Set<string>(options.throwOn ?? []);
   // Mutable so an insert can make its own row readable to a later query, which is
   // what lets a test distinguish "read it back" from "returned what it wrote".
@@ -135,6 +146,10 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
       if (deleting) {
         const failure = deleteError[table as CaseDbTable];
         if (failure) return { data: null, error: failure };
+        // A DELETE the POLICY refuses: zero rows, no error, rows untouched.
+        if (deleteRefused.has(table)) {
+          return { data: mode === "one" ? null : [], error: null };
+        }
         // Same reading as UPDATE: a refused DELETE is zero rows, not an error.
         // The rows really leave, so a later read cannot see what was removed —
         // which is what lets a test tell "replaced" from "inserted alongside".
