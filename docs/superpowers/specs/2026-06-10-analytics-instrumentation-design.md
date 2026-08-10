@@ -17,7 +17,17 @@ loses people. Every product-lane decision is currently taste, not evidence.
    nothing); host from `NEXT_PUBLIC_POSTHOG_HOST`.
 2. **Explicit catalog only — autocapture off, session recording off.** Autocapture hoovers DOM text
    and would violate "no sensitive data in client-side logs" by construction. `capture_pageview: true`
-   (standard pageviews are fine — routes carry no sensitive params, an existing architecture rule).
+   (standard pageviews are fine — ~~routes carry no sensitive params~~, an existing architecture rule).
+
+   > **AMENDED 2026-08-10 (MV-170 adversarial review).** The struck premise stopped being true when
+   > MV-170 shipped the workspace student list: its search box is a plain GET form, so a counsellor
+   > searching for a student puts that student's name or email address into `?q=…`, and pageview
+   > capture would have shipped it to PostHog inside `$current_url` and `$referrer`. Capturing
+   > pageviews still stands as a decision; it is now carried by a `sanitize_properties` hook
+   > (`lib/analytics/redact-url.ts`) that replaces the value of every free-text search parameter in
+   > PostHog's URL properties before anything leaves the browser. The architecture rule is still the
+   > rule — a route carrying a sensitive param is a defect wherever it appears, and the hook is
+   > defense in depth over fixing it, not a licence to add more.
 3. **One typed catalog** `lib/analytics/events.ts`: a discriminated union of event payloads + a thin
    `track(event)` wrapper (the only call surface). Payload fields are ids, kinds, enums, booleans,
    counts — **never names, free text, scores, emails, or URLs with params**.

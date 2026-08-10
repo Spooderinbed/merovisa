@@ -61,7 +61,18 @@ export type FakeCaseDbOptions = {
   updateError?: Partial<Record<CaseDbTable, { code?: string; message: string }>>;
 };
 
-export type RecordedQuery = { table: string; filters: Array<[string, unknown]> };
+export type RecordedQuery = {
+  table: string;
+  filters: Array<[string, unknown]>;
+  /** `.order(column, options)` calls in the order they were chained. */
+  order: Array<[string, unknown]>;
+  /**
+   * The `.limit()` the query carried, or `null` for an unbounded read — which is
+   * a real defect against PostgREST's `max_rows`, so the fake makes it visible
+   * rather than equivalent.
+   */
+  limit: number | null;
+};
 export type RecordedInsert = { table: string; row: Record<string, unknown> };
 export type RecordedUpdate = { table: string; patch: Record<string, unknown> };
 
@@ -85,12 +96,16 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
 
   const from = vi.fn((table: string) => {
     const filters: Array<[string, unknown]> = [];
-    const record: RecordedQuery = { table, filters };
+    const record: RecordedQuery = { table, filters, order: [], limit: null };
     queries.push(record);
 
     const rowsFor = (): Row[] => {
       const all = rows[table] ?? [];
-      return all.filter((row) => filters.every(([column, value]) => row[column] === value));
+      const matched = all.filter((row) => filters.every(([column, value]) => row[column] === value));
+      // `.limit()` is HONOURED, not just recorded: a caller that asks for N+1 rows
+      // to detect truncation is asserting on the size of the answer, and a fake
+      // that ignored the limit would make that detection untestable.
+      return record.limit === null ? matched : matched.slice(0, record.limit);
     };
 
     const resolve = (mode: "many" | "one") => {
@@ -129,9 +144,15 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
     // PostgREST builders are chainable AND awaitable; every chain method returns
     // the same builder and only a terminal (or an await) resolves.
     const builder: Record<string, unknown> = {};
-    for (const method of ["select", "order", "limit"]) {
-      builder[method] = vi.fn(() => builder);
-    }
+    builder.select = vi.fn(() => builder);
+    builder.order = vi.fn((column: string, options?: unknown) => {
+      record.order.push([column, options]);
+      return builder;
+    });
+    builder.limit = vi.fn((count: number) => {
+      record.limit = count;
+      return builder;
+    });
     builder.insert = vi.fn((row: Row) => {
       insertAttempts += 1;
       inserts.push({ table, row });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { sanitizeAnalyticsProperties } from "@/lib/analytics/redact-url";
 
 /**
  * Initializes PostHog once on the client. Renders nothing. Without
@@ -10,6 +11,12 @@ import { useEffect } from "react";
  * download it and it stays off the initial client chunk (MV-98). Autocapture and
  * session recording stay off by policy: the explicit catalog in
  * lib/analytics/events.ts is the only event surface.
+ *
+ * `sanitize_properties` strips free-text search terms out of the URL properties
+ * before anything leaves the browser. It lives HERE rather than on the one page
+ * that has a search box, so a future search surface is covered by construction —
+ * see lib/analytics/redact-url.ts for why the premise the spec captured pageviews
+ * on ("routes carry no sensitive params") stopped being true.
  */
 export function AnalyticsProvider() {
   useEffect(() => {
@@ -23,6 +30,7 @@ export function AnalyticsProvider() {
         disable_session_recording: true,
         // "history_change" so App Router client navigations count as pageviews.
         capture_pageview: "history_change",
+        sanitize_properties: (properties) => sanitizeAnalyticsProperties(properties),
         respect_dnt: true,
       });
     });

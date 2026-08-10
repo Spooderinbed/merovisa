@@ -41,8 +41,14 @@ vi.mock("@/lib/org/repo", () => ({ listActorOrganizations, listOrgMembers }));
 const { checkOrgPermission } = vi.hoisted(() => ({ checkOrgPermission: vi.fn() }));
 vi.mock("@/lib/cases/require-org-permission", () => ({ checkOrgPermission }));
 
-const { listOrgCases } = vi.hoisted(() => ({ listOrgCases: vi.fn() }));
-vi.mock("@/lib/cases/list-repo", () => ({ listOrgCases }));
+// LIST_ROW_CAP is deliberately NOT the real 500 here: the page has to render the
+// number it was given, and a test that fed it 500 would pass against a hard-coded
+// literal. The real value is pinned in `tests/cases/list-repo.test.ts`.
+const { listOrgCases, LIST_ROW_CAP } = vi.hoisted(() => ({
+  listOrgCases: vi.fn(),
+  LIST_ROW_CAP: 7,
+}));
+vi.mock("@/lib/cases/list-repo", () => ({ listOrgCases, LIST_ROW_CAP }));
 
 import WorkspacePage from "@/app/(app)/workspace/page";
 import TeamPage from "@/app/(app)/workspace/[organizationId]/team/page";
@@ -57,6 +63,20 @@ function grant(claims: Partial<Record<string, boolean>>) {
     decision: claims[permission]
       ? { allowed: true, requiredScope: "all-org", reason: null }
       : { allowed: false, requiredScope: null, reason: "role-not-permitted" },
+    context: {},
+  }));
+}
+
+/**
+ * Every claim denied for one stated reason. `checkOrgPermission` preserves
+ * `getOrgContext`'s reason precisely so `lookup-failed` — "the membership read
+ * errored" — stays distinguishable from "you are not a member", and a page that
+ * renders both as `notFound()` tells a legitimate owner their organization does
+ * not exist because Supabase blipped.
+ */
+function denyAll(reason: string) {
+  checkOrgPermission.mockImplementation(async () => ({
+    decision: { allowed: false, requiredScope: null, reason },
     context: {},
   }));
 }
@@ -157,6 +177,15 @@ describe("/workspace/[id]/team — cells 4 and 5", () => {
     expect(listOrgMembers).not.toHaveBeenCalled();
   });
 
+  it("renders an outage — NOT notFound — when the permission lookup itself failed", async () => {
+    denyAll("lookup-failed");
+    render(await TeamPage({ params }));
+
+    expect(screen.getByText(/couldn't load the team/i)).toBeTruthy();
+    expect(notFound).not.toHaveBeenCalled();
+    expect(listOrgMembers).not.toHaveBeenCalled();
+  });
+
   it("tells the admin that invitations are not built yet, rather than offering one", async () => {
     // Spec F-5: the plan's bullet 1 reads as a fuller surface than the model
     // supports. Silence here would let an admin conclude the button is missing.
@@ -185,6 +214,15 @@ describe("/workspace/[id]/settings — cell 2, owner-only", () => {
   it("refuses an ADMIN — divergence #1, and the refusal is notFound", async () => {
     grant({ "org.manage": true });
     await expect(OrgSettingsPage({ params })).rejects.toThrow("NOT_FOUND");
+    expect(listActorOrganizations).not.toHaveBeenCalled();
+  });
+
+  it("renders an outage — NOT notFound — when the permission lookup itself failed", async () => {
+    denyAll("lookup-failed");
+    render(await OrgSettingsPage({ params }));
+
+    expect(screen.getByText(/couldn't load this organization/i)).toBeTruthy();
+    expect(notFound).not.toHaveBeenCalled();
     expect(listActorOrganizations).not.toHaveBeenCalled();
   });
 });
@@ -217,40 +255,61 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     }));
   }
 
-  const CASES = [
-    {
-      id: "case-1",
-      displayName: "Anil Gurung",
-      email: "anil@example.test",
-      operationalStatus: "waiting_on_student",
-      hasLinkedStudent: true,
-      archivedAt: null,
-    },
-    {
-      id: "case-2",
-      displayName: "Sita Rai",
-      email: null,
-      operationalStatus: "new",
-      hasLinkedStudent: false,
-      archivedAt: null,
-    },
-  ];
+  /** Placeholder rows only — `display_name`/`email` describe real people from Stage 7 on. */
+  const LINKED_CASE = {
+    id: "case-1",
+    displayName: "Anil Gurung",
+    email: "anil@example.test",
+    operationalStatus: "waiting_on_student",
+    hasLinkedStudent: true,
+    archivedAt: null as string | null,
+  };
+  const UNLINKED_CASE = {
+    id: "case-2",
+    displayName: "Sita Rai",
+    email: null,
+    operationalStatus: "new",
+    hasLinkedStudent: false,
+    archivedAt: null as string | null,
+  };
+  const CASES = [LINKED_CASE, UNLINKED_CASE];
+
+  /**
+   * A whole `listOrgCases` answer. Spelling every field out at each call site
+   * invites a mock that omits one, and an omitted `scopeIsEmpty` reads as `false`
+   * — which is the empty-state defect this suite exists to catch.
+   */
+  function listed(
+    data: Array<typeof LINKED_CASE | typeof UNLINKED_CASE>,
+    extra: { scopeIsEmpty?: boolean; truncated?: boolean } = {},
+  ) {
+    return { ok: true, data, scopeIsEmpty: data.length === 0, truncated: false, ...extra };
+  }
+
+  /** The <ul> of students, so an assertion cannot be satisfied by the filter form. */
+  const studentRows = () => within(screen.getByRole("list")).getAllByRole("listitem");
+  const rowFor = (name: string) =>
+    studentRows().find((row) => within(row).queryByText(name)) as HTMLElement;
 
   it("lists the organization's students for an admin, with a readable status", async () => {
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: CASES });
+    listOrgCases.mockResolvedValue(listed(CASES));
     render(await StudentsPage({ params, searchParams: noSearch }));
 
     expect(screen.getByText("Anil Gurung")).toBeTruthy();
     expect(screen.getByText("Sita Rai")).toBeTruthy();
-    // The raw column value is schema, not copy.
-    expect(screen.getByText("Waiting on student")).toBeTruthy();
-    expect(screen.queryByText("waiting_on_student")).toBeNull();
+    // Scoped to the ROW. Unscoped, both of these are satisfied by the always-
+    // rendered status dropdown — whose <option> reads "Waiting on student" and
+    // whose value is `waiting_on_student` — so rendering the raw column value in
+    // the row would leave them green. The raw value is schema, not copy.
+    const row = within(rowFor("Anil Gurung"));
+    expect(row.getByText(/Waiting on student/)).toBeTruthy();
+    expect(row.queryByText(/waiting_on_student/)).toBeNull();
   });
 
   it("passes the counsellor's ASSIGNED scope through instead of listing the organization", async () => {
     grantList("assigned");
-    listOrgCases.mockResolvedValue({ ok: true, data: [CASES[0]] });
+    listOrgCases.mockResolvedValue(listed([LINKED_CASE]));
     render(await StudentsPage({ params, searchParams: noSearch }));
 
     expect(listOrgCases).toHaveBeenCalledWith(
@@ -266,7 +325,7 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     // A filtered list presented as the whole organization is a quiet lie: the
     // counsellor concludes the consultancy has one student.
     grantList("assigned");
-    listOrgCases.mockResolvedValue({ ok: true, data: [CASES[0]] });
+    listOrgCases.mockResolvedValue(listed([LINKED_CASE]));
     render(await StudentsPage({ params, searchParams: noSearch }));
     expect(screen.getByText(/assigned to you/i)).toBeTruthy();
   });
@@ -285,6 +344,18 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     expect(listOrgCases).not.toHaveBeenCalled();
   });
 
+  it("renders an outage — NOT notFound — when the permission lookup itself failed", async () => {
+    // "We could not work out your access" is not "you do not have any". Collapsing
+    // them tells an owner their organization does not exist because Supabase
+    // blipped, which is the one class of claim this surface must never make.
+    denyAll("lookup-failed");
+    render(await StudentsPage({ params, searchParams: noSearch }));
+
+    expect(screen.getByText(/couldn't load your students/i)).toBeTruthy();
+    expect(notFound).not.toHaveBeenCalled();
+    expect(listOrgCases).not.toHaveBeenCalled();
+  });
+
   it("does NOT claim the organization has no students when the lookup failed", async () => {
     grantList("all-org");
     listOrgCases.mockResolvedValue({ ok: false, reason: "lookup-failed" });
@@ -294,9 +365,9 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     expect(screen.queryByText(/No students yet/i)).toBeNull();
   });
 
-  it("says 'no students yet' only when nothing is filtered", async () => {
+  it("says 'no students yet' when the scope really is empty", async () => {
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: [] });
+    listOrgCases.mockResolvedValue(listed([], { scopeIsEmpty: true }));
     render(await StudentsPage({ params, searchParams: noSearch }));
 
     expect(screen.getByText(/No students yet/i)).toBeTruthy();
@@ -305,7 +376,7 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
 
   it("says 'nothing matched' — not 'no students' — when a search returned nothing", async () => {
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: [] });
+    listOrgCases.mockResolvedValue(listed([], { scopeIsEmpty: false }));
     render(
       await StudentsPage({ params, searchParams: Promise.resolve({ q: "zzz" }) }),
     );
@@ -314,23 +385,71 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     expect(screen.queryByText(/No students yet/i)).toBeNull();
   });
 
+  it("does NOT blame the filters for a list that was empty before they ran", async () => {
+    // An unassigned counsellor who searches. The repository short-circuits before
+    // the term is read, so the list was never filtered — and "clear the filters to
+    // see the full list" points at a list that does not exist. The page cannot
+    // tell this from the query string, which is why it branches on the repository's
+    // answer instead.
+    grantList("assigned");
+    listOrgCases.mockResolvedValue(listed([], { scopeIsEmpty: true }));
+    render(await StudentsPage({ params, searchParams: Promise.resolve({ q: "ram" }) }));
+
+    expect(screen.getByText(/not assigned to any students/i)).toBeTruthy();
+    expect(screen.queryByText(/No students match/i)).toBeNull();
+    expect(screen.queryByText(/Clear the filters/i)).toBeNull();
+  });
+
+  it("says the list is capped, rather than letting a search silently miss a student", async () => {
+    // Past the cap the read is a PREFIX, so "no students match those filters" would
+    // be a false claim about the organization. The number rendered is the number
+    // the repository applied, not a literal — hence the deliberately odd cap above.
+    grantList("all-org");
+    listOrgCases.mockResolvedValue(listed(CASES, { truncated: true }));
+    render(await StudentsPage({ params, searchParams: noSearch }));
+
+    expect(screen.getByText(`Showing the first ${LIST_ROW_CAP} students`)).toBeTruthy();
+  });
+
+  it("says nothing about a cap when the read was complete", async () => {
+    grantList("all-org");
+    listOrgCases.mockResolvedValue(listed(CASES));
+    render(await StudentsPage({ params, searchParams: noSearch }));
+
+    expect(screen.queryByText(/Showing the first/i)).toBeNull();
+  });
+
   it("marks a student-editable name as self-reported, and a staff-only one as having no account", async () => {
     // Spec F-3 reading (a). There is no provenance column, so the page claims
     // only what is knowable: whether a student CAN write these fields.
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: CASES });
+    listOrgCases.mockResolvedValue(listed(CASES));
     render(await StudentsPage({ params, searchParams: noSearch }));
 
-    // Scoped to the list: the sentence above it also names the marker, and an
-    // unscoped query would pass on the explanation alone while every row was bare.
-    const rows = within(screen.getByRole("list"));
-    expect(rows.getByText("Self-reported")).toBeTruthy();
-    expect(rows.getByText("No student account")).toBeTruthy();
+    // Tied to the ROW that produced each marker. Asserting only that both strings
+    // appear somewhere in the list leaves SWAPPING them invisible — and an inverted
+    // marker is exactly the deception F-3 exists to prevent.
+    expect(within(rowFor("Anil Gurung")).getByText("Self-reported")).toBeTruthy();
+    expect(within(rowFor("Sita Rai")).getByText("No student account")).toBeTruthy();
+  });
+
+  it("marks an archived case, and only an archived one", async () => {
+    // Both fixtures above set `archivedAt: null`, so deleting or inverting this
+    // marker left the whole suite green. The negative half is what catches the
+    // inversion.
+    grantList("all-org");
+    listOrgCases.mockResolvedValue(
+      listed([{ ...LINKED_CASE, archivedAt: "2026-08-01T00:00:00.000Z" }, UNLINKED_CASE]),
+    );
+    render(await StudentsPage({ params, searchParams: noSearch }));
+
+    expect(within(rowFor("Anil Gurung")).getByText("Archived")).toBeTruthy();
+    expect(within(rowFor("Sita Rai")).queryByText("Archived")).toBeNull();
   });
 
   it("drops a status the check constraint does not admit instead of forwarding it", async () => {
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: CASES });
+    listOrgCases.mockResolvedValue(listed(CASES));
     render(
       await StudentsPage({ params, searchParams: Promise.resolve({ status: "archived" }) }),
     );
@@ -346,7 +465,7 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
 
   it("forwards a status the constraint does admit", async () => {
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: CASES });
+    listOrgCases.mockResolvedValue(listed(CASES));
     render(
       await StudentsPage({ params, searchParams: Promise.resolve({ status: "closed", q: " Rai " }) }),
     );
@@ -365,7 +484,7 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     // parameter through as `string[]`, and `.trim()` on an array throws — which
     // would turn a malformed link into a server error page rather than a list.
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: CASES });
+    listOrgCases.mockResolvedValue(listed(CASES));
     render(
       await StudentsPage({
         params,
@@ -386,9 +505,32 @@ describe("/workspace/[id]/students — cell 7, the student list", () => {
     // The team page's F-5 lesson: silence here lets an admin conclude the button
     // is broken. Case creation is MV-171.
     grantList("all-org");
-    listOrgCases.mockResolvedValue({ ok: true, data: CASES });
+    listOrgCases.mockResolvedValue(listed(CASES));
     render(await StudentsPage({ params, searchParams: noSearch }));
     expect(screen.getByText(/Adding a student comes later/i)).toBeTruthy();
+  });
+
+  it("clears the CONTROLS as well as the URL, so the next Apply does not re-submit a dropped filter", async () => {
+    // Apply is a native submit and reloads the document, so the controls come back
+    // correct. "Clear" is a soft navigation: React reconciles the mounted
+    // <select>/<input>, and writing `defaultValue` to a mounted element changes
+    // nothing it displays — the dropdown would still read "Closed", and the next
+    // Apply would re-apply a filter the user believes they removed.
+    grantList("all-org");
+    listOrgCases.mockResolvedValue(listed(CASES));
+
+    const { rerender } = render(
+      await StudentsPage({
+        params,
+        searchParams: Promise.resolve({ q: "Rai", status: "closed" }),
+      }),
+    );
+    expect((screen.getByLabelText("Status") as HTMLSelectElement).value).toBe("closed");
+    expect((screen.getByLabelText("Search") as HTMLInputElement).value).toBe("Rai");
+
+    rerender(await StudentsPage({ params, searchParams: noSearch }));
+    expect((screen.getByLabelText("Status") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByLabelText("Search") as HTMLInputElement).value).toBe("");
   });
 
   it("sends an unauthenticated visitor to sign in", async () => {

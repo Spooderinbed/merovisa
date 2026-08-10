@@ -2,7 +2,7 @@ import { describe, test, expect, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { listOrgCases } from "@/lib/cases/list-repo";
+import { listOrgCases, LIST_ROW_CAP } from "@/lib/cases/list-repo";
 import { fakeCaseDb, type CaseDbFixture } from "@/tests/helpers/fake-case-db";
 
 /**
@@ -122,7 +122,7 @@ describe("listOrgCases — assigned scope (counsellor)", () => {
       }),
     );
     const result = await listOrgCases(COUNSELLOR, ORG_A, "assigned", {}, client);
-    expect(result).toEqual({ ok: true, data: [] });
+    expect(result).toEqual({ ok: true, data: [], scopeIsEmpty: true, truncated: false });
   });
 
   test("an assignment in a DIFFERENT organization does not leak a case into this list", async () => {
@@ -139,7 +139,7 @@ describe("listOrgCases — assigned scope (counsellor)", () => {
       }),
     );
     const result = await listOrgCases(COUNSELLOR, ORG_A, "assigned", {}, client);
-    expect(result).toEqual({ ok: true, data: [] });
+    expect(result).toEqual({ ok: true, data: [], scopeIsEmpty: true, truncated: false });
   });
 
   test("another counsellor's assignment is not the actor's — the filter is on user_id", async () => {
@@ -156,7 +156,153 @@ describe("listOrgCases — assigned scope (counsellor)", () => {
       }),
     );
     const result = await listOrgCases(COUNSELLOR, ORG_A, "assigned", {}, client);
-    expect(result).toEqual({ ok: true, data: [] });
+    expect(result).toEqual({ ok: true, data: [], scopeIsEmpty: true, truncated: false });
+  });
+});
+
+/**
+ * An empty list has two causes that must not render as one another: the scope was
+ * empty before anything was filtered, and the filters emptied a scope that holds
+ * students. The PAGE cannot tell them apart — from the query string, "an
+ * unassigned counsellor searched" and "a search matched nobody" look identical —
+ * so this layer, which knows, has to say. Getting it wrong tells a counsellor with
+ * no assignments to *clear the filters to see the full list*, pointing at a list
+ * that does not exist.
+ */
+describe("listOrgCases — 'the scope was empty' vs 'the filters emptied it'", () => {
+  test("an unassigned counsellor's empty list is reported as an EMPTY SCOPE, search or no search", async () => {
+    // The defect this pins: the short-circuit returned before the term was even
+    // read, so a searching unassigned counsellor was told the filters were at fault.
+    const { client } = fakeCaseDb(
+      orgFixture({
+        organization_memberships: [
+          { id: "m-1", organization_id: ORG_A, user_id: COUNSELLOR, role: "counsellor", status: "active" },
+        ],
+        case_assignments: [],
+      }),
+    );
+    const result = await listOrgCases(COUNSELLOR, ORG_A, "assigned", { query: "ram" }, client);
+    expect(result).toEqual({ ok: true, data: [], scopeIsEmpty: true, truncated: false });
+  });
+
+  test("a search that matches nobody is NOT an empty scope — the organization holds students", async () => {
+    const { client } = fakeCaseDb(orgFixture());
+    const result = await listOrgCases(COUNSELLOR, ORG_A, "all-org", { query: "zzz" }, client);
+    expect(result).toEqual({ ok: true, data: [], scopeIsEmpty: false, truncated: false });
+  });
+
+  test("a STATUS that matches nobody is not an empty scope either, and costs one unfiltered read", async () => {
+    // The status predicate runs in SQL, so the filtered page alone cannot tell
+    // "no cases" from "no cases with this status". The probe is what settles it.
+    const { client, queries } = fakeCaseDb(orgFixture());
+    const result = await listOrgCases(COUNSELLOR, ORG_A, "all-org", { status: "closed" }, client);
+
+    expect(result).toEqual({ ok: true, data: [], scopeIsEmpty: false, truncated: false });
+    expect(
+      queries.filter(
+        (query) =>
+          query.table === "cases" &&
+          !query.filters.some(([column]) => column === "operational_status"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("a genuinely empty organization reports an empty scope, and needs no probe", async () => {
+    const { client, queries } = fakeCaseDb({ cases: [] });
+    const result = await listOrgCases(COUNSELLOR, ORG_A, "all-org", {}, client);
+
+    expect(result).toEqual({ ok: true, data: [], scopeIsEmpty: true, truncated: false });
+    expect(queries.filter((query) => query.table === "cases")).toHaveLength(1);
+  });
+
+  test("a probe that fails is a FAILURE — neither empty-state sentence is a guess worth making", async () => {
+    // `fakeCaseDb`'s `errorOn` is per table, so it would break the FIRST read and
+    // never reach the probe. This stub fails only the second `cases` read.
+    let casesReads = 0;
+    const answering = (result: unknown) => {
+      const chain: Record<string, unknown> = {};
+      for (const method of ["select", "eq", "order", "limit"]) chain[method] = () => chain;
+      chain.then = (onFulfilled: (value: unknown) => unknown) => onFulfilled(result);
+      return chain;
+    };
+    const client = {
+      from: (table: string) => {
+        if (table !== "cases") throw new Error(`unexpected table ${table}`);
+        casesReads += 1;
+        return casesReads === 1
+          ? answering({ data: [], error: null })
+          : answering({ data: null, error: { message: "boom" } });
+      },
+    } as unknown as Parameters<typeof listOrgCases>[4];
+
+    expect(await listOrgCases(COUNSELLOR, ORG_A, "all-org", { status: "closed" }, client)).toEqual({
+      ok: false,
+      reason: "lookup-failed",
+    });
+    expect(casesReads).toBe(2);
+  });
+});
+
+/**
+ * `supabase/config.toml:18` sets `max_rows = 1000`, so an unbounded, unordered
+ * read is silently truncated at whatever rows the planner emitted — and the
+ * in-memory search then runs over that arbitrary subset, so the page can answer
+ * "no students match" about a student who exists. The read is explicitly ordered
+ * and capped, and asks for one row past the cap so the truncation is KNOWN rather
+ * than guessed.
+ */
+describe("listOrgCases — the cap is explicit, ordered, and reported", () => {
+  /** Placeholder rows only: `cases.display_name`/`email` describe real people from Stage 7 on. */
+  function manyCases(count: number) {
+    return Array.from({ length: count }, (_, index) => ({
+      id: `case-${String(index).padStart(4, "0")}`,
+      organization_id: ORG_A,
+      display_name: `Student ${String(index).padStart(4, "0")}`,
+      email: null,
+      operational_status: "new",
+      student_user_id: null,
+      archived_at: null,
+    }));
+  }
+
+  test("asks the database to ORDER the read and to bound it one row past the cap", async () => {
+    const { client, queries } = fakeCaseDb(orgFixture());
+    await listOrgCases(COUNSELLOR, ORG_A, "all-org", {}, client);
+
+    const read = queries.find((query) => query.table === "cases");
+    expect(read?.order).toEqual([["display_name", { ascending: true }]]);
+    expect(read?.limit).toBe(LIST_ROW_CAP + 1);
+  });
+
+  test("bounds the assignment read too — a truncated assignment set silently narrows the list", async () => {
+    const { client, queries } = fakeCaseDb(
+      orgFixture({
+        case_assignments: [
+          { id: "asg-1", case_id: CASE_1, user_id: COUNSELLOR, assignment_role: "primary_counsellor" },
+        ],
+      }),
+    );
+    await listOrgCases(COUNSELLOR, ORG_A, "assigned", {}, client);
+
+    const read = queries.find((query) => query.table === "case_assignments");
+    expect(read?.order).toEqual([["case_id", { ascending: true }]]);
+    expect(read?.limit).toBe(LIST_ROW_CAP + 1);
+  });
+
+  test("reports truncation, and never returns the row past the cap that proved it", async () => {
+    const { client } = fakeCaseDb({ cases: manyCases(LIST_ROW_CAP + 1) });
+    const result = await listOrgCases(COUNSELLOR, ORG_A, "all-org", {}, client);
+
+    expect(result.ok && result.truncated).toBe(true);
+    expect(result.ok && result.data).toHaveLength(LIST_ROW_CAP);
+  });
+
+  test("a list exactly the size of the cap is NOT truncated — the notice must not cry wolf", async () => {
+    const { client } = fakeCaseDb({ cases: manyCases(LIST_ROW_CAP) });
+    const result = await listOrgCases(COUNSELLOR, ORG_A, "all-org", {}, client);
+
+    expect(result.ok && result.truncated).toBe(false);
+    expect(result.ok && result.data).toHaveLength(LIST_ROW_CAP);
   });
 });
 

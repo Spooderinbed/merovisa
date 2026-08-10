@@ -44,10 +44,27 @@ import { isOperationalStatus } from "./operational-status";
  *   query. Matching in memory also means `%` and `_` are characters rather than
  *   `LIKE` wildcards, so a search for `100%` cannot quietly return everybody.
  *
- * **The result set is bounded by the organization and nothing else.** That is
- * honest for Stage 3, which runs on seeded data with no consultancy onboarded
- * (spec §9.3); pagination is earned by Stage 7's pilot, and is recorded on
- * MV-170's card rather than pre-built.
+ * ## The result set IS capped, and the cap is reported rather than hidden
+ *
+ * An earlier revision of this comment claimed the read was "bounded by the
+ * organization and nothing else". It never was: `supabase/config.toml:18` sets
+ * `max_rows = 1000`, so PostgREST truncates every unbounded read — and with no
+ * `order by`, at whatever rows the planner happened to emit. A list that silently
+ * drops students and then answers "no students match those filters" is a false
+ * claim about the organization, which is the one thing this surface must not make.
+ *
+ * So the read is explicitly ordered and explicitly capped at `LIST_ROW_CAP`, and
+ * it asks for `LIST_ROW_CAP + 1` rows: the extra row is what makes "there are more
+ * than we are showing" *knowable* rather than guessed. `truncated` carries that up
+ * to the page, which says it out loud. Pagination is still Stage 7's (spec §9.3) —
+ * this makes the missing pagination visible, it does not build it.
+ *
+ * Residual, stated rather than hidden: a truncated read cannot prove a scope is
+ * empty, so `scopeIsEmpty` is "the rows this read could see hold nothing in
+ * scope". Reaching that combination needs a counsellor holding more than
+ * `LIST_ROW_CAP` assignments whose cases all sort after the organization's first
+ * `LIST_ROW_CAP` by name; the cap notice renders alongside the empty state either
+ * way, and Stage 7's pagination retires the question.
  */
 
 /** The scopes cell 7 defines. `linked` is a student's own case and is not a list. */
@@ -85,11 +102,44 @@ export interface OrgCaseSummary {
 }
 
 export type CaseListResult =
-  | { ok: true; data: OrgCaseSummary[] }
+  | {
+      ok: true;
+      data: OrgCaseSummary[];
+      /**
+       * True when the actor's scope held no case AT ALL, before either filter ran.
+       *
+       * The page cannot work this out for itself: from the query string, "an
+       * unassigned counsellor searched for a name" and "a search excluded every
+       * student there is" look identical, and telling the first one to *clear the
+       * filters to see the full list* points at a list that does not exist. This
+       * layer is the only one that knows, so it says.
+       */
+      scopeIsEmpty: boolean;
+      /** True when a read hit `LIST_ROW_CAP`, so `data` is a PREFIX of the scope. */
+      truncated: boolean;
+    }
   | { ok: false; reason: "lookup-failed" | "denied" };
+
+/**
+ * The most rows one read of this list returns, well under PostgREST's
+ * `max_rows = 1000`. The number is exported because the page states it: "showing
+ * the first N" is only honest if the N a reader sees is the N that was applied.
+ */
+export const LIST_ROW_CAP = 500;
 
 const LOOKUP_FAILED = { ok: false, reason: "lookup-failed" } as const;
 const DENIED = { ok: false, reason: "denied" } as const;
+
+/**
+ * The rows a capped read may keep, and whether the cap cut it short. Queries ask
+ * for `LIST_ROW_CAP + 1`; a row beyond the cap is never returned to the caller,
+ * it exists only as proof that more rows are there.
+ */
+function capped<T>(rows: T[]): { rows: T[]; truncated: boolean } {
+  return rows.length > LIST_ROW_CAP
+    ? { rows: rows.slice(0, LIST_ROW_CAP), truncated: true }
+    : { rows, truncated: false };
+}
 
 function isPresent(value: string): boolean {
   return typeof value === "string" && value.trim().length > 0;
@@ -123,35 +173,50 @@ export async function listOrgCases(
 
   try {
     const supabase = db ?? (await createSupabaseServerClient());
+    let truncated = false;
 
     let assignedCaseIds: Set<string> | null = null;
     if (scope === "assigned") {
       const assignments = await supabase
         .from("case_assignments")
         .select("case_id")
-        .eq("user_id", actorUserId);
+        .eq("user_id", actorUserId)
+        .order("case_id", { ascending: true })
+        .limit(LIST_ROW_CAP + 1);
       if (assignments.error) return LOOKUP_FAILED;
 
-      assignedCaseIds = new Set((assignments.data ?? []).map((row) => row.case_id));
+      const assignmentPage = capped(assignments.data ?? []);
+      truncated = assignmentPage.truncated;
+      assignedCaseIds = new Set(assignmentPage.rows.map((row) => row.case_id));
       // No assignments is a true, complete answer — and reaching the `cases` query
       // with an empty set would ask for the whole organization.
-      if (assignedCaseIds.size === 0) return { ok: true, data: [] };
+      if (assignedCaseIds.size === 0) {
+        return { ok: true, data: [], scopeIsEmpty: true, truncated };
+      }
     }
+
+    // Narrowed once, so the SQL predicate and "was a status applied?" cannot drift.
+    const status = isOperationalStatus(filters.status) ? filters.status : undefined;
 
     let query = supabase
       .from("cases")
       .select("id, display_name, email, operational_status, student_user_id, archived_at")
       .eq("organization_id", organizationId);
-    if (isOperationalStatus(filters.status)) {
-      query = query.eq("operational_status", filters.status);
+    if (status !== undefined) {
+      query = query.eq("operational_status", status);
     }
 
-    const result = await query;
+    const result = await query.order("display_name", { ascending: true }).limit(LIST_ROW_CAP + 1);
     if (result.error) return LOOKUP_FAILED;
 
+    const page = capped(result.data ?? []);
+    truncated = truncated || page.truncated;
+    const inScope = page.rows.filter(
+      (row) => assignedCaseIds === null || assignedCaseIds.has(row.id),
+    );
+
     const term = (filters.query ?? "").trim();
-    const data = (result.data ?? [])
-      .filter((row) => assignedCaseIds === null || assignedCaseIds.has(row.id))
+    const data = inScope
       .map((row) => ({
         id: row.id,
         displayName: row.display_name,
@@ -163,7 +228,29 @@ export async function listOrgCases(
       .filter((row) => term === "" || matches(row, term))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-    return { ok: true, data };
+    let scopeIsEmpty = inScope.length === 0;
+    if (scopeIsEmpty && status !== undefined) {
+      // The status predicate ran in SQL, so an empty page does not yet separate
+      // "this scope holds no case" from "it holds none WITH THIS STATUS" — and the
+      // page renders a different sentence for each. One unfiltered read settles it.
+      const probe = await supabase
+        .from("cases")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .order("display_name", { ascending: true })
+        .limit(LIST_ROW_CAP + 1);
+      // Answering with either sentence here would be a guess. A read that could
+      // not complete is a failure, which the page already renders as one.
+      if (probe.error) return LOOKUP_FAILED;
+
+      const probePage = capped(probe.data ?? []);
+      truncated = truncated || probePage.truncated;
+      scopeIsEmpty = !probePage.rows.some(
+        (row) => assignedCaseIds === null || assignedCaseIds.has(row.id),
+      );
+    }
+
+    return { ok: true, data, scopeIsEmpty, truncated };
   } catch {
     // Includes a thrown client, an aborted request, and a client that does not
     // expose `from`. A read that could not complete is a failure, never an empty
