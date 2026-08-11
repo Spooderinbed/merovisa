@@ -17,6 +17,7 @@ rehearsal rather than merely written: a written rollback that was never run is a
 | `MV-156-counts.sql` | MV-156's DATA fingerprint — row counts, both ownership axes, whole-row and `updated_at` md5s, and row identity. Must be **byte-identical at every capture point**, because MV-156 writes no row data. |
 | `MV-159-rollback.sql` | The MV-159 unwind, ordered per spec §10.1 **R2**: drop the 24 case-aware policies, re-apply the legacy owner set verbatim, then drop the five helpers (**five since MV-159 review round 3** — `case_student_id`, the OWNER-axis helper the five INSERT `WITH CHECK`s and §1b clause (c) share). One transaction — a table with RLS FORCED and zero policies returns zero rows to every client. Four guards; no `-v` flag; no point of no return. Guard 2 keys on the **hazard** (`owner IS NULL` case-bearing rows exist) rather than on its usual cause (MV-160 applied), and the closing block **fingerprints the restored catalogue** against the measured pre-MV-159 state, so "it ran" and "it restored" are separate claims. |
 | `MV-159-visibility.sql` | MV-159's rehearsal, and it is a different SHAPE from the two above because the card mutates no data. It captures the set of row ids **visible as each authenticated user AND as `anon`** on each of the nine tables, applies the migration inline, re-captures, and RAISES on any diff, on any widening, and on any pair reachable only through the transitional owner disjunct. Rolls itself back. Applies the migration with `\ir`, so it must be run **by path**, not on stdin — see step 4. |
+| `MV-168-rollback.sql` | The MV-168 unwind — the three Stage 3 write grants and their three policies, leaving MV-160's end state. Policies dropped **before** grants, both in one transaction, because a granted verb with no policy is an *unfiltered* verb. Guard 0 refuses a partially-applied MV-168; four restored-state assertions including an over-revoke check that Stage 2's five UPDATE grants survived. Unwinds FIRST in the chain — see "Rolling MV-168 back in production". |
 | `MV-156-catalog.sql` | MV-156's SCHEMA capture — columns (with ordinals), constraints, indexes, triggers, column grants and policies for the **nine** student-owned tables. The pre-apply capture vs the post-rollback capture is what turns "the rollback ran" into "the rollback restored". **Widened from eight to nine on 2026-08-03** so it covers `assessments`: MV-156's "`assessments` is untouched" criterion was not something an eight-table capture could ever have falsified. |
 
 ## Running the MV-155 rehearsal
@@ -531,6 +532,152 @@ evaluate NULL for such a row and RLS admits only TRUE — every one of them woul
 counsellor and admin who own its case, silently. MV-160 is the usual cause but not the only one:
 MV-157's dual-write writes `owner IS NULL` on every consultancy-created row, so the **first
 consultancy row makes this rollback lossy**, long before MV-160.
+
+## Applying MV-168 to production
+
+**Founder-gated: run it only on an explicit, in-the-moment go.** Earlier revisions of this file said
+"nothing in this section is an agent action," and that was wrong on the facts — see the status note
+directly below, which records an agent performing exactly this apply under a founder's go. The gate
+is the founder's decision, not the identity of whoever types the command.
+
+> **STATUS — APPLIED 2026-08-11.** Production (`obfvrxixtautamflzxzq`) carries these grants. Applied
+> by agent on the founder's explicit go, via the Supabase MCP's `execute_sql` rather than
+> `supabase db push` (the CLI is broken on win32-x64 here) — the whole file in one implicit
+> transaction, all six assertions silent. The ledger row was then inserted **by hand as
+> `20260808120000`**, matching the repo, because `apply_migration` stamps a version of its own and
+> that is what caused the 2026-08-07 drift. Verified afterwards from outside the file: the three
+> grants exact to their column lists, the three policies attached to the verbs they claim, and the
+> three permanent refusals still absent. Pre-apply state was clean — `assessments` held no UPDATE
+> grant at all, so assertion (3) had no drift to find. The procedure below stands as written and is
+> what a re-apply, a second environment, or a post-rollback restore should follow.
+
+This section exists because MV-168 shipped without one, which is the **fourth recurrence** of the
+omission the MV-159 section above was written to end. The pattern is now unmistakable: a slice adds
+a migration, the rollback gets written, and the apply procedure — and with it the bookkeeping-row
+step — has nowhere to live. MV-168 also arrived with no row in the **Files** table, so
+`MV-168-rollback.sql` existed on disk and in no index. Both are fixed here.
+
+MV-168 differs from the three above in a way that matters to whoever runs it: it is the **lowest
+consequence of the four**. It writes no data, changes no schema object, and adds no column, index,
+constraint or trigger. What it does is hand `authenticated` three new write verbs, so the risk is
+not corruption but **over-grant** — and the file's own closing `do $$` block is six assertions
+aimed squarely at that.
+
+### The command
+
+```bash
+npx supabase link --project-ref obfvrxixtautamflzxzq   # once
+npx supabase db push
+```
+
+Same atomicity argument as MV-155/MV-156/MV-159: the file carries no `begin;`/`commit;`, so
+`supabase db push` submits it as one implicit transaction. Every assertion is inside that
+transaction, so **a raise means nothing landed** — there is no partially-granted state to clean up.
+
+**Caveat measured on the founder's Windows machine (recorded on `docs/kanban/cards/MV-168-consultancy-write-grants.md:118`):**
+`npx supabase` fails there on win32-x64 binary resolution. If that is the machine in front of you,
+use the fallback below or the Dashboard SQL Editor — not a statement-by-statement paste, which
+loses the transaction and can leave a grant in place with no policy.
+
+### If a different path is ever used
+
+One explicit transaction **plus the bookkeeping row by hand**:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction \
+  -f supabase/migrations/20260808120000_stage3_consultancy_write_grants.sql
+```
+
+```bash
+psql "$DATABASE_URL" -c "insert into supabase_migrations.schema_migrations (version) \
+  values ('20260808120000');"
+```
+
+**Unlike MV-159, this file sets no `lock_timeout`.** Each `grant`, `drop policy` and `create policy`
+takes a brief `ACCESS EXCLUSIVE` on its table; the work is sub-millisecond and what would be bounded
+is the *wait to acquire*. Set one in-session (`set lock_timeout = '10s';`) if the project is under
+load. A `55P03 lock_not_available` is a retry, not a failure.
+
+### Before the push
+
+**Capture the pre-apply grant surface.** This is what the rollback is verified against, and it is
+also the only thing that will tell you *what drifted* if assertion (3) refuses:
+
+```bash
+psql "$DATABASE_URL" -tAc "select table_name||'|'||privilege_type||'|'||column_name
+  from information_schema.column_privileges where grantee='authenticated'
+  and table_schema='public' and table_name in ('profiles','plan_items','assessments')
+  order by 1;" > prod.mv168.grants.before.txt
+```
+
+**Read assertion (3) before you run the file.** It requires the `assessments` UPDATE grant to be
+*exactly* `is_primary` and raises otherwise. That is not a formality: `result` and `rule_version`
+are scoring outputs, and a client that can write them mints its own verdict against the server-side
+rule — the trust property this product sells. If production has drifted to hold any other UPDATE
+column on `assessments`, **the migration will refuse, and that refusal is correct.** Resolve the
+drift; do not widen the assertion.
+
+### Verify the apply was COMPLETE, not merely error-free
+
+```sql
+select table_name, string_agg(column_name, ', ' order by column_name)
+  from information_schema.column_privileges
+ where grantee='authenticated' and table_schema='public'
+   and table_name in ('profiles','plan_items','assessments')
+   and privilege_type in ('INSERT','UPDATE')
+ group by table_name order by 1;
+select polname, polcmd from pg_policy
+ where polname in ('profiles_insert_case','plan_items_insert_case','assessments_update_case');
+select version from supabase_migrations.schema_migrations where version = '20260808120000';
+```
+
+Expect `assessments` = `is_primary`; `profiles` = `case_id, completeness, owner, sections`;
+`plan_items` = `body, case_id, impact, kind, lift_estimate, owner, status, time_estimate, title`;
+three policies with `polcmd` `a`, `a`, `w`. The migration asserts all of this at apply time too —
+these are the same properties checked **from outside**, so a partially-applied file cannot claim
+them.
+
+Then run the **consultancy-facing smoke**, which is what these grants exist for: as an org
+owner/admin, create a case, assign a primary counsellor, and open it. Those paths run on the
+`authenticated` client now; before this migration they fail with `42501`.
+
+### Rolling MV-168 back in production
+
+`supabase/rehearsal/MV-168-rollback.sql`, run through `psql -v ON_ERROR_STOP=1`. One transaction,
+no `-v` flag, and no point of no return — it mutates no data and re-runs. It drops the **policies
+before the grants**, because a granted verb with no policy is an *unfiltered* verb, and it leaves
+the database in MV-160's end state. Two things the script cannot do for you:
+
+1. **Delete the bookkeeping row, immediately after it commits.** The rollback is a script, not a
+   migration, and carries no entry in `supabase_migrations` — so the history will say applied while
+   the catalogue says otherwise, and the next `supabase db push` will therefore NOT re-apply MV-168:
+
+   ```sql
+   delete from supabase_migrations.schema_migrations where version = '20260808120000';
+   ```
+
+   **This is the step MV-155, MV-156 and MV-159 each shipped without.** It is written here, at the
+   point of use, for the same reason theirs are.
+
+2. **Diff the restored grant surface against `prod.mv168.grants.before.txt`.** The script's closing
+   assertions include an over-revoke check that Stage 2's five UPDATE grants survived, but "the
+   rollback ran" and "the rollback restored" are separate claims and only the diff settles the
+   second.
+
+**Order matters, and getting it wrong is loud rather than silent.** MV-168 is Stage 3 and landed
+after Stage 2, so it unwinds FIRST:
+
+```
+MV-168-rollback.sql  →  MV-160-rollback.sql (R1)  →  MV-159-rollback.sql (R2)
+```
+
+`MV-161-rollback.sql` **is not a step in that chain** — R1 deliberately keeps MV-161's P0 pointer
+bound, and MV-161-rollback's own header says twice that it is a rehearsal-host tool, not an incident
+tool. Reach for R1 while MV-168's three policies are still in place and its Guard 1 refuses: it
+counts the `%_case` policies on the nine student tables and expects MV-159's twenty-four, and
+MV-168's three are named to the same convention, so the count reads 27. That refusal is correct —
+the database is not in the state R1 was written against — and R1 carries a guard that names this
+file, so an operator who arrives out of order reads an instruction rather than a count to decode.
 
 ## Why the corpus exists, and what it does not prove
 
