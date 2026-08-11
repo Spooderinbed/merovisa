@@ -387,3 +387,94 @@ exactly the figure this card recorded at the first gate.
   `tests/analytics/redact-url.test.ts` (**new**),
   `tests/analytics/analytics-provider-sanitize.test.tsx` (**new**)
 - **No migration.**
+
+---
+
+## Adversarial review, round 2 — 2026-08-11
+
+A second adversarial review of the round-1 fix confirmed **three** further defects. All three are in
+code the first round touched, and two of them are the *same* defect the first round fixed, one layer
+down — which is the finding worth carrying forward: **D1 and D2 were each fixed at the surface the
+review named, and neither sweep was carried to the layer underneath it.**
+
+### The three defects, and what changed
+
+| # | Defect | Fix |
+|---|---|---|
+| **R1** (high) | **The D1 error-honesty sweep stopped at the pages.** D1 routed `lookup-failed` to an outage state on the three workspace PAGES; the write routes those pages POST to still collapsed every deny reason into 403, and `components/workspace/save-error.ts` renders a 403 as the literal sentence *"That change was not allowed."* So an owner who clicked Deactivate on a teammate — or renamed the org — while the `organization_memberships` read inside `getOrgContext` hit a statement timeout was told they lacked permission for a change they are entitled to make, with no indication of an outage and nothing to retry. `require-org-permission.ts:68-70` preserves the reason *deliberately*; both routes discarded it. | `lib/org/permission-response.ts` (**new**) is the one place a denial becomes a status: `lookup-failed` → **503**, every determined denial → 403 as before. `save-error.ts` renders 503 as *"We couldn't check your access just now — please try again."*, ahead of the generic `>= 500` branch — it is not a write failure, because no write was attempted. |
+| **R1, second order** | **Re-statusing alone would have left a 403 in place.** The members route's `org.settings` check is a **second** round trip, so it can fail on its own after `org.manage` answered. Its denial feeds `actorIsOwner`, where it stops being a status and becomes a *factual claim about the actor*: an owner whose settings lookup errored is carried forward as a non-owner, and `decideMembershipChange` then refuses with its **own** 403 — "only the owner may grant ownership" — that no longer carries `lookup-failed` at all. Fixing the status mapping without the reason propagation leaves this path unfixed and untestable. | The reason stops the request at the check (`isPermissionOutage`), before it can be read as a fact. A denial for **any other** reason still continues: an admin genuinely is not the owner, and 503ing that would tell every admin the site is broken. Both halves are pinned separately. |
+| **R2** (high) | **The D2 redaction missed `$session_entry_url`.** `URL_PROPERTIES` was an exact-key list of five. posthog-js (pinned **1.384.1**) attaches `$session_entry_url` — the full href of the page the session started on, query string included — to the properties of **every** event for the life of the session. Verified in the pinned tarball: `lib/src/session-props.js:66-77` re-emits each set-once property under a `$session_entry_` prefix (`$current_url` → `$session_entry_url`). The same href **is** scrubbed where posthog hands it over as `$set_once.$current_url` and shipped verbatim as `properties.$session_entry_url`, which is exactly why an exact list looked complete. A counsellor submits the GET search form, the session id rotates on that load or shortly after (30-minute idle, new tab, bookmark, shared link) — and from then on every `$pageview`, `$pageleave` and catalog event carries the student's name. | Matched by **shape**, not by one more literal: `URL_PROPERTY_PATTERNS = [/^\$session_entry_/]` covers the whole family, and `sanitizeAnalyticsProperties` now iterates the properties **present** rather than a fixed list of names so a pattern can reach them. The prefix is how posthog *constructs* the family, so the next member is covered before it exists. Over-matching is harmless — `redactSearchParams` returns a URL carrying none of the parameters byte for byte, so `$session_entry_utm_source` is untouched. |
+| **R3** (medium) | **`$heatmap_data` is keyed BY the full URL.** `analytics-provider.tsx` set `autocapture: false` and `disable_session_recording: true` but said nothing about heatmaps, so `capture_heatmaps` stayed nullish and posthog fell back to `_enabledServerSide` — a PostHog **project-settings** toggle flippable in a dashboard with no code change, no review and no deploy. It also outruns the redaction by shape: `$heatmap_data` is an object whose **keys** are `window.location.href`, and `sanitize_properties` rewrites values, so a searched student's name would leave the browser intact. | `capture_heatmaps: false` in the init config — the third DOM-scraping collector refused in code, consistent with the other two. Pinned by a test asserting `toBe(false)` and **not** `toBeFalsy()`: `undefined` was the defect. |
+
+### Mutation tests — every guard removed or inverted
+
+Restores verified with `git status --porcelain` against the **committed** fix (`f62871d`), per this
+card's own round-1 lesson that a mutation harness must restore from a known-good commit.
+
+| Mutation | Result |
+|---|---|
+| **R1** org route: 403 for every reason (revert) | **RED** — 1 failed |
+| **R1** members route: 403 on a failed `org.manage` lookup | **RED** — 1 failed |
+| **R1** members route: drop the `org.settings` outage guard (the second-order half) | **RED** — 1 failed |
+| **R1** `save-error.ts`: drop the 503 branch, let it fall into the generic 5xx | **RED** — 2 failed |
+| **R2** narrow the family rule back to an exact key — `/^\$session_entry_url$/` | **RED** — 1 failed |
+| **R2** drop the family rule entirely, back to the five exact keys | **RED** — 2 failed |
+| **R3** remove `capture_heatmaps`, back to the remote toggle | **RED** — 1 failed |
+
+The R2 pair is the one that matters: the *first* mutation still redacts `$session_entry_url`, so a
+test written only against that key would stay green. It goes RED on the family test instead, which
+is the assertion that keeps the rule from being narrowed back to exact keys later.
+
+### Gate — 2026-08-11
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | **exit 0** |
+| `npm run lint` | **exit 0** |
+| `npm test` | **exit 0 — 345/345 files, 2831/2831 tests, 57.8s** |
+
+Exit codes read from an **unpiped** run, for the reason recorded at the round-1 gate.
+
+**+10 tests** (2821 → 2831), and again the arithmetic is the cross-check rather than the claim:
+4 in `tests/api/org-routes.test.ts` + 1 in `tests/components/workspace/team-member-row.test.tsx` +
+1 in `tests/components/workspace/org-settings-form.test.tsx` + 2 in
+`tests/analytics/redact-url.test.ts` + 2 in `tests/analytics/analytics-provider-collectors.test.tsx`
+= 10, and 2831 − 10 = 2821, which is the figure the round-1 gate recorded. **+1 test file** (344 →
+345), the one new file.
+
+The single jsdom `Not implemented: navigation to another Document` notice in the run is
+**pre-existing**: measured by stashing this fix and re-running the full suite, where it appears
+exactly once as well.
+
+### What was NOT done, and why
+
+- **No migration, no column, no grant, no policy change.** Still SQL-free.
+- **No change to the permission model itself.** `getOrgContext` already answered `lookup-failed`
+  correctly and `checkOrgPermission` already preserved it — the defect was entirely in what the two
+  routes did with the reason they were handed. Nothing in `lib/cases/` was touched.
+- **No live browser pass**, for the reason recorded at round 1: the surface is unreachable without an
+  authenticated actor holding an active membership in an organization that holds cases, and no
+  consultancy organization exists in any environment. R1's trigger additionally requires the
+  membership read to *fail* mid-request, which is not reproducible from a browser at all — it is
+  pinned at the route, where the reason lives. `[[jsdom-is-blind-to-layout]]` applies to neither R2
+  nor R3: both are init-config and pure-function properties, not layout.
+- **`$session_entry_url` was confirmed against the pinned tarball in `node_modules`**, not from
+  memory of the posthog docs — version read back as `1.384.1`, and the key-construction loop read
+  directly out of `lib/src/session-props.js`.
+
+### Files touched by this fix
+
+- `lib/org/permission-response.ts` — **new**; the single denial → status mapping
+- `app/api/org/[organizationId]/route.ts`,
+  `app/api/org/[organizationId]/members/[membershipId]/route.ts` — wired, plus the second-order
+  `org.settings` reason guard
+- `components/workspace/save-error.ts` — the 503 branch
+- `lib/analytics/redact-url.ts` — `URL_PROPERTY_PATTERNS` + `isUrlProperty`, and
+  `sanitizeAnalyticsProperties` iterating the properties present
+- `components/analytics/analytics-provider.tsx` — `capture_heatmaps: false`
+- `tests/api/org-routes.test.ts` (its `grant` helper now denies with a *reason*),
+  `tests/components/workspace/team-member-row.test.tsx`,
+  `tests/components/workspace/org-settings-form.test.tsx`,
+  `tests/analytics/redact-url.test.ts`,
+  `tests/analytics/analytics-provider-collectors.test.tsx` (**new**)
+- **No migration.**
