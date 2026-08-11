@@ -2112,7 +2112,7 @@
     },
     {
       "id": "MV-172",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-172-case-route.md",

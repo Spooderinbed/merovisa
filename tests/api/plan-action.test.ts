@@ -8,8 +8,13 @@ const { getUser, setPlanItemStatus, setPlanItemStarted, getPlanItemKind } = vi.h
   setPlanItemStarted: vi.fn(),
   getPlanItemKind: vi.fn(),
 }));
+// MV-172 retired this route's service-role client (spec §6.2 entry 8): every write
+// it makes is inside the grant `authenticated` already holds, so the repositories
+// are handed the AUTHENTICATED client and the assertions below name it. The admin
+// factory stays mocked and TAGGED DIFFERENTLY on purpose — if the route ever
+// reaches for it again, these assertions fail rather than quietly still passing.
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: async () => ({ auth: { getUser } }),
+  createSupabaseServerClient: async () => ({ auth: { getUser }, tag: "authenticated" }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient: () => ({ tag: "admin" }) }));
 vi.mock("@/lib/plan/repo", () => ({ setPlanItemStatus, setPlanItemStarted, getPlanItemKind }));
@@ -60,7 +65,7 @@ describe("POST /api/plan/action", () => {
     setPlanItemStatus.mockResolvedValue(true);
     const res = await POST(req({ id: 1, status: "done" }));
     expect(res.status).toBe(200);
-    expect(setPlanItemStatus).toHaveBeenCalledWith({ tag: "admin" }, "case-1", 1, "done");
+    expect(setPlanItemStatus).toHaveBeenCalledWith(expect.objectContaining({ tag: "authenticated" }),"case-1", 1, "done");
   });
 
   it("422s on invalid body", async () => {
@@ -82,7 +87,7 @@ describe("POST /api/plan/action", () => {
     setPlanItemStarted.mockResolvedValue(true);
     const res = await POST(req({ id: 7, started: true }));
     expect(res.status).toBe(200);
-    expect(setPlanItemStarted).toHaveBeenCalledWith({ tag: "admin" }, "case-1", 7, true);
+    expect(setPlanItemStarted).toHaveBeenCalledWith(expect.objectContaining({ tag: "authenticated" }),"case-1", 7, true);
   });
 
   it("rejects manual done on a verified item (computed truth wins)", async () => {
@@ -107,6 +112,6 @@ describe("POST /api/plan/action", () => {
     setPlanItemStatus.mockResolvedValue(true);
     const res = await POST(req({ id: 7, status: "dismissed" }));
     expect(res.status).toBe(200);
-    expect(setPlanItemStatus).toHaveBeenCalledWith({ tag: "admin" }, "case-1", 7, "dismissed");
+    expect(setPlanItemStatus).toHaveBeenCalledWith(expect.objectContaining({ tag: "authenticated" }),"case-1", 7, "dismissed");
   });
 });

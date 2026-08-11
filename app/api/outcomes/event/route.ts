@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
-import { checkCasePermission } from "@/lib/cases/require-permission";
+import { requestedCaseId, resolveTargetCase, targetCaseResponse } from "@/lib/cases/target-case";
 import { EventInputSchema } from "@/lib/validation/outcomes";
 import { eventDecisionAuthority, eventGate } from "@/lib/outcomes/events";
 import { canRecordEvent } from "@/lib/outcomes/state-machine";
@@ -28,13 +27,17 @@ export async function POST(request: Request): Promise<Response> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Authorize BEFORE the first query — a denial costs zero reads.
-  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
-  if (caseId === null) {
-    return NextResponse.json({ error: "no workspace for this account" }, { status: 500 });
-  }
-  const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
-  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Authorize BEFORE the first query — a denial costs zero reads. MV-172, spec
+  // F-8 (cell 23): the case may be NAMED by the caller, and is authorized either
+  // way; a named one is never substituted by the actor's own.
+  const target = await resolveTargetCase(
+    data.user.id,
+    requestedCaseId(body),
+    "case.update",
+    supabase,
+  );
+  if (!target.ok) return targetCaseResponse(target, "no workspace for this account");
+  const { caseId } = target;
 
   // Both reads are scoped to the case authorized above. The attempt id is
   // client-supplied, and `prior` is what the state machine treats as "this has

@@ -19,11 +19,14 @@ export function VerdictGroup({
   matches,
   statusById,
   initialVisible = 3,
+  /** Passed through to each card's checklist link — see `ProgramCard`. */
+  checklistBase = "",
 }: {
   verdict: MatchVerdict;
   matches: MatchResult[];
   statusById: Map<string, Status>;
   initialVisible?: number;
+  checklistBase?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const listId = useId();
@@ -52,6 +55,7 @@ export function VerdictGroup({
             key={m.program.id}
             match={m}
             initialStatus={statusById.get(m.program.id) ?? null}
+            checklistBase={checklistBase}
           />
         ))}
       </div>

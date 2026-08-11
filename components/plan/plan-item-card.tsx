@@ -7,6 +7,7 @@ import { completionFor } from "@/lib/plan/completion";
 import { sourcesFor } from "@/lib/plan/sources";
 import { checklistStageForPlanKind } from "@/lib/checklist/plan-links";
 import { SourceLine } from "@/components/results/source-line";
+import { caseScoped, useCaseScopeId } from "@/components/cases/case-scope";
 import { ImpactPill } from "./impact-pill";
 import { track } from "@/lib/analytics/events";
 
@@ -25,6 +26,8 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
   // tag which checklist stage it belongs to — a quiet classification (shown on open
   // and closed cards alike), in the checklist's own "now" / "after offer" vocabulary.
   const checklistStage = checklistStageForPlanKind(item.kind);
+  // Null on /plan — the route then resolves the signed-in student's own case.
+  const caseId = useCaseScopeId();
 
   const post = async (body: Record<string, unknown>): Promise<boolean> => {
     setBusy(true);
@@ -32,7 +35,7 @@ export function PlanItemCard({ item, onChanged }: { item: PlanItemRow; onChanged
     const res = await fetch("/api/plan/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: item.id, ...body }),
+      body: JSON.stringify(caseScoped({ id: item.id, ...body }, caseId)),
     }).catch(() => null);
     setBusy(false);
     return !!res?.ok;

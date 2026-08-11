@@ -220,22 +220,26 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
       "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before any Storage call. The document ROW is case-keyed; the Storage OBJECT PATH stays owner-keyed until Stage 4 (spec §8) — a `<case_id>/…` object matches the live storage policy for nobody.",
     auditEvent: null,
   },
-  {
-    path: "app/api/plan/action/route.ts",
-    status: "legacy-owner-scoped",
-    justification:
-      "Mutates the case's own plan items. Deferred flip: `plan_items` grants `authenticated` UPDATE (status, completed_at, started_at) but NO INSERT, and plan generation through invalidatePlan inserts rows on the same client (spec §4.3, §6).",
-    requiredCaseCheck:
-      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before the service-role read/write; every plan query is keyed on case_id.",
-    auditEvent: null,
-  },
+  /**
+   * `app/api/plan/action/route.ts` USED TO BE HERE and RETIRED in MV-172 — Stage 3
+   * spec §6.2 entry 8, the one path the stage retires outright. It called three
+   * helpers and every write was inside the grant `authenticated` already held
+   * (`UPDATE (status, completed_at, started_at)`); the entry's stated blocker was
+   * `plan_items` INSERT, which MV-168 granted and which is live in production, and
+   * the `invalidatePlan` call it was credited with was only ever a comment. The
+   * route now constructs no admin client, so `tests/supabase/service-role-exceptions.test.ts`
+   * ("no registry entry is stale") would go RED if this entry were left behind.
+   *
+   * Its sibling below looks identical and is not. See §6.2's "two rows that look
+   * alike", and this file's `app/api/profile/section/route.ts` entry.
+   */
   {
     path: "app/api/profile/section/route.ts",
     status: "legacy-owner-scoped",
     justification:
-      "Writes one section of the case's profile. Deferred flip: `profiles` grants `authenticated` UPDATE (sections, completeness) but NO INSERT (spec §4.1), and this path must be able to create a first-ever profile row.",
+      "MV-172 SPLIT this route; it did NOT flip, and this entry is narrowed rather than retired (Stage 3 spec §6.2 entry 9). The profile write itself has MOVED to the authenticated client — `profiles` UPDATE (sections, completeness) was already granted and MV-168's grant 1 plus its `.upsert()` → INSERT-with-resolve conversion made the first-ever row reachable. THREE legs remain on service-role and spec §6.1 refuses all three: (1) `invalidatePlan`'s COPY REFRESH updates `impact, title, body, lift_estimate, time_estimate` — generator-owned columns, refused by the §6.1 row-6 correction because a client that can rewrite its plan copy can rewrite the advice; (2) `adoptOwnerKeyedResidue` updates `case_id`, which is omitted from every UPDATE grant BY DESIGN (`…20260802120000….sql:602-604` — a client that can update `case_id` re-points a row into another case); (3) `reScoreAssessment` updates `assessments.result`, refused PERMANENTLY by §6.1 row 3 because a client that can write `result` mints its own verdict. THE FAILURE WOULD HAVE BEEN SILENT: `lib/assessments/re-score.ts` never destructures `error`, a PostgREST 42501 RESOLVES rather than rejects, and `throwOnError` appears nowhere in lib/ or app/ — so a wholesale flip would have stopped every profile edit from updating the student's verdict while returning 200 with a green suite. `legacy-owner-scoped` rather than `sanctioned` because leg 1 is a grant question a later stage could revisit; legs 2 and 3 are permanent.",
     requiredCaseCheck:
-      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before the service-role write. NOTE requireCasePermission is not a field allowlist (MV-153 Finding 1): the Zod payload validation is what bounds WHICH fields move, and Stage 3's consultancy mutations inherit that question unsolved.",
+      "MV-172: resolveTargetCase(actor, body.caseId, 'case.update', authenticatedClient) BEFORE either client writes — it authorizes a caller-supplied case id and NEVER falls back to the actor's own when one is supplied, which is spec F-8's failure mode 1 (as amended by MV-172 from five routes to seven). createSupabaseAdminClient is constructed only AFTER that decision and after the granted write, so a denial costs no service-role client at all. NOTE requireCasePermission is not a field allowlist (MV-153 Finding 1): the Zod payload validation is what bounds WHICH fields move, and the TypeScript allowlist `lib/cases/README.md:152-157` calls for is MV-173's.",
     auditEvent: null,
   },
   {

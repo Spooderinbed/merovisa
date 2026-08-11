@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 /**
- * One guard for the identifiers that arrive as ROUTE SEGMENTS rather than in a
- * body — `[caseId]`, `[organizationId]`.
+ * One guard for the identifiers a route is handed rather than resolves — the
+ * `[caseId]` / `[organizationId]` route segments, and (since MV-172) the optional
+ * `caseId` a case-scoped write route accepts in its body.
  *
  * ## Why a path id needs validating at all, when it is authorized against anyway
  *
@@ -48,6 +49,20 @@ const PathId = z.uuid();
  * and cannot accidentally treat "valid" as falsy the way a bare boolean invites.
  */
 export function malformedPathId(value: unknown): Response | null {
-  if (PathId.safeParse(value).success) return null;
+  if (isWellFormedId(value)) return null;
+  return malformedIdResponse();
+}
+
+/**
+ * The format question on its own, for a caller that needs the ANSWER rather than
+ * a `Response` — `resolveTargetCase` decides the shape of its refusal before it
+ * knows which route is asking, and turns it into a status later.
+ */
+export function isWellFormedId(value: unknown): boolean {
+  return PathId.safeParse(value).success;
+}
+
+/** The one wording and the one status, so the two call shapes cannot drift. */
+export function malformedIdResponse(): Response {
   return NextResponse.json({ error: "Malformed identifier" }, { status: 400 });
 }
