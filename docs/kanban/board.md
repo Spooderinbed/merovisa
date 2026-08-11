@@ -9,14 +9,16 @@
 
 ### In flight — 2 open PRs
 
-> Read from `gh` at 2026-08-11 06:36 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-11 06:55 UTC. **Not board state** — never written to board.json.
 
 | Card | PR | | CI | Review | Touches |
 |---|---|---|---|---|---|
 | **MV-170** | [#136](https://github.com/Spooderinbed/merovisa/pull/136) | open | passing 4/4 | — | tests · app · docs · lib |
-| **MV-171** | [#138](https://github.com/Spooderinbed/merovisa/pull/138) | open | passing 2/2 | — | app · docs · tests · lib |
+| **MV-171** | [#138](https://github.com/Spooderinbed/merovisa/pull/138) | open | passing 2/2 | — | tests · app · docs · lib |
 
 _1 open PR matches no card: [#137](https://github.com/Spooderinbed/merovisa/pull/137)._
+
+> ⚠️ MV-177 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 20
@@ -46,13 +48,13 @@ _1 open PR matches no card: [#137](https://github.com/Spooderinbed/merovisa/pull
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-177** · P2 · [The redirect origin is taken from a request header on trust](cards/MV-177-site-origin-header-trust.md) — _lib/auth/site-origin.ts falls back to the x-forwarded-host / host request header when NEXT_PUBLIC_SITE_URL is unset, and that value becomes the ORIGIN half of ${origin}${destination} at app/auth/callback/route.ts:36 — independently of safeNext, which only validates the destination half. Surfaced by the adversarial pass over safe-next.ts during PR #137 (MV-176) review and, separately, by the 2026-07-10 audit. NOT a safeNext bypass and not live on Vercel: measured 2026-08-11 that a forged x-forwarded-host does not move the production Location (the edge overwrites it) and that a forged Host 404s. The fallback is NOT dead — NODE_ENV=development already handles local dev, so the branch serves Vercel PREVIEWS, whose per-PR URLs no fixed NEXT_PUBLIC_SITE_URL can express. Fail-closed was rejected (turns a latent security risk into a live sign-in outage, and breaks previews); leave-it-documented was rejected (.env.example still omits the var, so a fresh deploy starts in the untrusted branch). CHOSEN: bound the trust without removing the branch — consult the header only when the runtime is Vercel, the one edge whose overwrite is measured, and validate the result in MV-176 round-trip idiom (parse it; accept only an exact origin — http(s), no credentials, no path/query/fragment). PLUS a second defect found in the same branch: a comma-joined x-forwarded-host from a proxy CHAIN makes NextResponse.redirect throw, 500ing the sign-in page — the same failure class MV-176 just fixed, reached through a header. Every new rejection degrades to url.origin, so no new path can 500 and none can emit an uncertified origin._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-177** · P2 · [The redirect origin is taken from a request header on trust](cards/MV-177-site-origin-header-trust.md) — _lib/auth/site-origin.ts falls back to the x-forwarded-host / host request header when NEXT_PUBLIC_SITE_URL is unset, and that value becomes the ORIGIN half of ${origin}${destination} at app/auth/callback/route.ts:36 — independently of safeNext, which only validates the destination half. Surfaced by the adversarial pass over safe-next.ts during PR #137 (MV-176) review and, separately, by the 2026-07-10 audit. NOT a safeNext bypass and not live on Vercel: measured 2026-08-11 that a forged x-forwarded-host does not move the production Location (the edge overwrites it) and that a forged Host 404s. The fallback is NOT dead — NODE_ENV=development already handles local dev, so the branch serves Vercel PREVIEWS, whose per-PR URLs no fixed NEXT_PUBLIC_SITE_URL can express. Fail-closed was rejected (turns a latent security risk into a live sign-in outage, and breaks previews); leave-it-documented was rejected (.env.example still omits the var, so a fresh deploy starts in the untrusted branch). CHOSEN: bound the trust without removing the branch — consult the header only when the runtime is Vercel, the one edge whose overwrite is measured, and validate the result in MV-176 round-trip idiom (parse it; accept only an exact origin — http(s), no credentials, no path/query/fragment). PLUS a second defect found in the same branch: a comma-joined x-forwarded-host from a proxy CHAIN makes NextResponse.redirect throw, 500ing the sign-in page — the same failure class MV-176 just fixed, reached through a header. Every new rejection degrades to url.origin, so no new path can 500 and none can emit an uncertified origin._
 
 ## Blocked — 3
 

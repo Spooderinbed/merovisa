@@ -98,18 +98,25 @@ origin the parser did not certify.
 
 ## Acceptance criteria
 
-- [ ] With `VERCEL` unset and `NEXT_PUBLIC_SITE_URL` unset, a forged `x-forwarded-host` does
+- [x] With `VERCEL` unset and `NEXT_PUBLIC_SITE_URL` unset, a forged `x-forwarded-host` does
       **not** appear in the redirect `Location`; the app's own origin is used.
-- [ ] With `VERCEL=1`, the forwarded host is still honoured — Vercel previews keep working and
+- [x] With `VERCEL=1`, the forwarded host is still honoured — Vercel previews keep working and
       the existing production behaviour is unchanged.
-- [ ] `NEXT_PUBLIC_SITE_URL` still outranks every header, on Vercel and off it.
-- [ ] `NODE_ENV=development` still short-circuits to `url.origin`.
-- [ ] A host carrying userinfo (`site@evil.com`) is rejected, not emitted.
-- [ ] A comma-joined proxy-chain host (`a.host, b.host`) does not throw — it falls through.
-- [ ] A non-http(s) `x-forwarded-proto` (`javascript`) is rejected.
-- [ ] A host with a path/query/fragment appended is rejected.
-- [ ] A legitimate host carrying an explicit port survives.
-- [ ] `.env.example` documents `NEXT_PUBLIC_SITE_URL` and says what an unset value costs.
+- [x] `NEXT_PUBLIC_SITE_URL` still outranks every header, on Vercel and off it.
+- [x] `NODE_ENV=development` still short-circuits to `url.origin`.
+- [x] A host carrying userinfo (`site@evil.com`) is rejected, not emitted.
+- [x] A comma-joined proxy-chain host (`a.host, b.host`) does not throw — it falls through.
+- [x] A non-http(s) `x-forwarded-proto` (`javascript`) is rejected.
+- [x] A host with a path/query/fragment appended is rejected.
+- [x] A legitimate host carrying an explicit port survives.
+- [x] `.env.example` documents `NEXT_PUBLIC_SITE_URL` and says what an unset value costs.
+
+**One criterion is deliberately not met, and it is a real narrowing:** a host carrying an
+*explicit default port* (`example.com:443` under `https`) is now rejected and falls through,
+because the parser normalizes the port away and the authority then no longer accounts for the
+whole header. Vercel never emits one, so nothing in the supported deployment reaches it; and
+the degradation is to `url.origin`, not to a wrong host. Recorded rather than special-cased —
+loosening the authority check to permit it is what would let `site@evil.example` back in.
 
 ## Test plan
 
@@ -161,7 +168,57 @@ off-Vercel forgery case, the red step is intact and only the implementation is m
 - **2026-08-11** — Found a second defect in the same branch while reading it: a comma-joined
   `x-forwarded-host` from a proxy chain makes `NextResponse.redirect` throw, 500ing sign-in.
   Folded in — same function, same test file, and it is what makes the guard fail *safe*.
+- **2026-08-11** — Verified the 500 rather than asserting it: with the old `site-origin.ts`
+  restored, the new route test fails with `Caused by: TypeError: Invalid URL`. It is real.
+- **2026-08-11** — Rejected a deny-list of hostile host shapes in favour of the round-trip
+  check, on the MV-176 precedent. It found the default-port narrowing that a deny-list would
+  have hidden; the narrowing is now pinned by its own test rather than described in prose.
 
 ## Done evidence
 
-- (filled on completion)
+**Integration gate — green, run unpiped so the exit codes are the real ones:**
+
+```
+typecheck=0  lint=0  test=0
+```
+
+Full suite **2769 tests / 341 files, 0 failed** on `3f0b4cc`+.
+
+**Red step (this repo requires the test to fail first).** With `lib/auth/site-origin.ts`
+reverted to `HEAD` and the new tests in place:
+
+| Suite | Result against the old implementation |
+|---|---|
+| `tests/auth/site-origin.test.ts` | **10 failed / 9 passed** — the 9 passing are the precedence and Vercel-honours cases, which must not move |
+| `tests/api/auth-callback.test.ts` | **2 failed / 12 passed** — `does NOT redirect to a forged x-forwarded-host…` and `survives the comma-joined x-forwarded-host…`, the latter with `Caused by: TypeError: Invalid URL` |
+
+That the existing "prefers the public x-forwarded-host" route test still passes once wrapped in
+`onVercel` is the evidence the wrapper preserved its intent rather than papering over a
+regression.
+
+**A pre-existing flake was ruled out, not waved away.** The first full run showed one failure,
+`tests/architecture/no-actor-equals-student.test.ts > M4b`, a 5 000 ms timeout that took
+10 198 ms under load and passes in 588 ms in isolation. Clean `origin/master` (`6a40b4d`) was
+checked out and the full suite run against it: **2 failures in that same file**, i.e. the
+baseline is worse than this branch. Load-dependent, Windows-local, unrelated to these files,
+and untouched here. Flagged, not fixed — see the follow-up note below.
+
+**Also cleared:** a stale gitignored `.next/` from an Aug-9 build of a branch carrying a
+`workspace/[organizationId]/students/` page that does not exist on `origin/master`. It made
+`tsc --noEmit` emit three `TS2307`s that had nothing to do with this change.
+
+**Branch:** `mv-177-site-origin-header-trust` off `origin/master` (`6a40b4d`).
+**Files:** `lib/auth/site-origin.ts` · `tests/auth/site-origin.test.ts` (new, 20 tests) ·
+`tests/api/auth-callback.test.ts` · `.env.example` · this card + board.
+
+**Reviewer outcome:** awaiting founder. Merge is founder-gated. Before merging, confirm
+`NEXT_PUBLIC_SITE_URL` is set in Vercel → Production (see Risk notes — it cannot be checked
+from outside, and with it set this change cannot alter production behaviour at all).
+
+## Follow-up worth a card, not folded in here
+
+`tests/architecture/no-actor-equals-student.test.ts > M4b` runs a repo-wide scan under the
+default 5 000 ms vitest timeout and flakes on Windows under full-suite load (measured above:
+2 failures on clean master, 1 on this branch, 0 in isolation). It is a genuine test-reliability
+defect — a green CI on Linux does not make a locally-red gate honest, and the next agent to run
+the gate will hit the same ambiguity. Out of scope for an auth-hardening slice.

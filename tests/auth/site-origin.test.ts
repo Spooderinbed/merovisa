@@ -186,6 +186,23 @@ describe("resolveSiteOrigin — the header must parse to exactly an origin", () 
     expect(onVercel({ "x-forwarded-host": "staging.example:8443", "x-forwarded-proto": "https" })).toBe(
       "https://staging.example:8443",
     );
+    expect(onVercel({ "x-forwarded-host": "staging.example:80", "x-forwarded-proto": "https" })).toBe(
+      "https://staging.example:80",
+    );
+  });
+
+  it("measures the one narrowing: an explicit SCHEME-DEFAULT port falls through", () => {
+    // The parser strips a scheme-default port, so the authority no longer accounts for the
+    // whole header and the round-trip check rejects it. Vercel never emits a port, and the
+    // degradation is to url.origin rather than to a wrong host — but loosening the authority
+    // check to permit this is exactly what would let `site@evil.example` back in, so the
+    // trade is pinned here rather than argued in a comment.
+    expect(onVercel({ "x-forwarded-host": "example.com:443", "x-forwarded-proto": "https" })).toBe(
+      "http://localhost:3000",
+    );
+    expect(onVercel({ "x-forwarded-host": "example.com:80", "x-forwarded-proto": "http" })).toBe(
+      "http://localhost:3000",
+    );
   });
 
   it("returns a value that is always its own origin", () => {
