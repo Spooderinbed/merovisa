@@ -16,9 +16,18 @@ export type SearchParamValue = string | string[] | undefined;
 /**
  * The first value of a possibly-repeated search parameter.
  *
- * An empty array — which `?next=` with nothing after it can produce — reads as
- * **absent**, not as `""`: the visitor supplied no value, and `""` is a value.
- * `noUncheckedIndexedAccess` makes `value[0]` honest about that.
+ * A URL reaches this type three ways and only three: a parameter that appears
+ * zero times is `undefined`, once is a `string`, and twice or more is a
+ * `string[]` with that many entries. `?next=` with nothing after it is the
+ * *once* case — it arrives as `""`, not as `[]` — and `""` passes through
+ * unchanged, because the visitor did supply a value and an empty one is still a
+ * value. Whether it is an acceptable one is `safeNext`'s question, not this
+ * function's.
+ *
+ * `[]` is therefore unreachable from a URL, but it inhabits the type and a
+ * non-URL caller can build one, so `value[0]` reads as **absent** — the only
+ * honest answer to "which value" when there is none. `noUncheckedIndexedAccess`
+ * already types it that way, so saying so costs no branch.
  */
 export function first(value: SearchParamValue): string | undefined {
   return Array.isArray(value) ? value[0] : value;
