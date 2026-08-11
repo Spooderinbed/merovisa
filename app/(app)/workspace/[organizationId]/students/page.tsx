@@ -88,6 +88,26 @@ export default async function StudentsPage({
   const scope = list.decision.requiredScope;
   if (scope !== "all-org" && scope !== "assigned") notFound();
 
+  // MV-171, cell 8. Asked separately because it answers differently for the same
+  // person: every staff role gets SOME list, and only an owner or admin may
+  // create (F-1, decided 2026-08-10). Hiding the control is presentation — the
+  // route re-decides, and `cases_insert_admin` decides again.
+  const create = await checkOrgPermission(data.user.id, organizationId, "case.create", supabase);
+  const canCreate = create.decision.allowed;
+  /**
+   * "You may not create" and "we could not check" rendered identically — the control
+   * simply vanished — so an owner whose permission lookup blipped concluded their
+   * role had changed. Same rule as the manage page and as the failed list below: a
+   * failed check is an outage, not an absence.
+   *
+   * It does NOT blank the page the way the manage surface does, and the difference is
+   * deliberate. There the two controls ARE the page, so a half-rendered one is a lie
+   * about what the viewer may do. Here the list read succeeded and the list is what
+   * the page is for; replacing a working list with an outage card would destroy more
+   * than it reports. The note goes where the control would have been.
+   */
+  const createCheckFailed = !canCreate && create.decision.reason === "lookup-failed";
+
   const query = (first(sp.q) ?? "").trim();
   // An unknown status can only come from a hand-edited query string. It is
   // dropped rather than queried, and the form below then shows "Any status" —
@@ -115,13 +135,21 @@ export default async function StudentsPage({
           : "Every student this organization is working with."
       }
     >
-      <Card as="section" padding="lg" className="flex flex-col gap-2">
-        <h2 className="text-title font-medium">Adding a student comes later</h2>
-        <p className="max-w-[64ch] text-body text-ink-soft">
-          Creating a case and assigning a counsellor are not built yet. This page finds the students
-          who are already here.
+      {canCreate ? (
+        <div>
+          <Link
+            href={`/workspace/${organizationId}/students/new`}
+            className="inline-flex items-center rounded-pill border border-line px-4 py-2 text-control text-ink hover:border-primary"
+          >
+            Add a student
+          </Link>
+        </div>
+      ) : createCheckFailed ? (
+        <p className="max-w-[64ch] text-meta text-ink-soft">
+          We couldn&apos;t check whether you can add a student, so that option is missing from this
+          page. Something went wrong on our side — this is not a statement about your permissions.
         </p>
-      </Card>
+      ) : null}
 
       {/*
         The `key` is what makes "Clear" clear the CONTROLS as well as the URL.
@@ -211,7 +239,7 @@ export default async function StudentsPage({
           <ul className="flex flex-col gap-3">
             {cases.data.map((row) => (
               <li key={row.id}>
-                <StudentRow row={row} />
+                <StudentRow row={row} organizationId={organizationId} />
               </li>
             ))}
           </ul>
@@ -255,10 +283,12 @@ function LookupFailedCard() {
 }
 
 /**
- * One case. Not a link: the case route is MV-172, and a link to a 404 would be a
- * worse lie than no link.
+ * One case. The ROW is still not a link — the case route that shows a student's
+ * profile, matches and plan is MV-172's, and a link to a 404 would be a worse lie
+ * than no link. What it now carries is a link to MV-171's manage surface, which
+ * does exist: the status and the primary counsellor, and nothing else.
  */
-function StudentRow({ row }: { row: OrgCaseSummary }) {
+function StudentRow({ row, organizationId }: { row: OrgCaseSummary; organizationId: string }) {
   return (
     <Card as="article" padding="lg" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -269,6 +299,14 @@ function StudentRow({ row }: { row: OrgCaseSummary }) {
       <p className="text-meta text-ink-soft">
         {row.email ?? "No email address on file"} · {operationalStatusLabel(row.operationalStatus)}
       </p>
+      <div>
+        <Link
+          href={`/workspace/${organizationId}/students/${row.id}/manage`}
+          className="text-meta text-primary underline underline-offset-4"
+        >
+          Manage
+        </Link>
+      </div>
     </Card>
   );
 }

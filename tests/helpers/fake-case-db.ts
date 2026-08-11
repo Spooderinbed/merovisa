@@ -59,6 +59,42 @@ export type FakeCaseDbOptions = {
    * what lets a test tell "the write was denied" from "the write failed".
    */
   updateError?: Partial<Record<CaseDbTable, { code?: string; message: string }>>;
+  /**
+   * Tables whose DELETE answers with a PostgREST error — a column/table grant
+   * violation (`42501`).
+   */
+  deleteError?: Partial<Record<CaseDbTable, { code?: string; message: string }>>;
+  /**
+   * Tables whose DELETE is refused by POLICY rather than by grant: it affects
+   * **zero rows and raises nothing**, which is how Postgres reports an RLS
+   * refusal. This is NOT the same as the filters matching no row, and modelling
+   * it needs its own switch — a row can be READABLE and not DELETABLE. On
+   * `case_assignments` that is a real shape: `case_assignments_select_accessor`
+   * admits any staff member of the case, while `case_assignments_delete_admin`
+   * requires `can_manage_case`. So an assigned counsellor sees the assignment
+   * row they cannot remove.
+   */
+  deleteRefused?: CaseDbTable[];
+  /**
+   * Tables whose DELETE **lost a race**: another actor removed the row between our
+   * read and our delete, so our predicate matches nothing, Postgres reports zero
+   * rows and raises nothing — and a later read cannot see the row either.
+   *
+   * This needs its own switch because it differs from `deleteRefused` in exactly
+   * one observable way, and that one way is the whole point: both affect zero rows,
+   * but a REFUSED delete leaves the row IN PLACE while a LOST RACE leaves it GONE.
+   * A caller that re-reads can therefore tell "you may not do this" from "somebody
+   * else got there first" — and reporting the second as the first is a claim about
+   * the user's permissions that is simply false.
+   */
+  deleteLostRace?: CaseDbTable[];
+  /**
+   * Tables whose ordinary reads answer with a PostgREST error once a DELETE has
+   * been attempted. Models the disambiguating re-read after a zero-row delete
+   * failing, so "we could not tell" cannot be dressed up as either of the two
+   * answers it was asked to choose between.
+   */
+  errorAfterDelete?: CaseDbTable[];
 };
 
 export type RecordedQuery = {
@@ -75,6 +111,7 @@ export type RecordedQuery = {
 };
 export type RecordedInsert = { table: string; row: Record<string, unknown> };
 export type RecordedUpdate = { table: string; patch: Record<string, unknown> };
+export type RecordedDelete = { table: string; filters: Array<[string, unknown]> };
 
 type Row = Record<string, unknown>;
 
@@ -82,9 +119,14 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
   const queries: RecordedQuery[] = [];
   const inserts: RecordedInsert[] = [];
   const updates: RecordedUpdate[] = [];
+  const deletes: RecordedDelete[] = [];
   const errorOn = options.errorOn ?? {};
   const insertError = options.insertError ?? {};
   const updateError = options.updateError ?? {};
+  const deleteError = options.deleteError ?? {};
+  const deleteRefused = new Set<string>(options.deleteRefused ?? []);
+  const deleteLostRace = new Set<string>(options.deleteLostRace ?? []);
+  const errorAfterDelete = new Set<string>(options.errorAfterDelete ?? []);
   const throwOn = new Set<string>(options.throwOn ?? []);
   // Mutable so an insert can make its own row readable to a later query, which is
   // what lets a test distinguish "read it back" from "returned what it wrote".
@@ -93,6 +135,9 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
     rows[table] = [...((seed ?? []) as Row[])];
   }
   let insertAttempts = 0;
+  // Shared across `from()` calls, so a read issued AFTER a delete can answer
+  // differently from the same read issued before one.
+  let deleteAttempts = 0;
 
   const from = vi.fn((table: string) => {
     const filters: Array<[string, unknown]> = [];
@@ -123,6 +168,34 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
         if (mode === "one") return { data: touched[0] ?? null, error: null };
         return { data: touched, error: null };
       }
+      if (deleting) {
+        deleteAttempts += 1;
+        const failure = deleteError[table as CaseDbTable];
+        if (failure) return { data: null, error: failure };
+        // A DELETE the POLICY refuses: zero rows, no error, rows untouched.
+        if (deleteRefused.has(table)) {
+          return { data: mode === "one" ? null : [], error: null };
+        }
+        // A DELETE that LOST A RACE: zero rows, no error — and the row is gone,
+        // because whoever won removed it. Same return value as the refusal above,
+        // different state left behind, which is the only thing that tells them
+        // apart afterwards.
+        if (deleteLostRace.has(table)) {
+          const gone = rowsFor();
+          rows[table] = (rows[table] ?? []).filter((row) => !gone.includes(row));
+          return { data: mode === "one" ? null : [], error: null };
+        }
+        // Same reading as UPDATE: a refused DELETE is zero rows, not an error.
+        // The rows really leave, so a later read cannot see what was removed —
+        // which is what lets a test tell "replaced" from "inserted alongside".
+        const removed = rowsFor();
+        rows[table] = (rows[table] ?? []).filter((row) => !removed.includes(row));
+        if (mode === "one") return { data: removed[0] ?? null, error: null };
+        return { data: removed, error: null };
+      }
+      if (errorAfterDelete.has(table) && deleteAttempts > 0) {
+        return { data: null, error: { message: `fakeCaseDb: read on "${table}" failed after a delete` } };
+      }
       const failure = errorOn[table as CaseDbTable];
       if (failure) {
         return { data: null, error: failure };
@@ -140,6 +213,8 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
     let insertFailure: { code?: string; message: string } | null = null;
     // An update resolves from the rows its filters matched, patched in place.
     let updatePatch: Row | null = null;
+    // A delete resolves from the rows its filters matched, and removes them.
+    let deleting = false;
 
     // PostgREST builders are chainable AND awaitable; every chain method returns
     // the same builder and only a terminal (or an await) resolves.
@@ -175,6 +250,13 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
       updates.push({ table, patch });
       return builder;
     });
+    builder.delete = vi.fn(() => {
+      deleting = true;
+      // `filters` is the same array the chained `.eq()` calls append to, and it
+      // is read at resolve time — so the recorded delete carries its predicate.
+      deletes.push({ table, filters });
+      return builder;
+    });
     for (const method of ["eq", "is"]) {
       builder[method] = vi.fn((column: string, value: unknown) => {
         filters.push([column, value]);
@@ -188,7 +270,7 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
   });
 
   const client = { from } as unknown as SupabaseClient<Database>;
-  return { client, queries, inserts, updates, from };
+  return { client, queries, inserts, updates, deletes, rows, from };
 }
 
 /** Did the fake see a query against `table` carrying every one of `filters`? */
