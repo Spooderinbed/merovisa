@@ -122,7 +122,20 @@ export type AssignmentFailure =
   | "not-an-org-case"
   | "unknown-member"
   | "member-inactive"
-  | "lookup-failed";
+  | "lookup-failed"
+  /**
+   * Somebody else changed this case's primary counsellor while this request was in
+   * flight, so the row this request read back was already gone by the time it tried
+   * to remove it.
+   *
+   * It exists because a zero-row DELETE is how Postgres reports BOTH an RLS refusal
+   * and a lost race, and the two need different sentences: one means "ask someone",
+   * the other means "look at what it says now and try again". Reporting a lost race
+   * as `denied` is a claim about the actor's permissions that is simply false — and
+   * it is the more likely of the two here, because reaching this code at all means
+   * the actor already passed `case.assign`.
+   */
+  | "reassignment-conflict";
 
 export type AssignmentResult =
   | { ok: true; changed: boolean }
@@ -422,8 +435,21 @@ export async function assignPrimaryCounsellor(
       if (removed.error) {
         return { ok: false, reason: writeFailure(removed.error.code), leftUnassigned: false };
       }
-      // A DELETE the policy refuses affects zero rows and raises nothing.
-      if (!removed.data || removed.data.length === 0) return refuse("denied");
+      // A DELETE the policy refuses affects zero rows and raises nothing — and so
+      // does a DELETE that lost a race, because another admin removed the same row
+      // microseconds earlier. Same return value, two different things to tell the
+      // user, so the state left behind is what tells them apart: a REFUSED delete
+      // leaves the row in place, a LOST race leaves it gone.
+      if (!removed.data || removed.data.length === 0) {
+        const after = await readPrimaryCounsellor(caseId, supabase);
+        if (!after.ok) return refuse("lookup-failed");
+        // Gone, or replaced by somebody else's choice. Either way this request did
+        // not remove it and "you may not do this" would be false.
+        if (after.data === null || after.data.assignmentId !== current.data.assignmentId) {
+          return refuse("reassignment-conflict");
+        }
+        return refuse("denied");
+      }
       deletedExisting = true;
     }
 

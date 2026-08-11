@@ -5,6 +5,7 @@ import { checkCasePermission } from "@/lib/cases/require-permission";
 import { setCaseOperationalStatus } from "@/lib/cases/write-repo";
 import { OPERATIONAL_STATUSES } from "@/lib/cases/operational-status";
 import { caseDenialResponse } from "@/lib/cases/route-denial";
+import { malformedPathId } from "@/lib/cases/path-ids";
 
 /**
  * Access-matrix cell 10 — move a case through its five operational statuses.
@@ -30,6 +31,10 @@ export async function PATCH(
   { params }: { params: Promise<{ caseId: string }> },
 ): Promise<Response> {
   const { caseId } = await params;
+
+  // FIRST, before a client exists and before any query — see `lib/cases/path-ids.ts`.
+  const malformed = malformedPathId(caseId);
+  if (malformed) return malformed;
 
   let body: unknown;
   try {

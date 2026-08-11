@@ -69,9 +69,20 @@ const ORG = "11111111-1111-4111-8111-111111111111";
 const OTHER_ORG = "22222222-2222-4222-8222-222222222222";
 const CASE = "aaaaaaaa-0000-4000-8000-000000000001";
 const ACTOR = "actor-user-id";
-const COUNSELLOR_USER = "counsellor-a-user-id";
+/**
+ * HEX, and that is load-bearing. It used to read `counsellor-a-user-id`, whose
+ * first eight characters are `counsell` — a substring of the word "counsellor",
+ * which the page prints in a label, in a role name and in a paragraph. So the
+ * "the short reference IS shown" half of the no-whole-id test matched no matter
+ * what the page rendered, and would have kept passing with the reference removed
+ * entirely. A hex prefix cannot collide with the page's vocabulary.
+ */
+const COUNSELLOR_USER = "7f3c9a1e-4b2d-4c6e-8a10-000000000001";
 const MEMBERSHIP_A = "mmmmmmmm-0000-4000-8000-00000000000a";
 const MEMBERSHIP_B = "mmmmmmmm-0000-4000-8000-00000000000b";
+
+/** The staff relationship `can_staff_case` admits, as `getCaseContext` reports it. */
+const STAFF_CONTEXT = { grantedRoles: ["admin"] as string[] };
 
 function grantOrg(claims: Partial<Record<string, boolean>>, reason = "role-not-permitted") {
   checkOrgPermission.mockImplementation(async (_a: string, _o: string, permission: string) => ({
@@ -82,13 +93,41 @@ function grantOrg(claims: Partial<Record<string, boolean>>, reason = "role-not-p
   }));
 }
 
-function grantCase(claims: Partial<Record<string, boolean>>, reason = "role-not-permitted") {
+function grantCase(
+  claims: Partial<Record<string, boolean>>,
+  reason = "role-not-permitted",
+  context: { grantedRoles: string[] } = STAFF_CONTEXT,
+) {
   checkCasePermission.mockImplementation(async (_a: string, _c: string, permission: string) => ({
     decision: claims[permission]
       ? { allowed: true, requiredScope: "all-org", reason: null }
       : { allowed: false, requiredScope: null, reason },
-    context: {},
+    // `getCaseContext` populates the context on an ALLOW and hands back the
+    // grants-nothing one on a denial, so a mock that populated it either way would
+    // let the page read a relationship it was never told about.
+    context: claims[permission] ? context : { grantedRoles: [] },
   }));
+}
+
+/**
+ * Per-claim decisions AND per-claim reasons — the shape the two case checks can
+ * genuinely answer with, because they are two separate questions about the same
+ * actor. `grantCase` applies one reason to every denial, which cannot express "one
+ * check succeeded and the other could not complete".
+ */
+function grantCaseEach(
+  map: Record<string, { allowed: boolean; reason?: string }>,
+  context: { grantedRoles: string[] } = STAFF_CONTEXT,
+) {
+  checkCasePermission.mockImplementation(async (_a: string, _c: string, permission: string) => {
+    const entry = map[permission] ?? { allowed: false };
+    return {
+      decision: entry.allowed
+        ? { allowed: true, requiredScope: "all-org", reason: null }
+        : { allowed: false, requiredScope: null, reason: entry.reason ?? "role-not-permitted" },
+      context: entry.allowed ? context : { grantedRoles: [] },
+    };
+  });
 }
 
 const newPage = () => NewStudentPage({ params: Promise.resolve({ organizationId: ORG }) });
@@ -209,6 +248,54 @@ describe("/workspace/[organizationId]/students/[caseId]/manage — cells 9 and 1
     expect(screen.getByText(/something went wrong on our side/i)).toBeTruthy();
   });
 
+  it("renders an OUTAGE when ONE check could not complete and the other allowed", async () => {
+    // THE defect. Two checks, and only the both-denied path looked at
+    // `lookup-failed`: when `case.assign` could not be answered while `case.update`
+    // allowed, the page rendered normally with the assignment control silently
+    // absent — indistinguishable from "you are a counsellor, who may not assign".
+    // A failed check is an outage, not an absence (MV-170's rule), and a page that
+    // renders three quarters of itself with no indication anything failed is the
+    // worst version of it: the admin sees a surface that looks complete.
+    grantCaseEach({
+      "case.update": { allowed: true },
+      "case.assign": { allowed: false, reason: "lookup-failed" },
+    });
+
+    render(await managePage());
+
+    expect(notFound).not.toHaveBeenCalled();
+    expect(screen.getByText(/something went wrong on our side/i)).toBeInTheDocument();
+    // And nothing partial: no status control either, because the page cannot say
+    // which controls this person has.
+    expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+  });
+
+  it("renders an OUTAGE when the OTHER check could not complete", async () => {
+    // Symmetric on purpose: a guard written for one ordering is half a guard.
+    grantCaseEach({
+      "case.update": { allowed: false, reason: "lookup-failed" },
+      "case.assign": { allowed: true },
+    });
+
+    render(await managePage());
+
+    expect(notFound).not.toHaveBeenCalled();
+    expect(screen.getByText(/something went wrong on our side/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/primary counsellor/i)).not.toBeInTheDocument();
+  });
+
+  it("still renders both controls when both checks answered", async () => {
+    // The guard must not turn every denial into an outage: a counsellor legitimately
+    // gets one control and no outage, which the test above this one covers.
+    grantCaseEach({ "case.update": { allowed: true }, "case.assign": { allowed: true } });
+
+    render(await managePage());
+
+    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    expect(screen.getByLabelText(/primary counsellor/i)).toBeInTheDocument();
+    expect(screen.queryByText(/something went wrong on our side/i)).not.toBeInTheDocument();
+  });
+
   it("renders notFound() when the case belongs to a different organization", async () => {
     readOrgCase.mockResolvedValue({
       ok: true,
@@ -272,6 +359,106 @@ describe("/workspace/[organizationId]/students/[caseId]/manage — cells 9 and 1
     expect(screen.getByText(/couldn.t check who is assigned/i)).toBeTruthy();
   });
 
+  it("does NOT read the roster for a viewer who is not staff on the case", async () => {
+    // Reachable today: `CASE_PERMISSION_MATRIX.student["case.update"]` is `linked`, so
+    // the LINKED STUDENT passes this page's gate. But
+    // `case_assignments_select_accessor` admits only
+    // `actor_assigned_case_ids() or can_staff_case(case_id)` — not the student — and
+    // an RLS refusal is ZERO ROWS, NOT AN ERROR. So `readPrimaryCounsellor` returned
+    // `{ok: true, data: null}` and the page told the student "No counsellor is
+    // assigned to this student yet": a denial wearing the empty-result answer, and a
+    // false claim about a case that may well have a counsellor.
+    //
+    // The two are indistinguishable AFTER the read, so the fix is not to read. Which
+    // is also what the migration says the rule is: "Who staffs a case is
+    // consultancy-internal operating data" and "the student link must not confer
+    // org-scoped rights" (20260730180000, divergence 6).
+    grantCaseEach({ "case.update": { allowed: true }, "case.assign": { allowed: false } }, {
+      grantedRoles: ["student"],
+    });
+
+    render(await managePage());
+
+    expect(readPrimaryCounsellor).not.toHaveBeenCalled();
+    expect(screen.queryByText(/no counsellor is assigned/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/assigned to 7f3c9a1e/i)).not.toBeInTheDocument();
+  });
+
+  it("says who staffs the case is not shown, rather than saying nobody does", async () => {
+    grantCaseEach({ "case.update": { allowed: true }, "case.assign": { allowed: false } }, {
+      grantedRoles: ["student"],
+    });
+
+    render(await managePage());
+
+    expect(screen.getByText(/who is working on this student is not shown here/i)).toBeInTheDocument();
+  });
+
+  it("still reads and reports the roster for staff", async () => {
+    // The guard must narrow to non-staff only. A counsellor holds `case.update` and
+    // not `case.assign`, and `case_assignments_select_accessor` admits them.
+    grantCaseEach({ "case.update": { allowed: true }, "case.assign": { allowed: false } }, {
+      grantedRoles: ["counsellor"],
+    });
+
+    render(await managePage());
+
+    expect(readPrimaryCounsellor).toHaveBeenCalled();
+    expect(screen.getByText(/no counsellor is assigned/i)).toBeInTheDocument();
+  });
+
+  it("shows the Archived state the list already shows", async () => {
+    readOrgCase.mockResolvedValue({
+      ok: true,
+      data: {
+        id: CASE,
+        organizationId: ORG,
+        displayName: "Case one",
+        email: null,
+        operationalStatus: "in_progress",
+        hasLinkedStudent: false,
+        archivedAt: "2026-08-01T00:00:00.000Z",
+      },
+    });
+
+    render(await managePage());
+
+    // The list renders an "Archived" marker; dropping it here meant the one surface
+    // that offers to CHANGE the case was the one that did not mention it was closed
+    // off.
+    expect(screen.getByText("Archived")).toBeInTheDocument();
+  });
+
+  it("offers no live status control on an archived case, and says why", async () => {
+    readOrgCase.mockResolvedValue({
+      ok: true,
+      data: {
+        id: CASE,
+        organizationId: ORG,
+        displayName: "Case one",
+        email: null,
+        operationalStatus: "in_progress",
+        hasLinkedStudent: false,
+        archivedAt: "2026-08-01T00:00:00.000Z",
+      },
+    });
+
+    render(await managePage());
+
+    // Moving an archived case through the operational statuses is an edit to a
+    // record that has been put away, and un-archiving is Stage 6 — so the control
+    // would offer a change with no way back.
+    expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+    expect(screen.getByText(/archived, so its status cannot be changed/i)).toBeInTheDocument();
+  });
+
+  it("keeps the status control on a case that is not archived", async () => {
+    render(await managePage());
+
+    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    expect(screen.queryByText(/status cannot be changed/i)).not.toBeInTheDocument();
+  });
+
   it("offers only ACTIVE members for the slot", async () => {
     render(await managePage());
 
@@ -308,8 +495,23 @@ describe("/workspace/[organizationId]/students/[caseId]/manage — cells 9 and 1
     // surfaces naming the same member differently would be worse than a truncated
     // id. What must not appear is a whole one, and what travels to the route is
     // the membership id (asserted by the option-value test above).
+    const shortReference = COUNSELLOR_USER.slice(0, 8);
     expect(container.innerHTML).not.toContain(COUNSELLOR_USER);
-    expect(container.innerHTML).toContain(COUNSELLOR_USER.slice(0, 8));
+    expect(container.innerHTML).toContain(shortReference);
+
+    // The positive half above was VACUOUS until the fixture id became hex: with
+    // `counsellor-a-user-id` the slice was `counsell`, a substring of the word
+    // "counsellor" that this page prints in a label, a role name and a paragraph —
+    // so it matched whether or not the reference was rendered at all. This asserts
+    // the prefix cannot come from the page's own vocabulary, so the test above can
+    // only pass by the reference genuinely being there.
+    expect(/^[0-9a-f]{8}$/.test(shortReference)).toBe(true);
+    // …and it is in the OPTION the admin reads, not merely somewhere in the markup.
+    expect(
+      screen
+        .getAllByRole("option")
+        .some((option) => (option.textContent ?? "").includes(shortReference)),
+    ).toBe(true);
   });
 
   it("redirects a visitor with no session", async () => {
@@ -333,6 +535,29 @@ describe("the student list grows MV-171's entry points", () => {
     render(await listPage());
 
     expect(screen.queryByRole("link", { name: /add a student/i })).toBeNull();
+    // "You may not" is a determined answer and says nothing — the absence IS the
+    // answer. It must not borrow the outage sentence below.
+    expect(screen.queryByText(/couldn.t check whether you can add/i)).toBeNull();
+  });
+
+  it("SAYS SO when it could not check whether you may add a student", async () => {
+    // Identical rendering for "you may not create" and "we couldn't check" is the
+    // same defect H6 fixes on the manage page: an owner whose permission lookup
+    // blipped silently loses the control and concludes their role changed.
+    //
+    // Unlike the manage page this does NOT become a whole-page outage: the list read
+    // succeeded and the list is what the page is for, so blanking a working list
+    // over a failed check on one control would destroy more than it reports. The
+    // note goes where the control would have been.
+    grantOrg({ "case.list": true, "case.create": false }, "lookup-failed");
+
+    render(await listPage());
+
+    expect(screen.queryByRole("link", { name: /add a student/i })).toBeNull();
+    expect(screen.getByText(/couldn.t check whether you can add/i)).toBeInTheDocument();
+    // The list page itself is still rendered — it was read successfully, and
+    // replacing a working list with an outage card would destroy more than it reports.
+    expect(screen.getByRole("heading", { level: 1, name: "Students" })).toBeInTheDocument();
   });
 
   it("links each row to its manage page", async () => {

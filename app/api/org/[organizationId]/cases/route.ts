@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkOrgPermission } from "@/lib/cases/require-org-permission";
 import { createOrgCase } from "@/lib/cases/write-repo";
+import { malformedPathId } from "@/lib/cases/path-ids";
 
 /**
  * Access-matrix cell 8 — create a case for a student who has no account.
@@ -42,6 +43,10 @@ export async function POST(
   { params }: { params: Promise<{ organizationId: string }> },
 ): Promise<Response> {
   const { organizationId } = await params;
+
+  // FIRST, before a client exists and before any query — see `lib/cases/path-ids.ts`.
+  const malformed = malformedPathId(organizationId);
+  if (malformed) return malformed;
 
   let body: unknown;
   try {

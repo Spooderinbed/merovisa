@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkCasePermission } from "@/lib/cases/require-permission";
 import { assignPrimaryCounsellor } from "@/lib/cases/write-repo";
 import { caseDenialResponse } from "@/lib/cases/route-denial";
+import { malformedPathId } from "@/lib/cases/path-ids";
 
 /**
  * Access-matrix cell 9 — put one member into the case's single primary-counsellor
@@ -26,13 +27,23 @@ import { caseDenialResponse } from "@/lib/cases/route-denial";
  * to the case's own organization.
  */
 
-const BodySchema = z.object({ membershipId: z.string().trim().min(1) }).strict();
+/**
+ * `organization_memberships.id` is a `uuid` column, so a uuid is what this field
+ * actually is — a non-empty string was as much validation as "any text at all",
+ * and the repository would have spent a query discovering that.
+ */
+const BodySchema = z.object({ membershipId: z.uuid() }).strict();
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ caseId: string }> },
 ): Promise<Response> {
   const { caseId } = await params;
+
+  // FIRST, before a client exists and before any query. A malformed segment is not
+  // an outage and not a permission answer — see `lib/cases/path-ids.ts`.
+  const malformed = malformedPathId(caseId);
+  if (malformed) return malformed;
 
   let body: unknown;
   try {
@@ -58,33 +69,71 @@ export async function PUT(
   const result = await assignPrimaryCounsellor(caseId, parsed.data.membershipId, supabase);
   if (result.ok) return NextResponse.json({ ok: true, changed: result.changed });
 
+  /**
+   * `leftUnassigned` travels with EVERY failure, not with the ones that happen to
+   * be able to set it.
+   *
+   * That distinction was the defect. The unique index forces delete-then-insert, so
+   * "the previous counsellor was removed and the new one was not added" is a state
+   * the case can genuinely be in — and the branch that reaches it is not only the
+   * 500. `writeFailure()` maps a `42501` on the REPLACEMENT INSERT to `denied`, and
+   * that insert runs *after* the delete has landed, so `denied` +
+   * `leftUnassigned: true` is reachable. The 403 branch dropped the flag, which
+   * meant the one state the flag exists to report was exactly the state that never
+   * reached the caller: the case had no counsellor and the admin was told only
+   * "not allowed".
+   *
+   * Uniform rather than case-by-case because `false` is a true answer to "did this
+   * request leave the case unassigned?", and a flag present on some branches and
+   * absent on others is one refactor away from going missing on the branch that
+   * needed it.
+   */
+  const withUnassigned = (fields: Record<string, unknown>) => ({
+    ...fields,
+    leftUnassigned: result.leftUnassigned,
+  });
+
   // Every reason gets its own status, because every one of them tells the person
   // something different about what to do next.
   switch (result.reason) {
     case "unknown-member":
       return NextResponse.json(
-        { error: "No such member in this organization" },
+        withUnassigned({ error: "No such member in this organization", reason: "unknown-member" }),
         { status: 404 },
       );
     case "unknown-case":
-      return NextResponse.json({ error: "No such case" }, { status: 404 });
+      return NextResponse.json(withUnassigned({ error: "No such case", reason: "unknown-case" }), {
+        status: 404,
+      });
     case "member-inactive":
       return NextResponse.json(
-        { error: "That person's access to this organization has been switched off" },
+        withUnassigned({
+          error: "That person's access to this organization has been switched off",
+          // Two conflicts share 409, so the REASON is what tells them apart. A
+          // client that re-derived a sentence from the status alone would tell an
+          // admin who lost a race to go and reactivate somebody who is active.
+          reason: "member-inactive",
+        }),
+        { status: 409 },
+      );
+    case "reassignment-conflict":
+      return NextResponse.json(
+        withUnassigned({
+          error: "Somebody else changed this student's counsellor",
+          reason: "reassignment-conflict",
+        }),
         { status: 409 },
       );
     case "not-an-org-case":
     case "invalid-input":
-      return NextResponse.json({ error: "Validation failed" }, { status: 422 });
+      return NextResponse.json(withUnassigned({ error: "Validation failed", reason: result.reason }), {
+        status: 422,
+      });
     case "denied":
-      return NextResponse.json({ error: "Forbidden", reason: "denied" }, { status: 403 });
+      return NextResponse.json(withUnassigned({ error: "Forbidden", reason: "denied" }), { status: 403 });
     default:
-      // `leftUnassigned` travels with the failure. The unique index forces
-      // delete-then-insert, so "the previous counsellor was removed and the new
-      // one was not added" is a state the case can genuinely be in — and an admin
-      // who is told only "that didn't work" will not know to reassign.
       return NextResponse.json(
-        { error: "Could not save the assignment", leftUnassigned: result.leftUnassigned },
+        withUnassigned({ error: "Could not save the assignment", reason: result.reason }),
         { status: 500 },
       );
   }

@@ -34,11 +34,24 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => serverClient,
 }));
 
-const { createSupabaseAdminClient, adminInsertSingle } = vi.hoisted(() => ({
+/**
+ * `adminInsert` is a SPY on the insert itself, not a bare passthrough, because the
+ * row shape is the thing spec §6.3 specifies and a test that only reads the status
+ * code cannot see it. `owner`, `case_id`, `is_primary` and `expires_at` are each
+ * load-bearing and each invisible in a 200.
+ */
+const { createSupabaseAdminClient, adminInsert, adminInsertSingle } = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
+  adminInsert: vi.fn(),
   adminInsertSingle: vi.fn(),
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient }));
+
+const { checkRateLimit } = vi.hoisted(() => ({ checkRateLimit: vi.fn() }));
+vi.mock("@/lib/rate-limit/upstash", () => ({
+  checkRateLimit,
+  ipFromRequest: () => "127.0.0.1",
+}));
 
 const { checkOrgPermission } = vi.hoisted(() => ({ checkOrgPermission: vi.fn() }));
 vi.mock("@/lib/cases/require-org-permission", () => ({ checkOrgPermission }));
@@ -80,7 +93,12 @@ import { POST as assessCase } from "@/app/api/cases/[caseId]/assess/route";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 const CASE = "aaaaaaaa-0000-4000-8000-000000000001";
-const MEMBERSHIP = "mmmmmmmm-0000-4000-8000-00000000000a";
+/**
+ * A real UUID, because the route now validates it as one. It used to read
+ * `mmmmmmmm-…`, which is not hex — a mnemonic that only worked while the schema
+ * asked for a non-empty string.
+ */
+const MEMBERSHIP = "bbbbbbbb-0000-4000-8000-00000000000a";
 const ACTOR = "actor-user-id";
 
 /** `checkOrgPermission` answers per claim, so a route asking the wrong one fails. */
@@ -170,13 +188,18 @@ beforeEach(() => {
   assignPrimaryCounsellor.mockResolvedValue({ ok: true, changed: true });
   caseWriteColumns.mockResolvedValue({ case_id: CASE, owner: null });
   getPrimaryAssessmentForCase.mockResolvedValue(null);
+  checkRateLimit.mockResolvedValue(true);
   adminInsertSingle.mockResolvedValue({ data: { id: "assessment-1" }, error: null });
+  adminInsert.mockImplementation(() => ({ select: () => ({ single: adminInsertSingle }) }));
   createSupabaseAdminClient.mockImplementation(() => ({
-    from: () => ({
-      insert: () => ({ select: () => ({ single: adminInsertSingle }) }),
-    }),
+    from: () => ({ insert: adminInsert }),
   }));
 });
+
+/** The payload of the Nth `assessments` insert this request issued. */
+function insertedRow(call = 0): Record<string, unknown> {
+  return adminInsert.mock.calls[call]![0] as Record<string, unknown>;
+}
 
 describe("POST /api/org/[organizationId]/cases — cell 8", () => {
   it("creates a case for an actor holding case.create", async () => {
@@ -252,6 +275,20 @@ describe("POST /api/org/[organizationId]/cases — cell 8", () => {
     const response = await createRequest({ displayName: "Case one" });
 
     expect(response.status).toBe(401);
+    expect(checkOrgPermission).not.toHaveBeenCalled();
+    expect(createOrgCase).not.toHaveBeenCalled();
+  });
+
+  it("rejects an organizationId that is not a uuid with 400, before any query", async () => {
+    const response = await createCase(
+      new Request("http://localhost/api/org/nope/cases", {
+        method: "POST",
+        body: JSON.stringify({ displayName: "Case one" }),
+      }),
+      { params: Promise.resolve({ organizationId: "nope" }) },
+    );
+
+    expect(response.status).toBe(400);
     expect(checkOrgPermission).not.toHaveBeenCalled();
     expect(createOrgCase).not.toHaveBeenCalled();
   });
@@ -344,6 +381,24 @@ describe("PATCH /api/cases/[caseId] — cell 10", () => {
     setCaseOperationalStatus.mockResolvedValue({ ok: false, reason: "write-failed" });
     expect((await patchRequest({ operationalStatus: "closed" })).status).toBe(500);
   });
+
+  it("rejects a caseId that is not a uuid with 400, before any query", async () => {
+    // A client error must not be reported as a server outage. A malformed id used
+    // to raise `22P02` inside the permission lookup and answer 500, while a
+    // well-formed unknown id answers 404 — so the more broken request got the
+    // report that says "our fault, try again".
+    const response = await patchCase(
+      new Request("http://localhost/api/cases/xyz", {
+        method: "PATCH",
+        body: JSON.stringify({ operationalStatus: "closed" }),
+      }),
+      { params: Promise.resolve({ caseId: "xyz" }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(checkCasePermission).not.toHaveBeenCalled();
+    expect(setCaseOperationalStatus).not.toHaveBeenCalled();
+  });
 });
 
 describe("PUT /api/cases/[caseId]/assignment — cell 9", () => {
@@ -404,12 +459,40 @@ describe("PUT /api/cases/[caseId]/assignment — cell 9", () => {
       ["denied", 403],
       ["lookup-failed", 500],
       ["write-failed", 500],
+      // A lost race: another admin removed the same assignment row microseconds
+      // earlier. It shares 409 with `member-inactive` because both are genuine
+      // conflicts, so the two are told apart by `reason` — asserted below.
+      ["reassignment-conflict", 409],
     ];
 
     for (const [reason, status] of cases) {
       assignPrimaryCounsellor.mockResolvedValue({ ok: false, reason, leftUnassigned: false });
       expect((await assignRequest({ membershipId: MEMBERSHIP })).status, reason).toBe(status);
     }
+  });
+
+  it("names the reason on both 409s, so the two conflicts do not collapse", async () => {
+    // Sharing a status is fine; sharing a sentence is not. "That person's access
+    // has been switched off" and "somebody else reassigned this student" tell the
+    // admin to do completely different things, and the client branches on `reason`
+    // rather than re-deriving one from the status.
+    assignPrimaryCounsellor.mockResolvedValue({
+      ok: false,
+      reason: "member-inactive",
+      leftUnassigned: false,
+    });
+    const inactive = await assignRequest({ membershipId: MEMBERSHIP });
+    expect(inactive.status).toBe(409);
+    expect(await inactive.json()).toMatchObject({ reason: "member-inactive" });
+
+    assignPrimaryCounsellor.mockResolvedValue({
+      ok: false,
+      reason: "reassignment-conflict",
+      leftUnassigned: false,
+    });
+    const conflict = await assignRequest({ membershipId: MEMBERSHIP });
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toMatchObject({ reason: "reassignment-conflict" });
   });
 
   it("tells the caller when the case was left with no counsellor at all", async () => {
@@ -426,6 +509,78 @@ describe("PUT /api/cases/[caseId]/assignment — cell 9", () => {
 
     expect(response.status).toBe(500);
     expect(await response.json()).toMatchObject({ leftUnassigned: true });
+  });
+
+  it("reports leftUnassigned on a 403 too — the branch that used to drop it", async () => {
+    // THE defect this pins. `writeFailure()` maps a 42501 on the REPLACEMENT INSERT
+    // to `denied`, and that insert only runs after the previous assignment has
+    // already been deleted — so `denied` + `leftUnassigned: true` is a state the
+    // case can genuinely be in. The route's 403 branch returned a bare
+    // `{error, reason}`, which means the ONE state the flag exists to report was
+    // exactly the state that never reached the caller: the case had no counsellor
+    // and the admin was told only "not allowed".
+    assignPrimaryCounsellor.mockResolvedValue({
+      ok: false,
+      reason: "denied",
+      leftUnassigned: true,
+    });
+
+    const response = await assignRequest({ membershipId: MEMBERSHIP });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ leftUnassigned: true });
+  });
+
+  it("carries leftUnassigned on EVERY failure branch, not only the ones that can set it", async () => {
+    // Uniform on purpose. A flag present on some failures and absent on others is
+    // one refactor away from going missing on the branch that needed it — and
+    // `false` is a true answer to "did this request leave the case unassigned?".
+    const reasons = [
+      "unknown-member",
+      "member-inactive",
+      "unknown-case",
+      "not-an-org-case",
+      "invalid-input",
+      "denied",
+      "lookup-failed",
+      "write-failed",
+      "reassignment-conflict",
+    ];
+
+    for (const reason of reasons) {
+      assignPrimaryCounsellor.mockResolvedValue({ ok: false, reason, leftUnassigned: false });
+      const body = (await (await assignRequest({ membershipId: MEMBERSHIP })).json()) as Record<
+        string,
+        unknown
+      >;
+      expect(body, reason).toHaveProperty("leftUnassigned", false);
+    }
+  });
+
+  it("rejects a caseId that is not a uuid with 400, before any query", async () => {
+    // A malformed path segment used to reach `checkCasePermission`, where the
+    // `cases` query raised `22P02 invalid input syntax for uuid` and the route
+    // answered 500 "Could not check your access" — reporting a client's malformed
+    // request as an outage on our side, while a well-formed unknown id correctly
+    // 404s.
+    const response = await putAssignment(
+      new Request("http://localhost/api/cases/not-a-uuid/assignment", {
+        method: "PUT",
+        body: JSON.stringify({ membershipId: MEMBERSHIP }),
+      }),
+      { params: Promise.resolve({ caseId: "not-a-uuid" }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(checkCasePermission).not.toHaveBeenCalled();
+    expect(assignPrimaryCounsellor).not.toHaveBeenCalled();
+  });
+
+  it("rejects a membershipId that is not a uuid with 422", async () => {
+    // It identifies a row in `organization_memberships`, whose primary key is a
+    // uuid. A non-empty string was as much validation as "any text at all".
+    expect((await assignRequest({ membershipId: "not-a-uuid" })).status).toBe(422);
+    expect(assignPrimaryCounsellor).not.toHaveBeenCalled();
   });
 
   it("returns 401 with no session", async () => {
@@ -452,6 +607,61 @@ describe("POST /api/cases/[caseId]/assess — the case-scoped scoring route", ()
     // `caseBindColumns` — which narrows `owner` to non-null — would refuse every
     // consultancy case, which is exactly why this route asks the other one.
     expect(caseWriteColumns).toHaveBeenCalledWith(expect.anything(), CASE);
+
+    // …and the columns it produced actually reached the INSERT. Asserting only the
+    // choke-point CALL leaves the payload unpinned: a route that derived ownership
+    // and then wrote the session user as `owner` — attributing a student's
+    // assessment to the counsellor who typed it — would satisfy the line above and
+    // fail here. `owner` must be present-and-null, not absent: the
+    // `_ownership_axis_present` check needs one axis, and an omitted key is a
+    // different row from an explicit null when a DEFAULT exists.
+    const row = insertedRow();
+    expect(row).toHaveProperty("owner", null);
+    expect(row).toHaveProperty("case_id", CASE);
+    expect(row["owner"]).not.toBe(ACTOR);
+  });
+
+  it("writes the far-future expiry that keeps an ownerless row out of MV-135's purge", async () => {
+    await assessRequest(validProfile);
+
+    // The purge keys on `owner IS NULL AND expires_at`, and this row is
+    // DELIBERATELY `owner IS NULL` — so the expiry is the only thing standing
+    // between a consultancy's assessment of record and a retention job written for
+    // three-day anonymous artefacts.
+    expect(insertedRow()).toHaveProperty("expires_at", "9999-12-31T00:00:00.000Z");
+  });
+
+  it("records the destination and the rule version the verdict was produced under", async () => {
+    await assessRequest(validProfile);
+
+    const row = insertedRow();
+    expect(row).toHaveProperty("destination_id", "australia");
+    // `rule_version` is NOT NULL and is the reason `assessments` INSERT can never
+    // be granted to `authenticated` (spec §6.1) — a row that misreported it would
+    // make the verdict unreproducible.
+    expect(typeof row["rule_version"]).toBe("string");
+    expect(row["rule_version"]).not.toBe("");
+    expect(row).toHaveProperty("profile_snapshot");
+  });
+
+  it("marks the FIRST assessment for a case as primary", async () => {
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
+
+    await assessRequest(validProfile);
+
+    expect(insertedRow()).toHaveProperty("is_primary", true);
+  });
+
+  it("marks a LATER assessment as not primary — the guard the unique index needs", async () => {
+    // `assessments_case_primary_idx` is UNIQUE (case_id) WHERE is_primary. A route
+    // that always wrote `true` would 23505 on the second intake for a case, and a
+    // test asserting only a 200 could not tell the two apart.
+    getPrimaryAssessmentForCase.mockResolvedValue({ id: "existing" });
+
+    const response = await assessRequest(validProfile);
+
+    expect(response.status).toBe(200);
+    expect(insertedRow()).toHaveProperty("is_primary", false);
   });
 
   it("authorizes on the AUTHENTICATED client BEFORE constructing the admin client", async () => {
@@ -533,14 +743,95 @@ describe("POST /api/cases/[caseId]/assess — the case-scoped scoring route", ()
     expect(adminInsertSingle).not.toHaveBeenCalled();
   });
 
-  it("marks the first assessment for a case as primary, and a later one as not", async () => {
-    await assessRequest(validProfile);
-    expect(adminInsertSingle).toHaveBeenCalled();
+  it("recovers from a LOST RACE for the primary slot instead of 500ing", async () => {
+    // Two counsellors submit the case's first intake at the same time. Both read
+    // "no primary yet", both ask to be it, and the second violates
+    // `assessments_case_primary_idx`. Without recovery that request answers 500
+    // "Could not save the assessment" and the work is simply lost — while the
+    // sibling `/api/assess` has handled exactly this collision since MV-157.
+    adminInsertSingle
+      .mockResolvedValueOnce({ data: null, error: { code: "23505", message: "duplicate key" } })
+      .mockResolvedValue({ data: { id: "assessment-2" }, error: null });
+    getPrimaryAssessmentForCase
+      .mockResolvedValueOnce(null) // what this request saw
+      .mockResolvedValue({ id: "the-winner" }); // what is true after the collision
 
-    // `assessments_case_primary_idx` is UNIQUE (case_id) WHERE is_primary, so a
-    // second primary would be a 23505 rather than a second lead assessment.
-    getPrimaryAssessmentForCase.mockResolvedValue({ id: "existing" });
     const response = await assessRequest(validProfile);
+
     expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ id: "assessment-2" });
+    // Asked to be primary, collided, re-read, and retried as a non-primary. The
+    // assessment is saved and the winner keeps the slot.
+    expect(adminInsert).toHaveBeenCalledTimes(2);
+    expect(insertedRow(0)).toHaveProperty("is_primary", true);
+    expect(insertedRow(1)).toHaveProperty("is_primary", false);
+  });
+
+  it("retries ONCE, never in a loop", async () => {
+    adminInsertSingle.mockResolvedValue({
+      data: null,
+      error: { code: "23505", message: "duplicate key" },
+    });
+    getPrimaryAssessmentForCase.mockResolvedValueOnce(null).mockResolvedValue({ id: "the-winner" });
+
+    const response = await assessRequest(validProfile);
+
+    expect(response.status).toBe(500);
+    expect(adminInsert).toHaveBeenCalledTimes(2);
+  });
+
+  it("does NOT retry a 23505 that was not the primary-slot collision", async () => {
+    // The re-read still finds no primary, so the collision came from somewhere else
+    // and re-inserting as a non-primary would just collide again. The honest answer
+    // is the failure.
+    adminInsertSingle.mockResolvedValue({
+      data: null,
+      error: { code: "23505", message: "duplicate key" },
+    });
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
+
+    const response = await assessRequest(validProfile);
+
+    expect(response.status).toBe(500);
+    expect(adminInsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry a failure that is not a unique violation", async () => {
+    adminInsertSingle.mockResolvedValue({
+      data: null,
+      error: { code: "23514", message: "check constraint" },
+    });
+
+    expect((await assessRequest(validProfile)).status).toBe(500);
+    expect(adminInsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("rate-limits per user, before it authorizes or builds the admin client", async () => {
+    // The most expensive route in the workspace: a catalogue read, a full scoring
+    // run, and a service-role INSERT of a row MV-135's purge deliberately cannot
+    // reach. Every comparable write route in this repo is limited — `/api/guide/chat`
+    // and `/api/documents/upload` both key on the user id immediately after the 401.
+    checkRateLimit.mockResolvedValue(false);
+
+    const response = await assessRequest(validProfile);
+
+    expect(response.status).toBe(429);
+    expect(checkRateLimit).toHaveBeenCalledWith("case-assess", ACTOR, 10, "1 m");
+    expect(checkCasePermission).not.toHaveBeenCalled();
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+  });
+
+  it("rejects a caseId that is not a uuid with 400, before any client is built", async () => {
+    const response = await assessCase(
+      new Request("http://localhost/api/cases/nope/assess", {
+        method: "POST",
+        body: JSON.stringify(validProfile),
+      }),
+      { params: Promise.resolve({ caseId: "nope" }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(checkCasePermission).not.toHaveBeenCalled();
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
   });
 });

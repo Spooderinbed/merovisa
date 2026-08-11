@@ -10,6 +10,9 @@ import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { caseWriteColumns } from "@/lib/cases/dual-write";
 import { checkCasePermission } from "@/lib/cases/require-permission";
 import { caseDenialResponse } from "@/lib/cases/route-denial";
+import { malformedPathId } from "@/lib/cases/path-ids";
+import { isUniqueViolation } from "@/lib/cases/errors";
+import { checkRateLimit } from "@/lib/rate-limit/upstash";
 import type { Json } from "@/lib/supabase/types";
 
 /**
@@ -38,9 +41,25 @@ import type { Json } from "@/lib/supabase/types";
  * would notice. `tests/api/case-routes.test.ts` pins it by asserting
  * `createSupabaseAdminClient` was never called on a denial.
  *
- * The primary-assessment read stays on the authenticated client too: staff reach
- * the case through `actor_case_ids()`, so there is nothing service-role is needed
- * for except the insert itself.
+ * ## What service-role is used for, all THREE of them
+ *
+ * This list used to say "exactly two things", and that was false — which matters
+ * more here than in ordinary prose, because `lib/supabase/service-role-exceptions.ts`
+ * is the audit artefact for every RLS bypass in the codebase and an entry that
+ * understates its own surface is the specific failure it exists to prevent.
+ *
+ * 1. The **catalogue read** — `programs` / `universities`, non-tenant reference data.
+ * 2. The **ownership derivation** — `caseWriteColumns(adminDb, caseId)` reads
+ *    `cases.student_user_id`, which IS a tenant table. Not exploitable: `caseId` was
+ *    authorized on the authenticated client above, and the function returns two
+ *    columns rather than the row. But it is an RLS-bypassing read of tenant data and
+ *    has to be named as one. It runs on the admin client because a Stage 5 case whose
+ *    student the actor cannot see must still resolve its own `owner`.
+ * 3. The **`assessments` INSERT** itself — the refusal spec §6.1 makes permanent.
+ *
+ * The primary-assessment read is NOT one of them: it stays on the authenticated
+ * client, because staff reach the case through `actor_case_ids()` and nothing about
+ * that read needs RLS bypassed. Its post-collision re-read stays there too.
  *
  * ## The row shape
  *
@@ -71,6 +90,10 @@ export async function POST(
 ): Promise<Response> {
   const { caseId } = await params;
 
+  // FIRST, before a client exists and before any query — see `lib/cases/path-ids.ts`.
+  const malformed = malformedPathId(caseId);
+  if (malformed) return malformed;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -100,6 +123,26 @@ export async function POST(
   const supabase = await createSupabaseServerClient();
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  /**
+   * The most expensive route in the workspace: a catalogue read, a full scoring run,
+   * and a service-role INSERT of a row MV-135's purge deliberately cannot reach
+   * (`owner IS NULL`, `expires_at` far future). Unlimited, it is the cheapest way to
+   * grow the `assessments` table without bound.
+   *
+   * Keyed on the USER and placed immediately after the 401, matching
+   * `/api/guide/chat` and `/api/documents/upload` — the two comparable authenticated
+   * write routes. An IP key would throttle a whole consultancy office behind one
+   * NAT; 10 a minute is the same scoring budget the anonymous path allows, and no
+   * counsellor types ten intakes in a minute.
+   *
+   * Before the authorization check on purpose: a 429 answers a question about this
+   * caller's rate, not about this case, so it leaks nothing a denial would not — and
+   * it means a flood costs no permission lookups.
+   */
+  if (!(await checkRateLimit("case-assess", userData.user.id, 10, "1 m"))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   // BEFORE any service-role client exists. See the header.
   const { decision } = await checkCasePermission(
@@ -154,19 +197,54 @@ export async function POST(
     return NextResponse.json({ error: "Could not save the assessment" }, { status: 500 });
   }
 
-  const { data, error } = await adminDb
-    .from("assessments")
-    .insert({
-      ...ownership,
-      profile_snapshot: parsed.data as unknown as Json,
-      destination_id: destination,
-      result: payload as unknown as Json,
-      rule_version: payload.result.ruleVersion,
-      expires_at: FAR_FUTURE,
-      is_primary: !existingPrimary,
-    })
-    .select("id")
-    .single();
+  const insertAssessment = (isPrimary: boolean) =>
+    adminDb
+      .from("assessments")
+      .insert({
+        ...ownership,
+        profile_snapshot: parsed.data as unknown as Json,
+        destination_id: destination,
+        result: payload as unknown as Json,
+        rule_version: payload.result.ruleVersion,
+        expires_at: FAR_FUTURE,
+        is_primary: isPrimary,
+      })
+      .select("id")
+      .single();
+
+  let { data, error } = await insertAssessment(!existingPrimary);
+
+  /**
+   * The lost race for the primary slot, recovered the way the sibling
+   * `app/api/assess/route.ts` recovers its own collision.
+   *
+   * `is_primary` was computed from a read that can go stale between the read and the
+   * insert: two counsellors submit a case's first intake at the same moment, both see
+   * no primary, both ask to be it, and the second violates
+   * `assessments_case_primary_idx` (UNIQUE (case_id) WHERE is_primary). Without this
+   * that request falls into the generic failure below and answers 500 "Could not save
+   * the assessment" — the work is simply lost, over a slot the row did not need.
+   *
+   * RE-READ, then retry ONCE as a non-primary. The re-read is the guard: if it still
+   * finds no primary, the `23505` came from somewhere else and inserting again would
+   * only collide again, so the failure stands. The sibling's residue adoption is
+   * deliberately NOT copied — it exists for the legacy owner-keyed unique, and this
+   * row is `owner IS NULL` by construction (spec §6.3), so there is no owner-keyed
+   * residue for it to adopt.
+   */
+  if (isUniqueViolation(error)) {
+    let primaryNow: unknown = null;
+    try {
+      primaryNow = await getPrimaryAssessmentForCase(supabase, caseId);
+    } catch (err) {
+      // A failed re-read cannot establish the retry's precondition, so the original
+      // collision stands rather than being retried on a guess.
+      console.error("[/api/cases/[caseId]/assess] primary re-read after 23505 failed", err);
+    }
+    if (primaryNow) {
+      ({ data, error } = await insertAssessment(false));
+    }
+  }
 
   // PostgREST reports a failed write as a value, not a throw. Returning 200 with
   // `id: null` here would read to the caller as "saved".

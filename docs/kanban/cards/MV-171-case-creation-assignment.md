@@ -326,3 +326,180 @@ This is worth stating plainly rather than reporting "checks pass":
 - `docs/superpowers/specs/2026-08-07-stage3-workspace-and-access-matrix.md` — F-1 recorded as
   decided, plus four build findings in the decision log (spec §1 rule 2)
 - **No migration.**
+
+---
+
+## Review remediation — 2026-08-11 (16 confirmed defects, all fixed)
+
+A code review of PR #138 confirmed **6 HIGH, 7 MEDIUM and 4 LOW** defects. All are fixed (16 numbered
+items; L1 spanned the repository, the route and the client). One item on the review's list was
+adjudicated **not** a defect and was deliberately left alone — the `/auth?next=…` redirect on the
+manage page, which matches `app/(app)/checklist/[programId]/page.tsx:40` and predates this slice.
+
+Every fix was driven by a failing test first. Where the review's point was that a test *could not
+fail*, the fix was verified by mutation: the mutant is named below and was observed red.
+
+### HIGH
+
+- **H1 — silent unassignment.** `assignPrimaryCounsellor` can return
+  `{ok:false, reason:"denied", leftUnassigned:true}`: `writeFailure()` maps a `42501` on the
+  **replacement INSERT** to `denied`, and that insert only runs after the DELETE has landed. The
+  route's 403 branch dropped the flag, so the one state it exists to report was the one state that
+  never reached the caller. `leftUnassigned` now travels on **every** failure branch (uniform, because
+  `false` is a true answer and a per-branch flag goes missing on the branch that needed it), and the
+  client reads the **flag before the status**, so a 403 renders "this student has nobody assigned
+  right now" rather than "not allowed".
+- **H2 — four gated routes in no denial suite.** `tests/api/case-denial.test.ts` had none of MV-171's
+  four routes, and its only completeness check —
+  `expect(new Set(ROUTES.map(r => r.name)).size).toBe(14)` — asserted that fourteen hand-written names
+  are fourteen hand-written names. All four are now registered (18 rows), each row carries a `file:`,
+  and the constant is replaced by a **filesystem-derived** check: `app/api` is swept for routes that
+  gate on `checkCasePermission`/`requireCasePermission` (import specifier ∪ call shape, comments
+  stripped, split on `/\r?\n/`) and every one must hold a row. Plus a stale-row check, a `> 10`
+  non-vacuity floor, and a derived assertion that `/api/account/delete` genuinely has no case gate
+  rather than being excused by a comment. **Mutation: renaming the assess row's `file` → 1 finding,
+  named by path (2 tests red).**
+  The four path-scoped rows carry `noCaseStatus: null`, which is not an opt-out — they are asserted to
+  never call either personal-case resolver, which is what makes "the case came from the path" true.
+- **H3 — the assess insert payload was invisible.** Two tests named for the row shape and the primary
+  guard asserted only a 200. The admin mock now spies the insert itself, and the payload is asserted
+  column by column: `owner` **present-and-null** (and `!== ACTOR`), `case_id`, `expires_at` =
+  `9999-12-31T00:00:00.000Z` (the only thing keeping an ownerless row out of MV-135's purge),
+  `destination_id`, a non-empty `rule_version`, `profile_snapshot`, and `is_primary` **true then
+  false** in two separate tests rather than one asserting a status twice.
+- **H4 — reassignment DELETE predicate never asserted.** The fixture held one `case_assignments` row,
+  so an unscoped delete and a correctly scoped one left the table identical. Added `twoCaseFixture`
+  (two assigned cases in one org) and an assertion on both the predicate
+  (`[["id", <the row read back>]]`) and the survivor. **Mutations: `.delete()` with no predicate →
+  red; `.eq("case_id", caseId)` instead of the assignment id → red.** The pre-existing
+  "REPLACES the existing primary counsellor" test passes under both mutants — confirming the review.
+- **H5 — `readOrgCase` had zero direct tests.** Mocked at its only call site, so the outage-vs-404
+  branch never executed. Six direct tests: the column mapping, `hasLinkedStudent` derived without
+  carrying `student_user_id`, a missing case as `{ok:true,data:null}`, a failed read as
+  `lookup-failed` **plus an explicit assertion that the two are different values**, a thrown client,
+  and a blank id that issues no query. The implementation was already correct — this was purely the
+  coverage gap the review described.
+- **H6 — manage page rendered a per-claim lookup-failed as a missing control.** The outage branch sat
+  inside `if (!canUpdateStatus && !canAssign)`, so the mixed answer (one check allowed, one failed) was
+  the one it could not report: the page rendered normally with a control silently absent. Now **either**
+  check returning `lookup-failed` renders the outage. Both orderings are tested, plus a test that a
+  legitimate one-control counsellor still gets no outage.
+
+### MEDIUM
+
+- **M1 — the service-role registry understated its own surface.** The entry and the route header both
+  said "exactly two things" while `caseWriteColumns(adminDb, caseId)` reads `cases` — a **tenant
+  table** — through the service-role client. Both corrected to name all three uses. Because prose rots,
+  this is now **machine-checked**: a new test asserts that any registered path calling
+  `caseWriteColumns`/`caseBindColumns` names it in its entry, and that no entry claims a use count it
+  does not keep. **That guard immediately surfaced two adjacent pre-existing understatements** —
+  `app/api/assess/route.ts` ("Three distinct uses", actually four) and `app/api/dev/sign-in/route.ts`
+  ("n/a — no case data", while it creates a case and derives ownership through the admin client). Both
+  entries corrected; prose-only, no behaviour change.
+- **M2 — no 23505 recovery on the assess insert.** Two concurrent submits both observe no primary, both
+  insert `is_primary:true`, and the second violates `assessments_case_primary_idx` → generic 500 and the
+  work is lost. Now `isUniqueViolation` → **re-read the primary → retry once as non-primary**. The
+  re-read is the guard: if it still finds no primary the collision was something else and the failure
+  stands. The sibling's `adoptOwnerKeyedResidue` is deliberately **not** copied — it exists for the
+  legacy owner-keyed unique, and this row is `owner IS NULL` by construction (§6.3), so there is no
+  owner-keyed residue to adopt. Four tests: recovery, retry-once-never-a-loop, no retry when the
+  re-read finds no primary, no retry on a non-unique failure.
+- **M3 — RLS-denied assignment read rendered as an empty result.** Reachable, and the review was right:
+  `CASE_PERMISSION_MATRIX.student["case.update"]` is `linked`, so the **linked student** passes the
+  page's gate, while `case_assignments_select_accessor` admits only
+  `actor_assigned_case_ids() or can_staff_case(case_id)`. An RLS refusal is zero rows and no error, so
+  the student was told "No counsellor is assigned to this student yet" — a false claim. The two are
+  indistinguishable *after* the read, so the read is **not made**: the page derives staff-ness from
+  `context.grantedRoles` (the authorization fact `getCaseContext` publishes, mirroring
+  `can_staff_case`) and a non-staff viewer is told who staffs the case is not shown. That is also what
+  the migration says the rule is — "consultancy-internal operating data", divergence 6. Three tests:
+  the roster is not read, the honest sentence renders, and a **counsellor** (staff, no `case.assign`)
+  still gets the roster.
+- **M4 — no path-identifier validation.** A malformed `caseId` raised `22P02` inside the permission
+  lookup and answered **500 "Could not check your access"**, while a well-formed unknown one answered
+  404 — the client error got the outage report. New `lib/cases/path-ids.ts` (`malformedPathId`) runs
+  **first, before any client or query** on all four routes → **400**. `membershipId` moved from
+  `z.string().trim().min(1)` to `z.uuid()` (422). The suite's `MEMBERSHIP` constant was `mmmmmmmm-…`,
+  which is not hex — a mnemonic that only worked while the field accepted any text.
+- **M5 — students list hid "Add a student" when the create check FAILED.** Now an inline note where the
+  control would be. Deliberately **not** a whole-page outage the way H6 is: there the two controls *are*
+  the page, here the list read succeeded and blanking a working list would destroy more than it reports.
+  The "may not create" test now also asserts the note is **absent**, so the two cannot re-collapse.
+- **M6 — manage page dropped "Archived" and offered a live status control on an archived case.** The
+  marker the list shows is back, and `canUpdateStatus` is `&& !isArchived` with a sentence saying why
+  (un-archiving is Stage 6's, so the change would have no way back). A non-archived case keeps its
+  control, asserted.
+- **M7 — the assess route had no rate limit** while writing through service-role and inserting rows
+  MV-135's purge cannot reach. Now `checkRateLimit("case-assess", user.id, 10, "1 m")` immediately
+  after the 401 — keyed on the **user**, matching `/api/guide/chat` and `/api/documents/upload` (an IP
+  key would throttle a whole consultancy office behind one NAT), and before the permission check so a
+  flood costs no lookups. Asserted: 429, the exact key/limit, and that neither the permission layer nor
+  the admin client is reached.
+
+### LOW
+
+- **L1 — a zero-row DELETE reported a lost race as a permission denial.** Zero rows is how Postgres
+  reports **both** an RLS refusal and a lost race, but the state left behind differs: a refused delete
+  leaves the row **in place**, a lost race leaves it **gone**. So one cheap re-read distinguishes them.
+  New `AssignmentFailure` member `reassignment-conflict` → **409 with a `reason`**; `member-inactive`
+  gained a `reason` too, because two conflicts now share the status and a client deriving a sentence
+  from the status alone would tell an admin who lost a race to reactivate a colleague whose access is
+  fine. The client branches on `reason`. A failed re-read is `lookup-failed`, not either answer.
+  New fake switches `deleteLostRace` / `errorAfterDelete` model the two states.
+- **L2 — the assignment "nothing changed" outcome was announced to nobody.** Now `role="status"` —
+  polite, not assertive: nothing went wrong, but a screen-reader user who submitted got silence.
+- **L3 — the no-whole-Auth-id test's positive half was vacuous.** `COUNSELLOR_USER` was
+  `counsellor-a-user-id`, whose 8-char slice is `counsell` — a substring of "counsellor", which the page
+  prints in a label, a role name and a paragraph, so the assertion matched whether or not the reference
+  was rendered. The fixture id is now **hex**, and the test additionally asserts the prefix matches
+  `/^[0-9a-f]{8}$/` (so it cannot come from the page's vocabulary) and appears in the **option the admin
+  reads**, not merely somewhere in the markup.
+- **L4 — the two workspace components had no tests at all.** Two new suites, 29 tests:
+  `case-manage-controls.test.tsx` (17) — both request bodies, every recovery message including
+  `leftUnassigned` on a 500 **and** on a 403, both 409 reasons, a non-JSON error body, the live region,
+  and which controls exist; `case-create-form.test.tsx` (12) — the blank email **omitted** rather than
+  sent as `""`, a trimmed name, `.strict()`-safe keys, and each failure sentence.
+  **Mutation on the create form: sending `email: trimmedEmail` unconditionally → 3 tests red.**
+
+### Gate — run locally, unpiped, on this branch
+
+`.github/workflows/ci.yml` triggers on `pull_request: branches: [main, master]` and **PR #138 targets
+`mv-170-student-list`**, so `validate` and `integration` are still not queued and there is no green
+tick to lean on. The local gate is the evidence, as it was for the original slice:
+
+```
+$ npm run typecheck     -> tsc --noEmit, no output, exit 0
+$ npm run lint          -> eslint, no output, exit 0
+$ npm test              -> Test Files  349 passed (349)
+                           Tests      2996 passed (2996)
+                           Duration   80.54s
+```
+
+Touched suites, individually: `tests/cases/write-repo.test.ts` **45** ·
+`tests/api/case-routes.test.ts` **55** · `tests/api/case-denial.test.ts` **40** ·
+`tests/app/case-pages.test.tsx` **34** · `tests/components/workspace/case-manage-controls.test.tsx`
+**17** · `tests/components/workspace/case-create-form.test.tsx` **12** ·
+`tests/supabase/service-role-exceptions.test.ts` **57**.
+
+Still no migration: `git status --porcelain -- supabase/` is empty. Still no `tests/integration/*.itest.ts`
+change, so `integration`'s relevance to this remediation is bounded the same way — but the founder
+should still read a green `validate` + `integration` after retargeting to `master`, and this card does
+not claim one.
+
+### Files this remediation adds or changes
+
+- `lib/cases/path-ids.ts` — **new**; `malformedPathId`, the shared 400 for a malformed route segment
+- `lib/cases/write-repo.ts` — `reassignment-conflict`; the zero-row DELETE re-reads to distinguish
+- `app/api/cases/[caseId]/assignment/route.ts` — `leftUnassigned` on every branch, `reason` on both
+  409s, uuid path id, `membershipId` as `z.uuid()`
+- `app/api/cases/[caseId]/assess/route.ts` — rate limit, 23505 recovery, uuid path id, corrected header
+- `app/api/cases/[caseId]/route.ts` · `app/api/org/[organizationId]/cases/route.ts` — uuid path ids
+- `app/(app)/workspace/[organizationId]/students/[caseId]/manage/page.tsx` — either-check outage,
+  staff-only roster, Archived marker, no status control on an archived case
+- `app/(app)/workspace/[organizationId]/students/page.tsx` — the failed-create-check note
+- `components/workspace/case-manage-controls.tsx` — branch on `reason`/`leftUnassigned` not on status;
+  `role="status"` on the note
+- `lib/supabase/service-role-exceptions.ts` — three entries corrected (this route's, plus the two the
+  new guard surfaced)
+- `tests/helpers/fake-case-db.ts` — `deleteLostRace`, `errorAfterDelete`
+- **No migration. No `tests/integration/` change.**

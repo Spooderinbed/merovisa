@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 import {
   createOrgCase,
   setCaseOperationalStatus,
+  readOrgCase,
   readPrimaryCounsellor,
   assignPrimaryCounsellor,
   PRIMARY_COUNSELLOR_ROLE,
@@ -42,7 +43,12 @@ const ORG = "11111111-1111-4111-8111-111111111111";
 const OTHER_ORG = "22222222-2222-4222-8222-222222222222";
 const ADMIN = "admin-user-id";
 const CASE = "aaaaaaaa-0000-4000-8000-000000000001";
+/** A SECOND case in the same organization — see `twoCaseFixture`. */
+const SIBLING_CASE = "aaaaaaaa-0000-4000-8000-000000000002";
 const PERSONAL_CASE = "aaaaaaaa-0000-4000-8000-000000000009";
+
+const ASSIGNMENT_ON_CASE = "ssssssss-0000-4000-8000-000000000001";
+const ASSIGNMENT_ON_SIBLING = "ssssssss-0000-4000-8000-000000000002";
 
 const MEMBERSHIP_A = "mmmmmmmm-0000-4000-8000-00000000000a";
 const MEMBERSHIP_B = "mmmmmmmm-0000-4000-8000-00000000000b";
@@ -58,8 +64,24 @@ const COUNSELLOR_B = "counsellor-b-user-id";
 function fixture(overrides: CaseDbFixture = {}): CaseDbFixture {
   return {
     cases: [
-      { id: CASE, organization_id: ORG, student_user_id: null, display_name: "Case one" },
-      { id: PERSONAL_CASE, organization_id: null, student_user_id: "some-student", display_name: "Personal" },
+      {
+        id: CASE,
+        organization_id: ORG,
+        student_user_id: null,
+        display_name: "Case one",
+        email: "one@example.test",
+        operational_status: "new",
+        archived_at: null,
+      },
+      {
+        id: PERSONAL_CASE,
+        organization_id: null,
+        student_user_id: "some-student",
+        display_name: "Personal",
+        email: null,
+        operational_status: "in_progress",
+        archived_at: null,
+      },
     ],
     organization_memberships: [
       { id: MEMBERSHIP_A, organization_id: ORG, user_id: COUNSELLOR_A, role: "counsellor", status: "active" },
@@ -82,8 +104,49 @@ function assignedFixture(overrides: CaseDbFixture = {}): CaseDbFixture {
   return fixture({
     case_assignments: [
       {
-        id: "ssssssss-0000-4000-8000-000000000001",
+        id: ASSIGNMENT_ON_CASE,
         case_id: CASE,
+        user_id: COUNSELLOR_A,
+        assignment_role: "primary_counsellor",
+      },
+    ],
+    ...overrides,
+  });
+}
+
+/**
+ * TWO assigned cases in the same organization, which is what makes the delete's
+ * PREDICATE observable.
+ *
+ * A single-row fixture cannot: with one row in the table, a delete scoped to the
+ * assignment id and a delete carrying no predicate at all both leave the table
+ * holding exactly the newly inserted row, so the two are the same value and the
+ * suite passes either way. Seeding a second organization's-worth of work means an
+ * unscoped delete takes a case nobody asked about with it, and the survivor
+ * assertion below sees that.
+ */
+function twoCaseFixture(overrides: CaseDbFixture = {}): CaseDbFixture {
+  return fixture({
+    cases: [
+      { id: CASE, organization_id: ORG, student_user_id: null, display_name: "Case one" },
+      { id: SIBLING_CASE, organization_id: ORG, student_user_id: null, display_name: "Case two" },
+      {
+        id: PERSONAL_CASE,
+        organization_id: null,
+        student_user_id: "some-student",
+        display_name: "Personal",
+      },
+    ],
+    case_assignments: [
+      {
+        id: ASSIGNMENT_ON_CASE,
+        case_id: CASE,
+        user_id: COUNSELLOR_A,
+        assignment_role: "primary_counsellor",
+      },
+      {
+        id: ASSIGNMENT_ON_SIBLING,
+        case_id: SIBLING_CASE,
         user_id: COUNSELLOR_A,
         assignment_role: "primary_counsellor",
       },
@@ -302,6 +365,84 @@ describe("setCaseOperationalStatus — cell 10", () => {
   });
 });
 
+/**
+ * `readOrgCase` had NO direct test. Its only call site — the manage page — mocks
+ * it, so the outage-versus-404 branch never executed anywhere in the suite: a
+ * lookup that FAILED and a case that genuinely does not exist could have returned
+ * the same value and nothing would have gone red. They render as an outage and a
+ * `notFound()` respectively, and swapping them tells a legitimate admin their
+ * student does not exist because Supabase blipped.
+ */
+describe("readOrgCase", () => {
+  test("maps the row the manage surface needs, and carries the organization", async () => {
+    const db = fakeCaseDb(fixture());
+
+    const result = await readOrgCase(CASE, db.client);
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        id: CASE,
+        organizationId: ORG,
+        displayName: "Case one",
+        email: "one@example.test",
+        operationalStatus: "new",
+        hasLinkedStudent: false,
+        archivedAt: null,
+      },
+    });
+    // The organization is carried because a single-case page takes the case from
+    // the URL and the organization from the URL, and has to check the two agree.
+    expect(db.queries[0]!.filters).toEqual([["id", CASE]]);
+  });
+
+  test("derives hasLinkedStudent from student_user_id and NEVER carries the id itself", async () => {
+    const db = fakeCaseDb(fixture());
+
+    const result = await readOrgCase(PERSONAL_CASE, db.client);
+
+    // MV-170's rule: a raw Auth user id is no use to a counsellor and does not
+    // belong in markup. What the surface needs from it is the boolean.
+    expect(result).toMatchObject({
+      ok: true,
+      // A NULL email is carried as null, never as "" — "no email address on file"
+      // is a real state and an empty string would render as an address.
+      data: { hasLinkedStudent: true, email: null },
+    });
+    expect(JSON.stringify(result)).not.toContain("some-student");
+  });
+
+  test("a case that does not exist is data: null, NOT a failure", async () => {
+    const db = fakeCaseDb(fixture());
+
+    expect(await readOrgCase("no-such-case", db.client)).toEqual({ ok: true, data: null });
+  });
+
+  test("a read that FAILED is a failure, and must not render as a missing case", async () => {
+    const db = fakeCaseDb(fixture(), { errorOn: { cases: { message: "connection reset" } } });
+
+    const result = await readOrgCase(CASE, db.client);
+
+    expect(result).toEqual({ ok: false, reason: "lookup-failed" });
+    // The whole point: the two are DIFFERENT values. A branch that collapsed them
+    // would 404 an existing student because a query timed out.
+    expect(result).not.toEqual({ ok: true, data: null });
+  });
+
+  test("a thrown client is a failure rather than an escaping exception", async () => {
+    const db = fakeCaseDb(fixture(), { throwOn: ["cases"] });
+
+    expect(await readOrgCase(CASE, db.client)).toEqual({ ok: false, reason: "lookup-failed" });
+  });
+
+  test("refuses a blank case id without querying", async () => {
+    const db = fakeCaseDb(fixture());
+
+    expect(await readOrgCase("   ", db.client)).toEqual({ ok: false, reason: "lookup-failed" });
+    expect(db.queries).toHaveLength(0);
+  });
+});
+
 describe("readPrimaryCounsellor", () => {
   test("returns the row filtered by the assignment role, not merely by case", async () => {
     const db = fakeCaseDb(assignedFixture());
@@ -376,6 +517,34 @@ describe("assignPrimaryCounsellor — cell 9", () => {
     );
     expect(remaining).toHaveLength(1);
     expect(remaining[0]!["user_id"]).toBe(COUNSELLOR_B);
+  });
+
+  test("deletes BY ASSIGNMENT ID — another case's counsellor is not collateral", async () => {
+    // The predicate is the whole safety property, and a one-row fixture cannot see
+    // it: with a single row in the table, `delete().eq("id", …)` and a delete
+    // carrying no predicate at all both end with the table holding exactly the new
+    // row. Two assigned cases make an unscoped delete visible as a case nobody
+    // asked about losing its counsellor.
+    const db = fakeCaseDb(twoCaseFixture());
+
+    const result = await assignPrimaryCounsellor(CASE, MEMBERSHIP_B, db.client);
+
+    expect(result).toEqual({ ok: true, changed: true });
+    expect(db.deletes).toHaveLength(1);
+    expect(db.deletes[0]!.table).toBe("case_assignments");
+    // Scoped to the row that was read back, NOT to `case_id` and NOT unscoped.
+    expect(db.deletes[0]!.filters).toEqual([["id", ASSIGNMENT_ON_CASE]]);
+
+    const remaining = db.rows["case_assignments"] ?? [];
+    // The sibling case still has the counsellor it started with.
+    const sibling = remaining.filter((row) => row["case_id"] === SIBLING_CASE);
+    expect(sibling).toHaveLength(1);
+    expect(sibling[0]!["id"]).toBe(ASSIGNMENT_ON_SIBLING);
+    expect(sibling[0]!["user_id"]).toBe(COUNSELLOR_A);
+    // And this case holds exactly its replacement.
+    const own = remaining.filter((row) => row["case_id"] === CASE);
+    expect(own).toHaveLength(1);
+    expect(own[0]!["user_id"]).toBe(COUNSELLOR_B);
   });
 
   test("assigning the counsellor who already holds the slot writes nothing", async () => {
@@ -499,8 +668,47 @@ describe("assignPrimaryCounsellor — cell 9", () => {
 
     expect(result).toEqual({ ok: false, reason: "denied", leftUnassigned: false });
     expect(db.inserts).toHaveLength(0);
-    // The row the delete did not remove is still there.
+    // The row the delete did not remove is still there — and THAT is what makes
+    // this a denial rather than the lost race below.
     expect(db.rows["case_assignments"]).toHaveLength(1);
+  });
+
+  test("a LOST RACE is a conflict, not a permission denial", async () => {
+    // Zero rows affected is how a policy refuses AND how a lost race looks: another
+    // admin deleted the same assignment microseconds earlier, so our predicate
+    // matches nothing and Postgres raises nothing. Reporting that to the user as
+    // "you may not do this" is a claim about their permissions that is simply
+    // false, and it sends them to ask a colleague instead of retrying.
+    //
+    // The two ARE distinguishable, by one cheap read: after a zero-row delete, the
+    // row we read back is either still there (the policy refused us) or gone
+    // (somebody else got there first).
+    const db = fakeCaseDb(assignedFixture(), { deleteLostRace: ["case_assignments"] });
+
+    const result = await assignPrimaryCounsellor(CASE, MEMBERSHIP_B, db.client);
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "reassignment-conflict",
+      leftUnassigned: false,
+    });
+    // Our delete removed nothing, so we did not strand the case — whoever won the
+    // race owns the outcome.
+    expect(db.inserts).toHaveLength(0);
+  });
+
+  test("a lost race whose re-read also fails is an outage, not a conflict", async () => {
+    // The disambiguating read can itself fail, and "we could not tell" must not be
+    // dressed up as either of the two answers it was asked to choose between.
+    const db = fakeCaseDb(assignedFixture(), {
+      deleteLostRace: ["case_assignments"],
+      errorAfterDelete: ["case_assignments"],
+    });
+
+    const result = await assignPrimaryCounsellor(CASE, MEMBERSHIP_B, db.client);
+
+    expect(result).toEqual({ ok: false, reason: "lookup-failed", leftUnassigned: false });
+    expect(db.inserts).toHaveLength(0);
   });
 
   test("an insert that fails AFTER the delete succeeded reports the case as unassigned", async () => {

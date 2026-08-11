@@ -94,6 +94,19 @@ export default async function StudentsPage({
   // route re-decides, and `cases_insert_admin` decides again.
   const create = await checkOrgPermission(data.user.id, organizationId, "case.create", supabase);
   const canCreate = create.decision.allowed;
+  /**
+   * "You may not create" and "we could not check" rendered identically — the control
+   * simply vanished — so an owner whose permission lookup blipped concluded their
+   * role had changed. Same rule as the manage page and as the failed list below: a
+   * failed check is an outage, not an absence.
+   *
+   * It does NOT blank the page the way the manage surface does, and the difference is
+   * deliberate. There the two controls ARE the page, so a half-rendered one is a lie
+   * about what the viewer may do. Here the list read succeeded and the list is what
+   * the page is for; replacing a working list with an outage card would destroy more
+   * than it reports. The note goes where the control would have been.
+   */
+  const createCheckFailed = !canCreate && create.decision.reason === "lookup-failed";
 
   const query = (first(sp.q) ?? "").trim();
   // An unknown status can only come from a hand-edited query string. It is
@@ -131,6 +144,11 @@ export default async function StudentsPage({
             Add a student
           </Link>
         </div>
+      ) : createCheckFailed ? (
+        <p className="max-w-[64ch] text-meta text-ink-soft">
+          We couldn&apos;t check whether you can add a student, so that option is missing from this
+          page. Something went wrong on our side — this is not a statement about your permissions.
+        </p>
       ) : null}
 
       {/*

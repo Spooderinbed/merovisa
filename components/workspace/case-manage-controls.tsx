@@ -99,24 +99,41 @@ export function CaseManageControls({
       });
 
       if (!response.ok) {
-        if (response.status === 409) {
+        // Read the body ONCE, then branch on what it SAYS rather than on the status
+        // it arrived with. Two of these outcomes share 409 and a third can arrive as
+        // either 403 or 500, so the status is not the discriminator — `reason` and
+        // `leftUnassigned` are. `.catch` covers a proxy answering with an HTML error
+        // page, where `json()` rejects.
+        const body: unknown = await response.json().catch(() => null);
+        const failure = (typeof body === "object" && body !== null ? body : {}) as {
+          leftUnassigned?: unknown;
+          reason?: unknown;
+        };
+
+        // FIRST, and across every status. The one failure that changed the case
+        // anyway: the unique index forces delete-then-insert, so the previous
+        // counsellor can be gone while the new one was never added. It reaches here
+        // as a 500 OR as a 403 — a 42501 on the replacement insert is mapped to
+        // `denied` — and an admin told only "not allowed" would not know to
+        // reassign.
+        if (failure.leftUnassigned === true) {
+          setAssignmentError(
+            "We removed the previous counsellor but could not add the new one, so this student has nobody assigned right now. Please choose a counsellor again.",
+          );
+          return;
+        }
+        if (failure.reason === "member-inactive") {
           setAssignmentError(
             "That person's access to this organization has been switched off. Reactivate them on the team page, or choose someone else.",
           );
           return;
         }
-        // The one failure that changed the case anyway. The unique index forces
-        // delete-then-insert, so the previous counsellor can be gone while the
-        // new one was never added — and an admin told only "that didn't work"
-        // would not know to reassign.
-        const body: unknown = await response.json().catch(() => null);
-        if (
-          typeof body === "object" &&
-          body !== null &&
-          (body as { leftUnassigned?: unknown }).leftUnassigned === true
-        ) {
+        if (failure.reason === "reassignment-conflict") {
+          // A lost race, not a refusal. Zero rows affected is how Postgres reports
+          // both, and telling this admin they lack permission would be false — they
+          // already passed `case.assign` to get here.
           setAssignmentError(
-            "We removed the previous counsellor but could not add the new one, so this student has nobody assigned right now. Please choose a counsellor again.",
+            "Somebody else changed this student's counsellor while you were choosing. Refresh the page to see who holds it now, then try again.",
           );
           return;
         }
@@ -203,7 +220,14 @@ export function CaseManageControls({
             </p>
           ) : null}
           {assignmentNote !== null ? (
-            <p className="text-meta text-ink-soft">{assignmentNote}</p>
+            // ANNOUNCED, like its sibling error above. This is the outcome of a
+            // submit the person deliberately made, and rendering it as plain text
+            // meant a screen-reader user got silence — no error, no confirmation,
+            // and no reason to believe the request had finished. `status` rather
+            // than `alert` because nothing went wrong: it is polite, not assertive.
+            <p role="status" className="text-meta text-ink-soft">
+              {assignmentNote}
+            </p>
           ) : null}
           <div>
             <Button type="submit" size="sm" disabled={savingAssignment || membershipId === ""}>

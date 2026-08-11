@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkCasePermission } from "@/lib/cases/require-permission";
 import { readOrgCase, readPrimaryCounsellor } from "@/lib/cases/write-repo";
 import { listOrgMembers } from "@/lib/org/repo";
+import { MEMBERSHIP_ROLES } from "@/lib/cases/permissions";
 import { operationalStatusLabel } from "@/lib/cases/operational-status";
 import {
   CaseManageControls,
@@ -33,7 +34,16 @@ import { Card } from "@/components/ui/card";
  *
  * Three outcomes, three renderings, and they must never collapse: a denial is
  * `notFound()`, a failed check or read is an outage, and a case that does not
- * exist is `notFound()`.
+ * exist is `notFound()`. **"A failed check" means EITHER of the two**, not both —
+ * asking two questions and only reporting the failure when both fail is how the
+ * mixed answer became a page that silently dropped one control.
+ *
+ * **Two things this page will not say.** Who staffs the case, to a viewer who is
+ * not staff on it — the linked student holds `case.update` and so reaches here,
+ * but `case_assignments_select_accessor` refuses them with zero rows, which is
+ * indistinguishable from an unassigned case, so the read is not made rather than
+ * misreported. And a status control on an ARCHIVED case, because un-archiving is
+ * Stage 6's and the change would have no way back.
  */
 export default async function ManageCasePage({
   params,
@@ -53,15 +63,51 @@ export default async function ManageCasePage({
   const canUpdateStatus = update.decision.allowed;
   const canAssign = assign.decision.allowed;
 
-  if (!canUpdateStatus && !canAssign) {
-    if (
-      update.decision.reason === "lookup-failed" ||
-      assign.decision.reason === "lookup-failed"
-    ) {
-      return <Outage organizationId={organizationId} heading="We couldn't check your access" />;
-    }
-    notFound();
+  /**
+   * EITHER check failing is an outage — not just both of them.
+   *
+   * This used to sit inside `if (!canUpdateStatus && !canAssign)`, which meant the
+   * mixed answer was the one it could not report: `case.update` allowed while
+   * `case.assign` could not be answered rendered the page normally with the
+   * assignment control silently absent, indistinguishable from "you are a
+   * counsellor, who may not assign". The admin then sees a surface that looks
+   * complete and is not, which is worse than an error page — there is nothing to
+   * retry, because nothing said anything went wrong.
+   *
+   * A `lookup-failed` on an ALLOWED decision cannot happen (its reason is null), so
+   * this reads only the reasons of decisions that actually denied.
+   */
+  if (update.decision.reason === "lookup-failed" || assign.decision.reason === "lookup-failed") {
+    return <Outage organizationId={organizationId} heading="We couldn't check your access" />;
   }
+  if (!canUpdateStatus && !canAssign) notFound();
+
+  /**
+   * Is this viewer STAFF on the case, or the student it belongs to?
+   *
+   * It matters because `CASE_PERMISSION_MATRIX.student["case.update"]` is `linked`,
+   * so the linked student passes the gate above — while
+   * `case_assignments_select_accessor` admits only
+   * `actor_assigned_case_ids() or can_staff_case(case_id)`. An RLS refusal is ZERO
+   * ROWS AND NO ERROR, so their roster read came back `{ok: true, data: null}` and
+   * the page told them "No counsellor is assigned to this student yet" — a denial
+   * wearing the empty-result answer, and a false claim about a case that may well
+   * have a counsellor.
+   *
+   * The two are indistinguishable after the read, so the answer is not to make it.
+   * Which is also the rule the migration states: who staffs a case is
+   * "consultancy-internal operating data" and "the student link must not confer
+   * org-scoped rights" (`…20260730180000….sql`, divergence 6).
+   *
+   * `grantedRoles` is the authorization fact `getCaseContext` publishes for exactly
+   * this and mirrors `can_staff_case`; it is read from whichever check ALLOWED,
+   * because a denial hands back the grants-nothing context.
+   */
+  const grantedRoles: readonly string[] =
+    (canUpdateStatus ? update.context.grantedRoles : assign.context.grantedRoles) ?? [];
+  const isStaffOnCase = grantedRoles.some((role) =>
+    (MEMBERSHIP_ROLES as readonly string[]).includes(role),
+  );
 
   const caseResult = await readOrgCase(caseId, supabase);
   if (!caseResult.ok) {
@@ -70,8 +116,18 @@ export default async function ManageCasePage({
   if (!caseResult.data || caseResult.data.organizationId !== organizationId) notFound();
   const caseRow = caseResult.data;
 
-  const primary = await readPrimaryCounsellor(caseId, supabase);
-  const currentUserId = primary.ok ? (primary.data?.userId ?? null) : null;
+  /**
+   * Archiving is Stage 6's, and until it exists an archived case is a record that
+   * has been put away with no way back. Offering the operational-status control on
+   * one would offer a change nobody can reverse — and the list already shows this
+   * state, so the one surface that offers to CHANGE the case was the only one not
+   * mentioning it was closed off.
+   */
+  const isArchived = caseRow.archivedAt !== null;
+
+  // Not read at all for a non-staff viewer — see `isStaffOnCase` above.
+  const primary = isStaffOnCase ? await readPrimaryCounsellor(caseId, supabase) : null;
+  const currentUserId = primary?.ok ? (primary.data?.userId ?? null) : null;
 
   // The member list is read ONLY when there is a control to put it in. A viewer
   // who may not assign has no use for it, and asking for it anyway would be a
@@ -109,7 +165,15 @@ export default async function ManageCasePage({
         >
           ← Students
         </Link>
-        <h1 className="text-[clamp(28px,3.4vw,40px)]">{caseRow.displayName}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-[clamp(28px,3.4vw,40px)]">{caseRow.displayName}</h1>
+          {/* The same marker the list shows, for the same reason it shows it. */}
+          {isArchived ? (
+            <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-2 py-0.5 text-caption text-ink-soft">
+              Archived
+            </span>
+          ) : null}
+        </div>
         <p className="text-meta text-ink-soft">
           {caseRow.email ?? "No email address on file"} ·{" "}
           {operationalStatusLabel(caseRow.operationalStatus)}
@@ -120,13 +184,18 @@ export default async function ManageCasePage({
       <Card as="section" padding="lg" className="flex flex-col gap-2">
         <h2 className="text-title font-medium">Who is working on this student</h2>
         <p className="max-w-[64ch] text-body text-ink-soft">
-          {!primary.ok
-            ? // A failed read must not wear the "nobody is assigned" answer — it
-              // would tell an admin to assign somebody who is already assigned.
-              "We couldn't check who is assigned. Something went wrong on our side; please try again in a moment."
-            : primary.data === null
-              ? "No counsellor is assigned to this student yet."
-              : `Assigned to ${primary.data.userId.slice(0, 8)}.`}
+          {primary === null
+            ? // Not staff on this case. The roster was never read, so there is no
+              // answer to report — and inventing "nobody is assigned" from a read
+              // RLS would have refused is the defect this branch exists to avoid.
+              "Who is working on this student is not shown here. The people a consultancy puts on a case are internal to that consultancy."
+            : !primary.ok
+              ? // A failed read must not wear the "nobody is assigned" answer — it
+                // would tell an admin to assign somebody who is already assigned.
+                "We couldn't check who is assigned. Something went wrong on our side; please try again in a moment."
+              : primary.data === null
+                ? "No counsellor is assigned to this student yet."
+                : `Assigned to ${primary.data.userId.slice(0, 8)}.`}
         </p>
       </Card>
 
@@ -137,10 +206,16 @@ export default async function ManageCasePage({
             wrong on our side — the status can still be changed.
           </p>
         ) : null}
+        {isArchived ? (
+          <p className="max-w-[64ch] text-body text-ink-soft">
+            This student&apos;s record is archived, so its status cannot be changed here.
+            Un-archiving is not built yet.
+          </p>
+        ) : null}
         <CaseManageControls
           caseId={caseId}
           operationalStatus={caseRow.operationalStatus}
-          canUpdateStatus={canUpdateStatus}
+          canUpdateStatus={canUpdateStatus && !isArchived}
           canAssign={canAssign && !memberListFailed}
           members={members}
         />
