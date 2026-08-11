@@ -535,7 +535,21 @@ consultancy row makes this rollback lossy**, long before MV-160.
 
 ## Applying MV-168 to production
 
-**Founder-gated. Nothing in this section is an agent action.**
+**Founder-gated: run it only on an explicit, in-the-moment go.** Earlier revisions of this file said
+"nothing in this section is an agent action," and that was wrong on the facts — see the status note
+directly below, which records an agent performing exactly this apply under a founder's go. The gate
+is the founder's decision, not the identity of whoever types the command.
+
+> **STATUS — APPLIED 2026-08-11.** Production (`obfvrxixtautamflzxzq`) carries these grants. Applied
+> by agent on the founder's explicit go, via the Supabase MCP's `execute_sql` rather than
+> `supabase db push` (the CLI is broken on win32-x64 here) — the whole file in one implicit
+> transaction, all six assertions silent. The ledger row was then inserted **by hand as
+> `20260808120000`**, matching the repo, because `apply_migration` stamps a version of its own and
+> that is what caused the 2026-08-07 drift. Verified afterwards from outside the file: the three
+> grants exact to their column lists, the three policies attached to the verbs they claim, and the
+> three permanent refusals still absent. Pre-apply state was clean — `assessments` held no UPDATE
+> grant at all, so assertion (3) had no drift to find. The procedure below stands as written and is
+> what a re-apply, a second environment, or a post-rollback restore should follow.
 
 This section exists because MV-168 shipped without one, which is the **fourth recurrence** of the
 omission the MV-159 section above was written to end. The pattern is now unmistakable: a slice adds
