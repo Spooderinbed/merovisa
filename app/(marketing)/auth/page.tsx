@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AuthCard } from "@/components/auth/auth-card";
 import { safeNext } from "@/lib/auth/safe-next";
 import { CLAIM_TTL_MS, signClaim } from "@/lib/auth/hmac-claim";
+import { first } from "@/lib/http/search-params";
 
 /**
  * Sign the claim for a visitor who arrived here from their anonymous results.
@@ -27,13 +28,21 @@ function claimFor(assessmentId: string | undefined): string | null {
 export default async function AuthPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; assessment?: string }>;
+  searchParams: Promise<{ next?: string | string[]; assessment?: string | string[] }>;
 }) {
   const sp = await searchParams;
+  // A repeated parameter arrives as `string[]` (MV-176). Collapsed here, once:
+  // `safeNext` and `claimFor` both reason about a single value, and `AuthCard`
+  // takes a `string`. Declaring `string` didn't make it one — `?next=/a&next=/b`
+  // reached `safeNext`, which called `.startsWith` on an array and 500'd the
+  // sign-in page.
+  const next = first(sp.next);
+  const assessment = first(sp.assessment);
+
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
   if (data.user) {
-    redirect(safeNext(sp.next) ?? "/dashboard");
+    redirect(safeNext(next) ?? "/dashboard");
   }
-  return <AuthCard nextPath={sp.next} claimToken={claimFor(sp.assessment)} />;
+  return <AuthCard nextPath={next} claimToken={claimFor(assessment)} />;
 }
