@@ -2156,7 +2156,7 @@
     },
     {
       "id": "MV-177",
-      "col": "inreview",
+      "col": "done",
       "pri": "P2",
       "owner": "agent",
       "file": "cards/MV-177-site-origin-header-trust.md",
