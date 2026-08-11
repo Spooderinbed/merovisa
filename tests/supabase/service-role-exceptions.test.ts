@@ -299,6 +299,59 @@ describe("B — the registry agrees with the working tree", () => {
     expect(stale, "this path no longer uses service-role — remove its exception").toEqual([]);
   });
 
+  /**
+   * MV-171's review found this entry lying about its own surface: the assess route's
+   * `requiredCaseCheck` said "service-role is used for exactly two things — the
+   * catalogue read and the assessments INSERT", while line 139 passed the admin
+   * client to `caseWriteColumns`, which reads `cases.select("id, student_user_id")`
+   * — a TENANT table — through it.
+   *
+   * Not exploitable, and that is beside the point. This registry is the audit
+   * artefact for every RLS bypass in the codebase, so an entry that understates its
+   * own surface is the exact failure the list exists to prevent, and a reviewer
+   * reading the entry rather than the file gets the wrong answer.
+   *
+   * PROSE ALONE CANNOT HOLD THIS. The correction was a doc edit, and a doc edit rots
+   * the moment somebody adds a fourth use. `caseWriteColumns` / `caseBindColumns` are
+   * the two helpers that read `cases` on whatever client they are handed, so a
+   * registered path calling either is performing a tenant read the entry must name.
+   * That is derivable, so it is asserted rather than remembered.
+   */
+  test("an entry that derives ownership through service-role SAYS so", () => {
+    const OWNERSHIP_HELPERS = ["caseWriteColumns", "caseBindColumns"] as const;
+
+    const silent: string[] = [];
+    for (const entry of SERVICE_ROLE_EXCEPTIONS) {
+      const absolute = path.join(REPO_ROOT, entry.path);
+      if (!existsSync(absolute)) continue;
+      const code = stripComments(readFileSync(absolute, "utf8"));
+      const used = OWNERSHIP_HELPERS.filter((helper) => code.includes(`${helper}(`));
+      if (used.length === 0) continue;
+
+      // The entry may name it anywhere it documents its behaviour.
+      const documented = `${entry.justification} ${entry.requiredCaseCheck}`;
+      if (!used.some((helper) => documented.includes(helper))) silent.push(entry.path);
+    }
+
+    expect(
+      silent,
+      "these paths read `cases` through the service-role client without naming it in their registry entry",
+    ).toEqual([]);
+  });
+
+  test("no entry claims a use count it does not keep", () => {
+    // The specific sentence that was false. A registry entry counting its own
+    // service-role uses is asserting something a reader will not re-derive, and this
+    // one had drifted by one for MV-171's whole build.
+    const counting = SERVICE_ROLE_EXCEPTIONS.filter((entry) =>
+      /\bfor exactly two things\b/.test(`${entry.justification} ${entry.requiredCaseCheck}`),
+    ).map((entry) => entry.path);
+
+    // `scripts/stage2/capture-read-path-snapshot.mjs` keeps the phrase legitimately:
+    // it enumerates Auth users and reads anonymous rows, and does nothing else.
+    expect(counting).toEqual(["scripts/stage2/capture-read-path-snapshot.mjs"]);
+  });
+
   test("the new case-permission layer reaches for service-role nowhere", () => {
     const caseLayer = collectSourceFiles(path.join(REPO_ROOT, "lib", "cases"));
     expect(caseLayer.length).toBeGreaterThan(0);

@@ -16,6 +16,13 @@ import { TeamMemberRow } from "@/components/workspace/team-member-row";
  * enumeration oracle, and `getOrgContext` already refuses to distinguish "unknown
  * organization" from "not a member" for the same reason.
  *
+ * A FAILED permission lookup is not a denial. `checkOrgPermission` preserves
+ * `getOrgContext`'s reason so "not a member" and "the membership read errored"
+ * stay distinguishable; collapsing them tells an owner their organization does not
+ * exist because Supabase blipped. `lookup-failed` renders the outage card this
+ * page already has for the equivalent failure one layer down (MV-170 adversarial
+ * review, 2026-08-10).
+ *
  * There is no invite control. Spec F-5: staff invitations are Stage 5, so this
  * surface manages memberships that already exist and cannot grow the team.
  */
@@ -32,7 +39,16 @@ export default async function TeamPage({
   if (!data.user) redirect(`/auth?next=/workspace/${organizationId}/team`);
 
   const manage = await checkOrgPermission(data.user.id, organizationId, "org.manage", supabase);
-  if (!manage.decision.allowed) notFound();
+  if (!manage.decision.allowed) {
+    if (manage.decision.reason === "lookup-failed") {
+      return (
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">
+          <TeamLookupFailedCard />
+        </div>
+      );
+    }
+    notFound();
+  }
   const settings = await checkOrgPermission(data.user.id, organizationId, "org.settings", supabase);
   const viewerIsOwner = settings.decision.allowed;
 
@@ -66,12 +82,7 @@ export default async function TeamPage({
       </Card>
 
       {!members.ok ? (
-        <Card as="section" padding="lg" className="flex flex-col gap-2">
-          <h2 className="text-title font-medium">We couldn&apos;t load the team</h2>
-          <p className="max-w-[64ch] text-body text-ink-soft">
-            Something went wrong on our side. Please try again in a moment.
-          </p>
-        </Card>
+        <TeamLookupFailedCard />
       ) : (
         <Card as="section" padding="lg" className="flex flex-col">
           {members.data.map((member) => (
@@ -90,5 +101,21 @@ export default async function TeamPage({
         </Card>
       )}
     </div>
+  );
+}
+
+/**
+ * One wording for "a read did not complete", shared by the failed permission
+ * lookup and the failed roster read so neither can drift into sounding like a
+ * statement about the actor's access.
+ */
+function TeamLookupFailedCard() {
+  return (
+    <Card as="section" padding="lg" className="flex flex-col gap-2">
+      <h2 className="text-title font-medium">We couldn&apos;t load the team</h2>
+      <p className="max-w-[64ch] text-body text-ink-soft">
+        Something went wrong on our side. Please try again in a moment.
+      </p>
+    </Card>
   );
 }

@@ -62,6 +62,15 @@ describe("OrgSettingsForm — what a failed save says", () => {
     expect(screen.queryByText(/was not allowed/i)).not.toBeInTheDocument();
   });
 
+  it("reports a failed ACCESS CHECK as a transient outage, distinctly from a write failure", async () => {
+    // The route 503s when `checkOrgPermission` returned `lookup-failed`: the
+    // owner's standing was never established, so neither "not allowed" nor
+    // "we couldn't save that" is true — nothing was attempted.
+    await saveOnce(response(503));
+    expect(await screen.findByText(/couldn't check your access/i)).toBeInTheDocument();
+    expect(screen.queryByText(/was not allowed/i)).not.toBeInTheDocument();
+  });
+
   it("still reports a genuine 403 as a refusal", async () => {
     await saveOnce(response(403));
     expect(await screen.findByText("That change was not allowed.")).toBeInTheDocument();

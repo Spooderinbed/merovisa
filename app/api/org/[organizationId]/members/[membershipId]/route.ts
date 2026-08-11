@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkOrgPermission } from "@/lib/cases/require-org-permission";
 import { MEMBERSHIP_ROLES, MEMBERSHIP_STATUSES } from "@/lib/cases/permissions";
 import { decideMembershipChange } from "@/lib/org/membership-change";
+import { isPermissionOutage, permissionDenialResponse } from "@/lib/org/permission-response";
 import { applyMembershipChange, getOrgMembership } from "@/lib/org/repo";
 
 /**
@@ -68,9 +69,24 @@ export async function PATCH(
 
   const manage = await checkOrgPermission(actorUserId, organizationId, "org.manage", supabase);
   if (!manage.decision.allowed) {
-    return NextResponse.json({ error: "Forbidden", reason: manage.decision.reason }, { status: 403 });
+    // Not every denial is a refusal — see `lib/org/permission-response.ts` for
+    // why a failed lookup must not be reported as a lack of permission.
+    return permissionDenialResponse(manage.decision.reason);
   }
+
   const settings = await checkOrgPermission(actorUserId, organizationId, "org.settings", supabase);
+  // This is a SECOND round trip, so it can fail on its own after `org.manage`
+  // answered. Its denial feeds `actorIsOwner` below, and there it stops being a
+  // status and becomes a factual claim about the actor: an owner whose settings
+  // lookup errored would be carried forward as a non-owner, and
+  // `decideMembershipChange` would refuse with its own 403 — "only the owner may
+  // grant ownership" — that no longer mentions the outage at all. Fixing the
+  // status mapping alone would leave that 403 in place, so the reason has to stop
+  // the request here. A denial with any OTHER reason is an answer: an admin
+  // genuinely is not the owner, and that path continues.
+  if (isPermissionOutage(settings.decision.reason)) {
+    return permissionDenialResponse(settings.decision.reason);
+  }
 
   const membership = await getOrgMembership(organizationId, membershipId, supabase);
   if (!membership.ok) {

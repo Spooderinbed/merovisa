@@ -21,6 +21,14 @@
  * 403 keeps the original sentence, because for a 403 it was always true. The
  * defect was applying it to everything else.
  *
+ * **503 is narrower than the other 5xx and is not a write failure at all.** Both
+ * routes answer it when `checkOrgPermission` came back `lookup-failed`: the
+ * membership read behind the permission check errored, so nothing about the
+ * actor's standing was established and no write was attempted. "We couldn't save
+ * that change" would be wrong on both counts, and the 403 sentence it used to get
+ * was wrong in the way that matters most — it reported an outage as a statement
+ * about the person (`lib/org/permission-response.ts`).
+ *
  * Statuses a surface can answer more specifically — 404 on the members route,
  * 409 and 422 on the settings route — are handled at the call site and never
  * reach here.
@@ -30,6 +38,7 @@ export function saveErrorMessage(status: number): string {
   if (status === 403) return "That change was not allowed.";
   if (status === 404) return "We couldn't find that any more. Refresh the page and try again.";
   if (status === 422) return "That value isn't one we can save. Refresh the page and try again.";
+  if (status === 503) return "We couldn't check your access just now — please try again.";
   if (status >= 500) {
     return "We couldn't save that change. Something went wrong on our side — please try again in a moment.";
   }

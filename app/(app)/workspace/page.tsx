@@ -67,6 +67,16 @@ export default async function WorkspacePage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
+                  {/*
+                    Every staff role holds `case.list` (cell 7) — a counsellor's
+                    list is narrower, not absent — so the link is unconditional.
+                  */}
+                  <Link
+                    href={`/workspace/${org.id}/students`}
+                    className="text-control text-primary underline underline-offset-4"
+                  >
+                    Students
+                  </Link>
                   {org.role === "owner" || org.role === "admin" ? (
                     <Link
                       href={`/workspace/${org.id}/team`}
