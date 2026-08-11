@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkOrgPermission } from "@/lib/cases/require-org-permission";
+import { permissionDenialResponse } from "@/lib/org/permission-response";
 import { renameOrganization } from "@/lib/org/repo";
 
 /**
@@ -63,7 +64,9 @@ export async function PATCH(
 
   const { decision } = await checkOrgPermission(data.user.id, organizationId, "org.settings", supabase);
   if (!decision.allowed) {
-    return NextResponse.json({ error: "Forbidden", reason: decision.reason }, { status: 403 });
+    // Not every denial is a refusal — see `lib/org/permission-response.ts` for
+    // why a failed lookup must not be reported as a lack of permission.
+    return permissionDenialResponse(decision.reason);
   }
 
   const result = await renameOrganization(organizationId, parsed.data, supabase);
