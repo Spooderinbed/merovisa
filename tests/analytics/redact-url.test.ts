@@ -76,6 +76,31 @@ describe("sanitizeAnalyticsProperties", () => {
     expect(JSON.stringify(sanitized)).not.toContain("Placeholder");
   });
 
+  test("cleans $session_entry_url — the href pinned to EVERY event for the session's life", () => {
+    // posthog-js attaches the session's entry URL to the properties of every
+    // event until the session id rotates (30-minute idle, new tab, a shared
+    // link). A counsellor whose session starts on a submitted search therefore
+    // ships the student's name with every subsequent $pageview and $pageleave —
+    // the same href posthog DOES scrub where it hands it over as
+    // $set_once.$current_url.
+    const sanitized = sanitizeAnalyticsProperties({
+      $session_entry_url: `${STUDENTS}?q=Placeholder+Name`,
+    });
+    expect(sanitized.$session_entry_url).toBe(`${STUDENTS}?q=${REDACTION_PLACEHOLDER}`);
+  });
+
+  test("covers the whole $session_entry_ family by shape, not by an exact list of one", () => {
+    // `getSessionProps` builds these keys by prefixing whatever set-once
+    // property it holds, so the family grows without us. A rule narrowed back to
+    // literal keys passes the test above and fails this one.
+    const sanitized = sanitizeAnalyticsProperties({
+      $session_entry_pathname: `/workspace/org-1/students?q=Placeholder`,
+      $session_entry_referrer: `${STUDENTS}?q=Placeholder`,
+      $session_entry_some_future_url: `${STUDENTS}?q=Placeholder`,
+    });
+    expect(JSON.stringify(sanitized)).not.toContain("Placeholder");
+  });
+
   test("leaves the catalog's own event properties untouched", () => {
     const sanitized = sanitizeAnalyticsProperties({ surface: "matches", domain: "example.test" });
     expect(sanitized).toEqual({ surface: "matches", domain: "example.test" });

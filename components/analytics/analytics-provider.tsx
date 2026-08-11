@@ -28,6 +28,14 @@ export function AnalyticsProvider() {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
         autocapture: false,
         disable_session_recording: true,
+        // The third DOM-scraping collector, and the one that was left unset. An
+        // absent `capture_heatmaps` is not "off": posthog-js falls back to
+        // `_enabledServerSide`, a PostHog project-settings toggle someone can
+        // flip in a dashboard with no code change and no deploy. It also outruns
+        // `sanitize_properties` by shape — `$heatmap_data` is an object KEYED by
+        // window.location.href, and the sanitizer rewrites values, not keys — so
+        // a searched student's name would leave the browser intact.
+        capture_heatmaps: false,
         // "history_change" so App Router client navigations count as pageviews.
         capture_pageview: "history_change",
         sanitize_properties: (properties) => sanitizeAnalyticsProperties(properties),

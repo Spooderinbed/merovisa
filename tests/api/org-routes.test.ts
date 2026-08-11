@@ -39,14 +39,28 @@ const ORG = "11111111-1111-4111-8111-111111111111";
 const MEMBERSHIP = "22222222-2222-4222-8222-222222222222";
 const ACTOR = "actor-user-id";
 
-/** `checkOrgPermission` answers per claim, so a route asking the wrong one fails. */
-function grant(claims: Partial<Record<string, boolean>>) {
-  checkOrgPermission.mockImplementation(async (_actor: string, _org: string, permission: string) => ({
-    decision: claims[permission]
-      ? { allowed: true, requiredScope: "all-org", reason: null }
-      : { allowed: false, requiredScope: null, reason: "role-not-permitted" },
-    context: { actorUserId: _actor, organizationId: _org },
-  }));
+/**
+ * `checkOrgPermission` answers per claim, so a route asking the wrong one fails.
+ *
+ * `true` allows; a STRING denies with that reason, so "the membership read
+ * errored" can be told apart from "this role may not do this" — the distinction
+ * `checkOrgPermission` preserves and these routes used to throw away.
+ */
+function grant(claims: Partial<Record<string, boolean | string>>) {
+  checkOrgPermission.mockImplementation(async (_actor: string, _org: string, permission: string) => {
+    const claim = claims[permission];
+    return {
+      decision:
+        claim === true
+          ? { allowed: true, requiredScope: "all-org", reason: null }
+          : {
+              allowed: false,
+              requiredScope: null,
+              reason: typeof claim === "string" ? claim : "role-not-permitted",
+            },
+      context: { actorUserId: _actor, organizationId: _org },
+    };
+  });
 }
 
 function patchOrgRequest(body: unknown) {
@@ -157,6 +171,18 @@ describe("PATCH /api/org/[organizationId] — cell 2, owner-only settings", () =
     renameOrganization.mockResolvedValue({ ok: false, reason: "denied" });
     expect((await patchOrgRequest({ name: "x" })).status).toBe(403);
   });
+
+  it("does NOT 403 a permission lookup that failed — that is an outage, not a refusal", async () => {
+    // `getOrgContext` answers `lookup-failed` when the membership read errors —
+    // a statement timeout, a dropped connection, a thrown client. The owner is
+    // entitled to rename; nothing about their standing was established. A 403
+    // tells them they lack permission and gives them nothing to retry.
+    grant({ "org.settings": "lookup-failed" });
+    const response = await patchOrgRequest({ name: "Anadi Global" });
+    expect(response.status).toBe(503);
+    expect(renameOrganization).not.toHaveBeenCalled();
+    expect(await response.json()).toMatchObject({ reason: "lookup-failed" });
+  });
 });
 
 describe("PATCH /api/org/[organizationId]/members/[membershipId] — cell 5", () => {
@@ -230,5 +256,36 @@ describe("PATCH /api/org/[organizationId]/members/[membershipId] — cell 5", ()
     getOrgMembership.mockResolvedValue({ ok: false, reason: "lookup-failed" });
     expect((await patchMemberRequest({ role: "admin" })).status).toBe(500);
     expect(applyMembershipChange).not.toHaveBeenCalled();
+  });
+
+  it("does NOT 403 a failed org.manage lookup — that is an outage, not a refusal", async () => {
+    grant({ "org.manage": "lookup-failed" });
+    const response = await patchMemberRequest({ status: "inactive" });
+    expect(response.status).toBe(503);
+    expect(getOrgMembership).not.toHaveBeenCalled();
+    expect(applyMembershipChange).not.toHaveBeenCalled();
+    expect(await response.json()).toMatchObject({ reason: "lookup-failed" });
+  });
+
+  it("does NOT proceed as a non-owner when the org.settings lookup failed", async () => {
+    // The second-order bug. `org.manage` answered, `org.settings` errored — so
+    // `actorIsOwner` is false for an actor who may well BE the owner, and
+    // `decideMembershipChange` then refuses with its own 403 ("only the owner may
+    // grant ownership") that no longer mentions the outage at all. An owner is
+    // told the rule refused them, when in fact nothing was ever checked.
+    grant({ "org.manage": true, "org.settings": "lookup-failed" });
+    const response = await patchMemberRequest({ role: "owner" });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ reason: "lookup-failed" });
+    expect(applyMembershipChange).not.toHaveBeenCalled();
+  });
+
+  it("still treats an admin's honest lack of org.settings as a refusal, not an outage", async () => {
+    // The guard above must key on the REASON. An admin is legitimately not the
+    // owner; that denial is an answer, and 503ing it would tell every admin the
+    // site is broken.
+    grant({ "org.manage": true });
+    expect((await patchMemberRequest({ role: "counsellor" })).status).toBe(200);
+    expect((await patchMemberRequest({ role: "owner" })).status).toBe(403);
   });
 });

@@ -51,6 +51,32 @@ export const URL_PROPERTIES: readonly string[] = [
 ];
 
 /**
+ * Families of URL-carrying properties posthog-js BUILDS rather than declares, so
+ * an exact-key list cannot keep up with them.
+ *
+ * `$session_entry_*` is the one that matters and the one the exact list missed.
+ * `SessionPropsManager.getSessionProps` (posthog-js `lib/src/session-props.js`)
+ * takes each set-once property and re-emits it under a `$session_entry_` prefix —
+ * `$current_url` becomes `$session_entry_url` — and posthog then pins that object
+ * to the properties of EVERY event for the life of the session. So the href of
+ * whatever page a session started on rides along with every later `$pageview` and
+ * `$pageleave`; if that page was a submitted search, so does the student's name.
+ * The same href IS redacted where posthog hands it over as `$set_once.$current_url`
+ * and shipped verbatim here, which is why an exact list looked complete.
+ *
+ * Matching by SHAPE rather than adding one more literal is the point: the prefix
+ * is how posthog constructs the family, so the next member is covered before it
+ * exists. Over-matching is harmless — `redactSearchParams` returns a URL carrying
+ * none of the parameters byte for byte, so `$session_entry_utm_source` is untouched.
+ */
+export const URL_PROPERTY_PATTERNS: readonly RegExp[] = [/^\$session_entry_/];
+
+/** Whether a property name is one whose value is a URL we have to clean. */
+export function isUrlProperty(key: string): boolean {
+  return URL_PROPERTIES.includes(key) || URL_PROPERTY_PATTERNS.some((pattern) => pattern.test(key));
+}
+
+/**
  * The same URL with every free-text parameter's value replaced.
  *
  * Split by hand rather than through `new URL()`: this has to work on a relative
@@ -83,14 +109,21 @@ export function redactSearchParams(url: string): string {
 /**
  * PostHog's `sanitize_properties` hook: every event's properties, on their way
  * out. Returns a new object — mutating PostHog's is not ours to do.
+ *
+ * Iterates the properties PRESENT rather than a fixed list of names, which is
+ * what lets `isUrlProperty` recognise a family by shape.
+ *
+ * This reaches property VALUES only. A URL in a property KEY is out of range —
+ * `$heatmap_data` is keyed by `window.location.href` — which is why heatmap
+ * capture is refused outright in `components/analytics/analytics-provider.tsx`
+ * rather than cleaned here.
  */
 export function sanitizeAnalyticsProperties(
   properties: Record<string, unknown>,
 ): Record<string, unknown> {
   const sanitized: Record<string, unknown> = { ...properties };
-  for (const key of URL_PROPERTIES) {
-    const value = sanitized[key];
-    if (typeof value === "string") sanitized[key] = redactSearchParams(value);
+  for (const [key, value] of Object.entries(sanitized)) {
+    if (typeof value === "string" && isUrlProperty(key)) sanitized[key] = redactSearchParams(value);
   }
   return sanitized;
 }
