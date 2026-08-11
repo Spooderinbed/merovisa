@@ -211,6 +211,11 @@ and untouched here. Flagged, not fixed — see the follow-up note below.
 **Files:** `lib/auth/site-origin.ts` · `tests/auth/site-origin.test.ts` (new, 20 tests) ·
 `tests/api/auth-callback.test.ts` · `.env.example` · this card + board.
 
+**CI on PR #139 — all four checks green** (run `31467086594`, `completed / success`):
+`validate` pass 3m36s · `integration` pass 3m57s · `Vercel` pass · `Vercel Preview Comments` pass.
+The `integration` job has been gating since 2026-08-03, so its tick is real evidence rather than
+a `continue-on-error` pass.
+
 **Reviewer outcome:** awaiting founder. Merge is founder-gated. Before merging, confirm
 `NEXT_PUBLIC_SITE_URL` is set in Vercel → Production (see Risk notes — it cannot be checked
 from outside, and with it set this change cannot alter production behaviour at all).
