@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07",
+  "updated": "2026-08-11",
   "staleDays": 7,
   "columns": [
     {
@@ -2079,14 +2079,14 @@
     },
     {
       "id": "MV-169",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-169-org-context-team-management.md",
       "title": "Stage 3 slice 2 — org context, org selection, and team management",
       "summary": "Plan bullet 1. Org selection for a multi-org actor (wires getOrgContext/requireOrgPermission to a real surface) plus the team list, role change, and deactivate. Owner-only org settings (canonical divergence #1, verified live: organizations_update_owner reads actor_owner_org_ids). Role change must refuse role='owner' for a non-owner (divergence #5's carve-out). NOT IN SCOPE, both recorded as findings on the spec: org CREATION (F-2 — authenticated holds no INSERT grant on organizations and there is no INSERT policy, so provisioning stays a founder/ops action; no slice grants it), and INVITATIONS (F-5 — staff invitations are Stage 5, so Stage 3 team management can change a role and deactivate a member but CANNOT add one; plan bullet 1 reads as a more complete surface than it is). No case surfaces. Access matrix cells 1, 2, 4, 5 in spec §4.",
       "created": "2026-08-07",
-      "entered": "2026-08-08"
+      "entered": "2026-08-09"
     },
     {
       "id": "MV-170",
@@ -2142,6 +2142,17 @@
       "summary": "CARRIES THE STAGE EXIT. Completes the service-role disposition (spec §6.2): reclassify entries 1 and 2 to 'sanctioned' (F-6 — app/(focused)/assessment/[id]/page.tsx serves an UNAUTHENTICATED visitor so no grant to authenticated can ever retire it, and app/api/account/delete/route.ts says 'DELIBERATELY still owner-keyed' in its own justification; both are permanent designs mislabelled as grandfathered, so the list currently reports two entries as awaiting a migration that will never come), narrow entries 3, 4 AND 9 (app/api/profile/section/route.ts does NOT retire — reScoreAssessment, the plan copy refresh and adoptOwnerKeyedResidue are all refused by spec §6.1, and service-role-exceptions.test.ts:280/:293 pin both horns, so a builder cannot keep the admin client and delete the entry), confirm 5-7 wait for Stage 4's Storage policies, and register the new case-scoped scoring route. Net 9 → 9 — the same count it started with, one retired and one added — and the growth is admitted rather than hidden: MV-154's framing of the list as monotonically shrinking does not survive Stage 3, and the stage is scored on scope, not on list size. THEN proves the exit gate — seven criteria E1-E7 at named layers (spec §9.1), each shipping the vacuity guard from §9.2. E4 is the direct analogue of the Stage 2 §A2 vacuity MV-165 recorded honestly: it passes trivially if the case under test has a student_user_id, or on an empty write set, so it must assert cases.student_user_id IS NULL, owner IS NULL on every row written, AND a created-row count > 0. E1 must assert the actor's JWT role is 'authenticated' (a test run as service_role bypasses every policy and proves nothing). E6 must assert per-entry disposition, never a count (the tracked set is 9 at exit). E7 pins F-8: each case-scoped write route must write the STUDENT'S case id, read back from the row — and the counsellor fixture must itself hold a personal case with a row on the same table, or a wrong-case write has nowhere to land and the test proves nothing. AND THE EXIT MUST NOT OVERCLAIM (spec §9.3): with D-B shut, production holds no consultancy org and no student-less case, so a green Stage 3 licenses 'the mechanism is built and proven under RLS as the authenticated user' and NEVER 'it works for real students' — that is earned in Stage 7's pilot.",
       "created": "2026-08-07",
       "entered": "2026-08-07"
+    },
+    {
+      "id": "MV-177",
+      "col": "inprogress",
+      "pri": "P2",
+      "owner": "agent",
+      "file": "cards/MV-177-site-origin-header-trust.md",
+      "title": "The redirect origin is taken from a request header on trust",
+      "summary": "lib/auth/site-origin.ts falls back to the x-forwarded-host / host request header when NEXT_PUBLIC_SITE_URL is unset, and that value becomes the ORIGIN half of ${origin}${destination} at app/auth/callback/route.ts:36 — independently of safeNext, which only validates the destination half. Surfaced by the adversarial pass over safe-next.ts during PR #137 (MV-176) review and, separately, by the 2026-07-10 audit. NOT a safeNext bypass and not live on Vercel: measured 2026-08-11 that a forged x-forwarded-host does not move the production Location (the edge overwrites it) and that a forged Host 404s. The fallback is NOT dead — NODE_ENV=development already handles local dev, so the branch serves Vercel PREVIEWS, whose per-PR URLs no fixed NEXT_PUBLIC_SITE_URL can express. Fail-closed was rejected (turns a latent security risk into a live sign-in outage, and breaks previews); leave-it-documented was rejected (.env.example still omits the var, so a fresh deploy starts in the untrusted branch). CHOSEN: bound the trust without removing the branch — consult the header only when the runtime is Vercel, the one edge whose overwrite is measured, and validate the result in MV-176 round-trip idiom (parse it; accept only an exact origin — http(s), no credentials, no path/query/fragment). PLUS a second defect found in the same branch: a comma-joined x-forwarded-host from a proxy CHAIN makes NextResponse.redirect throw, 500ing the sign-in page — the same failure class MV-176 just fixed, reached through a header. Every new rejection degrades to url.origin, so no new path can 500 and none can emit an uncertified origin.",
+      "created": "2026-08-11",
+      "entered": "2026-08-11"
     }
   ]
 }

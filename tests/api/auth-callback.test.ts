@@ -26,6 +26,34 @@ import { GET } from "@/app/auth/callback/route";
 
 const url = (qs: string) => new Request(`http://localhost/auth/callback?${qs}`);
 
+/**
+ * Run one request with the Vercel system env vars pinned. Since MV-177 the forwarded host is
+ * only consulted behind an edge known to overwrite it, and these vars are what say so. Both
+ * are pinned rather than only the one under test, so the result does not depend on whatever
+ * the surrounding CI environment happens to export.
+ */
+async function withVercelEnv<T>(on: boolean, run: () => Promise<T>): Promise<T> {
+  const prev = { VERCEL: process.env.VERCEL, VERCEL_ENV: process.env.VERCEL_ENV };
+  if (on) {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "production";
+  } else {
+    delete process.env.VERCEL;
+    delete process.env.VERCEL_ENV;
+  }
+  try {
+    return await run();
+  } finally {
+    for (const [key, value] of Object.entries(prev)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
+const onVercel = <T,>(run: () => Promise<T>): Promise<T> => withVercelEnv(true, run);
+const offVercel = <T,>(run: () => Promise<T>): Promise<T> => withVercelEnv(false, run);
+
 describe("GET /auth/callback", () => {
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
@@ -148,12 +176,50 @@ describe("GET /auth/callback", () => {
     // to localhost — this asserts the forwarded host wins so production lands on the site.
     exchangeCodeForSession.mockResolvedValue({ error: null });
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    const req = new Request("http://localhost/auth/callback?code=abc", {
-      headers: { "x-forwarded-host": "merovisa.vercel.app", "x-forwarded-proto": "https" },
-    });
-    const res = await GET(req);
+    const res = await onVercel(() =>
+      GET(
+        new Request("http://localhost/auth/callback?code=abc", {
+          headers: { "x-forwarded-host": "merovisa.vercel.app", "x-forwarded-proto": "https" },
+        }),
+      ),
+    );
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("https://merovisa.vercel.app/dashboard");
+  });
+
+  it("does NOT redirect to a forged x-forwarded-host when no trusted edge set it (MV-177)", async () => {
+    // The origin half of `${origin}${destination}` is the one part of this redirect that comes
+    // from request data. safeNext guards the destination half only. Off Vercel nothing
+    // overwrites the header, so it is a claim rather than evidence and must not be honoured.
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    const res = await offVercel(() =>
+      GET(
+        new Request("http://localhost/auth/callback?code=abc", {
+          headers: { "x-forwarded-host": "attacker.example", "x-forwarded-proto": "https" },
+        }),
+      ),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).not.toContain("attacker");
+    expect(res.headers.get("location")).toBe("http://localhost/dashboard");
+  });
+
+  it("survives the comma-joined x-forwarded-host a chain of proxies produces (MV-177)", async () => {
+    // `${proto}://${host}` would be "https://a.host, b.host" — unparseable, and
+    // NextResponse.redirect throws on it, so the sign-in page 500s instead of signing anyone
+    // in. Same failure class as MV-176, reached through a header instead of the query string.
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    const res = await onVercel(() =>
+      GET(
+        new Request("http://localhost/auth/callback?code=abc", {
+          headers: { "x-forwarded-host": "a.host, b.host", "x-forwarded-proto": "https" },
+        }),
+      ),
+    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost/dashboard");
   });
 
   it("prefers NEXT_PUBLIC_SITE_URL over the request origin and forwarded host", async () => {
