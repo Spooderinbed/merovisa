@@ -2145,14 +2145,25 @@
     },
     {
       "id": "MV-176",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-176-repeated-search-params.md",
       "title": "A repeated query parameter 500s the sign-in page",
       "summary": "Confirmed defect on a page LIVE IN PRODUCTION, found while reviewing MV-170 (PR #136) but outside that slice. Next hands a repeated query parameter through as string[] (its own SearchParams type is {[key:string]: string | string[] | undefined}), but app/(marketing)/auth/page.tsx declared searchParams as {next?: string; assessment?: string} — a claim about the URL, not about Next, and one TypeScript cannot check across a framework boundary. So /auth?next=/a&next=/b reached safeNext, which calls input.startsWith, and 500d the sign-in page; ?next= alone did the same because [] is truthy; the array also flowed into AuthCards nextPath prop typed string; and a repeated ?assessment= silently signed NO claim (String([a,b]) is \"a,b\", which fails the id shape check), costing a visitor from anonymous results the assessment the token binds. A CRASH, NOT A SECURITY HOLE — safeNext returning null is already the safe path and the throw precedes the redirect, so no unsafe destination was ever followed; the redirect-safety logic is correct and is NOT restructured. Fix matches MV-170s own approach: widen both declared types to the truthful union and collapse to the first value at the boundary, via ONE shared lib/http/search-params.ts first() rather than a third private copy; an empty array reads as ABSENT, not \"\". app/(focused)/assess/page.tsx never called a string method on a search param so it never threw — a repeated ?new=/?error= was silently IGNORED instead; it now honours the first value, which is the one behaviour delta in the card and is flagged for the founder rather than buried. MV-170s private first() is behaviourally identical and lives on OPEN PR #136, not on master, so it is deliberately not in this diff: whichever of the two PRs merges second swaps it for the import (one-line, same behaviour). Red test came first and failed with the production error verbatim — TypeError: input.startsWith is not a function; six mutations (helper x3, /auth x2, /assess x1) each re-run RED. Gate green unpiped: typecheck 0, lint 0, test 0 (342 files, 2769 tests, +21), build 0.",
       "created": "2026-08-10",
-      "entered": "2026-08-10"
+      "entered": "2026-08-11"
+    },
+    {
+      "id": "MV-177",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "file": "cards/MV-177-site-origin-header-trust.md",
+      "title": "The redirect origin is taken from a request header on trust",
+      "summary": "lib/auth/site-origin.ts falls back to the x-forwarded-host / host request header when NEXT_PUBLIC_SITE_URL is unset, and that value becomes the ORIGIN half of ${origin}${destination} at app/auth/callback/route.ts:36 — independently of safeNext, which only validates the destination half. Surfaced by the adversarial pass over safe-next.ts during PR #137 (MV-176) review and, separately, by the 2026-07-10 audit. NOT a safeNext bypass and not live on Vercel: measured 2026-08-11 that a forged x-forwarded-host does not move the production Location (the edge overwrites it) and that a forged Host 404s. The fallback is NOT dead — NODE_ENV=development already handles local dev, so the branch serves Vercel PREVIEWS, whose per-PR URLs no fixed NEXT_PUBLIC_SITE_URL can express. Fail-closed was rejected (turns a latent security risk into a live sign-in outage, and breaks previews); leave-it-documented was rejected (.env.example still omits the var, so a fresh deploy starts in the untrusted branch). CHOSEN: bound the trust without removing the branch — consult the header only when the runtime is Vercel, the one edge whose overwrite is measured, and validate the result in MV-176 round-trip idiom (parse it; accept only an exact origin — http(s), no credentials, no path/query/fragment). PLUS a second defect found in the same branch: a comma-joined x-forwarded-host from a proxy CHAIN makes NextResponse.redirect throw, 500ing the sign-in page — the same failure class MV-176 just fixed, reached through a header. Every new rejection degrades to url.origin, so no new path can 500 and none can emit an uncertified origin.",
+      "created": "2026-08-11",
+      "entered": "2026-08-11"
     }
   ]
 }
