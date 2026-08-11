@@ -458,9 +458,16 @@ exactly once as well.
   membership read to *fail* mid-request, which is not reproducible from a browser at all — it is
   pinned at the route, where the reason lives. `[[jsdom-is-blind-to-layout]]` applies to neither R2
   nor R3: both are init-config and pure-function properties, not layout.
-- **`$session_entry_url` was confirmed against the pinned tarball in `node_modules`**, not from
-  memory of the posthog docs — version read back as `1.384.1`, and the key-construction loop read
-  directly out of `lib/src/session-props.js`.
+- **Both posthog claims were confirmed against the pinned tarball in `node_modules`**, not from
+  memory of the docs — version read back as `1.384.1`.
+  - R2: the key-construction loop read directly out of `lib/src/session-props.js:66-77`.
+  - R3: `lib/src/heatmaps.js:109-110` reads
+    `if (!isNullish(this._config.capture_heatmaps)) { return this._config.capture_heatmaps !== false; }`
+    — so nullish genuinely falls through to `_enabledServerSide`, and `false` genuinely short-circuits
+    it. This mattered because R3's test asserts on what we **pass to `init`**, which would have stayed
+    green against a misspelled config key while the fix did nothing; the mechanism check is what rules
+    that out, and `tsc` accepting the key against posthog's own `PostHogConfig` type is the second
+    half of it.
 
 ### Files touched by this fix
 
