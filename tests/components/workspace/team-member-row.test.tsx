@@ -74,6 +74,16 @@ describe("TeamMemberRow — what a failed change says", () => {
     expect(screen.queryByText(/was not allowed/i)).not.toBeInTheDocument();
   });
 
+  it("reports a failed ACCESS CHECK as a transient outage, distinctly from a write failure", async () => {
+    // 503 is the route's answer when `checkOrgPermission` could not establish
+    // anything (`lookup-failed`). "We couldn't save it" would be wrong twice
+    // over: nothing was attempted, and the admin has no idea their permission
+    // was never read.
+    await deactivateWith(503);
+    expect(await screen.findByText(/couldn't check your access/i)).toBeInTheDocument();
+    expect(screen.queryByText(/was not allowed/i)).not.toBeInTheDocument();
+  });
+
   it("reports a failed write as our problem, not as a refusal", async () => {
     // Two 500s reach here — a membership lookup that failed, and a write that
     // failed for any reason other than 42501.
