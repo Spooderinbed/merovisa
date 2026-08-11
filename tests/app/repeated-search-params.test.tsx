@@ -130,6 +130,7 @@ describe("/auth with a repeated ?next=", () => {
     ["protocol-relative", "//evil.com"],
     ["backslash-prefixed", "/\\evil"],
     ["fully-qualified", "https://evil.com/path"],
+    ["tab-hidden protocol-relative", `/${String.fromCharCode(0x09)}/evil.com`],
   ])("still rejects a %s first element and falls back to /dashboard", async (_label, hostile) => {
     getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
     await expect(
@@ -147,6 +148,46 @@ describe("/auth with a repeated ?next=", () => {
       AuthPage({ searchParams: Promise.resolve({ next: ["//evil.com", "/profile"] }) }),
     ).rejects.toThrow("REDIRECT");
     expect(redirect).not.toHaveBeenCalledWith("/profile");
+  });
+});
+
+/**
+ * Review finding F1 — the bypass arrives as a *single* value, not a repeated one:
+ * `/auth?next=/%09/evil.com`. Next decodes it to `/<tab>/evil.com`, which the
+ * pre-fix `safeNext` returned unchanged (starts with `/`, not with `//`), Next's
+ * relative `redirect()` put on the `Location` header verbatim, and the browser
+ * resolved as `//evil.com` after stripping the tab — off-origin.
+ *
+ * These pin the caller's half of the contract: a rejected value must become
+ * `/dashboard`, not a 500 and not the hostile destination.
+ */
+describe("/auth with a whitespace-hidden ?next=", () => {
+  beforeEach(() => {
+    getUser.mockReset();
+    redirect.mockClear();
+    getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+  });
+
+  it.each([
+    ["%09 (tab)", 0x09],
+    ["%0a (line feed)", 0x0a],
+    ["%0d (carriage return)", 0x0d],
+    ["a literal space", 0x20],
+    ["a C1 control", 0x85],
+  ])("redirects a signed-in visitor to /dashboard for %s", async (_label, code) => {
+    const hostile = `/${String.fromCharCode(code)}/evil.com`;
+    await expect(AuthPage({ searchParams: Promise.resolve({ next: hostile }) })).rejects.toThrow(
+      "REDIRECT",
+    );
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+    expect(redirect).not.toHaveBeenCalledWith(hostile);
+  });
+
+  it("still redirects a clean ?next= to where it asked", async () => {
+    await expect(AuthPage({ searchParams: Promise.resolve({ next: "/matches" }) })).rejects.toThrow(
+      "REDIRECT",
+    );
+    expect(redirect).toHaveBeenCalledWith("/matches");
   });
 });
 
