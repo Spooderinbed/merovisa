@@ -104,15 +104,19 @@ Spec §9.2 exists because these tests pass for free if written the obvious way.
 
 **Gate:** `npm run typecheck` clean · `npm run lint` clean · `npm test` **357 files / 3186 tests, 0 failed**.
 
-**The integration lane was NOT run in this session, and that is a gap, not a pass.**
-`tests/integration/stage3-case-route.itest.ts` is written, typechecks and lints, but was never
-executed here: Docker Desktop's Linux engine on this machine holds **zero images and zero volumes**,
-so the local Supabase stack does not exist, and `npx supabase` is broken on win32-x64 here (prior
-measurement) so it could not be created. The suite is therefore **unexecuted code** until CI runs
-it — and CI does: the `integration` job self-hosts its own Supabase stack and has been **gating**
-since 2026-08-03. **Read that job's result on the PR before treating any claim below about row
-shape, `owner IS NULL`, or cross-case refusal as evidence.** Everything asserted from `npm test` is
-evidence today; everything asserted from the `.itest.ts` is a claim awaiting CI.
+**The integration lane could not run locally and was run by CI instead.** Docker Desktop's Linux
+engine on this machine holds **zero images and zero volumes**, so the local Supabase stack does not
+exist, and `npx supabase` is broken on win32-x64 here (prior measurement). The gating `integration`
+job self-hosts its own stack, so that is where the evidence comes from.
+
+**Run 1 (PR #143, commit `3832615`): 848 passed / 1 failed** — every MV-172 positive and all seven
+negatives green against a real database; the single failure was **this suite's own fixture mistake**,
+not the code under test. `a MALFORMED case id…` sent `kind: "police-clearance"`, which is not a
+`DocumentKind`, so `DocumentStatusSchema` answered **422** before the case id was ever looked at and
+the 400 branch was never reached. Fixed to a real kind — **and the ordering it accidentally
+documented is now pinned as its own test** (payload validation runs before case resolution, so a
+request malformed in both ways answers 422). Note the failure mode: had the assertion been written
+as `toBe(422)`, it would have passed while proving nothing about the malformed case id at all.
 
 ### What shipped
 
@@ -172,7 +176,7 @@ evidence today; everything asserted from the `.itest.ts` is a claim awaiting CI.
   full: green licenses *"the mechanism is built and proven under RLS as the authenticated user"* and
   **never** *"it works for real students"*.
 - **The three `outcomes` routes' positive DB path.** Covered in the integration suite by their
-  **refusal only**. The happy path needs a frozen prediction, which needs the catalogue readable
+  **refusal only** (which does pass against the real database). The happy path needs a frozen prediction, which needs the catalogue readable
   through PostgREST — it is not, on this stack (`stage3-write-grants.itest.ts` reads `programs`
   through `psql` for the same reason). Their case-id plumbing is proven in the unit matrix and their
   grants in `stage3-write-grants.itest.ts`; the end-to-end write on a student-less case is proven

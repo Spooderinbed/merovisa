@@ -462,9 +462,15 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-172 the case route writes t
   });
 
   it("a MALFORMED case id is refused before any query, and writes nothing", async () => {
+    // The `kind` must be a REAL DocumentKind. The first draft of this test used
+    // "police-clearance", which is not one, so `DocumentStatusSchema` answered 422
+    // and the 400 was never reached — the test would have passed for the wrong
+    // reason had it expected 422. The ordering it accidentally documented is
+    // correct and is pinned below: payload validation runs BEFORE the case is
+    // resolved, so a request malformed in both ways answers 422, not 400.
     const res = await documentStatusPost(
       json("/api/documents/status", "POST", {
-        kind: "police-clearance",
+        kind: "national-id",
         obtained: true,
         caseId: "case-the-client-asked-for",
       }),
@@ -477,5 +483,20 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-172 the case route writes t
       .eq("case_id", counsellorOwnCase);
     // The fallback that must not exist: a malformed id resolving to the actor's own case.
     expect((data ?? []).length).toBe(1);
+  }, 120_000);
+
+  it("validates the PAYLOAD before it resolves the case — 422 wins over 400", async () => {
+    // Not a nicety: it is why the malformed-case-id test above has to send a real
+    // `kind`, and pinning it stops a later refactor from moving the case
+    // resolution earlier and quietly turning every bad payload into a 400 that
+    // says nothing about what was actually wrong with the request.
+    const res = await documentStatusPost(
+      json("/api/documents/status", "POST", {
+        kind: "not-a-document-kind",
+        obtained: true,
+        caseId: "case-the-client-asked-for",
+      }),
+    );
+    expect(res.status).toBe(422);
   }, 120_000);
 });
