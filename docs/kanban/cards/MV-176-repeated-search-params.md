@@ -266,6 +266,43 @@ that the two layers overlap: with layer 1 deleted, layer 2 still closes the bypa
 to have, and it is the reason layer 1 is kept despite no test being able to distinguish it — see the
 decision log. `git status --porcelain` was clean after restoring; no mutation reached a commit.
 
+### F1 — adversarial pass: four independent lenses tried to break the fixed guard
+
+A green suite proves the cases I thought of. Four agents were pointed at the fixed guard with
+distinct attack lenses and told to default to "no bypass" unless they could demonstrate one
+empirically. All four ran; **zero bypasses**.
+
+| Lens | What it attacked | Result |
+|---|---|---|
+| whitespace / controls | characters a browser strips, trims or normalises — tab, LF, CR, C0/C1, NBSP, U+2028/2029, BOM, zero-width, fullwidth solidus, NFKC/IDNA folds | 35 candidates, none survived *and* resolved off-origin |
+| scheme / authority | `//`, `///`, `/\`, `/%2f%2f`, `/%5c`, `/.//`, `/..//`, `/https://`, userinfo `/@evil.com`, port, fragment and query smuggling | ~40 candidates + a 5,000,000-iteration fuzz: 978,654 survivors, **0** off-origin |
+| parser disagreement | places where the round-trip can hold while a browser still resolves elsewhere: lone surrogates, overlong percent-encodings, opaque origins, non-special schemes | ~60 candidates; pathname+search+hash byte-identical under the placeholder base and the live base in every probe |
+| caller / header | the path from `safeNext` to the wire — all 12 call sites, re-encoding, concatenation, OAuth `redirectTo`, CRLF header splitting | 871,530 probes, 25,760 survivors, **0** off-origin |
+
+**The negative result is evidence rather than blindness, because the rig had positive controls.**
+The caller lens stood up a live two-origin HTTP server and drove real Chrome through top-level
+navigations: the three values the guard *rejects* (`//host`, `/\host`, `/<tab>//host`) each **did**
+navigate Chrome to the attacker origin, so the harness demonstrably detects a real escape. The 13
+guard-approved payloads carrying an attacker authority all landed on the site origin.
+
+The structural argument the lenses converged on, independently: after the prefix checks, any value
+reaching the round-trip starts with exactly one `/` whose next character is neither `/` nor `\`, so
+WHATWG parses it as a path-absolute reference whose reconstruction is base-independent. Requiring
+`pathname + search + hash === input` therefore forces the browser to produce exactly
+`origin + input`, which is on-origin by construction.
+
+**Two observations surfaced that are not `safeNext` bypasses and are not fixed here:**
+
+1. `lib/auth/site-origin.ts:14` trusts `x-forwarded-host` / `host` when `NEXT_PUBLIC_SITE_URL` is
+   unset, which controls the *origin* half of `app/auth/callback/route.ts:36` independently of this
+   guard. Not victim-triggerable — a browser cannot be induced to send a forged `x-forwarded-host`
+   cross-origin — and Vercel overwrites the header. Latent, not exploitable, and out of this card's
+   scope; flagged rather than folded in.
+2. `app/(marketing)/auth/page.tsx:47` passes the **raw** `next` to `AuthCard`, which builds the OAuth
+   `redirectTo`. Verified safe: `URLSearchParams` contains all 17 hostile values tested, the
+   `redirectTo` origin and `/auth/callback` path never move, and the callback re-guards on read-back.
+   Left as it is — but that encoding is load-bearing, which is now written down.
+
 ### F2 — no red test, and that is the honest report
 
 F2 is a documentation correction: the comment described a shape (`[]` from `?next=`) that a URL cannot
