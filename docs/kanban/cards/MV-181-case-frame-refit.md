@@ -34,7 +34,8 @@ Per spec §7 PR 3, adjusted for the refit: route tests owner/admin all-case + co
 ## Evidence (2026-08-18, branch `mv-181-case-frame-refit`)
 
 **Gate:** `npm test` 3394 passed / 365 files · `npm run typecheck` clean · `npm run lint` clean.
-No database evidence is claimed from this machine — there is no local Supabase stack here, and the slice ships no SQL. The gating CI `integration` job covers the DB side.
+**CI on PR #147 (`7c91cfb`): `validate` ✅ and `integration` ✅ — both green.**
+No database evidence is claimed from this machine — there is no local Supabase stack here, and the slice ships no SQL. The gating CI `integration` job, which self-hosts its own Supabase stack, covers the DB side and passed.
 
 ### What shipped — the delta only
 
