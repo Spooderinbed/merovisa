@@ -2112,14 +2112,14 @@
     },
     {
       "id": "MV-172",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-172-case-route.md",
       "title": "Stage 3 slice 5 — render the existing experience inside an explicit case route",
       "summary": "Plan bullet 3, and the largest surface in the stage. Renders the existing MeroVisa experience (profile, matches, plan, documents, checklist) under an explicit case route for a case that is NOT the actor's own — the first time a non-student actor reaches student data through the product. Flips app/api/plan/action/route.ts off service-role onto the authenticated client (retiring registry entry 8) and SPLITS app/api/profile/section/route.ts — its profile write moves, but reScoreAssessment (assessments UPDATE result), invalidatePlan's generator-column copy refresh (impact/title/body/estimates) and adoptOwnerKeyedResidue (UPDATE case_id) are all refused by spec §6.1 and stay service-role, so entry 9 NARROWS rather than retires; all three would fail SILENTLY if flipped (re-score.ts:33 never destructures error, and throwOnError appears nowhere in lib/ or app/). Those moves ARE grants 1 and 5, which is why MV-168 is a hard predecessor (without it this slice ships the case route still on service-role, the exact inverse of the enforcement boundary). Depends on MV-171 for a real student-less case to exercise: before it, the route can only be tested against a personal case, which is the Stage 2 shape and proves nothing new. NOT IN SCOPE: any change to the documents model, Storage paths, or signed downloads (Stage 4 — object paths stay owner-keyed through Stage 3 by the Stage 2 spec §8 decision); the case-context indicators (MV-173). PLUS F-8, which said FIVE and is SEVEN (spec amended in PR #143): shortlist:46, documents/status:33, outcomes/prediction:28, outcomes/attempt:31, outcomes/event:32, AND plan/action:37 + profile/section:37 — the last two were missed because they were VISIBLE to the service-role registry lens, which gave them a client disposition and asked nothing about their case id. All seven resolve the ACTOR'S OWN personal case via resolvePersonalCaseId and accept no case id — left as-is, every write control in the case route writes to the COUNSELLOR'S own case, and nothing fails loudly because the grants and policies already exist. They take an explicit, authorized case id here. Access matrix cells 13-17 and 21-23 in spec §4; exit criterion E7.",
       "created": "2026-08-07",
-      "entered": "2026-08-11"
+      "entered": "2026-08-17"
     },
     {
       "id": "MV-173",
@@ -2164,6 +2164,50 @@
       "summary": "lib/auth/site-origin.ts falls back to the x-forwarded-host / host request header when NEXT_PUBLIC_SITE_URL is unset, and that value becomes the ORIGIN half of ${origin}${destination} at app/auth/callback/route.ts:36 — independently of safeNext, which only validates the destination half. Surfaced by the adversarial pass over safe-next.ts during PR #137 (MV-176) review and, separately, by the 2026-07-10 audit. NOT a safeNext bypass and not live on Vercel: measured 2026-08-11 that a forged x-forwarded-host does not move the production Location (the edge overwrites it) and that a forged Host 404s. The fallback is NOT dead — NODE_ENV=development already handles local dev, so the branch serves Vercel PREVIEWS, whose per-PR URLs no fixed NEXT_PUBLIC_SITE_URL can express. Fail-closed was rejected (turns a latent security risk into a live sign-in outage, and breaks previews); leave-it-documented was rejected (.env.example still omits the var, so a fresh deploy starts in the untrusted branch). CHOSEN: bound the trust without removing the branch — consult the header only when the runtime is Vercel, the one edge whose overwrite is measured, and validate the result in MV-176 round-trip idiom (parse it; accept only an exact origin — http(s), no credentials, no path/query/fragment). PLUS a second defect found in the same branch: a comma-joined x-forwarded-host from a proxy CHAIN makes NextResponse.redirect throw, 500ing the sign-in page — the same failure class MV-176 just fixed, reached through a header. Every new rejection degrades to url.origin, so no new path can 500 and none can emit an uncertified origin.",
       "created": "2026-08-11",
       "entered": "2026-08-11"
+    },
+    {
+      "id": "MV-178",
+      "col": "backlog",
+      "pri": "P2",
+      "owner": "founder+agent",
+      "file": "cards/MV-178-data-refresh-cadence.md",
+      "title": "Data-refresh cadence (founder-deferred, do not chase)",
+      "summary": "Founder call 2026-08-17: legal + keep-updating-the-data deferred to backlog. Research report S5 priced it: visa/policy layer ~80-120 h/yr is the moat; catalogue breadth ~240 h/yr is a cost trap. Card exists so the deferral is durable state.",
+      "created": "2026-08-17",
+      "entered": "2026-08-17"
+    },
+    {
+      "id": "MV-179",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-179-queue-first-day-view.md",
+      "title": "Queue-first Day view for the consultancy workspace (UI lane slice 1)",
+      "summary": "New /workspace/[organizationId] landing: workload summary strip, view tabs, GET filters, dense semantic table with derived next action + attention sort, URL-addressable state, keyboard shortcuts. Spec: docs/superpowers/specs/2026-08-17-consultancy-workspace-ui.md S2. Depends on PR #143 (MV-172) merging first.",
+      "created": "2026-08-17",
+      "entered": "2026-08-17"
+    },
+    {
+      "id": "MV-180",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-180-consultancy-shell-split.md",
+      "title": "Consultancy shell split + counsellor team-read access fix (UI lane slice 2)",
+      "summary": "Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179.",
+      "created": "2026-08-17",
+      "entered": "2026-08-17"
+    },
+    {
+      "id": "MV-181",
+      "col": "backlog",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-181-case-frame-refit.md",
+      "title": "Case-frame refit: persistent context, decision-strip slot, manage-inside-frame (UI lane slice 3)",
+      "summary": "DELTA on top of MV-172's case-workspace-shell, not a rebuild: align with spec S1/S3 persistent-context contract, empty decision-strip slot until judgement/Stage 4 ship, manage refits inside the frame, single next-action panel shared with MV-179's resolver.",
+      "created": "2026-08-17",
+      "entered": "2026-08-17"
     }
   ]
 }
