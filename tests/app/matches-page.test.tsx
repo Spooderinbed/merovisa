@@ -43,7 +43,7 @@ beforeEach(() => {
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
 });
 
-import MatchesPage from "@/app/(app)/matches/page";
+import MatchesPage from "@/app/(app)/(student)/matches/page";
 import { CatalogReadError } from "@/lib/programs/errors";
 
 // A minimally-filled profile so the matches path runs (the empty/never-filled

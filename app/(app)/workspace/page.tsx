@@ -5,12 +5,20 @@ import { listActorOrganizations } from "@/lib/org/repo";
 import { Card } from "@/components/ui/card";
 
 /**
- * Access-matrix cell 1 — organization selection.
+ * Access-matrix cell 1 — organization selection, and since MV-180 the ORGANIZATION
+ * SWITCHER rather than the front door.
  *
- * This is a selection surface even for a single-organization actor: MV-170's case
- * list is scoped by the chosen organization, so the id has to come from somewhere
- * explicit rather than being inferred from "the only one you have" and then
- * quietly breaking the day a second membership appears.
+ * A sole-organization actor is sent straight to their Day view. The id is still
+ * explicit everywhere downstream — it is in the URL after the redirect, and every
+ * page re-authorizes against it — so nothing is inferred from "the only one you
+ * have" beyond which URL to open. The chooser is unchanged for an actor who
+ * genuinely has more than one membership, and the day a second one appears they get
+ * it back automatically.
+ *
+ * The auto-enter is deliberately conditioned on `ok && length === 1`. A failed
+ * lookup must not be resolved by guessing an organization, and it is not "you have
+ * exactly none" either — the two render as different sentences below, which is the
+ * whole reason this page has an outage state.
  *
  * There is no "create an organization" control, and its absence is deliberate:
  * spec F-2 records that `authenticated` holds no INSERT grant on `organizations`
@@ -24,6 +32,7 @@ export default async function WorkspacePage() {
   if (!data.user) redirect("/auth?next=/workspace");
 
   const result = await listActorOrganizations(data.user.id, supabase);
+  if (result.ok && result.data.length === 1) redirect(`/workspace/${result.data[0]!.id}`);
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">

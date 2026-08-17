@@ -93,16 +93,18 @@ vi.mock("@/lib/assessments/repo", () => ({
   listAssessmentsForCase: vi.fn().mockResolvedValue([]),
 }));
 
-import AppLayout from "@/app/(app)/layout";
-import ChecklistLandingPage from "@/app/(app)/checklist/page";
-import GlobalChecklistPage from "@/app/(app)/checklist/all/page";
-import ProgramChecklistPage from "@/app/(app)/checklist/[programId]/page";
-import DashboardPage from "@/app/(app)/dashboard/page";
-import DocumentsPage from "@/app/(app)/documents/page";
-import GuidePage from "@/app/(app)/guide/page";
-import MatchesPage from "@/app/(app)/matches/page";
-import PlanPage from "@/app/(app)/plan/page";
-import ProfilePage from "@/app/(app)/profile/page";
+// MV-180 moved the journey-marker chrome down into the (student) shell; the
+// neutral (app) layout no longer reads a case at all.
+import StudentLayout from "@/app/(app)/(student)/layout";
+import ChecklistLandingPage from "@/app/(app)/(student)/checklist/page";
+import GlobalChecklistPage from "@/app/(app)/(student)/checklist/all/page";
+import ProgramChecklistPage from "@/app/(app)/(student)/checklist/[programId]/page";
+import DashboardPage from "@/app/(app)/(student)/dashboard/page";
+import DocumentsPage from "@/app/(app)/(student)/documents/page";
+import GuidePage from "@/app/(app)/(student)/guide/page";
+import MatchesPage from "@/app/(app)/(student)/matches/page";
+import PlanPage from "@/app/(app)/(student)/plan/page";
+import ProfilePage from "@/app/(app)/(student)/profile/page";
 import AssessPage from "@/app/(focused)/assess/page";
 import AssessmentPage from "@/app/(focused)/assessment/[id]/page";
 
@@ -235,23 +237,23 @@ describe("MV-157 §D — every migrated Server Component DENIES before it reads"
   });
 
   describe("the two DEGRADE surfaces — neither may redirect, and neither may read", () => {
-    it("(app)/layout drops the journey marker on a denial rather than redirecting", async () => {
+    it("(student)/layout drops the journey marker on a denial rather than redirecting", async () => {
       // The chrome must never be the thing that decides a student cannot see
       // their own app — but it must also not read the case it was refused.
       checkCasePermission.mockResolvedValue({ decision: { allowed: false }, context: {} });
 
-      await AppLayout({ children: null });
+      await StudentLayout({ children: null });
 
       expect(redirect).not.toHaveBeenCalled();
       expect(getJourneySignals).not.toHaveBeenCalled();
       expect(from).not.toHaveBeenCalled();
     });
 
-    it("(app)/layout drops the journey marker when the actor has no personal case", async () => {
+    it("(student)/layout drops the journey marker when the actor has no personal case", async () => {
       checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
       resolvePersonalCaseId.mockResolvedValue(null);
 
-      await AppLayout({ children: null });
+      await StudentLayout({ children: null });
 
       expect(redirect).not.toHaveBeenCalled();
       expect(checkCasePermission).not.toHaveBeenCalled();

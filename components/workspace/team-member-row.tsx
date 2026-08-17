@@ -3,12 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { StaffReference } from "./staff-reference";
 import { saveErrorMessage } from "./save-error";
 
 /**
  * One membership, with the two controls cell 5 allows: change the role, or
  * deactivate. There is no "remove" — `status = 'inactive'` is the revocation
  * switch and the row deliberately survives for the audit trail.
+ *
+ * MV-180 makes the row a dense roster line built on `StaffReference`, so one
+ * person reads identically here, in the queue, and on the manage picker — and
+ * takes `canManage`, because cell 4 (read the roster) and cell 5 (change it) are
+ * different cells and a counsellor holds only the first.
  *
  * The controls a viewer may not use are not rendered at all, but that is
  * PRESENTATION: the route re-decides every request against the database, and the
@@ -37,6 +43,12 @@ export interface TeamMemberRowProps {
   status: string;
   /** The viewer's own membership row — no self-management, see the lockout guard. */
   isSelf: boolean;
+  /**
+   * Cell 5 — does this viewer hold `org.manage`? Required rather than defaulted:
+   * a default would decide the read-only case silently, and the case it would
+   * decide wrong is the counsellor's.
+   */
+  canManage: boolean;
   viewerIsOwner: boolean;
   /** Computed on the server from `MEMBERSHIP_ROLES`; already filtered for this viewer. */
   roleOptions: readonly string[];
@@ -49,6 +61,7 @@ export function TeamMemberRow({
   role,
   status,
   isSelf,
+  canManage,
   viewerIsOwner,
   roleOptions,
 }: TeamMemberRowProps) {
@@ -56,9 +69,9 @@ export function TeamMemberRow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // An admin may not touch the owner's row (the USING horn), and nobody may touch
-  // their own.
-  const manageable = !isSelf && (viewerIsOwner || role !== "owner");
+  // A counsellor manages nothing here, an admin may not touch the owner's row
+  // (the USING horn), and nobody may touch their own.
+  const manageable = canManage && !isSelf && (viewerIsOwner || role !== "owner");
 
   async function patch(change: { role?: string; status?: string }) {
     if (busy) return;
@@ -93,49 +106,46 @@ export function TeamMemberRow({
   }
 
   return (
-    <div className="flex flex-col gap-3 border-b border-line py-4 last:border-b-0">
-      <div className="flex flex-col gap-1">
-        <p className="text-control text-ink">
-          {/* No name and no email, and this is not an omission we can fix here:
-              `organization_memberships` carries only `user_id`, and `auth.users`
-              is not readable by `authenticated`. Recorded as F-9 on the spec. */}
-          <span className="font-mono text-meta">{userId.slice(0, 8)}</span>
-          {isSelf ? <span className="ml-2 text-meta text-ink-soft">(you)</span> : null}
+    <div className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {/* No name and no email, and this is not an omission we can fix here:
+            `organization_memberships` carries only `user_id`, and `auth.users` is
+            not readable by `authenticated`. Recorded as F-9 on the spec — which is
+            why the whole roster reads through `StaffReference`. */}
+        <p className="flex flex-wrap items-baseline gap-2">
+          <StaffReference role={role} userId={userId} active={status === "active"} />
+          {isSelf ? <span className="text-meta text-ink-soft">(you)</span> : null}
         </p>
-        <p className="text-meta text-ink-soft">
-          {role}
-          {status === "active" ? null : <span className="ml-2 text-reach">deactivated</span>}
-        </p>
-      </div>
 
-      {manageable ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-meta text-ink-soft">
-            Role
-            <select
-              value={role}
-              disabled={busy}
-              aria-label={`Role for member ${userId.slice(0, 8)}`}
-              onChange={(event) => patch({ role: event.target.value })}
-              className="rounded-md border border-line-2 bg-surface px-3 py-2 text-control text-ink focus:border-primary"
+        {manageable ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-meta text-ink-soft">
+              Role
+              <select
+                value={role}
+                disabled={busy}
+                aria-label={`Role for member ${userId.slice(0, 8)}`}
+                onChange={(event) => patch({ role: event.target.value })}
+                className="rounded-md border border-line-2 bg-surface px-3 py-1.5 text-control text-ink focus:border-primary"
+              >
+                {roleOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={busy}
+              onClick={() => patch({ status: status === "active" ? "inactive" : "active" })}
             >
-              {roleOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            variant="ghost"
-            size="sm"
-            loading={busy}
-            onClick={() => patch({ status: status === "active" ? "inactive" : "active" })}
-          >
-            {status === "active" ? "Deactivate" : "Reactivate"}
-          </Button>
-        </div>
-      ) : null}
+              {status === "active" ? "Deactivate" : "Reactivate"}
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       {error ? <p className="text-meta text-reach">{error}</p> : null}
     </div>

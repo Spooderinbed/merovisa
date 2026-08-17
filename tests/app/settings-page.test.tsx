@@ -33,8 +33,8 @@ const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.ho
 vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
 vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
 
-import SettingsPage from "@/app/(app)/settings/page";
-import ProfilePage from "@/app/(app)/profile/page";
+import SettingsPage from "@/app/(app)/(student)/settings/page";
+import ProfilePage from "@/app/(app)/(student)/profile/page";
 
 beforeEach(() => {
   resolvePersonalCaseId.mockResolvedValue("case-1");

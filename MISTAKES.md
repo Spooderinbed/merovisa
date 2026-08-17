@@ -15,6 +15,7 @@ Format per entry: **bold rule first**, then the incident in one or two lines. Ne
 ## Testing
 
 - **A green jsdom suite proves nothing about layout, CSS, or timing — do a live browser pass after any CSS-heavy change.** jsdom has no layout engine; two production hotfixes (MV-113, MV-114) shipped days after a "green" landing redesign.
+- **Check theme colours on a fresh page LOAD, never by flipping `data-theme` at runtime.** An element carrying `transition-colors` keeps the OLD theme's computed colour indefinitely after a runtime attribute flip (a reflow does not clear it; an identical element without the transition classes resolves correctly). On MV-180 that read as a 2:1 contrast failure on the new org rail; on reload it measured 6.2:1. Same family as the `background` shorthand note under Design Language.
 - **Split on `/\r?\n/`, never `"\n"` — and never verify a JS regex claim in PowerShell/.NET.** The Windows working tree is CRLF (`autocrlf=true`, no `.gitattributes`): `split("\n")` + `(.*)$` matched zero lines and the assertions went vacuously green — red only on Windows, green on Linux CI.
 - **A denial-only RLS test suite passes identically against a MISSING policy — mutation-test every policy and read the failing test names.** Negative probes ("role X cannot read Y") are inert as evidence; only drop-the-policy-and-watch-it-fail proves the test bites.
 - **Beware vacuous "both sides" checks: when two keys are 1:1, "denied under both" can be true with no policy at all.** (MV-157: owner↔case is 1:1, so the check never discriminated.)

@@ -68,7 +68,7 @@ export default async function StudentsPage({
   if (!list.decision.allowed) {
     if (list.decision.reason === "lookup-failed") {
       return (
-        <StudentsShell organizationId={organizationId}>
+        <StudentsShell>
           <LookupFailedCard />
         </StudentsShell>
       );
@@ -111,7 +111,6 @@ export default async function StudentsPage({
 
   return (
     <StudentsShell
-      organizationId={organizationId}
       lede={
         scope === "assigned"
           ? "The students assigned to you. Others in this organization are not shown."
@@ -230,24 +229,11 @@ export default async function StudentsPage({
 }
 
 /** The page's frame, so an outage renders as this page rather than as a bare card. */
-function StudentsShell({
-  organizationId,
-  lede,
-  children,
-}: {
-  organizationId: string;
-  lede?: string;
-  children: React.ReactNode;
-}) {
+function StudentsShell({ lede, children }: { lede?: string; children: React.ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 px-5 py-10">
+      {/* The back-link to the Day view is the rail's now (MV-180). */}
       <header className="flex flex-col gap-2">
-        <Link
-          href={`/workspace/${organizationId}`}
-          className="text-meta text-primary underline underline-offset-4"
-        >
-          ← Day view
-        </Link>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">All cases</h1>
         {lede ? <p className="max-w-[64ch] text-control text-ink-soft">{lede}</p> : null}
       </header>

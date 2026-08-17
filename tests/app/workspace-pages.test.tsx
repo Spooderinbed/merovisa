@@ -63,7 +63,10 @@ function grant(claims: Partial<Record<string, boolean>>) {
     decision: claims[permission]
       ? { allowed: true, requiredScope: "all-org", reason: null }
       : { allowed: false, requiredScope: null, reason: "role-not-permitted" },
-    context: {},
+    // An ACTIVE membership that simply does not hold this claim. `getOrgContext`
+    // resolves standing and the claim separately, and the team page reads both:
+    // cell 4 (roster read) is standing, cell 5 (role/deactivate) is the claim.
+    context: { membershipRole: "counsellor", isActiveMember: true, hasAccess: true, denyReason: null },
   }));
 }
 
@@ -77,7 +80,9 @@ function grant(claims: Partial<Record<string, boolean>>) {
 function denyAll(reason: string) {
   checkOrgPermission.mockImplementation(async () => ({
     decision: { allowed: false, requiredScope: null, reason },
-    context: {},
+    // `checkOrgPermission` short-circuits on a context that established no
+    // standing, so the context carries the same reason the decision does.
+    context: { membershipRole: null, isActiveMember: false, hasAccess: false, denyReason: reason },
   }));
 }
 
@@ -87,6 +92,44 @@ beforeEach(() => {
 });
 
 describe("/workspace — cell 1, organization selection", () => {
+  it("auto-enters a sole active organization rather than asking a question with one answer", async () => {
+    // MV-180: a counsellor at one consultancy has no choice to make here, and the
+    // Day view is the landing (MV-179). The chooser survives for the actor who
+    // genuinely has more than one.
+    listActorOrganizations.mockResolvedValue({
+      ok: true,
+      data: [{ id: ORG, name: "Anadi Education", slug: "anadi", role: "counsellor" }],
+    });
+    await expect(WorkspacePage()).rejects.toThrow("REDIRECT");
+    expect(redirect).toHaveBeenCalledWith(`/workspace/${ORG}`);
+  });
+
+  it("stays a chooser when the actor has more than one organization", async () => {
+    listActorOrganizations.mockResolvedValue({
+      ok: true,
+      data: [
+        { id: ORG, name: "Anadi Education", slug: "anadi", role: "owner" },
+        { id: "org-b", name: "Bagmati Overseas", slug: "bagmati", role: "counsellor" },
+      ],
+    });
+    render(await WorkspacePage());
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-enter anything when the lookup failed", async () => {
+    // An outage must never be resolved by guessing at an organization, and a
+    // failed read is not "you have exactly none" either.
+    listActorOrganizations.mockResolvedValue({ ok: false, reason: "lookup-failed" });
+    render(await WorkspacePage());
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-enter when the actor belongs to no organization", async () => {
+    listActorOrganizations.mockResolvedValue({ ok: true, data: [] });
+    render(await WorkspacePage());
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
   it("lists every organization the actor is an active member of", async () => {
     listActorOrganizations.mockResolvedValue({
       ok: true,
@@ -157,27 +200,93 @@ describe("/workspace — cell 1, organization selection", () => {
   });
 });
 
+/**
+ * MV-180 corrects this page's gate. Cell 4 (team list) is `read · read · read ·
+ * read` — every ACTIVE member of the organization, a counsellor included; cell 5
+ * (role change / deactivate) is owner/admin. The page gated BOTH on `org.manage`,
+ * so a counsellor was told the organization does not exist rather than shown the
+ * roster the matrix grants them (Stage 3 spec §0, amendment 3).
+ *
+ * The two halves are therefore asserted separately, and the read half is asserted
+ * for the role that used to be refused. Standing comes from the resolved context;
+ * the claim comes from the decision.
+ */
 describe("/workspace/[id]/team — cells 4 and 5", () => {
   const params = Promise.resolve({ organizationId: ORG });
 
+  const roster = {
+    ok: true,
+    data: [
+      { id: "m-1", userId: "aaaaaaaa-1111", role: "owner", status: "active" },
+      { id: "m-2", userId: "bbbbbbbb-2222", role: "counsellor", status: "inactive" },
+    ],
+  };
+
   it("renders the roster for an admin", async () => {
     grant({ "org.manage": true });
-    listOrgMembers.mockResolvedValue({
-      ok: true,
-      data: [
-        { id: "m-1", userId: "aaaaaaaa-1111", role: "owner", status: "active" },
-        { id: "m-2", userId: "bbbbbbbb-2222", role: "counsellor", status: "inactive" },
-      ],
-    });
+    listOrgMembers.mockResolvedValue(roster);
     render(await TeamPage({ params }));
 
-    expect(screen.getByText("owner")).toBeTruthy();
+    expect(screen.getByText("Owner")).toBeTruthy();
     // A deactivated member is still listed — the row survives for the audit trail.
-    expect(screen.getByText("deactivated")).toBeTruthy();
+    expect(screen.getByText(/Access switched off/i)).toBeTruthy();
   });
 
-  it("gates on org.manage, so a counsellor gets notFound rather than a forbidden page", async () => {
+  it("renders the roster for a COUNSELLOR — cell 4 is a read every active member holds", async () => {
+    // The bug: this asserted `notFound()`. A counsellor holds no `org.manage`,
+    // and `organization_memberships_select_member` lets them read their
+    // co-members anyway, so the app layer was refusing what the database grants.
     grant({ "case.list": true });
+    listOrgMembers.mockResolvedValue(roster);
+    render(await TeamPage({ params }));
+
+    expect(screen.getByText("Owner")).toBeTruthy();
+    expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it("offers a counsellor no role control and no deactivate control — cell 5 stays owner/admin", async () => {
+    grant({ "case.list": true });
+    listOrgMembers.mockResolvedValue(roster);
+    render(await TeamPage({ params }));
+
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /deactivate|reactivate/i })).toBeNull();
+  });
+
+  it("gives an admin the cell-5 controls the counsellor does not get", async () => {
+    // The other half of the pair: without this, "no controls for a counsellor"
+    // would pass against a page that renders controls for nobody.
+    grant({ "org.manage": true });
+    listOrgMembers.mockResolvedValue(roster);
+    render(await TeamPage({ params }));
+
+    expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /reactivate/i })).toBeTruthy();
+  });
+
+  it("says the roster is read-only to a counsellor, and says nothing about invitations", async () => {
+    // Spec F-5's "adding people comes later" is a manager's sentence. Telling a
+    // counsellor that this page manages memberships would describe a surface they
+    // do not have.
+    grant({ "case.list": true });
+    listOrgMembers.mockResolvedValue(roster);
+    render(await TeamPage({ params }));
+
+    expect(screen.getByText(/who is in this organization/i)).toBeTruthy();
+    expect(screen.queryByText(/Adding people comes later/i)).toBeNull();
+  });
+
+  it("denies a NON-member with notFound rather than a forbidden page", async () => {
+    denyAll("no-relationship");
+    await expect(TeamPage({ params })).rejects.toThrow("NOT_FOUND");
+    expect(listOrgMembers).not.toHaveBeenCalled();
+  });
+
+  it("denies an INACTIVE member with notFound — a revoked membership reads no roster", async () => {
+    // Canonical rule 1: inactive membership grants nothing. Standing, not the
+    // claim, is what the read gate now reads — so this is the case that would
+    // regress if the gate were loosened to "has a membership row".
+    denyAll("membership-inactive");
     await expect(TeamPage({ params })).rejects.toThrow("NOT_FOUND");
     expect(listOrgMembers).not.toHaveBeenCalled();
   });

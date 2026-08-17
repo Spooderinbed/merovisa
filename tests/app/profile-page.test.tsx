@@ -37,7 +37,7 @@ beforeEach(() => {
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
 });
 
-import ProfilePage from "@/app/(app)/profile/page";
+import ProfilePage from "@/app/(app)/(student)/profile/page";
 
 const GROUP_TITLES = [
   "About you",

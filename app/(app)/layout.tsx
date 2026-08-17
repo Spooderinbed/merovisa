@@ -2,17 +2,29 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
-import { AppBar } from "@/components/layout/app-bar";
-import { Footer } from "@/components/layout/footer";
-import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
-import { JourneyMarker } from "@/components/journey/journey-marker";
 import { IdentifyUser } from "@/components/analytics/identify-user";
-import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
-import { checkCasePermission } from "@/lib/cases/require-permission";
-import { getJourneySignals } from "@/lib/journey/signals";
-import { buildJourney, type Journey } from "@/lib/journey/journey";
 import { DEFAULT_CORRIDOR } from "@/lib/theme/corridor";
 
+/**
+ * The NEUTRAL authenticated shell (MV-180). It answers one question — is anyone
+ * signed in — and says nothing about who they are.
+ *
+ * Everything that describes the actor now lives in a shell below it:
+ * `(student)/layout.tsx` for a student's own journey, `workspace/layout.tsx` for
+ * consultancy staff processing cases. Both are children of this file, so the auth
+ * gate and the corridor scope are stated once.
+ *
+ * Why the split exists: this layout used to mount the student chrome — the journey
+ * marker, a "My plan" nav item, the five student mobile tabs — around EVERY
+ * signed-in route, `/workspace` included. A counsellor working a queue of other
+ * people's cases was told what their own next step was. Route groups change no
+ * public URL, so `/dashboard` and `/workspace/…` are exactly where they were
+ * (spec §1, "Signed-in shells").
+ *
+ * `tests/architecture/shell-boundary.test.ts` keeps this file neutral: it fails if
+ * either shell's chrome is imported here, and it fails if a route is added directly
+ * under `(app)/`, where it would render with no chrome at all.
+ */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
@@ -22,50 +34,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const next = safeNext(pathname) ?? "/dashboard";
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
-  // The persistent "where am I" marker (MV-103) rides in the chrome on every
-  // signed-in page. Wayfinding is non-critical, so a signals failure degrades to
-  // no marker — it must never take a page down with it.
-  //
-  // MV-157: the six signal reads are case-scoped like every other read, so the
-  // chrome resolves and authorizes the case exactly as a page does. No case (or a
-  // denial) degrades to no marker rather than a redirect — the chrome must never
-  // be the thing that decides a student cannot see their own app.
-  let journey: Journey | null = null;
-  try {
-    const caseId = await resolvePersonalCaseId(data.user.id, supabase);
-    if (caseId !== null) {
-      const { decision } = await checkCasePermission(data.user.id, caseId, "case.read", supabase);
-      if (decision.allowed) {
-        journey = buildJourney(await getJourneySignals(supabase, caseId));
-      }
-    }
-  } catch {
-    journey = null;
-  }
   return (
     <>
       <IdentifyUser userId={data.user.id} />
-      {/* Corridor scope (MV-96): signed-in = corridor known, always-on. Chrome
-          included so Phase-2 surfaces can consume corridor accents without
-          re-wiring. `contents` = token carrier only, no layout box. */}
+      {/* Corridor scope (MV-96): signed-in = corridor known, always-on. It sits
+          ABOVE the shell split because both shells consume corridor accents.
+          `contents` = token carrier only, no layout box — which is why each shell
+          owns its own full-height column rather than inheriting one from here. */}
       <div className="contents" data-corridor={DEFAULT_CORRIDOR}>
-        {/* Full-height flex column pins the footer to the viewport bottom, so a short
-            streamed loading fallback doesn't paint the footer high and then jump it
-            down when the taller real page streams in (MV-98 CLS fix). The chrome
-            (AppBar + JourneyMarker) lives INSIDE this column, not above it: the
-            `contents` wrapper is boxless, so any chrome placed as its sibling would
-            stack ~103px *outside* the 100dvh column, leaving the document taller
-            than one viewport — a dead scrollbar on every short signed-in page and on
-            the loading fallback, with the footer below the fold (MV-115 fix; mirrors
-            app/(marketing)/layout.tsx). Padded below md so the fixed tab bar never
-            covers content or footer. */}
-        <div className="flex min-h-dvh flex-col pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
-          <AppBar variant="app" user={data.user} />
-          {journey && <JourneyMarker journey={journey} />}
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        <MobileTabBar />
+        {children}
       </div>
     </>
   );
