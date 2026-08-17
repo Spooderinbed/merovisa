@@ -26,13 +26,21 @@ import type { QueueCase } from "./queue";
  * the queue). `lookup-failed` renders as the outage card, never as emptiness.
  *
  * THE ID LISTS ARE CHUNKED. supabase-js sends `.in()` as URL querystring, and
- * `LIST_ROW_CAP` ids in one URL is a request some proxy will refuse. Chunks also
- * keep each plan-item read comfortably under PostgREST's `max_rows = 1000`
- * ceiling, which truncates SILENTLY — `QUEUE_BATCH_SIZE` cases times a bounded
- * kind vocabulary cannot reach it.
+ * `LIST_ROW_CAP` ids in one URL is a request some proxy will refuse. Plan items
+ * chunk SMALLER than assignments, and the chunk size is NOT a guarantee:
+ * `plan_items.kind` is unconstrained text and staff hold a case-scoped INSERT
+ * policy, so open items per case are bounded by app convention only (the
+ * generator's vocabulary), never by the database. PostgREST's `max_rows = 1000`
+ * truncates SILENTLY, so a chunk that comes back at the ceiling MAY be a prefix
+ * — and a prefix here is wrong next actions and a wrong order with no error.
+ * `PLAN_ROW_CEILING` therefore trips that read into `lookup-failed`: the
+ * fail-the-queue rule applied to the one truncation PostgREST will not report.
  */
 
 export const QUEUE_BATCH_SIZE = 40;
+const PLAN_BATCH_SIZE = 20;
+/** PostgREST `max_rows` (supabase/config.toml). A plan read this long may be a silent prefix. */
+export const PLAN_ROW_CEILING = 1000;
 
 export type CaseQueueResult =
   | {
@@ -107,14 +115,18 @@ export async function listCaseQueue(
     }
 
     const planByCase = new Map<string, PlanItemRow[]>();
-    for (const ids of chunk(caseIds, QUEUE_BATCH_SIZE)) {
+    for (const ids of chunk(caseIds, PLAN_BATCH_SIZE)) {
       const plan = await supabase
         .from("plan_items")
         .select("id, case_id, kind, impact, title, status, started_at")
         .eq("status", "todo")
         .in("case_id", ids);
       if (plan.error) return LOOKUP_FAILED;
-      for (const row of plan.data ?? []) {
+      const planRows = plan.data ?? [];
+      // At the ceiling, PostgREST may have cut the answer without saying so; a
+      // possibly-partial plan read renders wrong next actions, so it is an outage.
+      if (planRows.length >= PLAN_ROW_CEILING) return LOOKUP_FAILED;
+      for (const row of planRows) {
         // `case_id` is nullable in the schema (a legacy owner-keyed item); the
         // `.in()` filter cannot return such a row, and one that somehow arrived
         // belongs to no case in this queue.

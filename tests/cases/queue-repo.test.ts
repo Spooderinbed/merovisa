@@ -263,6 +263,22 @@ describe("listCaseQueue — plan-item enrichment", () => {
     }
   });
 
+  test("a plan chunk at the PostgREST ceiling is an OUTAGE, never a silent prefix", async () => {
+    // max_rows truncates without an error, so `plan.error` cannot catch it — the
+    // row count is the only tell. A possibly-partial plan read renders wrong
+    // next actions and a wrong order, which is the misordering the fail-the-
+    // queue rule exists to prevent (adversarial-review finding).
+    const { client } = fakeCaseDb(
+      orgFixture({
+        plan_items: Array.from({ length: 1000 }, (_, i) =>
+          planItem(i + 1, CASE_2),
+        ) as CaseDbFixture["plan_items"],
+      }),
+    );
+    const result = await listCaseQueue(ACTOR, ORG_A, "all-org", client);
+    expect(result).toEqual({ ok: false, reason: "lookup-failed" });
+  });
+
   test("one case's items never bleed into another's", async () => {
     const { client } = fakeCaseDb(
       orgFixture({

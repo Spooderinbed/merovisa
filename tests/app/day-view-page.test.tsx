@@ -223,6 +223,25 @@ describe("Day view — the queue, in attention order", () => {
     expect(renderedNames()).toHaveLength(40);
   });
 
+  it("emits the shortcut contract on the REAL components — the attributes the client boundary queries", async () => {
+    // Mutation-proven gap (adversarial review): the shortcuts suite tests the
+    // listener against its own fixture, so the stringly-typed selector contract
+    // (`data-case-queue-search`/`data-case-queue-link`) could vanish from the
+    // real toolbar and row with every suite green while '/', 'j', 'k' silently
+    // die on the live page. This is the test-time link between the two halves.
+    grantList("all-org");
+    listCaseQueue.mockResolvedValue(
+      queued([
+        qc({ operationalStatus: "new" }),
+        qc({ id: "case-2", displayName: "Second Case", operationalStatus: "new" }),
+      ]),
+    );
+    const { container } = render(await DayViewPage({ params, searchParams: noParams }));
+
+    expect(container.querySelector("[data-case-queue-search]")).not.toBeNull();
+    expect(container.querySelectorAll("[data-case-queue-link]")).toHaveLength(2);
+  });
+
   it("case names are real links to the case overview, and rows carry no click handler", async () => {
     grantList("all-org");
     listCaseQueue.mockResolvedValue(queued([qc({ id: "case-9", displayName: "Anil Gurung", operationalStatus: "new" })]));
