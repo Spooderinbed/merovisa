@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { caseScoped, useCaseScopeId } from "@/components/cases/case-scope";
 import type { SectionKey } from "@/lib/profiles/sections";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -25,6 +26,10 @@ export function useGroupSave() {
   const router = useRouter();
   const [status, setStatus] = useState<SaveStatus>("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // The single choke point for all eight profile editors: they save through this
+  // hook, so the case scope is read here once rather than threaded through each.
+  // Null on /profile — the route then resolves the student's own case.
+  const caseId = useCaseScopeId();
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -35,7 +40,7 @@ export function useGroupSave() {
       const res = await fetch("/api/profile/section", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section, patch }),
+        body: JSON.stringify(caseScoped({ section, patch }, caseId)),
       }).catch(() => null);
       if (!res?.ok) {
         setStatus("error");

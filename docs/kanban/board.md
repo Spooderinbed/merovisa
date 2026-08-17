@@ -5,19 +5,17 @@
 > dashboard is [board.html](board.html) (open in a browser). See [README.md](README.md)
 > for how the board works.
 >
-> _Last updated: 2026-08-17 · stale threshold: 7d_
+> _Last updated: 2026-08-11 · stale threshold: 7d_
 
-### In flight — 1 open PR
+### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-17 02:24 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-17 02:56 UTC. **Not board state** — never written to board.json.
 
-| Card | PR | | CI | Review | Touches |
-|---|---|---|---|---|---|
-| **MV-172** | [#143](https://github.com/Spooderinbed/merovisa/pull/143) | open | passing 4/4 | — | app · components · tests · docs |
+_No open PRs._
 
 _1 open PR matches no card: [#144](https://github.com/Spooderinbed/merovisa/pull/144)._
 
-> ⚠️ MV-172 is in "ready" but its PR #142 is already merged — the board is behind the repo.
+> ⚠️ MV-172 is in "inreview" but its PR #143, #142 is already merged — the board is behind the repo.
 
 
 ## Backlog — 19
@@ -42,9 +40,8 @@ _1 open PR matches no card: [#144](https://github.com/Spooderinbed/merovisa/pull
 - **MV-178** · P2 · [Data-refresh cadence (founder-deferred, do not chase)](cards/MV-178-data-refresh-cadence.md) — _Founder call 2026-08-17: legal + keep-updating-the-data deferred to backlog. Research report S5 priced it: visa/policy layer ~80-120 h/yr is the moat; catalogue breadth ~240 h/yr is a cost trap. Card exists so the deferral is durable state._
 - **MV-181** · P1 · [Case-frame refit: persistent context, decision-strip slot, manage-inside-frame (UI lane slice 3)](cards/MV-181-case-frame-refit.md) — _DELTA on top of MV-172's case-workspace-shell, not a rebuild: align with spec S1/S3 persistent-context contract, empty decision-strip slot until judgement/Stage 4 ship, manage refits inside the frame, single next-action panel shared with MV-179's resolver._
 
-## Ready (WIP 5) — 3
+## Ready (WIP 5) — 2
 
-- **MV-172** · P1 · [Stage 3 slice 5 — render the existing experience inside an explicit case route](cards/MV-172-case-route.md) — _Plan bullet 3, and the largest surface in the stage. Renders the existing MeroVisa experience (profile, matches, plan, documents, checklist) under an explicit case route for a case that is NOT the actor's own — the first time a non-student actor reaches student data through the product. Flips app/api/plan/action/route.ts off service-role onto the authenticated client (retiring registry entry 8) and SPLITS app/api/profile/section/route.ts — its profile write moves, but reScoreAssessment (assessments UPDATE result), invalidatePlan's generator-column copy refresh (impact/title/body/estimates) and adoptOwnerKeyedResidue (UPDATE case_id) are all refused by spec §6.1 and stay service-role, so entry 9 NARROWS rather than retires; all three would fail SILENTLY if flipped (re-score.ts:33 never destructures error, and throwOnError appears nowhere in lib/ or app/). Those moves ARE grants 1 and 5, which is why MV-168 is a hard predecessor (without it this slice ships the case route still on service-role, the exact inverse of the enforcement boundary). Depends on MV-171 for a real student-less case to exercise: before it, the route can only be tested against a personal case, which is the Stage 2 shape and proves nothing new. NOT IN SCOPE: any change to the documents model, Storage paths, or signed downloads (Stage 4 — object paths stay owner-keyed through Stage 3 by the Stage 2 spec §8 decision); the case-context indicators (MV-173). PLUS F-8: five case-scoped write routes (shortlist:46, documents/status:33, outcomes/prediction:28, outcomes/attempt:31, outcomes/event:32) resolve the ACTOR'S OWN personal case via resolvePersonalCaseId and accept no case id — left as-is, every write control in the case route writes to the COUNSELLOR'S own case, and nothing fails loudly because the grants and policies already exist. They take an explicit, authorized case id here. Access matrix cells 13-17 and 21-23 in spec §4; exit criterion E7._ · [#143](https://github.com/Spooderinbed/merovisa/pull/143) open, ci passing · [#142](https://github.com/Spooderinbed/merovisa/pull/142) merged, ci passing
 - **MV-179** · P1 · [Queue-first Day view for the consultancy workspace (UI lane slice 1)](cards/MV-179-queue-first-day-view.md) — _New /workspace/[organizationId] landing: workload summary strip, view tabs, GET filters, dense semantic table with derived next action + attention sort, URL-addressable state, keyboard shortcuts. Spec: docs/superpowers/specs/2026-08-17-consultancy-workspace-ui.md S2. Depends on PR #143 (MV-172) merging first._
 - **MV-180** · P1 · [Consultancy shell split + counsellor team-read access fix (UI lane slice 2)](cards/MV-180-consultancy-shell-split.md) — _Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179._
 
@@ -52,9 +49,9 @@ _1 open PR matches no card: [#144](https://github.com/Spooderinbed/merovisa/pull
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-172** · P1 · [Stage 3 slice 5 — render the existing experience inside an explicit case route](cards/MV-172-case-route.md) — _Plan bullet 3, and the largest surface in the stage. Renders the existing MeroVisa experience (profile, matches, plan, documents, checklist) under an explicit case route for a case that is NOT the actor's own — the first time a non-student actor reaches student data through the product. Flips app/api/plan/action/route.ts off service-role onto the authenticated client (retiring registry entry 8) and SPLITS app/api/profile/section/route.ts — its profile write moves, but reScoreAssessment (assessments UPDATE result), invalidatePlan's generator-column copy refresh (impact/title/body/estimates) and adoptOwnerKeyedResidue (UPDATE case_id) are all refused by spec §6.1 and stay service-role, so entry 9 NARROWS rather than retires; all three would fail SILENTLY if flipped (re-score.ts:33 never destructures error, and throwOnError appears nowhere in lib/ or app/). Those moves ARE grants 1 and 5, which is why MV-168 is a hard predecessor (without it this slice ships the case route still on service-role, the exact inverse of the enforcement boundary). Depends on MV-171 for a real student-less case to exercise: before it, the route can only be tested against a personal case, which is the Stage 2 shape and proves nothing new. NOT IN SCOPE: any change to the documents model, Storage paths, or signed downloads (Stage 4 — object paths stay owner-keyed through Stage 3 by the Stage 2 spec §8 decision); the case-context indicators (MV-173). PLUS F-8, which said FIVE and is SEVEN (spec amended in PR #143): shortlist:46, documents/status:33, outcomes/prediction:28, outcomes/attempt:31, outcomes/event:32, AND plan/action:37 + profile/section:37 — the last two were missed because they were VISIBLE to the service-role registry lens, which gave them a client disposition and asked nothing about their case id. All seven resolve the ACTOR'S OWN personal case via resolvePersonalCaseId and accept no case id — left as-is, every write control in the case route writes to the COUNSELLOR'S own case, and nothing fails loudly because the grants and policies already exist. They take an explicit, authorized case id here. Access matrix cells 13-17 and 21-23 in spec §4; exit criterion E7._ · [#143](https://github.com/Spooderinbed/merovisa/pull/143) merged, ci passing · [#142](https://github.com/Spooderinbed/merovisa/pull/142) merged, ci passing
 
 ## Blocked — 3
 

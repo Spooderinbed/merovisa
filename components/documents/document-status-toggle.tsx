@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DocumentKind } from "@/lib/documents/types";
+import { caseScoped, useCaseScopeId } from "@/components/cases/case-scope";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ export function DocumentStatusToggle({
   const router = useRouter();
   const [obtained, setObtained] = useState(initialObtained);
   const [pending, setPending] = useState(false);
+  // Null on /checklist/all — the route then resolves the student's own case.
+  const caseId = useCaseScopeId();
 
   async function toggle() {
     const next = !obtained;
@@ -33,7 +36,7 @@ export function DocumentStatusToggle({
       const res = await fetch("/api/documents/status", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind, obtained: next }),
+        body: JSON.stringify(caseScoped({ kind, obtained: next }, caseId)),
       });
       if (!res.ok) {
         setObtained(!next); // roll back

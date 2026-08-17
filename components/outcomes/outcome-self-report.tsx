@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EventType } from "@/lib/outcomes/types";
+import { caseScoped, useCaseScopeId } from "@/components/cases/case-scope";
 import { cn } from "@/lib/utils";
 
 // Student-voice labels for the milestones a student can self-report. Only events
@@ -36,6 +37,8 @@ export function OutcomeSelfReport({
   const router = useRouter();
   const [pending, setPending] = useState<EventType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Null outside a case route — the route then resolves the student's own case.
+  const caseId = useCaseScopeId();
   // A quiet confirm beat (audit #25): once a milestone is recorded, acknowledge it
   // before the row advances. Deliberately neutral — "Saved", no colour, no glyph —
   // because the same control reports a refusal as well as an offer, and recording
@@ -67,7 +70,9 @@ export function OutcomeSelfReport({
       const res = await fetch("/api/outcomes/event", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ attemptId, eventType, occurredAt: new Date().toISOString() }),
+        body: JSON.stringify(
+          caseScoped({ attemptId, eventType, occurredAt: new Date().toISOString() }, caseId),
+        ),
       });
       if (!res.ok) {
         setError("We couldn’t save that just now — try again.");

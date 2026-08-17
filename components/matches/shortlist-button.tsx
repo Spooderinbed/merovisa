@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { caseScoped, useCaseScopeId } from "@/components/cases/case-scope";
 
 export type Status = "shortlisted" | "applied" | "withdrawn" | null;
 
@@ -21,6 +22,8 @@ export function ShortlistButton({
   initialStatus: Status;
 }) {
   const [status, setStatus] = useState<Status>(initialStatus);
+  // Null on /matches — the route then resolves the signed-in student's own case.
+  const caseId = useCaseScopeId();
 
   const choose = async (next: Status) => {
     if (next === status) return;
@@ -33,7 +36,7 @@ export function ShortlistButton({
       const res = await fetch("/api/shortlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ programId, status: next }),
+        body: JSON.stringify(caseScoped({ programId, status: next }, caseId)),
       });
       if (!res.ok) setStatus(prev); // server rejected — roll the pill back
     } catch {

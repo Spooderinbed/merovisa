@@ -32,9 +32,17 @@ function isDeepLink(url: string): boolean {
 export function ProgramCard({
   match,
   initialStatus,
+  /**
+   * Prefix for the per-program checklist link. Empty on `/matches`, so the link
+   * stays `/checklist/<id>`; inside a case route it is that case's base, because
+   * a bare `/checklist/…` there walks a counsellor out of the student's case and
+   * into their own — the navigation half of spec F-8's wrong-case defect.
+   */
+  checklistBase = "",
 }: {
   match: MatchResult;
   initialStatus: Status;
+  checklistBase?: string;
 }) {
   const { program: p, university: u, verdict, reasons, preferenceChip } = match;
   const isEstimated = p.dataQuality === "derived";
@@ -114,7 +122,7 @@ export function ProgramCard({
           >
             {linkLabel} ↗
           </SourceAnchor>
-          <a href={`/checklist/${p.id}`} className="text-small text-primary hover:underline">
+          <a href={`${checklistBase}/checklist/${p.id}`} className="text-small text-primary hover:underline">
             Document checklist →
           </a>
           {cricos ? (

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
-import { checkCasePermission } from "@/lib/cases/require-permission";
+import { requestedCaseId, resolveTargetCase, targetCaseResponse } from "@/lib/cases/target-case";
 import { upsertProgramState, deleteProgramState } from "@/lib/matches/repo";
 import { captureApplication } from "@/lib/outcomes/on-apply";
 
@@ -18,6 +17,12 @@ import { captureApplication } from "@/lib/outcomes/on-apply";
  * `profiles`/`plan_items`/`documents` no INSERT), and grants are reviewed once,
  * with the policies, in MV-159 — shipping a grant ahead of its policy is how a
  * table ends up briefly open.
+ *
+ * MV-172, spec F-8 (cell 21): the case is now the one the caller NAMES, when it
+ * names one — `resolveTargetCase` authorizes it and never falls back to the
+ * actor's own. Without that, the shortlist control rendered in a counsellor's
+ * case route writes the student's choices onto the counsellor's personal case,
+ * and RLS admits it because the counsellor may legitimately reach that case.
  */
 
 const BodySchema = z.object({
@@ -43,12 +48,14 @@ export async function POST(request: Request): Promise<Response> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
-  if (caseId === null) {
-    return NextResponse.json({ error: "no workspace for this account" }, { status: 500 });
-  }
-  const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
-  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const target = await resolveTargetCase(
+    data.user.id,
+    requestedCaseId(body),
+    "case.update",
+    supabase,
+  );
+  if (!target.ok) return targetCaseResponse(target, "no workspace for this account");
+  const { caseId } = target;
 
   if (parsed.data.status === null) {
     const ok = await deleteProgramState(supabase, caseId, parsed.data.programId);

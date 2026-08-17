@@ -2,20 +2,15 @@ import { redirect, notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
-import { getProgram, listAllUniversities } from "@/lib/programs/repo";
 import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
 import { checkCasePermission } from "@/lib/cases/require-permission";
-import { getProfileForCase } from "@/lib/profiles/repo";
-import { listDocumentsForCase } from "@/lib/documents/repo";
-import { listObtainedKinds } from "@/lib/documents/status-repo";
-import { listAllPlanForCase } from "@/lib/plan/repo";
-import { generateChecklist } from "@/lib/checklist/generator";
-import { planStatesForChecklist } from "@/lib/checklist/plan-links";
-import { NEPAL_ASSESSMENT_LEVEL } from "@/lib/programs/policy";
-import type { DocumentKind } from "@/lib/documents/types";
-import type { ProfileSections } from "@/lib/profiles/sections";
-import { ChecklistView } from "@/components/checklist/checklist-view";
+import { ChecklistProgramPanel } from "@/components/case-experience/checklist-landing-panel";
 
+/**
+ * The student's own per-program checklist. MV-172 moved the body into
+ * `ChecklistProgramPanel` so the counsellor's case route renders the same
+ * checklist for a case that is not the actor's own.
+ */
 export default async function ProgramChecklistPage({ params }: { params: Promise<{ programId: string }> }) {
   const { programId } = await params;
   const supabase = await createSupabaseServerClient();
@@ -28,9 +23,6 @@ export default async function ProgramChecklistPage({ params }: { params: Promise
     redirect(`/auth?next=${encodeURIComponent(next)}`);
   }
 
-  const program = await getProgram(supabase, programId);
-  if (!program) notFound();
-
   // MV-157: resolve the personal case ONCE per render and authorize ONCE, before
   // the first read. A signed-in actor with no personal case sees the same empty
   // state a brand-new account does (see the dashboard for the full note).
@@ -39,20 +31,10 @@ export default async function ProgramChecklistPage({ params }: { params: Promise
     const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
     if (!decision.allowed) redirect(`/auth?next=/checklist/${programId}`);
   }
-  const [universities, profile, docs, planRows, obtainedKinds] = await Promise.all([
-    listAllUniversities(supabase),
-    caseId === null ? null : getProfileForCase(supabase, caseId),
-    caseId === null ? [] : listDocumentsForCase(supabase, caseId),
-    caseId === null ? [] : listAllPlanForCase(supabase, caseId),
-    caseId === null ? new Set<DocumentKind>() : listObtainedKinds(supabase, caseId),
-  ]);
-  const university = universities.find((u) => u.id === program.universityId) ?? null;
-  const sections = (profile?.sections ?? {}) as ProfileSections;
-  const uploadedKinds = new Set<DocumentKind>(docs.map((d) => d.kind));
 
-  // obtainedKinds (self-reported on /checklist/all) fold into the rows as "obtained" — the
-  // global toggle is no longer a dead end; it now flows into per-program rows + readiness (MV-69).
-  const items = generateChecklist({ program, sections, uploadedKinds, obtainedKinds, nepalAssessmentLevel: NEPAL_ASSESSMENT_LEVEL });
-  // Step rows mirror their plan item's state — the plan is the single completion authority.
-  return <ChecklistView program={program} university={university} items={items} planStates={planStatesForChecklist(planRows)} />;
+  const panel = await ChecklistProgramPanel({ db: supabase, caseId, programId });
+  // The panel returns null for an unknown program rather than deciding a status
+  // code itself — that decision belongs to the route.
+  if (panel === null) notFound();
+  return panel;
 }
