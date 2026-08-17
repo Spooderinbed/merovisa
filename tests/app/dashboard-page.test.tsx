@@ -60,7 +60,7 @@ beforeEach(() => {
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
 });
 
-import DashboardPage from "@/app/(app)/dashboard/page";
+import DashboardPage from "@/app/(app)/(student)/dashboard/page";
 import { CatalogReadError } from "@/lib/programs/errors";
 
 describe("/dashboard page", () => {

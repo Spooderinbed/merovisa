@@ -30,7 +30,7 @@ beforeEach(() => {
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
 });
 
-import GuidePage from "@/app/(app)/guide/page";
+import GuidePage from "@/app/(app)/(student)/guide/page";
 
 describe("/guide page", () => {
   beforeEach(() => {

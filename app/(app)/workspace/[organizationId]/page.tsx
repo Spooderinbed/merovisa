@@ -61,7 +61,7 @@ export default async function DayViewPage({
   if (!list.decision.allowed) {
     if (list.decision.reason === "lookup-failed") {
       return (
-        <DayShell organizationId={organizationId}>
+        <DayShell>
           <QueueFailedCard />
         </DayShell>
       );
@@ -77,7 +77,7 @@ export default async function DayViewPage({
   if (!queue.ok && queue.reason === "denied") notFound();
   if (!queue.ok) {
     return (
-      <DayShell organizationId={organizationId}>
+      <DayShell>
         <QueueFailedCard />
       </DayShell>
     );
@@ -92,7 +92,7 @@ export default async function DayViewPage({
     state.assignee !== undefined;
 
   return (
-    <DayShell organizationId={organizationId}>
+    <DayShell>
       <WorkloadSummary summary={summary} scope={scope} />
       <CaseQueueToolbar
         organizationId={organizationId}
@@ -134,31 +134,14 @@ export default async function DayViewPage({
 }
 
 /** The page's frame, so an outage renders as this page rather than as a bare card. */
-function DayShell({
-  organizationId,
-  children,
-}: {
-  organizationId: string;
-  children: React.ReactNode;
-}) {
+function DayShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
+      {/* Org-level wayfinding — All organizations, All cases — moved into the rail
+          the layout now renders above every route in this organization (MV-180).
+          Three navigations to the same four places is noise, not redundancy. */}
       <header className="flex flex-col gap-2">
-        <Link href="/workspace" className="text-meta text-primary underline underline-offset-4">
-          ← All organizations
-        </Link>
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 className="text-[clamp(28px,3.4vw,40px)]">Day view</h1>
-          {/* The org rail is MV-180's; until it exists these two links are the way around. */}
-          <nav aria-label="Organization pages" className="flex gap-4">
-            <Link
-              href={`/workspace/${organizationId}/students`}
-              className="text-control text-primary underline underline-offset-4"
-            >
-              All cases
-            </Link>
-          </nav>
-        </div>
+        <h1 className="text-[clamp(28px,3.4vw,40px)]">Day view</h1>
       </header>
       {children}
     </div>

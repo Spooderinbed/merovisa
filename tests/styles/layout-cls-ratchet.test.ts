@@ -20,12 +20,23 @@ function read(rel: string): string {
 }
 
 describe("layout CLS ratchet (MV-98)", () => {
-  it("(app) layout shell is a full-height flex column so the footer pins to the bottom", () => {
-    const src = read("app/(app)/layout.tsx");
+  // MV-180 split the signed-in shell in two, so the column that pins the footer
+  // moved out of `(app)/layout.tsx` and into each shell. Both are ratcheted: the
+  // student shell because it is the one with a footer to pin, and the consultancy
+  // shell because a streamed queue is exactly as capable of shifting.
+  it("(student) shell is a full-height flex column so the footer pins to the bottom", () => {
+    const src = read("app/(app)/(student)/layout.tsx");
     expect(src).toMatch(/min-h-dvh/);
     expect(src).toMatch(/flex-col/);
     expect(src).toMatch(/\bflex\b/);
     // <main> must grow to fill the column so short content doesn't ride the footer up.
+    expect(src).toMatch(/<main className="[^"]*\bflex-1\b/);
+  });
+
+  it("workspace shell is a full-height flex column with a growing main", () => {
+    const src = read("app/(app)/workspace/layout.tsx");
+    expect(src).toMatch(/min-h-dvh/);
+    expect(src).toMatch(/flex-col/);
     expect(src).toMatch(/<main className="[^"]*\bflex-1\b/);
   });
 

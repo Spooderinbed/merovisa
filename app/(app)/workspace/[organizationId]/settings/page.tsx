@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkOrgPermission } from "@/lib/cases/require-org-permission";
@@ -46,10 +45,8 @@ export default async function OrgSettingsPage({
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">
+      {/* Org-level wayfinding is the rail's now (MV-180). */}
       <header className="flex flex-col gap-2">
-        <Link href="/workspace" className="text-meta text-primary underline underline-offset-4">
-          ← All organizations
-        </Link>
         <h1 className="text-[clamp(28px,3.4vw,40px)]">Organization settings</h1>
         <p className="max-w-[64ch] text-control text-ink-soft">
           Only the owner can change these. The web address is how links to this organization are

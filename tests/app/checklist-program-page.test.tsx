@@ -49,7 +49,7 @@ beforeEach(() => {
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
 });
 
-import ProgramChecklistPage from "@/app/(app)/checklist/[programId]/page";
+import ProgramChecklistPage from "@/app/(app)/(student)/checklist/[programId]/page";
 import { notFound } from "next/navigation";
 import { CatalogReadError } from "@/lib/programs/errors";
 

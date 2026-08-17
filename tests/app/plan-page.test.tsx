@@ -31,7 +31,7 @@ beforeEach(() => {
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
 });
 
-import PlanPage from "@/app/(app)/plan/page";
+import PlanPage from "@/app/(app)/(student)/plan/page";
 
 describe("/plan page", () => {
   beforeEach(() => {

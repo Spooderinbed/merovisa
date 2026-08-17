@@ -92,6 +92,44 @@ beforeEach(() => {
 });
 
 describe("/workspace — cell 1, organization selection", () => {
+  it("auto-enters a sole active organization rather than asking a question with one answer", async () => {
+    // MV-180: a counsellor at one consultancy has no choice to make here, and the
+    // Day view is the landing (MV-179). The chooser survives for the actor who
+    // genuinely has more than one.
+    listActorOrganizations.mockResolvedValue({
+      ok: true,
+      data: [{ id: ORG, name: "Anadi Education", slug: "anadi", role: "counsellor" }],
+    });
+    await expect(WorkspacePage()).rejects.toThrow("REDIRECT");
+    expect(redirect).toHaveBeenCalledWith(`/workspace/${ORG}`);
+  });
+
+  it("stays a chooser when the actor has more than one organization", async () => {
+    listActorOrganizations.mockResolvedValue({
+      ok: true,
+      data: [
+        { id: ORG, name: "Anadi Education", slug: "anadi", role: "owner" },
+        { id: "org-b", name: "Bagmati Overseas", slug: "bagmati", role: "counsellor" },
+      ],
+    });
+    render(await WorkspacePage());
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-enter anything when the lookup failed", async () => {
+    // An outage must never be resolved by guessing at an organization, and a
+    // failed read is not "you have exactly none" either.
+    listActorOrganizations.mockResolvedValue({ ok: false, reason: "lookup-failed" });
+    render(await WorkspacePage());
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-enter when the actor belongs to no organization", async () => {
+    listActorOrganizations.mockResolvedValue({ ok: true, data: [] });
+    render(await WorkspacePage());
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
   it("lists every organization the actor is an active member of", async () => {
     listActorOrganizations.mockResolvedValue({
       ok: true,
