@@ -2,21 +2,26 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkOrgPermission } from "@/lib/cases/require-org-permission";
-import { listOrgCases, LIST_ROW_CAP, type OrgCaseSummary } from "@/lib/cases/list-repo";
+import { LIST_ROW_CAP } from "@/lib/cases/list-repo";
+import { listCaseQueue } from "@/lib/cases/queue-repo";
+import { applyQueueFacets, sortQueue } from "@/lib/cases/queue";
 import {
   OPERATIONAL_STATUSES,
   OPERATIONAL_STATUS_LABELS,
   isOperationalStatus,
-  operationalStatusLabel,
 } from "@/lib/cases/operational-status";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
+import { CaseQueueTable } from "@/components/workspace/case-queue-table";
 
 /**
- * Access-matrix cell 7 — the org-scoped student list, with search and a status
- * filter. Read-only: nothing on this page writes, and case creation and
- * assignment are MV-171's.
+ * Access-matrix cell 7 — the org-scoped case directory, since MV-179 titled
+ * "All cases": the Day view (`/workspace/[organizationId]`) is the daily landing
+ * and this page is the searchable directory behind it (spec §6). The large
+ * `StudentRow` cards are retired for the same dense queue table; the name-sorted
+ * order, the search and status filters, the honest empty states and the cap
+ * warning all survive.
  *
  * THE SCOPE IS LOAD-BEARING, not a formality. `case.list` allows an owner or
  * admin with scope `all-org` and a counsellor with scope `assigned`
@@ -25,26 +30,16 @@ import { Input, Select } from "@/components/ui/input";
  * scope is narrowed here and passed down; a scope this page has no query for
  * denies rather than falling through to the widest branch.
  *
- * A DENIAL renders `notFound()` rather than a "forbidden" page, for the reason
- * the team page states: confirming an organization exists but is not yours is an
- * enumeration oracle, and `getOrgContext` already refuses to distinguish "unknown
- * organization" from "not a member".
+ * A DENIAL renders `notFound()` rather than a "forbidden" page (the enumeration
+ * rule), and A FAILED PERMISSION LOOKUP IS NOT A DENIAL: `lookup-failed` renders
+ * the outage card, never "this organization does not exist".
  *
- * A FAILED PERMISSION LOOKUP IS NOT A DENIAL, and must not render as one.
- * `checkOrgPermission` preserves `getOrgContext`'s reason precisely so that "not a
- * member" and "the membership read errored" stay distinguishable, and a page that
- * collapses them tells a legitimate owner their organization does not exist
- * because Supabase blipped. `lookup-failed` therefore renders the same outage card
- * this page already renders for the equivalent failure one layer down. Every
- * reason that IS a determined outcome keeps `notFound()`.
- *
- * NO CLIENT JAVASCRIPT DRIVES THE FILTERS. Search and status are a plain GET
- * form, so the current view is a URL — shareable, back-button-correct, and
- * readable by the server component that renders it. The cost of that choice is
- * that a searched name reaches the URL: the browser's history and the request log
- * get it, and `lib/analytics/redact-url.ts` is what keeps it out of PostHog. The
- * alternative — POST, or client state — buys the privacy back and spends the
- * shareable URL; the trade is recorded on MV-170's card rather than assumed away.
+ * NO CLIENT JAVASCRIPT DRIVES THE FILTERS — a plain GET form, so the current
+ * view is a URL. The privacy cost (a searched name reaches the URL) is recorded
+ * on MV-170's card, and `lib/analytics/redact-url.ts` keeps it out of PostHog.
+ * Since MV-179 the search and status predicates run in memory over the queue
+ * read (`applyQueueFacets`), so the words the page renders and the rows the Day
+ * view counts come from one data set.
  */
 
 /**
@@ -71,14 +66,9 @@ export default async function StudentsPage({
 
   const list = await checkOrgPermission(data.user.id, organizationId, "case.list", supabase);
   if (!list.decision.allowed) {
-    // `lookup-failed` is the one reason that is not an answer about this actor's
-    // access — it is the absence of one. `invalid-input` is the only other reason
-    // `getOrgContext` raises without deciding anything, and it needs a blank route
-    // segment or a blank user id to reach: a URL that names no organization is
-    // genuinely not found, so it keeps the non-answer.
     if (list.decision.reason === "lookup-failed") {
       return (
-        <StudentsShell>
+        <StudentsShell organizationId={organizationId}>
           <LookupFailedCard />
         </StudentsShell>
       );
@@ -99,36 +89,29 @@ export default async function StudentsPage({
    * simply vanished — so an owner whose permission lookup blipped concluded their
    * role had changed. Same rule as the manage page and as the failed list below: a
    * failed check is an outage, not an absence.
-   *
-   * It does NOT blank the page the way the manage surface does, and the difference is
-   * deliberate. There the two controls ARE the page, so a half-rendered one is a lie
-   * about what the viewer may do. Here the list read succeeded and the list is what
-   * the page is for; replacing a working list with an outage card would destroy more
-   * than it reports. The note goes where the control would have been.
    */
   const createCheckFailed = !canCreate && create.decision.reason === "lookup-failed";
 
   const query = (first(sp.q) ?? "").trim();
   // An unknown status can only come from a hand-edited query string. It is
-  // dropped rather than queried, and the form below then shows "Any status" —
+  // dropped rather than applied, and the form below then shows "Any status" —
   // which is what the page is actually showing.
   const rawStatus = first(sp.status);
   const status = isOperationalStatus(rawStatus) ? rawStatus : undefined;
   const isFiltered = query !== "" || status !== undefined;
 
-  const cases = await listOrgCases(
-    data.user.id,
-    organizationId,
-    scope,
-    { query, status },
-    supabase,
-  );
+  const queue = await listCaseQueue(data.user.id, organizationId, scope, supabase);
   // Unreachable while the narrowing above holds, and handled anyway: a refusal is
   // an authorization outcome and must not render as an outage.
-  if (!cases.ok && cases.reason === "denied") notFound();
+  if (!queue.ok && queue.reason === "denied") notFound();
+
+  const rows = queue.ok
+    ? sortQueue(applyQueueFacets(queue.rows, { query, status }), "name")
+    : [];
 
   return (
     <StudentsShell
+      organizationId={organizationId}
       lede={
         scope === "assigned"
           ? "The students assigned to you. Others in this organization are not shown."
@@ -156,9 +139,7 @@ export default async function StudentsPage({
         Apply is a native submit, so it reloads the document and the controls come
         back correct; Clear is a soft navigation, where React reconciles the
         existing <select>/<input> nodes and writing `defaultValue` to a mounted
-        element changes nothing it displays. Without this the dropdown would still
-        read "Closed" after Clear, and the next Apply would re-submit a filter the
-        user believes they removed.
+        element changes nothing it displays.
       */}
       <form key={`${query}|${status ?? ""}`} method="get" className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-[220px] flex-1 flex-col gap-1">
@@ -193,7 +174,7 @@ export default async function StudentsPage({
         ) : null}
       </form>
 
-      {cases.ok && cases.truncated ? (
+      {queue.ok && queue.truncated ? (
         // A capped list that says nothing is a list that lies by omission: the
         // search runs over what was loaded, so a student past the cap is missing
         // AND unfindable, and "no students match" would be a false claim about
@@ -208,21 +189,21 @@ export default async function StudentsPage({
         </Card>
       ) : null}
 
-      {!cases.ok ? (
+      {!queue.ok ? (
         // "The lookup failed" and "there are no students" must never render the
         // same: the second is a claim about the organization.
         <LookupFailedCard />
-      ) : cases.data.length === 0 ? (
+      ) : rows.length === 0 ? (
         // Branching on `scopeIsEmpty`, NOT on the query string. Whether a filter
         // is set says nothing about whether there was a list to filter, and
         // telling an unassigned counsellor to "clear the filters to see the full
         // list" points them at a list that does not exist.
         <Card as="section" padding="lg" className="flex flex-col gap-2">
           <h2 className="text-title font-medium">
-            {cases.scopeIsEmpty ? "No students yet" : "No students match those filters"}
+            {queue.scopeIsEmpty ? "No students yet" : "No students match those filters"}
           </h2>
           <p className="max-w-[64ch] text-body text-ink-soft">
-            {!cases.scopeIsEmpty
+            {!queue.scopeIsEmpty
               ? "Nothing here matches what you searched for. Clear the filters to see the full list."
               : scope === "assigned"
                 ? "You are not assigned to any students in this organization yet."
@@ -236,13 +217,12 @@ export default async function StudentsPage({
             account and can edit their own name and email address. Read those as the student&apos;s
             words, not as a verified identity.
           </p>
-          <ul className="flex flex-col gap-3">
-            {cases.data.map((row) => (
-              <li key={row.id}>
-                <StudentRow row={row} organizationId={organizationId} />
-              </li>
-            ))}
-          </ul>
+          <CaseQueueTable
+            rows={rows}
+            organizationId={organizationId}
+            canAssign={scope === "all-org"}
+            showAssignee={scope === "all-org"}
+          />
         </section>
       )}
     </StudentsShell>
@@ -250,14 +230,25 @@ export default async function StudentsPage({
 }
 
 /** The page's frame, so an outage renders as this page rather than as a bare card. */
-function StudentsShell({ lede, children }: { lede?: string; children: React.ReactNode }) {
+function StudentsShell({
+  organizationId,
+  lede,
+  children,
+}: {
+  organizationId: string;
+  lede?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="mx-auto flex w-full max-w-[860px] flex-col gap-8 px-5 py-10">
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 px-5 py-10">
       <header className="flex flex-col gap-2">
-        <Link href="/workspace" className="text-meta text-primary underline underline-offset-4">
-          ← All organizations
+        <Link
+          href={`/workspace/${organizationId}`}
+          className="text-meta text-primary underline underline-offset-4"
+        >
+          ← Day view
         </Link>
-        <h1 className="text-[clamp(28px,3.4vw,40px)]">Students</h1>
+        <h1 className="text-[clamp(28px,3.4vw,40px)]">All cases</h1>
         {lede ? <p className="max-w-[64ch] text-control text-ink-soft">{lede}</p> : null}
       </header>
       {children}
@@ -279,42 +270,5 @@ function LookupFailedCard() {
         access — please try again in a moment.
       </p>
     </Card>
-  );
-}
-
-/**
- * One case. The ROW is still not a link — the case route that shows a student's
- * profile, matches and plan is MV-172's, and a link to a 404 would be a worse lie
- * than no link. What it now carries is a link to MV-171's manage surface, which
- * does exist: the status and the primary counsellor, and nothing else.
- */
-function StudentRow({ row, organizationId }: { row: OrgCaseSummary; organizationId: string }) {
-  return (
-    <Card as="article" padding="lg" className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-title font-medium">{row.displayName}</h3>
-        <Marker>{row.hasLinkedStudent ? "Self-reported" : "No student account"}</Marker>
-        {row.archivedAt !== null ? <Marker>Archived</Marker> : null}
-      </div>
-      <p className="text-meta text-ink-soft">
-        {row.email ?? "No email address on file"} · {operationalStatusLabel(row.operationalStatus)}
-      </p>
-      <div>
-        <Link
-          href={`/workspace/${organizationId}/students/${row.id}/manage`}
-          className="text-meta text-primary underline underline-offset-4"
-        >
-          Manage
-        </Link>
-      </div>
-    </Card>
-  );
-}
-
-function Marker({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-2 py-0.5 text-caption text-ink-soft">
-      {children}
-    </span>
   );
 }

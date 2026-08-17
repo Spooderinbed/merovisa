@@ -2,6 +2,7 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CaseAuthorizationClient } from "./context";
 import { isOperationalStatus } from "./operational-status";
+import { matchesCaseSearch } from "./queue";
 
 /**
  * The org-scoped student list — access-matrix cell 7 (spec §4).
@@ -99,6 +100,12 @@ export interface OrgCaseSummary {
    */
   hasLinkedStudent: boolean;
   archivedAt: string | null;
+  /**
+   * `cases.updated_at`, carried for the Day view's neglect tie-break (MV-179).
+   * Never a deadline — nothing in the schema knows one — and the queue's copy
+   * must not present it as one.
+   */
+  updatedAt: string;
 }
 
 export type CaseListResult =
@@ -145,14 +152,8 @@ function isPresent(value: string): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-/** Substring, case-insensitive, over the two identity columns. Never a `LIKE` pattern. */
-function matches(row: OrgCaseSummary, term: string): boolean {
-  const needle = term.toLowerCase();
-  return (
-    row.displayName.toLowerCase().includes(needle) ||
-    (row.email ?? "").toLowerCase().includes(needle)
-  );
-}
+// The search predicate lives in `./queue` since MV-179 so the Day view's facet
+// and this list cannot drift apart on what a search means.
 
 export async function listOrgCases(
   actorUserId: string,
@@ -200,7 +201,7 @@ export async function listOrgCases(
 
     let query = supabase
       .from("cases")
-      .select("id, display_name, email, operational_status, student_user_id, archived_at")
+      .select("id, display_name, email, operational_status, student_user_id, archived_at, updated_at")
       .eq("organization_id", organizationId);
     if (status !== undefined) {
       query = query.eq("operational_status", status);
@@ -224,8 +225,9 @@ export async function listOrgCases(
         operationalStatus: row.operational_status,
         hasLinkedStudent: row.student_user_id !== null,
         archivedAt: row.archived_at,
+        updatedAt: row.updated_at,
       }))
-      .filter((row) => term === "" || matches(row, term))
+      .filter((row) => term === "" || matchesCaseSearch(row, term))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     let scopeIsEmpty = inScope.length === 0;
