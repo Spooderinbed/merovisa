@@ -307,7 +307,7 @@ describe("Day view — views and filters are the URL", () => {
     expect(renderedNames()).not.toContain("Archived Case");
   });
 
-  it("status, link and assignee facets narrow the queue", async () => {
+  it("the link facet narrows the queue", async () => {
     grantList("all-org");
     listCaseQueue.mockResolvedValue(queued(ROWS));
     render(
@@ -317,6 +317,48 @@ describe("Day view — views and filters are the URL", () => {
       }),
     );
     expect(renderedNames()).toEqual(["Unlinked Case"]);
+  });
+
+  it("the status facet narrows the queue — asserted alone, so dropping it from the page cannot stay green", async () => {
+    // Proven necessary the hard way: with only the link-facet test above, a page
+    // that passed `{ query, link }` instead of the whole state rendered
+    // identically under every existing test.
+    grantList("all-org");
+    listCaseQueue.mockResolvedValue(queued(ROWS));
+    render(
+      await DayViewPage({
+        params,
+        searchParams: Promise.resolve({ view: "all", status: "waiting_on_student" }),
+      }),
+    );
+    expect(renderedNames()).toEqual(["Waiting Case"]);
+  });
+
+  it("the assignee facet narrows by MEMBERSHIP id", async () => {
+    grantList("all-org");
+    listCaseQueue.mockResolvedValue(
+      queued([
+        qc({ id: "c-mine", displayName: "Mine Case", operationalStatus: "new" }),
+        qc({
+          id: "c-other",
+          displayName: "Other Case",
+          operationalStatus: "new",
+          assignment: {
+            membershipId: "m-owner",
+            userId: "aaaa1111-0000-4000-8000-000000000002",
+            role: "owner",
+            active: true,
+          },
+        }),
+      ]),
+    );
+    render(
+      await DayViewPage({
+        params,
+        searchParams: Promise.resolve({ view: "all", assignee: "m-couns" }),
+      }),
+    );
+    expect(renderedNames()).toEqual(["Mine Case"]);
   });
 
   it("sort=name orders by name, not by attention", async () => {
