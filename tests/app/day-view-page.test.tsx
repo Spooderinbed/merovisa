@@ -291,12 +291,12 @@ describe("Day view — views and filters are the URL", () => {
     }),
   ];
 
-  it("view=all admits closed and archived cases the default view omits", async () => {
+  it("view=all admits closed cases the default view omits — archived stays in the All-cases directory", async () => {
     grantList("all-org");
     listCaseQueue.mockResolvedValue(queued(ROWS));
     render(await DayViewPage({ params, searchParams: Promise.resolve({ view: "all" }) }));
     expect(renderedNames()).toContain("Closed Case");
-    expect(renderedNames()).toContain("Archived Case");
+    expect(renderedNames()).not.toContain("Archived Case");
   });
 
   it("the default view omits them", async () => {

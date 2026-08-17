@@ -154,11 +154,18 @@ export const QUEUE_VIEWS = [
 
 export type QueueView = (typeof QUEUE_VIEWS)[number];
 
-/** Spec §2 queue membership. Only `all` admits archived and closed cases. */
+/**
+ * Spec §2 queue membership. The asymmetry is the spec's own: closed cases are
+ * "omitted from the default Day view" and surface under the All TAB, while
+ * archived cases "appear only in All cases" — the DIRECTORY at `/students`,
+ * which renders the whole scope. Admitting archived rows here would also make
+ * the tab named "All" disagree with the strip's "All" count, which excludes
+ * them.
+ */
 export function filterByView(rows: QueueCase[], view: QueueView): QueueCase[] {
   switch (view) {
     case "all":
-      return rows;
+      return rows.filter((row) => row.archivedAt === null);
     case "needs-action":
       return rows.filter((row) => row.archivedAt === null && needsAction(row));
     case "waiting-on-student":

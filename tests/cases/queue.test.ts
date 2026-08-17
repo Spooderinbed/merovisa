@@ -299,8 +299,16 @@ describe("filterByView — queue membership per spec §2", () => {
     ]);
   });
 
-  test("all really is all — archived and closed included", () => {
-    expect(filterByView(ALL, "all")).toHaveLength(ALL.length);
+  test("all admits closed cases but leaves archived to the All-cases directory", () => {
+    // Spec §2's asymmetry: closed cases are only "omitted from the DEFAULT Day
+    // view"; archived cases "appear only in All cases" — the /students
+    // directory, not this tab. The strip's "All" count excludes archived, and
+    // the tab sharing that word must agree with it.
+    const ids = filterByView(ALL, "all").map((r) => r.id);
+    expect(ids).toContain("c-closed");
+    expect(ids).toContain("c-closed-unassigned");
+    expect(ids).not.toContain("c-archived");
+    expect(ids).toHaveLength(ALL.length - 1);
   });
 
   test("waiting-on-student and ready-for-review are status views, minus archived", () => {
