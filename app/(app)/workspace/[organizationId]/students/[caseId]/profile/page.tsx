@@ -1,5 +1,5 @@
 import { openCaseRoute } from "@/lib/cases/case-route";
-import { CaseRouteOutage, CaseWorkspaceShell } from "@/components/workspace/case-workspace-shell";
+import { CaseRouteOutage } from "@/components/workspace/case-route-outage";
 import { ProfilePanel } from "@/components/case-experience/profile-panel";
 
 /**
@@ -24,19 +24,8 @@ export default async function CaseProfilePage({
   const gate = await openCaseRoute(organizationId, caseId, "/profile");
   if (!gate.ok) return <CaseRouteOutage organizationId={organizationId} outage={gate.outage} />;
 
-  // No `subtitle`: the shell already names the case, and repeating the profile's
-  // self-reported name underneath it invites a reader to treat a disagreement
-  // between the two as an error.
-  const panel = await ProfilePanel({ db: gate.supabase, caseId });
-
-  return (
-    <CaseWorkspaceShell
-      organizationId={organizationId}
-      caseId={caseId}
-      caseRow={gate.caseRow}
-      active="profile"
-    >
-      {panel}
-    </CaseWorkspaceShell>
-  );
+  // No `subtitle`: the persistent frame (`../layout.tsx`) already names the case,
+  // and repeating the profile's self-reported name underneath it invites a reader
+  // to treat a disagreement between the two as an error.
+  return ProfilePanel({ db: gate.supabase, caseId });
 }

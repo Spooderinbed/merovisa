@@ -21,12 +21,31 @@ import Link from "next/link";
  * makes on the team page itself.
  *
  * ORIENTATION: one horizontal row at every width. Spec §1 asks for a vertical rail
- * above `md` collapsing to a row below it; a vertical rail has to own the content
- * column's grid, and every workspace page currently centres its own
- * `max-w-[1120px]` container. Re-homing all of them belongs with MV-181's case-frame
- * refit, not here — recorded on the MV-180 dossier rather than left as a silent
- * deviation. The row scrolls rather than wraps on a narrow phone, and there is no
- * second fixed bottom bar.
+ * above `md` collapsing to a row below it, and MV-181 was where that would have
+ * happened — it re-homes the CASE routes onto a grid the frame owns, which is the
+ * work a vertical rail needs at the organization level too.
+ *
+ * It was measured and declined, and the measurement is the reason. A vertical org
+ * rail takes 184px plus its gutter off every route's content column, and the two
+ * rails would then nest: `[organizationId]` rail, then the case frame's own section
+ * rail, then content — three columns inside 1120px. The Day view's dense queue is
+ * the surface that pays. Measured live on 2026-08-18 with five seeded rows and the
+ * assignee column shown:
+ *
+ * | content column | queue table | result |
+ * |---|---|---|
+ * | 1080px (today) | needs 1062px | fits; every row 64px |
+ * | 896px (one rail) | needs 1004px | scrolls sideways; rows grow to 79px |
+ * | 712px (two rails) | needs 1004px | scrolls sideways; rows grow to 79px |
+ *
+ * Spec §2 asks for 56–64px rows and no horizontal scrolling on the queue, so a
+ * vertical rail trades the product's primary surface for a rail orientation.
+ * Widening the shell past 1120px would buy the room back, but that is a whole-app
+ * decision rather than a side effect of a case-frame slice. Recorded on the MV-181
+ * dossier as a deviation carried forward, not closed.
+ *
+ * The row scrolls rather than wraps on a narrow phone, and there is no second
+ * fixed bottom bar — which is what spec §1 asks for below `md`.
  */
 
 export interface OrgRailProps {

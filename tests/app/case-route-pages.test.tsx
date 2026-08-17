@@ -48,6 +48,23 @@ const { readOrgCase } = vi.hoisted(() => ({ readOrgCase: vi.fn() }));
 vi.mock("@/lib/cases/write-repo", () => ({ readOrgCase }));
 
 /**
+ * The frame's own reads are stubbed here on purpose. This file asks what the
+ * ROUTES decide; what the case frame and the overview SAY about a case is
+ * `tests/app/case-frame.test.tsx` and `tests/app/case-overview.test.tsx`, which
+ * run these for real against a fake database.
+ */
+vi.mock("@/lib/cases/case-frame", () => ({
+  isStaffOnCase: () => true,
+  readCaseAssignee: async () => ({ state: "unassigned" }),
+  readCaseNextStep: async () => ({
+    state: "caught-up",
+    item: null,
+    openCount: 0,
+    waitingCount: 0,
+  }),
+}));
+
+/**
  * The four panels are stubbed to render the case id and a tag for the client they
  * were handed. That is the assertion: a page that passed the wrong case id, or
  * that reached for the service-role client to read a student's data, is visible
@@ -125,9 +142,10 @@ describe.each(PAGES)("$name — cell 13", ({ panel, render: renderPage }) => {
   it("renders for an assigned counsellor, on a case with no student account", async () => {
     render(await renderPage());
 
-    // Named, so the counsellor can see whose case they are in. (The persistent
-    // indicator itself is MV-173's; this is the page's own heading.)
-    expect(screen.getByText(/Asha Gurung/)).toBeTruthy();
+    // Whose case it is now comes from the persistent frame above these pages
+    // (MV-181), so what each page owes is its own content: a panel, or — for the
+    // overview — the case's one next action.
+    expect(screen.getByTestId(panel ?? "case-next-action")).toBeTruthy();
     expect(notFound).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
   });
@@ -231,21 +249,10 @@ describe.each(PAGES)("$name — cell 13", ({ panel, render: renderPage }) => {
   });
 });
 
-describe("the case route's own navigation", () => {
-  it("links to every surface of the case, scoped to THIS case", async () => {
-    render(await CaseHomePage({ params: params() }));
-
-    const base = `/workspace/${ORG}/students/${CASE}`;
-    for (const surface of ["profile", "matches", "plan", "checklist"]) {
-      const link = screen.getByRole("link", { name: new RegExp(surface, "i") });
-      // A link to `/profile` here would open the COUNSELLOR's own profile — the
-      // navigation half of the same wrong-case defect the routes guard against.
-      expect(link.getAttribute("href")).toBe(`${base}/${surface}`);
-    }
-  });
-
-  it("says plainly that this student has no account, rather than implying they do", async () => {
-    render(await CaseHomePage({ params: params() }));
-    expect(screen.getByText(/No student account/i)).toBeTruthy();
-  });
-});
+/**
+ * MV-172's two navigation tests moved WITH the thing they test. The case's
+ * surface links and its "No student account" marker now live in the persistent
+ * frame, and `tests/app/case-frame.test.tsx` asserts both there — including the
+ * case-scoping of every href, which is the half that matters (a link to
+ * `/profile` would open the COUNSELLOR's own profile).
+ */

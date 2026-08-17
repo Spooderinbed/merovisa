@@ -67,10 +67,24 @@ export function CaseCreateForm({ organizationId }: CaseCreateFormProps) {
         return;
       }
 
-      // The new case is not navigated to. The manage page is reached from the
-      // list, and sending someone straight into a surface that carries only a
-      // status control would imply there is more there than there is.
-      router.push(`/workspace/${organizationId}/students`);
+      // Straight into the new case (spec §6). MV-171 returned to the list because
+      // `/manage` was the only case surface there was, and landing on a lone
+      // status control implied more than was there; MV-181's case now opens on an
+      // overview with its own next action, so the reason has gone.
+      //
+      // A response with no `caseId` falls back to the list rather than navigating
+      // to `/students/undefined` — the case WAS created, and a 404 would say
+      // otherwise.
+      const created: unknown = await response.json().catch(() => null);
+      const caseId =
+        typeof created === "object" && created !== null && "caseId" in created
+          ? (created as { caseId?: unknown }).caseId
+          : undefined;
+      router.push(
+        typeof caseId === "string" && caseId !== ""
+          ? `/workspace/${organizationId}/students/${caseId}`
+          : `/workspace/${organizationId}/students`,
+      );
       router.refresh();
     } catch {
       setError(saveErrorMessage(500));

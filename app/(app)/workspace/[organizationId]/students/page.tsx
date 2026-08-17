@@ -212,7 +212,7 @@ export default async function StudentsPage({
       ) : (
         <section className="flex flex-col gap-3">
           <p className="max-w-[72ch] text-meta text-ink-soft">
-            <span className="font-medium text-ink">Self-reported</span> means the student has an
+            <span className="font-medium text-ink">Student linked</span> means the student has an
             account and can edit their own name and email address. Read those as the student&apos;s
             words, not as a verified identity.
           </p>

@@ -214,11 +214,22 @@ describe("/workspace/[organizationId]/students/new — cell 8", () => {
 });
 
 describe("/workspace/[organizationId]/students/[caseId]/manage — cells 9 and 10", () => {
-  it("renders the student and their current status", async () => {
+  it("renders as the case frame's Case details section, with the status control", async () => {
     render(await managePage());
 
-    expect(screen.getByRole("heading", { name: "Case one" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Case details" })).toBeTruthy();
     expect(screen.getByLabelText(/status/i)).toBeTruthy();
+  });
+
+  it("leaves the student's identity to the frame rather than repeating it", async () => {
+    // MV-181 put this page inside `[caseId]/layout.tsx`, which names the student,
+    // states their status and linkage and carries the way back. Two headings for
+    // one person invite a reader to treat a disagreement between them as
+    // meaningful — `tests/app/case-frame.test.tsx` proves the frame says it.
+    render(await managePage());
+
+    expect(screen.queryByRole("heading", { name: "Case one" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /students/i })).not.toBeInTheDocument();
   });
 
   it("renders the assignment control for an actor holding case.assign", async () => {
@@ -412,28 +423,6 @@ describe("/workspace/[organizationId]/students/[caseId]/manage — cells 9 and 1
 
     expect(readPrimaryCounsellor).toHaveBeenCalled();
     expect(screen.getByText(/no counsellor is assigned/i)).toBeInTheDocument();
-  });
-
-  it("shows the Archived state the list already shows", async () => {
-    readOrgCase.mockResolvedValue({
-      ok: true,
-      data: {
-        id: CASE,
-        organizationId: ORG,
-        displayName: "Case one",
-        email: null,
-        operationalStatus: "in_progress",
-        hasLinkedStudent: false,
-        archivedAt: "2026-08-01T00:00:00.000Z",
-      },
-    });
-
-    render(await managePage());
-
-    // The list renders an "Archived" marker; dropping it here meant the one surface
-    // that offers to CHANGE the case was the one that did not mention it was closed
-    // off.
-    expect(screen.getByText("Archived")).toBeInTheDocument();
   });
 
   it("offers no live status control on an archived case, and says why", async () => {
