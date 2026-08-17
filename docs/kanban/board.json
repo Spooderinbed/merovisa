@@ -2178,7 +2178,7 @@
     },
     {
       "id": "MV-179",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-179-queue-first-day-view.md",
@@ -2189,7 +2189,7 @@
     },
     {
       "id": "MV-180",
-      "col": "ready",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-180-consultancy-shell-split.md",
