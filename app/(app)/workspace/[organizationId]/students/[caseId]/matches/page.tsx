@@ -1,5 +1,5 @@
 import { openCaseRoute, caseRouteBase } from "@/lib/cases/case-route";
-import { CaseRouteOutage, CaseWorkspaceShell } from "@/components/workspace/case-workspace-shell";
+import { CaseRouteOutage } from "@/components/workspace/case-route-outage";
 import { MatchesPanel } from "@/components/case-experience/matches-panel";
 
 /**
@@ -18,7 +18,7 @@ export default async function CaseMatchesPage({
   const gate = await openCaseRoute(organizationId, caseId, "/matches");
   if (!gate.ok) return <CaseRouteOutage organizationId={organizationId} outage={gate.outage} />;
 
-  const panel = await MatchesPanel({
+  return MatchesPanel({
     db: gate.supabase,
     caseId,
     checklistBase: caseRouteBase(organizationId, caseId),
@@ -33,15 +33,4 @@ export default async function CaseMatchesPage({
       </header>
     ),
   });
-
-  return (
-    <CaseWorkspaceShell
-      organizationId={organizationId}
-      caseId={caseId}
-      caseRow={gate.caseRow}
-      active="matches"
-    >
-      {panel}
-    </CaseWorkspaceShell>
-  );
 }

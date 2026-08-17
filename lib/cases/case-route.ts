@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { PermissionScope } from "./permissions";
 import { checkCasePermission } from "./require-permission";
 import { readOrgCase, type OrgCaseDetail } from "./write-repo";
 import { isWellFormedId } from "./path-ids";
@@ -48,7 +49,28 @@ import { isWellFormedId } from "./path-ids";
  */
 
 export type CaseRouteGate =
-  | { ok: true; supabase: SupabaseClient<Database>; caseRow: OrgCaseDetail }
+  | {
+      ok: true;
+      supabase: SupabaseClient<Database>;
+      caseRow: OrgCaseDetail;
+      /**
+       * What `getCaseContext` published about HOW this actor reaches the case —
+       * the same fact `can_staff_case` decides on. The persistent frame needs it
+       * to tell a staff viewer from the linked student before deciding whether to
+       * read who is assigned (`./case-frame.ts`); nothing here is a second gate.
+       */
+      grantedRoles: readonly string[];
+      /**
+       * The scope `case.read` was granted at. `all-org` readers are exactly the
+       * owner/admin set that holds `case.assign` under the current matrix, which
+       * is how the case overview decides whether "Assign a counsellor" is an
+       * action this viewer can take — the same reading the Day view makes from
+       * `case.list`, and for the same reason: a second round trip here would buy a
+       * second failure mode, not a second lock. Everything it gates is
+       * presentation; `/manage` re-decides and `cases_update_admin` decides again.
+       */
+      scope: PermissionScope | null;
+    }
   | { ok: false; outage: "access" | "case" };
 
 /** `/workspace/<org>/students/<case>` — every link and redirect in the route. */
@@ -70,7 +92,12 @@ export async function openCaseRoute(
     redirect(`/auth?next=${encodeURIComponent(caseRouteBase(organizationId, caseId) + subPath)}`);
   }
 
-  const { decision } = await checkCasePermission(data.user.id, caseId, "case.read", supabase);
+  const { decision, context } = await checkCasePermission(
+    data.user.id,
+    caseId,
+    "case.read",
+    supabase,
+  );
   if (!decision.allowed) {
     if (decision.reason === "lookup-failed") return { ok: false, outage: "access" };
     notFound();
@@ -80,5 +107,11 @@ export async function openCaseRoute(
   if (!result.ok) return { ok: false, outage: "case" };
   if (!result.data || result.data.organizationId !== organizationId) notFound();
 
-  return { ok: true, supabase, caseRow: result.data };
+  return {
+    ok: true,
+    supabase,
+    caseRow: result.data,
+    grantedRoles: context.grantedRoles ?? [],
+    scope: decision.requiredScope,
+  };
 }

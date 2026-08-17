@@ -1,5 +1,5 @@
 import { openCaseRoute } from "@/lib/cases/case-route";
-import { CaseRouteOutage, CaseWorkspaceShell } from "@/components/workspace/case-workspace-shell";
+import { CaseRouteOutage } from "@/components/workspace/case-route-outage";
 import { ChecklistAllPanel } from "@/components/case-experience/checklist-landing-panel";
 
 /**
@@ -23,16 +23,5 @@ export default async function CaseChecklistAllPage({
   const gate = await openCaseRoute(organizationId, caseId, "/checklist/all");
   if (!gate.ok) return <CaseRouteOutage organizationId={organizationId} outage={gate.outage} />;
 
-  const panel = await ChecklistAllPanel({ db: gate.supabase, caseId });
-
-  return (
-    <CaseWorkspaceShell
-      organizationId={organizationId}
-      caseId={caseId}
-      caseRow={gate.caseRow}
-      active="checklist"
-    >
-      {panel}
-    </CaseWorkspaceShell>
-  );
+  return ChecklistAllPanel({ db: gate.supabase, caseId });
 }

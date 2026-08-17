@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkCasePermission } from "@/lib/cases/require-permission";
 import { readOrgCase, readPrimaryCounsellor } from "@/lib/cases/write-repo";
 import { listOrgMembers } from "@/lib/org/repo";
-import { MEMBERSHIP_ROLES } from "@/lib/cases/permissions";
-import { operationalStatusLabel } from "@/lib/cases/operational-status";
+import { isStaffOnCase } from "@/lib/cases/case-frame";
 import {
   CaseManageControls,
   type CaseManageMember,
@@ -16,10 +14,13 @@ import { Card } from "@/components/ui/card";
  * Access-matrix cells 9 and 10 — hand a case to one primary counsellor, and move
  * its operational status.
  *
- * **This is MV-171's surface, not a preview of MV-172's case route.** It carries
- * the status and the assignment and nothing else: no profile, no matches, no
- * plan, no documents. It is named `.../students/[caseId]/manage` precisely so it
- * cannot collide with the case route MV-172 adds.
+ * **This is the case frame's "Case details" section** (MV-181, spec §3 "Manage
+ * route" and §6). The URL, the two gates, the mutation logic and every error
+ * sentence are MV-171's, unchanged; what changed is where it renders — inside
+ * `../layout.tsx`, which now names the student, states their status and linkage,
+ * and carries the way back. So this page no longer repeats any of that: two
+ * headings for one person invite a reader to treat a disagreement between them as
+ * meaningful.
  *
  * **Both claims are CASE-scoped**, and they answer differently for the same
  * person: cell 10 gives an assigned counsellor `operational_status`, while F-1
@@ -78,7 +79,7 @@ export default async function ManageCasePage({
    * this reads only the reasons of decisions that actually denied.
    */
   if (update.decision.reason === "lookup-failed" || assign.decision.reason === "lookup-failed") {
-    return <Outage organizationId={organizationId} heading="We couldn't check your access" />;
+    return <Outage heading="We couldn't check your access" />;
   }
   if (!canUpdateStatus && !canAssign) notFound();
 
@@ -101,17 +102,18 @@ export default async function ManageCasePage({
    *
    * `grantedRoles` is the authorization fact `getCaseContext` publishes for exactly
    * this and mirrors `can_staff_case`; it is read from whichever check ALLOWED,
-   * because a denial hands back the grants-nothing context.
+   * because a denial hands back the grants-nothing context. The predicate itself
+   * is shared with the case frame (`lib/cases/case-frame.ts`), which asks the same
+   * question about the same viewer — two copies of it would be two chances to
+   * drift on a rule that decides what a student is told about a consultancy.
    */
   const grantedRoles: readonly string[] =
     (canUpdateStatus ? update.context.grantedRoles : assign.context.grantedRoles) ?? [];
-  const isStaffOnCase = grantedRoles.some((role) =>
-    (MEMBERSHIP_ROLES as readonly string[]).includes(role),
-  );
+  const viewerIsStaffOnCase = isStaffOnCase(grantedRoles);
 
   const caseResult = await readOrgCase(caseId, supabase);
   if (!caseResult.ok) {
-    return <Outage organizationId={organizationId} heading="We couldn't load this student" />;
+    return <Outage heading="We couldn't load this student" />;
   }
   if (!caseResult.data || caseResult.data.organizationId !== organizationId) notFound();
   const caseRow = caseResult.data;
@@ -125,8 +127,8 @@ export default async function ManageCasePage({
    */
   const isArchived = caseRow.archivedAt !== null;
 
-  // Not read at all for a non-staff viewer — see `isStaffOnCase` above.
-  const primary = isStaffOnCase ? await readPrimaryCounsellor(caseId, supabase) : null;
+  // Not read at all for a non-staff viewer — see `viewerIsStaffOnCase` above.
+  const primary = viewerIsStaffOnCase ? await readPrimaryCounsellor(caseId, supabase) : null;
   const currentUserId = primary?.ok ? (primary.data?.userId ?? null) : null;
 
   // The member list is read ONLY when there is a control to put it in. A viewer
@@ -157,27 +159,12 @@ export default async function ManageCasePage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-8 px-5 py-10">
+    <div className="flex w-full max-w-[720px] flex-col gap-8 px-5 py-10">
       <header className="flex flex-col gap-2">
-        <Link
-          href={`/workspace/${organizationId}/students`}
-          className="text-meta text-primary underline underline-offset-4"
-        >
-          ← Students
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-[clamp(28px,3.4vw,40px)]">{caseRow.displayName}</h1>
-          {/* The same marker the list shows, for the same reason it shows it. */}
-          {isArchived ? (
-            <span className="inline-flex items-center rounded-pill border border-line bg-bg-tint px-2 py-0.5 text-caption text-ink-soft">
-              Archived
-            </span>
-          ) : null}
-        </div>
-        <p className="text-meta text-ink-soft">
-          {caseRow.email ?? "No email address on file"} ·{" "}
-          {operationalStatusLabel(caseRow.operationalStatus)}
-          {caseRow.hasLinkedStudent ? " · Self-reported" : " · No student account"}
+        <h1 className="text-headline font-medium">Case details</h1>
+        <p className="max-w-[64ch] text-body text-ink-soft">
+          Who is working on this student, and where the case has got to. Everything else about them
+          lives in the sections beside this one.
         </p>
       </header>
 
@@ -222,23 +209,23 @@ export default async function ManageCasePage({
       </Card>
 
       <p className="max-w-[64ch] text-caption text-ink-soft">
-        This student&apos;s profile, matches, plan and documents are not part of the workspace yet.
-        Archiving and inviting the student to sign in are not built.
+        Archiving this case and inviting the student to sign in are not built yet.
       </p>
     </div>
   );
 }
 
-/** The outage state. Deliberately not `notFound()` — see the header. */
-function Outage({ organizationId, heading }: { organizationId: string; heading: string }) {
+/**
+ * The outage state. Deliberately not `notFound()` — see the header.
+ *
+ * A CARD, not a page: this renders inside the persistent case frame, which passed
+ * its own gate and is already naming the student and carrying the way back. A
+ * second full-page outage inside it would replace the section and keep the frame,
+ * which is what this does — with none of the duplicated chrome.
+ */
+function Outage({ heading }: { heading: string }) {
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-8 px-5 py-10">
-      <Link
-        href={`/workspace/${organizationId}/students`}
-        className="text-meta text-primary underline underline-offset-4"
-      >
-        ← Students
-      </Link>
+    <div className="flex w-full max-w-[720px] flex-col gap-8 px-5 py-10">
       <Card as="section" padding="lg" className="flex flex-col gap-2">
         <h1 className="text-title font-medium">{heading}</h1>
         <p className="max-w-[64ch] text-body text-ink-soft">

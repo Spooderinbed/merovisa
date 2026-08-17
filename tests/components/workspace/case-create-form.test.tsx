@@ -105,13 +105,23 @@ describe("CaseCreateForm — what it sends", () => {
 });
 
 describe("CaseCreateForm — what it says when the create fails", () => {
-  it("returns to the list on success rather than into a half-built case page", async () => {
+  it("opens the new case on success", async () => {
+    // Spec §6: "navigate successful creation to the new case overview". MV-171
+    // returned to the list because `/manage` was the only case surface and landing
+    // on a lone status control implied more than was there; the case now has a
+    // frame, an overview and a next action, so the reason has gone.
     await submit(response(200, { ok: true, caseId: "c1" }), { name: "Asha" });
 
-    // Sending someone straight into a surface carrying only a status control would
-    // imply there is more there than there is.
-    expect(push).toHaveBeenCalledWith(`/workspace/${ORG}/students`);
+    expect(push).toHaveBeenCalledWith(`/workspace/${ORG}/students/c1`);
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("falls back to the list when the response carried no case id", async () => {
+    // A create that succeeded without telling us WHICH case must not navigate to
+    // `/students/undefined`, which would 404 on a case that was genuinely created.
+    await submit(response(200, { ok: true }), { name: "Asha" });
+
+    expect(push).toHaveBeenCalledWith(`/workspace/${ORG}/students`);
   });
 
   it("blames the fields on a 422", async () => {

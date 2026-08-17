@@ -562,9 +562,11 @@ describe("/workspace/[id]/students — cell 7, the case directory (All cases)", 
     expect(screen.queryByText(/Showing the first/i)).toBeNull();
   });
 
-  it("marks a student-editable name as self-reported, and a staff-only one as having no account", async () => {
-    // Spec F-3 reading (a). There is no provenance column, so the page claims
-    // only what is knowable: whether a student CAN write these fields.
+  it("marks a case with an account as linked, and a staff-only one as having no account", async () => {
+    // The marker states the schema fact — `student_user_id IS NOT NULL` — and the
+    // legend beside the table carries F-3's caveat about what a linked student can
+    // edit. MV-181 aligned the word with the filter that has always been labelled
+    // "Student linked": a counsellor filtered by one word and read back another.
     grantList("all-org");
     listCaseQueue.mockResolvedValue(queued(CASES));
     render(await StudentsPage({ params, searchParams: noSearch }));
@@ -572,7 +574,7 @@ describe("/workspace/[id]/students — cell 7, the case directory (All cases)", 
     // Tied to the ROW that produced each marker. Asserting only that both strings
     // appear somewhere in the list leaves SWAPPING them invisible — and an inverted
     // marker is exactly the deception F-3 exists to prevent.
-    expect(within(rowFor("Anil Gurung")).getByText("Self-reported")).toBeTruthy();
+    expect(within(rowFor("Anil Gurung")).getByText("Student linked")).toBeTruthy();
     expect(within(rowFor("Sita Rai")).getByText("No student account")).toBeTruthy();
   });
 

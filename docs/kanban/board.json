@@ -2200,7 +2200,7 @@
     },
     {
       "id": "MV-181",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-181-case-frame-refit.md",

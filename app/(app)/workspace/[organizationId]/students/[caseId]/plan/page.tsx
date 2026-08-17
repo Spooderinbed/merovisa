@@ -1,5 +1,5 @@
 import { openCaseRoute } from "@/lib/cases/case-route";
-import { CaseRouteOutage, CaseWorkspaceShell } from "@/components/workspace/case-workspace-shell";
+import { CaseRouteOutage } from "@/components/workspace/case-route-outage";
 import { PlanPanel } from "@/components/case-experience/plan-panel";
 
 /**
@@ -19,7 +19,7 @@ export default async function CasePlanPage({
   const gate = await openCaseRoute(organizationId, caseId, "/plan");
   if (!gate.ok) return <CaseRouteOutage organizationId={organizationId} outage={gate.outage} />;
 
-  const panel = await PlanPanel({
+  return PlanPanel({
     db: gate.supabase,
     caseId,
     header: (
@@ -35,15 +35,4 @@ export default async function CasePlanPage({
       </header>
     ),
   });
-
-  return (
-    <CaseWorkspaceShell
-      organizationId={organizationId}
-      caseId={caseId}
-      caseRow={gate.caseRow}
-      active="plan"
-    >
-      {panel}
-    </CaseWorkspaceShell>
-  );
 }

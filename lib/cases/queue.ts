@@ -42,27 +42,54 @@ export interface QueueCase {
   nextStep: NextStepSelection;
 }
 
-export type NextActionKind =
-  | "none"
-  | "assign"
-  | "review"
-  | "invite"
-  | "add-email"
-  | "plan-item"
-  | "waiting-on-student"
-  | "plan-underway"
-  | "open";
+export const NEXT_ACTION_KINDS = [
+  "none",
+  "assign",
+  "review",
+  "invite",
+  "add-email",
+  "plan-item",
+  "waiting-on-student",
+  "plan-underway",
+  "open",
+] as const;
+
+export type NextActionKind = (typeof NEXT_ACTION_KINDS)[number];
 
 export interface NextAction {
   kind: NextActionKind;
   label: string;
 }
 
-function hasActiveAssignee(row: QueueCase): boolean {
+/**
+ * The fields the resolution actually reads. The queue passes whole `QueueCase`
+ * rows; the case overview (MV-181) has one case and no `updatedAt` on
+ * `OrgCaseDetail`, and asking it to invent a sort key to reuse the resolver would
+ * be the wrong way round. Structural, so `QueueCase` still satisfies it.
+ */
+export type NextActionInput = Pick<
+  QueueCase,
+  "archivedAt" | "operationalStatus" | "assignment" | "hasLinkedStudent" | "email" | "nextStep"
+>;
+
+/**
+ * Could a plan item have outranked this action?
+ *
+ * Steps 7 and 9 of the resolution read the plan, so anything resolved BELOW them
+ * is only right if the plan read succeeded. A surface whose plan read failed must
+ * therefore say it could not work the action out rather than show one of these —
+ * MISTAKES.md, silent failures: a failed read must not wear a determined answer.
+ * `plan-item` came FROM the plan, so a failed read cannot produce it.
+ */
+export function dependsOnPlan(kind: NextActionKind): boolean {
+  return kind === "waiting-on-student" || kind === "plan-underway" || kind === "open";
+}
+
+function hasActiveAssignee(row: NextActionInput): boolean {
   return row.assignment !== null && row.assignment.active;
 }
 
-function isClosed(row: QueueCase): boolean {
+function isClosed(row: { operationalStatus: string }): boolean {
   return row.operationalStatus === "closed";
 }
 
@@ -72,7 +99,10 @@ function isClosed(row: QueueCase): boolean {
  * owner/admin, and for anyone else the resolution falls through rather than
  * naming an action the viewer cannot take.
  */
-export function resolveNextAction(row: QueueCase, viewer: { canAssign: boolean }): NextAction {
+export function resolveNextAction(
+  row: NextActionInput,
+  viewer: { canAssign: boolean },
+): NextAction {
   if (row.archivedAt !== null || isClosed(row)) return { kind: "none", label: "No action" };
   if (viewer.canAssign && !hasActiveAssignee(row)) {
     return { kind: "assign", label: "Assign a counsellor" };

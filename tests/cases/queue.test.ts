@@ -2,6 +2,8 @@ import { describe, test, expect } from "vitest";
 
 import {
   resolveNextAction,
+  dependsOnPlan,
+  NEXT_ACTION_KINDS,
   attentionTier,
   needsAction,
   sortQueue,
@@ -523,5 +525,47 @@ describe("buildQueueHref — defaults are OMITTED from the canonical URL", () =>
     expect(
       buildQueueHref(ORG, { ...parseQueueSearchParams({}, { allowAssignee: true }), query: "rai & sons" }),
     ).toBe(`/workspace/${ORG}?q=rai+%26+sons`);
+  });
+});
+
+describe("dependsOnPlan — which actions a failed plan read could have got wrong (MV-181)", () => {
+  test("the actions resolved BELOW the plan steps depend on it", () => {
+    // Steps 7 and 9 read the plan. An action that resolved after them may have
+    // been outranked by a plan item the read never returned, so the case overview
+    // must say it could not work the action out rather than show this one.
+    expect(dependsOnPlan("waiting-on-student")).toBe(true);
+    expect(dependsOnPlan("plan-underway")).toBe(true);
+    expect(dependsOnPlan("open")).toBe(true);
+  });
+
+  test("the actions resolved ABOVE the plan steps do not", () => {
+    // These outrank any plan item, so they are still true with no plan at all.
+    expect(dependsOnPlan("none")).toBe(false);
+    expect(dependsOnPlan("assign")).toBe(false);
+    expect(dependsOnPlan("review")).toBe(false);
+    expect(dependsOnPlan("invite")).toBe(false);
+    expect(dependsOnPlan("add-email")).toBe(false);
+  });
+
+  test("an action that CAME from the plan cannot have been produced without it", () => {
+    expect(dependsOnPlan("plan-item")).toBe(false);
+  });
+
+  test("covers every action kind, so a new one cannot be forgotten", () => {
+    // The set is exhaustive by construction: every kind `resolveNextAction` can
+    // return is classified above. A new kind added to `NextActionKind` without a
+    // line here fails this list comparison rather than silently defaulting.
+    const classified = [
+      "none",
+      "assign",
+      "review",
+      "invite",
+      "add-email",
+      "plan-item",
+      "waiting-on-student",
+      "plan-underway",
+      "open",
+    ] as const;
+    expect([...NEXT_ACTION_KINDS].sort()).toEqual([...classified].sort());
   });
 });

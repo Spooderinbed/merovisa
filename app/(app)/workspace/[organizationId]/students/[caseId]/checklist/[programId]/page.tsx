@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { openCaseRoute } from "@/lib/cases/case-route";
-import { CaseRouteOutage, CaseWorkspaceShell } from "@/components/workspace/case-workspace-shell";
+import { CaseRouteOutage } from "@/components/workspace/case-route-outage";
 import { ChecklistProgramPanel } from "@/components/case-experience/checklist-landing-panel";
 
 /**
@@ -22,14 +22,5 @@ export default async function CaseProgramChecklistPage({
   // than in the panel — a panel must not choose a route's status code.
   if (panel === null) notFound();
 
-  return (
-    <CaseWorkspaceShell
-      organizationId={organizationId}
-      caseId={caseId}
-      caseRow={gate.caseRow}
-      active="checklist"
-    >
-      {panel}
-    </CaseWorkspaceShell>
-  );
+  return panel;
 }
