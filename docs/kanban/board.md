@@ -7,13 +7,13 @@
 >
 > _Last updated: 2026-08-11 · stale threshold: 7d_
 
-### In flight — 0 open PRs
+### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-17 12:06 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-17 12:09 UTC. **Not board state** — never written to board.json.
 
-_No open PRs._
-
-> ⚠️ MV-180 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
+| Card | PR | | CI | Review | Touches |
+|---|---|---|---|---|---|
+| **MV-180** | [#146](https://github.com/Spooderinbed/merovisa/pull/146) | open | pending 2/4 | — | app · tests · docs · components |
 
 
 ## Backlog — 19
@@ -48,7 +48,7 @@ _empty_
 
 ## In review (WIP 3) — 1
 
-- **MV-180** · P1 · [Consultancy shell split + counsellor team-read access fix (UI lane slice 2)](cards/MV-180-consultancy-shell-split.md) — _Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179._
+- **MV-180** · P1 · [Consultancy shell split + counsellor team-read access fix (UI lane slice 2)](cards/MV-180-consultancy-shell-split.md) — _Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179._ · [#146](https://github.com/Spooderinbed/merovisa/pull/146) open, ci pending
 
 ## Blocked — 3
 
@@ -179,7 +179,7 @@ _empty_
 - **MV-129** · P1 · [English editor caps PTE/TOEFL sub-scores to the IELTS scale (audit C-7)](cards/MV-129-english-editor-scale-cap.md) — _Audit C-7, confirmed uncarded 2026-07-17. Built 'Scoring + input' (founder choice): the live harm was the raw PTE/TOEFL-vs-IELTS SCORING bug (profile-strength.ts over-awarded every non-IELTS taker; callouts/rules.ts never warned them) — routed both through toIeltsEquivalent. Input: the profile editor's overall already scaled per-test, so the fix hides the IELTS-only per-band sub-inputs for PTE/TOEFL (wizard english-step was already correct). Gate green: 298 files/1954 tests, typecheck clean, lint 0 errors._
 - **MV-130** · P1 · [OAuth claim failure has no recovery on /assess (audit C-9)](cards/MV-130-assess-claim-failure-recovery.md) — _Audit C-9, uncarded. app/(focused)/assess/page.tsx reads only ?new and has no ?error handling, so a failed claim/OAuth silently drops the highest-intent user at the conversion moment. Fix: surface the failure honestly plus a retry path (reuse the MV-28 / MV-65 recover-in-place pattern). Distinct from MV-28 (anon results recovery)._ · [#103](https://github.com/Spooderinbed/merovisa/pull/103) merged, ci passing · [#102](https://github.com/Spooderinbed/merovisa/pull/102) merged, ci failing
 - **MV-132** · P1 · [FX rates are unsourced and unguarded, and they gate the DHA verdict (audit F-20)](cards/MV-132-fx-rates-source-and-guard.md) — _Audit F-20, uncarded (MV-09 consolidated FX but explicitly deferred source + reverifyBy + volatility). lib/data/policy/fx-rates.ts has hardcoded rates with no source/lastVerified/guard, consumed by financial.ts + from-sections.ts, so it silently gates the budget verdict (MV-120). Violates the CLAUDE.md every-data-point-has-source rule. Fix: source + reverifyBy on each rate, extend the freshness guard (MV-80 pattern), disclose the as-of date._ · [#97](https://github.com/Spooderinbed/merovisa/pull/97) merged, ci passing
-- **MV-133** · P1 · [A DB read error renders as no-programs, not an outage (audit read-side empty-state)](cards/MV-133-repo-read-error-empty-state.md) — _Audit section 7 item 18, uncarded. lib/programs/repo.ts returns [] on error at 4 sites (if error-or-no-data return []), so a transient DB/network failure is indistinguishable from a genuinely empty result and the student is told the product has nothing for them. Read-side sibling of MV-02 (which fixed the write-side ok:true swallow). Fix: distinguish failure from empty; render the MV-62 error state on failure._ · [#96](https://github.com/Spooderinbed/merovisa/pull/96) merged, ci passing
+- **MV-133** · P1 · [A DB read error renders as no-programs, not an outage (audit read-side empty-state)](cards/MV-133-repo-read-error-empty-state.md) — _Audit section 7 item 18, uncarded. lib/programs/repo.ts returns [] on error at 4 sites (if error-or-no-data return []), so a transient DB/network failure is indistinguishable from a genuinely empty result and the student is told the product has nothing for them. Read-side sibling of MV-02 (which fixed the write-side ok:true swallow). Fix: distinguish failure from empty; render the MV-62 error state on failure._
 - **MV-134** · P1 · [Destinations page markets corridors the product does not support (audit C-11)](cards/MV-134-destinations-false-claim-copy.md) — _Audit C-11 plus the Today stop-live-false-claims P0, uncarded. app/(marketing)/destinations/page.tsx presents six-countries-done-well (plus adjacent overclaims like 485=2-4yr and all-figures-current) while only Nepal to Australia ships, a live production false claim that bounces students to consultancies. SAME class as MV-122, DIFFERENT surface. Founder owns the wording. Grep all marketing surfaces before closing._ · [#131](https://github.com/Spooderinbed/merovisa/pull/131) merged, ci passing
 - **MV-135** · P1 · [Anonymous assessments have no purge/deletion path (audit O-2)](cards/MV-135-anonymous-assessment-purge.md) — _Audit O-2 (the audit said card O-1/O-2 as blockers; O-1 rides MV-08, O-2 was uncarded). The 3-day expiry is ACCESS expiry, not deletion; anon data persists unbounded with no purge job and no self-serve delete, a standing privacy/retention liability. Blocked on a founder retention-window decision, then a purge job + delete affordance + honest privacy copy. Distinct from MV-05 (account deletion + policy text)._ · [#99](https://github.com/Spooderinbed/merovisa/pull/99) merged, ci passing
 - **MV-139** · P1 · [Wizard asks about prior visa refusals before predicting on them (audit F-1)](cards/MV-139-wizard-prior-refusals.md) — _MV-124 Slice 9 (audit F-1), split off when the slice started. The scoring engine penalises prior visa refusals (one -15, multiple -35, a band drop) and the profile editor collects them, but the anonymous 9-step wizard never asked -> an optimistic anonymous verdict that silently dropped a band the moment a student voluntarily declared the refusal in the editor (the app punished honesty). Founder + Codex both picked the full fix over disclosure-only: added priorRefusals to ProfileSchema (closes the zod-strip risk so the answer reaches scoreVisa), a new FINAL wizard step (explicit selection required, no silent 'none', no-shame framing), and a from-assessment mapping for claim-time symmetry. TDD red->green; wizard step-count goldens updated 8->9 / 9->10 with justification. Gate: typecheck 0, lint 0, 1979 tests/302 files. Live-verified (Step 9 of 9 renders, CTA disabled->enabled on selection)._
