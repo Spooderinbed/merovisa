@@ -38,6 +38,7 @@ async function deactivateWith(status: number) {
       role="counsellor"
       status="active"
       isSelf={false}
+      canManage
       viewerIsOwner
       roleOptions={["counsellor", "admin", "owner"]}
     />,
