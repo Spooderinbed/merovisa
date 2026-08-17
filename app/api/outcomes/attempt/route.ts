@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
-import { checkCasePermission } from "@/lib/cases/require-permission";
+import { requestedCaseId, resolveTargetCase, targetCaseResponse } from "@/lib/cases/target-case";
 import { AttemptInputSchema } from "@/lib/validation/outcomes";
 import { getPredictionById, insertAttempt } from "@/lib/outcomes/repo";
 
@@ -27,13 +26,16 @@ export async function POST(request: Request): Promise<Response> {
   if (!data.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Authorize BEFORE the first query. A denial here must cost zero reads — the
-  // defect this ordering catches is "authorized after reading".
-  const caseId = await resolvePersonalCaseId(data.user.id, supabase);
-  if (caseId === null) {
-    return NextResponse.json({ error: "no workspace for this account" }, { status: 500 });
-  }
-  const { decision } = await checkCasePermission(data.user.id, caseId, "case.update", supabase);
-  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // defect this ordering catches is "authorized after reading". MV-172, spec F-8
+  // (cell 23): the case may be NAMED by the caller, and is authorized either way.
+  const target = await resolveTargetCase(
+    data.user.id,
+    requestedCaseId(body),
+    "case.update",
+    supabase,
+  );
+  if (!target.ok) return targetCaseResponse(target, "no workspace for this account");
+  const { caseId } = target;
 
   // Scoped to the case that was just authorized, not merely to whatever the
   // legacy owner policy happens to admit: the prediction id is client-supplied,

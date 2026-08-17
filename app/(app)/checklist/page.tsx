@@ -4,10 +4,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
 import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
 import { checkCasePermission } from "@/lib/cases/require-permission";
-import { listShortlistForCase } from "@/lib/matches/repo";
-import { listAllPrograms } from "@/lib/programs/repo";
-import { ChecklistLanding } from "@/components/checklist/checklist-landing";
+import { ChecklistLandingPanel } from "@/components/case-experience/checklist-landing-panel";
 
+/**
+ * The student's own checklist landing. MV-172 moved the body into
+ * `ChecklistLandingPanel` so the counsellor's case route renders the same surface
+ * for a case that is not the actor's own — one implementation, two case ids.
+ */
 export default async function ChecklistLandingPage() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -27,12 +30,7 @@ export default async function ChecklistLandingPage() {
     const { decision } = await checkCasePermission(user.id, caseId, "case.read", supabase);
     if (!decision.allowed) redirect("/auth?next=/checklist");
   }
-  const [shortlist, programs] = await Promise.all([
-    caseId === null ? [] : listShortlistForCase(supabase, caseId),
-    listAllPrograms(supabase),
-  ]);
-  const ids = new Set(shortlist.map((s) => s.programId));
-  const shortlisted = programs.filter((p) => ids.has(p.id)).map((p) => ({ id: p.id, name: p.name }));
 
-  return <ChecklistLanding shortlisted={shortlisted} />;
+  // Awaited rather than returned as an element — see `/profile`.
+  return ChecklistLandingPanel({ db: supabase, caseId });
 }

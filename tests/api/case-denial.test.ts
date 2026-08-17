@@ -397,15 +397,23 @@ function stripComments(source: string): string {
 }
 
 /**
- * Does this route gate on the CASE permission layer? Two detectors, unioned, so the
- * sweep fails closed: the import specifier (which cannot hide in a comment, and is
- * present whichever of the two functions the route uses) and the call shape.
+ * Does this route gate on the CASE permission layer? Detectors unioned, so the
+ * sweep fails closed: the import specifiers (which cannot hide in a comment, and
+ * are present whichever function the route uses) and the call shapes.
+ *
+ * MV-172 added the third pair. The seven case-scoped write routes now reach
+ * `checkCasePermission` through `resolveTargetCase`, which resolves-and-authorizes
+ * in one call — so a detector that only knew the direct import would have counted
+ * seven gated routes as ungated and this suite's completeness check would have
+ * stopped demanding rows for them, silently.
  */
 function isCaseGated(absolutePath: string): boolean {
   const code = stripComments(readFileSync(absolutePath, "utf8"));
   return (
     code.includes("@/lib/cases/require-permission") ||
-    /\b(?:check|require)CasePermission\s*\(/.test(code)
+    code.includes("@/lib/cases/target-case") ||
+    /\b(?:check|require)CasePermission\s*\(/.test(code) ||
+    /\bresolveTargetCase\s*\(/.test(code)
   );
 }
 
@@ -544,26 +552,77 @@ describe("MV-157 §C — every migrated route DENIES before it reads", () => {
     });
   });
 
-  it("a denial never reaches the permission check with a case the CLIENT supplied", async () => {
-    // MV-157 §A's other half, asserted once rather than per route: the case id
-    // handed to `checkCasePermission` is always the one the resolver returned for
-    // the SESSION actor, never a value that came off the request.
-    checkCasePermission.mockResolvedValue({ decision: { allowed: false }, context: {} });
-    resolvePersonalCaseId.mockResolvedValue("case-from-session");
+  /**
+   * ## AMENDED BY MV-172 — the invariant changed, and saying so is the point
+   *
+   * This test used to assert that a `caseId` in the request body was IGNORED and
+   * the session-resolved case used instead. That was right for MV-157, when no
+   * route had any business naming a case other than the actor's own — and it is
+   * exactly what Stage 3 spec F-8 asks MV-172 to change, because a counsellor
+   * working inside a student's case route must name that case or the write lands
+   * on their own.
+   *
+   * "Ignore what the client sent" was never the security property; it was one way
+   * of getting it. **The property is that the client's value is AUTHORIZED, never
+   * TRUSTED** — plan line 354, "knowing a case ID grants no access". So the three
+   * halves below replace the one above: an unnamed case still resolves from the
+   * session, a named one is what the permission layer is asked about, and a named
+   * one that is refused stays refused rather than falling back to a case the actor
+   * does happen to be allowed to write.
+   */
+  describe("a client-supplied case id is AUTHORIZED, never trusted (MV-172, spec F-8)", () => {
+    it("uses the SESSION-resolved case when the body names none", async () => {
+      checkCasePermission.mockResolvedValue({ decision: { allowed: false }, context: {} });
+      resolvePersonalCaseId.mockResolvedValue("case-from-session");
 
-    await shortlistPost(
-      json("http://localhost/api/shortlist", "POST", {
-        programId: "p1",
-        status: "shortlisted",
-        caseId: "case-the-client-asked-for",
-      }),
-    );
+      await shortlistPost(
+        json("http://localhost/api/shortlist", "POST", { programId: "p1", status: "shortlisted" }),
+      );
 
-    expect(checkCasePermission).toHaveBeenCalledWith(
-      ACTOR,
-      "case-from-session",
-      "case.update",
-      expect.anything(),
-    );
+      expect(checkCasePermission).toHaveBeenCalledWith(
+        ACTOR,
+        "case-from-session",
+        "case.update",
+        expect.anything(),
+      );
+    });
+
+    it("asks the permission layer about the case the body NAMED", async () => {
+      checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+      resolvePersonalCaseId.mockResolvedValue("case-from-session");
+
+      await shortlistPost(
+        json("http://localhost/api/shortlist", "POST", {
+          programId: "p1",
+          status: "shortlisted",
+          caseId: UUID,
+        }),
+      );
+
+      expect(checkCasePermission).toHaveBeenCalledWith(ACTOR, UUID, "case.update", expect.anything());
+      // And never the actor's own as a fallback — that fallback is precisely how a
+      // mishandled id would land on the counsellor's case in silence.
+      expect(resolvePersonalCaseId).not.toHaveBeenCalled();
+    });
+
+    it("refuses a named case the actor may not reach, without substituting their own", async () => {
+      checkCasePermission.mockResolvedValue({
+        decision: { allowed: false, reason: "not-assigned" },
+        context: {},
+      });
+      resolvePersonalCaseId.mockResolvedValue("case-from-session");
+
+      const res = await shortlistPost(
+        json("http://localhost/api/shortlist", "POST", {
+          programId: "p1",
+          status: "shortlisted",
+          caseId: UUID,
+        }),
+      );
+
+      expect(res.status).toBe(403);
+      expect(from).not.toHaveBeenCalled();
+      expect(resolvePersonalCaseId).not.toHaveBeenCalled();
+    });
   });
 });

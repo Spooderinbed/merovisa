@@ -1,7 +1,25 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 
-export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; name: string }[] }) {
+/**
+ * `base` prefixes every internal link. Empty on `/checklist`; inside a case route
+ * it is that case's base, so a counsellor opening "all documents" or a program's
+ * checklist stays in the student's case instead of landing on their own.
+ *
+ * `documentsHref` is null there for a different reason: the vault is Stage 4's,
+ * its Storage object paths are still owner-keyed, and there is no case-scoped
+ * documents surface to link to yet. Offering the student's counsellor a link to
+ * their OWN vault would be worse than offering none.
+ */
+export function ChecklistLanding({
+  shortlisted,
+  base = "",
+  documentsHref = "/documents",
+}: {
+  shortlisted: { id: string; name: string }[];
+  base?: string;
+  documentsHref?: string | null;
+}) {
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-5 py-10">
       <header className="flex flex-col gap-2">
@@ -14,7 +32,7 @@ export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; n
 
       <Card
         as={Link}
-        href="/checklist/all"
+        href={`${base}/checklist/all`}
         radius="card"
         tone="tint"
         padding="sm"
@@ -35,7 +53,7 @@ export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; n
             <li key={p.id}>
               <Card
                 as="a"
-                href={`/checklist/${p.id}`}
+                href={`${base}/checklist/${p.id}`}
                 padding="sm"
                 className="flex items-center justify-between hover:border-primary"
               >
@@ -48,15 +66,20 @@ export function ChecklistLanding({ shortlisted }: { shortlisted: { id: string; n
       ) : (
         <Card radius="card" tone="tint" padding="md" className="flex flex-col items-start gap-3">
           <p className="text-body text-ink">You haven&apos;t shortlisted any programs yet.</p>
-          <a href="/matches" className="rounded-pill bg-primary px-4 py-2 text-meta text-white hover:opacity-90">
+          <a
+            href={`${base}/matches`}
+            className="rounded-pill bg-primary px-4 py-2 text-meta text-white hover:opacity-90"
+          >
             Browse matches
           </a>
         </Card>
       )}
 
-      <a href="/documents" className="text-small text-primary hover:underline">
-        Go to your documents vault →
-      </a>
+      {documentsHref === null ? null : (
+        <a href={documentsHref} className="text-small text-primary hover:underline">
+          Go to your documents vault →
+        </a>
+      )}
     </div>
   );
 }

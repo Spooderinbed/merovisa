@@ -245,12 +245,15 @@ the allowlist is enforced by Postgres, not by the app. That TypeScript gap is re
 canonical, and is MV-173's. Cell 12 is a different thing: there the omission is the canonical
 decision itself, not an oversight (see **F-3**).
 
-² **Cells 21–23 are Stage 2 surfaces the case route inherits, and their five routes take no case id.**
+² **Cells 21–23 are Stage 2 surfaces the case route inherits, and their routes take no case id.**
 Grants and policies already exist on all five tables; what does not exist is a caller that can name a
 case other than the actor's own — every one resolves `resolvePersonalCaseId(<user>.id, …)`. This is
 the one place where MV-172 can ship green and write to the **wrong case**. Cell 17 is the `documents`
 vault table and is **not** cell 22: `document_status` is a separate table with its own grant and
-`ds_insert_case` policy. See **F-8**.
+`ds_insert_case` policy. See **F-8** — which said *five* routes and, as MV-172 amended it, is
+**seven**: `plan/action` and `profile/section` have the identical defect and were missed because
+they were visible to §6.2's registry lens instead. Cells 21–23's own surfaces are the five;
+the other two belong to §6.2 entries 8–9 and are carried there.
 
 ### The two rules Stage 1 got wrong most often, shown holding on every new surface
 
@@ -803,21 +806,42 @@ Recorded so later slices do not re-derive them:
   wrong about the four INSERTs, but a slice sizing the work off "four" will miss `assessments`
   UPDATE/DELETE and `plan_items` DELETE. §6.1 above is the complete list.
 
-### F-8 `[BLOCKER]` Five case-scoped write routes resolve the ACTOR's own case and accept no case id
+### F-8 `[BLOCKER]` ~~Five~~ **SEVEN** case-scoped write routes resolve the ACTOR's own case and accept no case id
 
-**Why §6.2's lens could not see these.** That section's inventory is the service-role registry, and
-all five of these already run on the **authenticated** client — so none appears in
+> **AMENDED 2026-08-11 BY MV-172 — the count was FIVE and it is SEVEN.**
+> The five below are correct *for what this finding measured*: routes invisible to §6.2's
+> service-role lens. They are **not** the count of routes that need a case id.
+> `app/api/plan/action/route.ts:37` and `app/api/profile/section/route.ts:37` call
+> `resolvePersonalCaseId(<user>.id, supabase)` on exactly the same line of exactly the same
+> four-line block — they were simply **visible** to the registry, so §6.2 entries 8 and 9 gave
+> them a *client* disposition (retire / split) and said nothing at all about their case id.
+> Neither audit asked the question of them, so neither answered it.
+>
+> **A slice that parameterizes only the five ships the case route with the PLAN and the PROFILE
+> EDITOR still writing to the counsellor's own case** — the same silent wrong-case write this
+> finding exists to prevent, on the two surfaces a counsellor uses most. Rows 6 and 7 are added
+> to the table below and the resolution now names seven.
+>
+> The lesson is §6.2's own, in a third register: **an audit that enumerates instances of a thing
+> is bounded by where it looked.** §6.2 looked at the registry and F-8 looked at everything the
+> registry could not see; a route in the registry that ALSO had the F-8 defect fell in the seam
+> between two complete-looking inventories.
+
+**Why §6.2's lens could not see the first five.** That section's inventory is the service-role
+registry, and all five of these already run on the **authenticated** client — so none appears in
 `lib/supabase/service-role-exceptions.ts` (`app/api/shortlist/route.ts` was removed from it by
 MV-157). They are invisible to a nine-path audit and to the ten-verb audit alike, because nothing is
 missing: the grants and the policies are already there.
 
-| Route | Writes | Resolves |
-|---|---|---|
-| `app/api/shortlist/route.ts:46` | `user_program_state` | `resolvePersonalCaseId(data.user.id, supabase)` |
-| `app/api/documents/status/route.ts:33` | `document_status` | same |
-| `app/api/outcomes/prediction/route.ts:28` | `program_predictions` | same |
-| `app/api/outcomes/attempt/route.ts:31` | `application_attempts` | same |
-| `app/api/outcomes/event/route.ts:32` | `outcome_events` | same |
+| # | Route | Writes | Resolves | Found by |
+|---|---|---|---|---|
+| 1 | `app/api/shortlist/route.ts:46` | `user_program_state` | `resolvePersonalCaseId(data.user.id, supabase)` | F-8 |
+| 2 | `app/api/documents/status/route.ts:33` | `document_status` | same | F-8 |
+| 3 | `app/api/outcomes/prediction/route.ts:28` | `program_predictions` | same | F-8 |
+| 4 | `app/api/outcomes/attempt/route.ts:31` | `application_attempts` | same | F-8 |
+| 5 | `app/api/outcomes/event/route.ts:32` | `outcome_events` | same | F-8 |
+| 6 | `app/api/plan/action/route.ts:37` | `plan_items` | same | **MV-172** — in the registry (§6.2 entry 8), so F-8 did not sweep it |
+| 7 | `app/api/profile/section/route.ts:37` | `profiles` + `plan_items` | same | **MV-172** — in the registry (§6.2 entry 9), same reason |
 
 Every one takes **no case id** and resolves the **actor's own personal case**. They serve
 `app/(app)/matches/page.tsx`, `app/(app)/checklist/page.tsx` and
@@ -826,6 +850,16 @@ under the case route — and the canonical counsellor is defined as *"manages th
 assessment, matches, plan, and documents."* The migration that granted these tables already names
 three of the five as the authenticated-client paths it exists to serve
 (`…20260802120000….sql:608-612`).
+
+> **ALSO FOUND BY MV-172, AND DELIBERATELY NOT FIXED THERE — `app/api/outcomes/route.ts:17`.**
+> A **GET** with the identical shape: it resolves the actor's own case and takes no case id. It is
+> a read, so cell 13's `*_select_case` policies keep it from leaking anything — but rendered
+> inside the case route it shows the **counsellor's** outcome history under the **student's**
+> name. That is a "whose case am I looking at" defect, which is **MV-173's** kind, not a
+> write-safety one, and MV-172 records it rather than widening its own diff.
+> `app/api/guide/chat/route.ts:52` has the same shape and is not in MV-172's rendered surface at
+> all. Both are named in `tests/api/case-scoped-routes.test.ts`'s out-of-scope set, so they are
+> recorded in a test rather than only in prose.
 
 **Two failure modes, and neither is loud:**
 
@@ -867,10 +901,34 @@ stops there; the grant half is what actually blocks the write.
 
 - **MV-168** converts `upsertProgramState` and `setObtained` off `.upsert()`, alongside the identical
   `profiles` conversion (§6.1), so all three land with one pattern and one test.
-- **MV-172** changes the five route signatures to accept and authorize an **explicit case id**
-  instead of resolving the actor's own. The three `outcomes` routes use a plain `INSERT` and need
-  only this half.
+- **MV-172** changes **all seven** route signatures to accept and authorize an **explicit case
+  id** instead of resolving the actor's own. The three `outcomes` routes use a plain `INSERT` and
+  need only this half.
 - **§4 cells 21–23** carry the surfaces; **§9.1 E4 and E7** carry the proof.
+
+> **SHIPPED 2026-08-11 BY MV-172.** All seven go through one helper,
+> `resolveTargetCase` (`lib/cases/target-case.ts`), which holds two properties the routes
+> individually could drift on: a requested id is **authorized** through `checkCasePermission`
+> exactly as a resolved one is, and when one is requested the actor's personal case is **never
+> resolved at all** — no fallback for a mishandled id to land on quietly. A `caseId` that is
+> present but not a uuid is **malformed (400)**, not absent; treating it as absent would restore
+> the fallback by another door. `tests/api/case-scoped-routes.test.ts` derives the seven from the
+> tree rather than from a list, and additionally asserts that **no route outside a named
+> out-of-scope set still calls `resolvePersonalCaseId`** — which is the half that would catch an
+> eighth.
+>
+> **The browser half is not optional and is not covered by any route test.** A control that never
+> names its case sends no `caseId`, the route falls back exactly as before, and every route test
+> still passes. The five write controls read the case from a `CaseScopeProvider`
+> (`components/cases/case-scope.tsx`) and `tests/components/case-scoped-writes.test.tsx` renders
+> each one both inside and outside a scope.
+>
+> **One prior test asserted the opposite invariant and was amended, not deleted.**
+> `tests/api/case-denial.test.ts` pinned *"a denial never reaches the permission check with a case
+> the CLIENT supplied"* — correct for MV-157, when no route had business naming another case. The
+> security property was never "ignore what the client sent"; it is **authorized, never trusted**
+> (plan line 354). The test now pins all three halves: unnamed resolves from the session, named is
+> what the permission layer is asked about, and a refused name is not swapped for the actor's own.
 
 **E4 is extended rather than left as it was**, because as originally written it asserted only a
 `profiles.sections` update and a `plan_items` insert — so the stage gate could go green with a live
@@ -925,7 +983,7 @@ allocates **MV-167 upward**.
 | **MV-170** STUDENT LIST / SEARCH / FILTERS | 2a | The org-scoped case list: search, filter, `operational_status` display. Read-only. Assigned-only for counsellors, all-org for owner/admin (cell 7). | MV-169 | No creation, no assignment (MV-171). No writes at all. |
 | **MV-171** CASE CREATION + ASSIGNMENT | 2b | Create a case with `student_user_id IS NULL`; assign/reassign the single primary counsellor slot; write `operational_status`. Carries **F-1's resolution** — built as an admin surface under reading (a). Adds the case-scoped scoring route (§6.2). | MV-168, MV-170 | No archive (Stage 6). No student invitation (Stage 5). Not a multi-counsellor model (§2.5). |
 | **MV-172** THE CASE ROUTE | 3 | Render the existing MeroVisa experience under an explicit `case` route, for a case that is not the actor's own. Flips `app/api/plan/action` onto the authenticated client and **splits** `app/api/profile/section` — its profile write moves, its three refused legs stay service-role (§6.2 entries 8–9). **Plus F-8**: the five case-scoped write routes take an explicit case id instead of the actor's own. | MV-168, MV-171 | No documents model change (Stage 4). No indicators (MV-173). **Does not retire `profile/section`'s registry entry** (§6.2 entry 9). |
-| **MV-173** CASE-CONTEXT INDICATORS + FIELD ALLOWLIST | 4 | Whose case am I in, and is it mine — persistent, unmissable. Plus the **TypeScript** field allowlist of footnote ¹: `lib/cases/permissions.ts` must stop admitting an arbitrary case patch from a student (`lib/cases/README.md:152-157` — *"The allowlist belongs with that mutation"*). | MV-172 | No new data. No notes (F-4). **Not F-3's column guard** — that is a canonical amendment awaiting the founder, not this slice's to take. |
+| **MV-173** CASE-CONTEXT INDICATORS + FIELD ALLOWLIST | 4 | Whose case am I in, and is it mine — persistent, unmissable. Plus the **TypeScript** field allowlist of footnote ¹: `lib/cases/permissions.ts` must stop admitting an arbitrary case patch from a student (`lib/cases/README.md:152-157` — *"The allowlist belongs with that mutation"*). **Plus `app/api/outcomes/route.ts:17`**, handed over by MV-172: a GET that resolves the actor's own case, so in a case route it renders the counsellor's outcome history under the student's name — a whose-case defect, not a write-safety one (see F-8). | MV-172 | No new data. No notes (F-4). **Not F-3's column guard** — that is a canonical amendment awaiting the founder, not this slice's to take. |
 | **MV-174** SERVICE-ROLE RETREAT + STAGE EXIT | exit | Reclassify entries 1–2, narrow 3–4 **and 9**, confirm 5–7 wait for Stage 4, register the new scoring route (§6.2) — ending at **nine** entries. Prove the exit gate (§9). **Carries the stage exit.** | all | No new surfaces. |
 
 ### 8.2 The DAG, with a stated reason per edge
@@ -996,7 +1054,7 @@ verb. Each criterion is a named test at a named layer; **MV-174 owns all seven.*
 | **E4** | The assigned counsellor writes `profiles.sections`, **inserts a `plan_items` row**, **ticks a `document_status` row and writes a `user_program_state` row** for that case through the authenticated client, with `owner IS NULL` on every row written. | same suite |
 | **E5** | The case route renders for the assigned counsellor and 404s for the unassigned one. | route-level test |
 | **E6** | No `service-role-exceptions.ts` entry is `legacy-owner-scoped` without a named later stage; §6.2's tracked set is **9** entries — eight survivors plus the new scoring route — with the dispositions of §6.2. | unit test over the registry metadata |
-| **E7** | **No case-scoped write route resolves the actor's own case.** For each of F-8's five routes, a request made by the assigned counsellor in the student's case context writes a row carrying **that case's** id — asserted by reading the written row's `case_id` back, never by a 200. | route-level test + real-DB read-back |
+| **E7** | **No case-scoped write route resolves the actor's own case.** For each of F-8's **seven** routes (amended by MV-172 from five), a request made by the assigned counsellor in the student's case context writes a row carrying **that case's** id — asserted by reading the written row's `case_id` back, never by a 200. | route-level test + real-DB read-back |
 
 ### 9.2 How each criterion could pass vacuously
 
@@ -1150,3 +1208,36 @@ the cited query. A claim whose query is missing is a defect in this document.
      reference MV-169's team page shows — so an admin can match a picker entry to the person on the
      team page — and says out loud that names are unavailable. **The form value is the membership id,
      never the Auth user id.** F-9 stands for staff-identity surfaces and is closed only for cell 7.
+- **2026-08-11 — MV-172 built the case route (cells 13, 14, 21–23; §6.2 entries 8–9).** Four
+  amendments this spec now carries, each recorded where a later slice will read it rather than only
+  in a PR body (§1 rule 2):
+  1. **F-8 counts SEVEN routes, not five.** `plan/action` and `profile/section` have the identical
+     defect and were missed because they were *visible* to §6.2's registry lens, which asked a
+     different question of them. Parameterizing only the five would have shipped the case route with
+     the plan and the profile editor writing to the counsellor's own case. **This is the second time
+     in this document that a complete-looking inventory was bounded by where it looked** (the first
+     is §6.1's `42501` pin, which found one of two copies); the remedy both times was to derive the
+     set from the tree rather than from a list, and `tests/api/case-scoped-routes.test.ts` does that
+     — including the inverse sweep, that no in-scope route still calls `resolvePersonalCaseId`.
+  2. **§6.2 entry 8 retired; entry 9 narrowed and kept.** `plan/action` constructs no admin client
+     and holds no registry entry. `profile/section` split: its `profiles` write moved to the
+     authenticated client, its three refused legs stayed. **The registry went 17 → 16 entries**
+     (counted from the file, not from this document's prior arithmetic — MV-171's log entry says it
+     "grew to 16" and the working tree said 17 before this slice, so that number was already one
+     behind). §6.2's own claim is about the **nine tracked `legacy-owner-scoped` paths**, not the
+     whole registry, and it holds: MV-171 added one `sanctioned` path and MV-172 retired one legacy
+     path, leaving **8** `legacy-owner-scoped` entries. Whole-registry totals and §6.2's tracked-set
+     totals are different quantities and this document has now conflated them once; a later slice
+     should quote which it means.
+  3. **`app/api/outcomes/route.ts:17` handed to MV-173.** Same own-case shape, but a GET: it cannot
+     leak (cell 13's policies hold) and it can misattribute, which is MV-173's kind of defect.
+  4. **The browser half is a first-class part of F-8's closure.** Seven routes that accept a case id
+     change nothing if the controls never send one — and every route test still passes in that
+     world. The five write controls read a `CaseScopeProvider`, and the repo's first `createContext`
+     is deliberate: the fact is ambient request scope, constant for a subtree, and threading it as a
+     prop would have touched fifteen components and left fifteen chances to drop it.
+
+  **What this slice does NOT establish.** Production holds no consultancy organization and no
+  student-less case (0 orgs, 0 memberships, 0 org cases — verified 2026-08-11), so §9.3's limit
+  applies in full: green here licenses *"the mechanism is built and proven under RLS as the
+  authenticated user"* and never *"it works for real students"*.
