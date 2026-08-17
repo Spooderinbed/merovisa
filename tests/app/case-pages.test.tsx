@@ -58,8 +58,9 @@ vi.mock("@/lib/cases/write-repo", async () => {
 const { listOrgMembers } = vi.hoisted(() => ({ listOrgMembers: vi.fn() }));
 vi.mock("@/lib/org/repo", () => ({ listOrgMembers }));
 
-const { listOrgCases } = vi.hoisted(() => ({ listOrgCases: vi.fn() }));
-vi.mock("@/lib/cases/list-repo", () => ({ listOrgCases }));
+const { listCaseQueue } = vi.hoisted(() => ({ listCaseQueue: vi.fn() }));
+vi.mock("@/lib/cases/list-repo", () => ({ LIST_ROW_CAP: 500 }));
+vi.mock("@/lib/cases/queue-repo", () => ({ listCaseQueue }));
 
 import NewStudentPage from "@/app/(app)/workspace/[organizationId]/students/new/page";
 import ManageCasePage from "@/app/(app)/workspace/[organizationId]/students/[caseId]/manage/page";
@@ -164,7 +165,13 @@ beforeEach(() => {
       { id: MEMBERSHIP_B, userId: "inactive-user-id", role: "counsellor", status: "inactive" },
     ],
   });
-  listOrgCases.mockResolvedValue({ ok: true, data: [] });
+  listCaseQueue.mockResolvedValue({
+    ok: true,
+    rows: [],
+    members: [],
+    scopeIsEmpty: true,
+    truncated: false,
+  });
 });
 
 describe("/workspace/[organizationId]/students/new — cell 8", () => {
@@ -557,13 +564,13 @@ describe("the student list grows MV-171's entry points", () => {
     expect(screen.getByText(/couldn.t check whether you can add/i)).toBeInTheDocument();
     // The list page itself is still rendered — it was read successfully, and
     // replacing a working list with an outage card would destroy more than it reports.
-    expect(screen.getByRole("heading", { level: 1, name: "Students" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "All cases" })).toBeInTheDocument();
   });
 
-  it("links each row to its manage page", async () => {
-    listOrgCases.mockResolvedValue({
+  it("links each row to the case overview — MV-172's routes are the queue's default target", async () => {
+    listCaseQueue.mockResolvedValue({
       ok: true,
-      data: [
+      rows: [
         {
           id: CASE,
           displayName: "Case one",
@@ -571,14 +578,20 @@ describe("the student list grows MV-171's entry points", () => {
           operationalStatus: "new",
           hasLinkedStudent: false,
           archivedAt: null,
+          updatedAt: "2026-08-01T00:00:00.000Z",
+          assignment: null,
+          nextStep: { state: "caught-up", item: null, openCount: 0, waitingCount: 0 },
         },
       ],
+      members: [],
+      scopeIsEmpty: false,
+      truncated: false,
     });
 
     render(await listPage());
 
-    const link = screen.getByRole("link", { name: /manage/i }) as HTMLAnchorElement;
-    expect(link.getAttribute("href")).toBe(`/workspace/${ORG}/students/${CASE}/manage`);
+    const link = screen.getByRole("link", { name: "Case one" }) as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe(`/workspace/${ORG}/students/${CASE}`);
   });
 
   it("no longer tells the reader that adding a student comes later", async () => {

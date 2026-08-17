@@ -69,13 +69,21 @@ export default async function WorkspacePage() {
                 <div className="flex flex-wrap gap-3">
                   {/*
                     Every staff role holds `case.list` (cell 7) — a counsellor's
-                    list is narrower, not absent — so the link is unconditional.
+                    queue is narrower, not absent — so both links are
+                    unconditional. The Day view is the landing (MV-179); the
+                    directory survives beside it as All cases.
                   */}
+                  <Link
+                    href={`/workspace/${org.id}`}
+                    className="text-control text-primary underline underline-offset-4"
+                  >
+                    Day view
+                  </Link>
                   <Link
                     href={`/workspace/${org.id}/students`}
                     className="text-control text-primary underline underline-offset-4"
                   >
-                    Students
+                    All cases
                   </Link>
                   {org.role === "owner" || org.role === "admin" ? (
                     <Link

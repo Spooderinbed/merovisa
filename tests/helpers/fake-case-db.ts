@@ -24,7 +24,12 @@ import type { Database } from "@/lib/supabase/types";
  */
 
 type Tables = Database["public"]["Tables"];
-export type CaseDbTable = "cases" | "organization_memberships" | "case_assignments" | "organizations";
+export type CaseDbTable =
+  | "cases"
+  | "organization_memberships"
+  | "case_assignments"
+  | "organizations"
+  | "plan_items";
 
 /** Partial fixture rows — supply only the columns a test cares about. */
 export type CaseDbFixture = {
@@ -32,6 +37,7 @@ export type CaseDbFixture = {
   organization_memberships?: Array<Partial<Tables["organization_memberships"]["Row"]>>;
   case_assignments?: Array<Partial<Tables["case_assignments"]["Row"]>>;
   organizations?: Array<Partial<Tables["organizations"]["Row"]>>;
+  plan_items?: Array<Partial<Tables["plan_items"]["Row"]>>;
 };
 
 export type FakeCaseDbOptions = {
@@ -146,7 +152,13 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
 
     const rowsFor = (): Row[] => {
       const all = rows[table] ?? [];
-      const matched = all.filter((row) => filters.every(([column, value]) => row[column] === value));
+      // An array-valued filter is an `.in()` predicate: the column must be one of
+      // the listed values. Everything else is an equality from `.eq()`/`.is()`.
+      const matched = all.filter((row) =>
+        filters.every(([column, value]) =>
+          Array.isArray(value) ? value.includes(row[column]) : row[column] === value,
+        ),
+      );
       // `.limit()` is HONOURED, not just recorded: a caller that asks for N+1 rows
       // to detect truncation is asserting on the size of the answer, and a fake
       // that ignored the limit would make that detection untestable.
@@ -263,6 +275,11 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
         return builder;
       });
     }
+    // `.in(column, values)` — recorded with its array value, matched by inclusion.
+    builder.in = vi.fn((column: string, values: unknown[]) => {
+      filters.push([column, values]);
+      return builder;
+    });
     builder.maybeSingle = vi.fn(() => Promise.resolve(resolve("one")));
     builder.single = vi.fn(() => Promise.resolve(resolve("one")));
     builder.then = (onFulfilled: (r: unknown) => unknown) => onFulfilled(resolve("many"));

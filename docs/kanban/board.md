@@ -9,9 +9,11 @@
 
 ### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-17 03:02 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-17 03:54 UTC. **Not board state** — never written to board.json.
 
 _No open PRs._
+
+> ⚠️ MV-179 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 19
@@ -40,13 +42,13 @@ _No open PRs._
 
 - **MV-180** · P1 · [Consultancy shell split + counsellor team-read access fix (UI lane slice 2)](cards/MV-180-consultancy-shell-split.md) — _Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179._
 
-## In progress (WIP 1) — 1
-
-- **MV-179** · P1 · [Queue-first Day view for the consultancy workspace (UI lane slice 1)](cards/MV-179-queue-first-day-view.md) — _New /workspace/[organizationId] landing: workload summary strip, view tabs, GET filters, dense semantic table with derived next action + attention sort, URL-addressable state, keyboard shortcuts. Spec: docs/superpowers/specs/2026-08-17-consultancy-workspace-ui.md S2. Depends on PR #143 (MV-172) merging first._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-179** · P1 · [Queue-first Day view for the consultancy workspace (UI lane slice 1)](cards/MV-179-queue-first-day-view.md) — _New /workspace/[organizationId] landing: workload summary strip, view tabs, GET filters, dense semantic table with derived next action + attention sort, URL-addressable state, keyboard shortcuts. Spec: docs/superpowers/specs/2026-08-17-consultancy-workspace-ui.md S2. Depends on PR #143 (MV-172) merging first._
 
 ## Blocked — 3
 
