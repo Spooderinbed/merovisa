@@ -490,16 +490,22 @@ describe("/workspace/[id]/students — cell 7, the case directory (All cases)", 
     expect(renderedNames()).toEqual(["Anil Gurung", "Sita Rai"]);
   });
 
-  it("applies a status the constraint does admit, together with the search term", async () => {
+  it("applies a status the constraint does admit — alone, so the search cannot mask a dropped predicate", async () => {
     // Since MV-179 the predicates run in memory over the queue read, so the
     // honest assertion is the RESULT the reader sees, not a forwarded argument.
+    // NO search term here, deliberately: with `q` set, a page that silently
+    // dropped the status facet rendered the identical rows and this test stayed
+    // green — the vacuity MISTAKES.md warns about.
     grantList("all-org");
     listCaseQueue.mockResolvedValue(queued(CASES));
     render(
-      await StudentsPage({ params, searchParams: Promise.resolve({ status: "new", q: " Rai " }) }),
+      await StudentsPage({
+        params,
+        searchParams: Promise.resolve({ status: "waiting_on_student" }),
+      }),
     );
 
-    expect(renderedNames()).toEqual(["Sita Rai"]);
+    expect(renderedNames()).toEqual(["Anil Gurung"]);
   });
 
   it("takes the first value of a repeated parameter instead of 500ing on the array", async () => {
