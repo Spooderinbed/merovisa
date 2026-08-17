@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-11",
+  "updated": "2026-08-18",
   "staleDays": 7,
   "columns": [
     {
@@ -2189,25 +2189,25 @@
     },
     {
       "id": "MV-180",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-180-consultancy-shell-split.md",
       "title": "Consultancy shell split + counsellor team-read access fix (UI lane slice 2)",
       "summary": "Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179.",
       "created": "2026-08-17",
-      "entered": "2026-08-17"
+      "entered": "2026-08-18"
     },
     {
       "id": "MV-181",
-      "col": "backlog",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-181-case-frame-refit.md",
       "title": "Case-frame refit: persistent context, decision-strip slot, manage-inside-frame (UI lane slice 3)",
       "summary": "DELTA on top of MV-172's case-workspace-shell, not a rebuild: align with spec S1/S3 persistent-context contract, empty decision-strip slot until judgement/Stage 4 ship, manage refits inside the frame, single next-action panel shared with MV-179's resolver.",
       "created": "2026-08-17",
-      "entered": "2026-08-17"
+      "entered": "2026-08-18"
     }
   ]
 }
