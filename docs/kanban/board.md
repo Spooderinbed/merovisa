@@ -7,13 +7,13 @@
 >
 > _Last updated: 2026-08-11 · stale threshold: 7d_
 
-### In flight — 0 open PRs
+### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-17 03:54 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-17 03:56 UTC. **Not board state** — never written to board.json.
 
-_No open PRs._
-
-> ⚠️ MV-179 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
+| Card | PR | | CI | Review | Touches |
+|---|---|---|---|---|---|
+| **MV-179** | [#145](https://github.com/Spooderinbed/merovisa/pull/145) | open | pending 2/4 | — | components · tests · docs · app |
 
 
 ## Backlog — 19
@@ -48,7 +48,7 @@ _empty_
 
 ## In review (WIP 3) — 1
 
-- **MV-179** · P1 · [Queue-first Day view for the consultancy workspace (UI lane slice 1)](cards/MV-179-queue-first-day-view.md) — _New /workspace/[organizationId] landing: workload summary strip, view tabs, GET filters, dense semantic table with derived next action + attention sort, URL-addressable state, keyboard shortcuts. Spec: docs/superpowers/specs/2026-08-17-consultancy-workspace-ui.md S2. Depends on PR #143 (MV-172) merging first._
+- **MV-179** · P1 · [Queue-first Day view for the consultancy workspace (UI lane slice 1)](cards/MV-179-queue-first-day-view.md) — _New /workspace/[organizationId] landing: workload summary strip, view tabs, GET filters, dense semantic table with derived next action + attention sort, URL-addressable state, keyboard shortcuts. Spec: docs/superpowers/specs/2026-08-17-consultancy-workspace-ui.md S2. Depends on PR #143 (MV-172) merging first._ · [#145](https://github.com/Spooderinbed/merovisa/pull/145) open, ci pending
 
 ## Blocked — 3
 
