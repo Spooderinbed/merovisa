@@ -1,13 +1,15 @@
-# MyVisa
+# MeroVisa
 
-Trust-first platform for international students to assess their real chances of studying abroad before engaging consultancies.
+Trust-first platform for the Nepal→Australia study corridor, built as **two versions of one product**: a self-serve **student version** (assess your real chances before engaging a consultancy) and a **consultancy version** (a case workspace sold to education consultancies). "MeroVisa" is the decided name (2026-07-29); older docs may still say "MyVisa".
 
 ## Project State
 
-- **Phase:** MVP, Phases 0–6 merged (marketing + chrome, signed-in shell, full profile editor, programs/matches, plan generator, documents vault + per-program checklist + Storage, AI guide chat). Current focus: completing & hardening the self-serve Nepal→Australia journey — every self-serve dead-end is a bounce to a consultancy, which the app exists to replace.
-- **Built:** Anonymous 9-step wizard → results, OAuth sign-in, dashboard, profile (13 sections), matches, plan, documents vault + per-program checklist (Supabase Storage, RLS), AI guide chat (grounded DeepSeek). Server-side scoring engine, Supabase persistence (10+ migrations, RLS enabled), 1400+ tests.
-- **Founder-owed (not a build gap):** the AI guide is built but returns a calm "unavailable" 503 until a valid `DEEPSEEK_API_KEY` is set in Vercel. No phase remains unbuilt — pick work by **student outcome** (journey completeness + reliability), not "% findings wired" (a retired vanity metric).
+- **Student version — built, designed, in production:** anonymous 9-step wizard → banded verdict, OAuth sign-in, dashboard, profile (13 sections), matches, plan, documents vault + per-program checklist (Supabase Storage, RLS), AI guide chat (grounded DeepSeek, live). Server-side scoring engine (incl. a distinct visa dimension), 1900+ tests, whole-app "elevated calm" design overhaul shipped.
+- **Consultancy version — the current build focus:** case workspace for consultancy staff. Stages 1–3 done (case model, case-scoped data, org access control + case routes). Sequence from here: **workspace UI/UX lane → Stage 4 documents-per-case → Stage 5 student invitations (the data bridge between the two versions) → judgement-in-workspace (per-case visa-risk + submittability read) → Stage 6 audit/export → Stage 7 pilot.** Roadmap: `docs/superpowers/plans/2026-07-23-consultancy-student-case-workspace.md`.
+- **The wedge (research-verified, 2026-08-11):** competitor CRMs answer "will this student get a university offer?" — none answers "will this student get a visa?", and Nepal's AU refusal rate is 65%. MeroVisa's differentiator is the per-case pre-lodgement visa-risk read + "which student is actually submittable, and what single item blocks each", backed by `source`/`lastVerified` provenance no competitor exposes. Do **not** pitch or build catalogue breadth (83 programs vs aggregators' 150k) or commodity-CRM features ahead of the wedge. Full report: `docs/research/2026-08-11-program-data-wedge.md`.
+- **Deliberately deferred (founder call, 2026-08-17 — backlog, do not chase):** B2B legal/privacy gate (MV-05) and the data-refresh cadence. Positioning to preserve meanwhile: MeroVisa is a **provider** of tooling/judgement, not a migration adviser; a self-serve student bears their own refusal risk, a consultancy-managed case is the consultancy's.
 - **Living status:** `docs/PROJECT_STATUS.md` is the authoritative **phase log / history** — what works, known issues. **Current work state lives on the kanban** (`docs/kanban/` — see Work tracking below), not here. Keep both current; don't duplicate detail.
+- **Mistakes log:** `MISTAKES.md` — measured mistakes with the rule each one taught. **Check the relevant section before starting matching work** (board edits, tests, Supabase grants, Windows quirks, external reviewers); add an entry when a mistake costs >15 min or slips past a green suite.
 - **Design spec:** `docs/superpowers/specs/2026-06-02-onboarding-mvp-design.md`. Prototype `index.html` is a design-language reference, not production code.
 
 ## Work tracking
@@ -74,6 +76,8 @@ All active work is tracked on an **in-repo kanban at `docs/kanban/` — check it
 ## Key Decisions
 
 - MVP covers Nepal → Australia only. Architecture supports expansion without code changes.
+- Two versions, one platform: the student version generates the data and the trust; the consultancy version monetises the judgement. Stage 5 student-links are the bridge — an unlinked case has nothing to score.
+- Consultancy go-to-market: the judgement layer (visa-risk + submittability) ships first as the reason to buy; commodity CRM feature parity is the long-term destination, sequenced after, never before.
 - Wizard: 9 steps, one question per screen, linear flow with smart contextual callouts
 - Results: banded verdicts (Strong/Possible/Reach), never percentages to users
 - Gated content uses peek-through blur, not flat lock icons
