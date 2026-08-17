@@ -9,9 +9,11 @@
 
 ### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-17 11:30 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-17 12:06 UTC. **Not board state** — never written to board.json.
 
 _No open PRs._
+
+> ⚠️ MV-180 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 19
@@ -40,13 +42,13 @@ _No open PRs._
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-180** · P1 · [Consultancy shell split + counsellor team-read access fix (UI lane slice 2)](cards/MV-180-consultancy-shell-split.md) — _Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-180** · P1 · [Consultancy shell split + counsellor team-read access fix (UI lane slice 2)](cards/MV-180-consultancy-shell-split.md) — _Split app/(app)/layout.tsx into student and consultancy shells via route groups (public URLs unchanged); org rail; sole-org auto-enter; and fix the team page gating the counsellor's matrix-permitted read-only view behind org.manage (spec S0 finding). Spec S1+S5. After MV-179._
 
 ## Blocked — 3
 

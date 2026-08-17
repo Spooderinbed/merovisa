@@ -2189,7 +2189,7 @@
     },
     {
       "id": "MV-180",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-180-consultancy-shell-split.md",
