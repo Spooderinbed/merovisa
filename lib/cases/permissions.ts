@@ -63,6 +63,12 @@ export const CASE_PERMISSIONS = [
   "case.archive",
   "case.delete",
   "case.notes.internal",
+  /**
+   * MV-182 — ask this case for a specific document, and resolve the ask. The verb
+   * is the WRITE half only; reading the chase list rides `case.read`, so the
+   * student's `deny` below withholds the ask and not the answer.
+   */
+  "case.documents.request",
   "org.audit.read",
   "org.manage",
   "org.settings",
@@ -104,6 +110,7 @@ export const CASE_SCOPED_PERMISSIONS = [
   "case.archive",
   "case.delete",
   "case.notes.internal",
+  "case.documents.request",
 ] as const satisfies readonly CasePermission[];
 export type CaseScopedPermission = (typeof CASE_SCOPED_PERMISSIONS)[number];
 
@@ -141,6 +148,7 @@ export const CASE_PERMISSION_MATRIX: Record<CaseRole, Record<CasePermission, Per
     "case.archive": "all-org",
     "case.delete": "all-org",
     "case.notes.internal": "all-org",
+    "case.documents.request": "all-org",
     "org.audit.read": "all-org",
     "org.manage": "all-org",
     "org.settings": "all-org",
@@ -156,6 +164,7 @@ export const CASE_PERMISSION_MATRIX: Record<CaseRole, Record<CasePermission, Per
     "case.archive": "all-org",
     "case.delete": "all-org",
     "case.notes.internal": "all-org",
+    "case.documents.request": "all-org",
     "org.audit.read": "all-org",
     "org.manage": "all-org",
     // Renaming the organization and transferring ownership stay with the owner.
@@ -174,6 +183,11 @@ export const CASE_PERMISSION_MATRIX: Record<CaseRole, Record<CasePermission, Per
     "case.archive": "deny",
     "case.delete": "deny",
     "case.notes.internal": "assigned",
+    // A counsellor chases documents on the cases they hold — the same reach as
+    // `case.invite_student`, and the same predicate at the database
+    // (`private.can_staff_case`, whose counsellor arm requires BOTH an active
+    // membership and a `case_assignments` row).
+    "case.documents.request": "assigned",
     "org.audit.read": "deny",
     "org.manage": "deny",
     "org.settings": "deny",
@@ -196,6 +210,13 @@ export const CASE_PERMISSION_MATRIX: Record<CaseRole, Record<CasePermission, Per
     // Never. Consultancy-internal notes are invisible to the student whose case
     // they describe (plan §"Student", line 99).
     "case.notes.internal": "deny",
+    // The WRITE half only. Asking a case for a document is something the
+    // consultancy does TO a case, and a student asking their own case for a
+    // passport is not a state the product has. Reading what has been asked of
+    // them is `case.read`, which this role holds at `linked` — so this `deny`
+    // withholds the ask, never the answer. The student-facing surface that shows
+    // it is Stage 5 and is not built by MV-182.
+    "case.documents.request": "deny",
     "org.audit.read": "deny",
     "org.manage": "deny",
     "org.settings": "deny",

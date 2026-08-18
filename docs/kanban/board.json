@@ -2200,13 +2200,24 @@
     },
     {
       "id": "MV-181",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-181-case-frame-refit.md",
       "title": "Case-frame refit: persistent context, decision-strip slot, manage-inside-frame (UI lane slice 3)",
       "summary": "DELTA on top of MV-172's case-workspace-shell, not a rebuild: align with spec S1/S3 persistent-context contract, empty decision-strip slot until judgement/Stage 4 ship, manage refits inside the frame, single next-action panel shared with MV-179's resolver.",
       "created": "2026-08-17",
+      "entered": "2026-08-18"
+    },
+    {
+      "id": "MV-182",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-182-case-document-requests.md",
+      "title": "Case document requests: the chase list (Stage 4 slice 1)",
+      "summary": "New additive case_document_requests table (RLS + column-scoped grants, authored NOT applied), a case-scoped case.documents.request verb, a case-scoped repository, and a documents section on the case route listing outstanding/resolved with create + resolve. Touches neither documents nor document_status; no Storage work.",
+      "created": "2026-08-18",
       "entered": "2026-08-18"
     }
   ]

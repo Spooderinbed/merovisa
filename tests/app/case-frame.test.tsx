@@ -317,6 +317,10 @@ describe("the case section navigation", () => {
       ["Matches", `${BASE}/matches`],
       ["Plan", `${BASE}/plan`],
       ["Checklist", `${BASE}/checklist`],
+      // MV-182 shipped the route, so the link appears. Spec §1's rule is about DEAD
+      // links, not about this section being permanently absent — it moves out of the
+      // list below on the slice that builds it, and not before.
+      ["Documents", `${BASE}/documents`],
       ["Case details", `${BASE}/manage`],
     ];
     for (const [label, href] of expected) {
@@ -330,7 +334,7 @@ describe("the case section navigation", () => {
     render(await frame());
 
     const nav = screen.getByRole("navigation", { name: /case/i });
-    for (const absent of ["Documents", "Visa read", "Activity", "Assessment"]) {
+    for (const absent of ["Visa read", "Activity", "Assessment"]) {
       expect(within(nav).queryByRole("link", { name: absent })).not.toBeInTheDocument();
     }
   });

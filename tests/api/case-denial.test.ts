@@ -106,6 +106,8 @@ import { POST as orgCasesPost } from "@/app/api/org/[organizationId]/cases/route
 import { PATCH as casePatch } from "@/app/api/cases/[caseId]/route";
 import { PUT as caseAssignmentPut } from "@/app/api/cases/[caseId]/assignment/route";
 import { POST as caseAssessPost } from "@/app/api/cases/[caseId]/assess/route";
+import { POST as documentRequestPost } from "@/app/api/cases/[caseId]/document-requests/route";
+import { PATCH as documentRequestPatch } from "@/app/api/cases/[caseId]/document-requests/[requestId]/route";
 
 const ACTOR = "11111111-1111-1111-1111-111111111111";
 /** A real v4 UUID — `z.uuid()` checks the version nibble, so `2222…` 422s. */
@@ -365,6 +367,33 @@ const ROUTES: ReadonlyArray<{
       caseAssessPost(json(`http://localhost/api/cases/${UUID}/assess`, "POST", VALID_PROFILE), {
         params: Promise.resolve({ caseId: UUID }),
       }),
+    denyStatus: 403,
+    noCaseStatus: null,
+  },
+  {
+    name: "POST /api/cases/[caseId]/document-requests (MV-182)",
+    file: "app/api/cases/[caseId]/document-requests/route.ts",
+    call: () =>
+      documentRequestPost(
+        json(`http://localhost/api/cases/${UUID}/document-requests`, "POST", {
+          kind: "passport",
+          title: "Passport bio page",
+        }),
+        { params: Promise.resolve({ caseId: UUID }) },
+      ),
+    denyStatus: 403,
+    noCaseStatus: null,
+  },
+  {
+    name: "PATCH /api/cases/[caseId]/document-requests/[requestId] (MV-182)",
+    file: "app/api/cases/[caseId]/document-requests/[requestId]/route.ts",
+    call: () =>
+      documentRequestPatch(
+        json(`http://localhost/api/cases/${UUID}/document-requests/${UUID}`, "PATCH", {
+          status: "resolved",
+        }),
+        { params: Promise.resolve({ caseId: UUID, requestId: UUID }) },
+      ),
     denyStatus: 403,
     noCaseStatus: null,
   },

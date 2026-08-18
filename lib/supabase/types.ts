@@ -235,6 +235,66 @@ export type Database = {
           },
         ]
       }
+      case_document_requests: {
+        Row: {
+          case_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          kind: string
+          note: string | null
+          organization_id: string
+          requested_by: string | null
+          resolved_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          kind: string
+          note?: string | null
+          organization_id: string
+          requested_by?: string | null
+          resolved_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          organization_id?: string
+          requested_by?: string | null
+          resolved_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_document_requests_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           archived_at: string | null
