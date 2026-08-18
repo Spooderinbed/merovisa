@@ -2211,7 +2211,7 @@
     },
     {
       "id": "MV-182",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-182-case-document-requests.md",

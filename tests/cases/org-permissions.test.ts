@@ -57,7 +57,7 @@ function orgFacts(role: CaseRole | null, status: "active" | "inactive" | null = 
 }
 
 describe("the org/case split — every claim is checkable through exactly one entry point", () => {
-  test("the two sets partition the 13 claims, with no overlap and nothing dropped", () => {
+  test("the two sets partition the 14 claims, with no overlap and nothing dropped", () => {
     const union = [...ORG_SCOPED_PERMISSIONS, ...CASE_SCOPED_PERMISSIONS];
     expect(new Set(union).size, "a claim appears in both sets").toBe(union.length);
     expect([...union].sort()).toEqual([...CASE_PERMISSIONS].sort());

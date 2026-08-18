@@ -36,6 +36,12 @@ const CARD_GRID: Array<
   ["case.archive", "all-org", "all-org", "deny", "deny"],
   ["case.delete", "all-org", "all-org", "deny", "deny"],
   ["case.notes.internal", "all-org", "all-org", "assigned", "deny"],
+  // MV-182 — asking a case for a document is a CONSULTANCY verb, so it takes the
+  // same column as `case.invite_student`: staff-shaped, assignment-scoped for a
+  // counsellor, and `deny` for the student. Reading the resulting chase list is
+  // NOT this claim — that rides `case.read`, which is why the student's cell here
+  // being `deny` does not hide their own outstanding items from them.
+  ["case.documents.request", "all-org", "all-org", "assigned", "deny"],
   ["org.audit.read", "all-org", "all-org", "deny", "deny"],
   ["org.manage", "all-org", "all-org", "deny", "deny"],
   ["org.settings", "all-org", "deny", "deny", "deny"],
@@ -73,7 +79,7 @@ function studentFacts(overrides: Partial<CaseAccessFacts> = {}): CaseAccessFacts
 }
 
 describe("case permission matrix — the card grid, cell for cell", () => {
-  test("the matrix covers exactly the 13 claims and 4 roles the card names", () => {
+  test("the matrix covers exactly the 14 claims and 4 roles the card names", () => {
     expect(CASE_PERMISSIONS).toEqual(CARD_GRID.map(([permission]) => permission));
     expect(CASE_ROLES).toEqual(COLUMN_ROLES);
     // The DB check constraint deliberately excludes 'student' as a membership role
@@ -129,16 +135,28 @@ describe("owner and admin — whole-organization scope", () => {
 });
 
 describe("counsellor — assigned cases only", () => {
-  test("assigned counsellor may read, update, invite the student, and use internal notes", () => {
+  test("assigned counsellor may read, update, invite the student, request documents, and use internal notes", () => {
     const facts = staffFacts("counsellor", { isAssignedToCase: true });
-    for (const permission of ["case.read", "case.update", "case.invite_student", "case.notes.internal"] as const) {
+    for (const permission of [
+      "case.read",
+      "case.update",
+      "case.invite_student",
+      "case.documents.request",
+      "case.notes.internal",
+    ] as const) {
       expect(decideCasePermission(permission, facts).allowed).toBe(true);
     }
   });
 
   test("unassigned counsellor is denied every assigned-scope claim", () => {
     const facts = staffFacts("counsellor", { isAssignedToCase: false });
-    for (const permission of ["case.read", "case.update", "case.invite_student", "case.notes.internal"] as const) {
+    for (const permission of [
+      "case.read",
+      "case.update",
+      "case.invite_student",
+      "case.documents.request",
+      "case.notes.internal",
+    ] as const) {
       const decision = decideCasePermission(permission, facts);
       expect(decision.allowed).toBe(false);
       expect(decision.reason).toBe("not-assigned");
@@ -203,6 +221,30 @@ describe("student — only the case linked to their Auth user", () => {
     ] as const) {
       expect(decideCasePermission(permission, studentFacts()).allowed).toBe(false);
     }
+  });
+
+  /**
+   * MV-182. The two halves of the student's relationship to a document request are
+   * different claims, and stating only one of them would make the matrix lie in one
+   * direction or the other:
+   *
+   *  - CREATE is a consultancy act. A student asking their own case for a document
+   *    is not a thing the product does, and the database refuses it independently:
+   *    the INSERT policy is `can_staff_case`, which is `can_access_case` MINUS the
+   *    student disjunct precisely so the student's own link cannot launder them
+   *    into the counsellor's chair on their own file.
+   *  - READING the chase list is `case.read`, which the student holds at `linked`.
+   *    So "the student is denied `case.documents.request`" must NOT be read as
+   *    "the student cannot see what has been asked of them" — the Stage 5 surface
+   *    that shows them is not built here, but the permission that will carry it
+   *    already exists and already allows.
+   */
+  test("a student may not REQUEST a document, but the read that shows them one still allows", () => {
+    const decision = decideCasePermission("case.documents.request", studentFacts());
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toBe("role-not-permitted");
+
+    expect(decideCasePermission("case.read", studentFacts()).allowed).toBe(true);
   });
 
   test("a linked student on a personal case keeps their linked-scope claims", () => {

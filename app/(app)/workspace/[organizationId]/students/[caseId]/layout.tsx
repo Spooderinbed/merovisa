@@ -34,8 +34,9 @@ import { caseRouteBase, openCaseRoute } from "@/lib/cases/case-route";
  *
  * ## What is deliberately NOT here
  *
- * Documents, Visa read, Activity. Their routes do not exist, and spec §1 is
- * explicit: never publish a dead "Coming soon" link. The nav grows when they ship.
+ * Visa read and Activity. Their routes do not exist, and spec §1 is explicit: never
+ * publish a dead "Coming soon" link. The nav grows when they ship — as it did for
+ * Documents, whose route MV-182 built.
  */
 export default async function CaseFrameLayout({
   children,
@@ -66,6 +67,10 @@ export default async function CaseFrameLayout({
     { segment: "matches", label: "Matches", href: `${base}/matches` },
     { segment: "plan", label: "Plan", href: `${base}/plan` },
     { segment: "checklist", label: "Checklist", href: `${base}/checklist` },
+    // MV-182 (Stage 4 slice 1) — the document chase list. It appears because its
+    // route now exists; the rule it was previously held out by is about DEAD links,
+    // not about the section.
+    { segment: "documents", label: "Documents", href: `${base}/documents` },
     // Spec §6: `/manage` keeps its URL — and its APIs — and becomes the frame's
     // Case details section rather than a surface reached from outside the case.
     { segment: "manage", label: "Case details", href: `${base}/manage` },
