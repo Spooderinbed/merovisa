@@ -199,17 +199,44 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-182 Stage 4 case document r
     });
 
     it("carries all three policies, each attached to the verb it claims", () => {
+      // `polcmd` is `"char"`, not text: `||` against it is ambiguous and the statement ERRORS
+      // rather than failing, which is how this assertion shipped once without ever running.
       const rows = sqlLines(`
-        select p.polname || '|' || p.polcmd from pg_policy p
+        select p.polname || '|' || p.polcmd::text from pg_policy p
         join pg_class c on c.oid = p.polrelid
         join pg_namespace n on n.oid = c.relnamespace
         where n.nspname = 'public' and c.relname = '${TABLE}' order by 1;
       `);
       expect(rows).toEqual([
         `${TABLE}_insert_staff|a`,
-        `${TABLE}_select_case|r`,
+        `${TABLE}_select_actor|r`,
         `${TABLE}_update_staff|w`,
       ]);
+    });
+
+    it("keeps every policy name OUT of the `%_case` census reserved for the nine", () => {
+      // The `_case` suffix is the census key seven exact-count guards read
+      // (`MV-159/160/168-rollback.sql`, `supabase/rehearsal/README.md`), each asserting a total
+      // and each phrased "on the nine". A policy here ending in `_case` makes those rollbacks
+      // refuse with a count that names the wrong cause. The migration comment says so; this
+      // fails if someone renames past it.
+      const offenders = sqlLines(`
+        select p.polname from pg_policy p
+        join pg_class c on c.oid = p.polrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relname = '${TABLE}'
+          and p.polname like '%\\_case' order by 1;
+      `);
+      expect(offenders).toEqual([]);
+
+      // ...and the census itself still reads 27 (MV-159's 24 + MV-168's 3) across the nine only.
+      const census = sqlLines(`
+        select count(distinct c.relname)::text from pg_policy p
+        join pg_class c on c.oid = p.polrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and p.polname like '%\\_case';
+      `);
+      expect(census).toEqual(["9"]);
     });
   });
 

@@ -584,8 +584,16 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-155 personal cases + case_i
            and table_name not in (${NINE.map((t) => `'${t}'`).join(",")})
          order by 1;
       `);
-      // case_assignments / invitations / audit_events carried case_id since MV-150; nothing else may.
-      expect(others).toEqual(["audit_events", "case_assignments", "invitations"]);
+      // case_assignments / invitations / audit_events carried case_id since MV-150; MV-182's
+      // case_document_requests is born case-scoped (it is a fact ABOUT a case, never backfilled
+      // from an owner). Nothing else may — a new name here must be added deliberately, never by
+      // relaxing this to `toContain`.
+      expect(others).toEqual([
+        "audit_events",
+        "case_assignments",
+        "case_document_requests",
+        "invitations",
+      ]);
     });
 
     /**

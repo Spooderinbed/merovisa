@@ -149,3 +149,54 @@ The resolve button measures **40px tall** on mobile, under the 44px touch-target
 ### Follow-up carved
 
 Cancelling a request (the escape hatch for one created in error) and the request → version → review model it belongs to. Not built here; see decision 2 above.
+
+---
+
+## Post-review fixes (PR #148 review, 2026-08-18)
+
+The first push failed the gating `integration` job three ways. All three are fixed on the branch; the
+review that caught them is recorded here because two were invisible to a green local run.
+
+**1 — the policy-verb test never executed.** `stage4-document-requests.itest.ts` built its expected
+rows with `p.polname || '|' || p.polcmd`. `polcmd` is `"char"`, so `||` is ambiguous and psql
+*errors* rather than the assertion *failing* — the suite reported a failed suite, not a failed test,
+and the claim "all three policies are attached to the verb they claim" had never once been checked
+on a brand-new access-control table. Fixed with `p.polcmd::text`, the cast `MV-159-rollback.sql:404`
+already uses. Now proven: `insert_staff → a`, `select_actor → r`, `update_staff → w`.
+
+**2 — the read policy was enrolled in a census it does not belong to.** It shipped as
+`case_document_requests_select_case`. The `%_case` suffix is not a style convention: it is the census
+key for MV-159's 24 policies on the **nine** student-owned tables, read by seven exact-count guards
+(`MV-159/160/168-rollback.sql` ×6 and `supabase/rehearsal/README.md`), each asserting a total and
+each phrased "on the nine" while querying `public` unscoped. The tenth table's policy pushed the
+count to 25 and made the MV-168 rollback refuse — a rollback script failing on a misleading cause.
+
+Founder call (2026-08-18): **rename the policy, leave the rehearsed rollback scripts untouched.**
+Renamed to `case_document_requests_select_actor`, which also reads truer — it is `actor_case_ids()`,
+staff plus the linked student. The migration carries a "do not rename this back" comment, and a new
+test asserts *no* policy on this table ends in `_case` **and** that the census still reads 9 tables,
+so the invariant is enforced rather than merely documented.
+
+The alternative — scoping the seven guards to the nine — was measured as a provable no-op against
+every state they were rehearsed on (all 27 `%_case` policies sit on the nine) and remains available
+if a later slice would rather fix the guards than keep avoiding the suffix.
+
+**3 — a structural inventory needed the new table named.** `case-backfill.itest.ts` asserts nothing
+outside the nine carries `case_id` beyond `audit_events`/`case_assignments`/`invitations`. This table
+legitimately does. Added **by name**, with a comment forbidding the lazy fix of relaxing it to
+`toContain` — the guard's whole value is that it is exact.
+
+### Evidence
+
+Verified against the real local Postgres (Docker stack, migration applied by `docker cp` + `psql`):
+
+| Check | Result |
+|---|---|
+| `stage4-document-requests.itest.ts` + `case-backfill.itest.ts` | **2 files, 59 tests passed** |
+| Migration's own `DO` self-check block (incl. check 9, all three policies) | applied clean, no raise |
+| `%_case` census after MV-182 | **27 policies on 9 tables** — unchanged from master |
+| Policy → verb binding | `insert_staff|a`, `select_actor|r`, `update_staff|w` |
+
+`stage2-data-equivalence.itest.ts` cannot run on this machine — it hits the known `.mjs`-shebang
+import parse trap, a local-only defect unrelated to this change (it parsed fine in CI and failed
+there on the count, which fix 2 removes). CI is the gate for that one.

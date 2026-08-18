@@ -167,8 +167,15 @@ grant update (status) on public.case_document_requests to authenticated;
 -- =====================================================================
 -- 5  policies
 -- =====================================================================
-drop policy if exists case_document_requests_select_case on public.case_document_requests;
+drop policy if exists case_document_requests_select_actor on public.case_document_requests;
 
+-- NAMED `_select_actor`, NOT `_select_case`, AND THAT IS LOAD-BEARING. The `%_case` suffix is not
+-- a style convention in this repo — it is the census key for MV-159's twenty-four policies on the
+-- NINE student-owned tables. Seven exact-count guards read it (`MV-159/160/168-rollback.sql` and
+-- `supabase/rehearsal/README.md`), each asserting a total and each phrased "on the nine". A tenth
+-- table adopting the suffix silently enrols itself in that census and makes every one of those
+-- rollbacks refuse with a misleading count. Do not rename this back.
+--
 -- READ rides the case axis, exactly like the nine student-owned tables: `actor_case_ids()` is the
 -- linked student's own case, plus the admin/owner's whole organization, plus a counsellor's
 -- assigned cases. So the linked STUDENT can read what has been asked of them — which is the cell
@@ -178,7 +185,7 @@ drop policy if exists case_document_requests_select_case on public.case_document
 -- The array form is deliberate and is not a style choice: `x = any ((select f()))` is an
 -- uncorrelated InitPlan evaluated ONCE per statement, while `(select f(col))` correlates on a
 -- column and can only ever be a per-row SubPlan (MV-152's measured finding).
-create policy case_document_requests_select_case on public.case_document_requests
+create policy case_document_requests_select_actor on public.case_document_requests
   for select to authenticated
   using (case_id = any ((select private.actor_case_ids())::uuid[]));
 
@@ -345,7 +352,7 @@ begin
   --     later file leaves the GRANT behind, and a granted verb with no policy is unfiltered.
   select string_agg(want.polname || ' (' || want.cmd || ')', ', ' order by want.polname) into v_bad
     from (values
-      ('case_document_requests_select_case',  'r'),
+      ('case_document_requests_select_actor', 'r'),
       ('case_document_requests_insert_staff', 'a'),
       ('case_document_requests_update_staff', 'w')
     ) as want(polname, cmd)
