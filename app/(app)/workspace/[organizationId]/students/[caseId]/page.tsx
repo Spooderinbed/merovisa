@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { isStaffOnCase, readCaseAssignee, readCaseNextStep } from "@/lib/cases/case-frame";
+import {
+  isStaffOnCase,
+  readCaseAssignee,
+  readCaseLodgement,
+  readCaseNextStep,
+} from "@/lib/cases/case-frame";
 import { caseRouteBase, openCaseRoute } from "@/lib/cases/case-route";
 import { dependsOnPlan, resolveNextAction } from "@/lib/cases/queue";
 import { CaseDecisionStrip } from "@/components/workspace/case-decision-strip";
@@ -13,8 +18,9 @@ import { StaffReference } from "@/components/workspace/staff-reference";
 /**
  * The case overview — spec §3's three zones, in order:
  *
- * 1. **Decision strip** — the visa read and the lodgement read. Renders nothing
- *    yet, and says nothing about that (`case-decision-strip.tsx`).
+ * 1. **Decision strip** — the visa read and the lodgement read. MV-183 ships the
+ *    lodgement half; the visa read is still absent and still says nothing about
+ *    being absent (`case-decision-strip.tsx`).
  * 2. **Primary work area** — the unlinked case's invitation prompt, then exactly
  *    one next action.
  * 3. **Operational rail** — status, assignment, linkage, and the way into Case
@@ -61,6 +67,11 @@ export default async function CaseOverviewPage({
     gate.supabase,
   );
   const nextStep = await readCaseNextStep(caseId, gate.supabase);
+  // Its own failure, and its own outage note. A failed lodgement read does not
+  // affect any other sentence on this page, so the rest is still stated truthfully
+  // (spec §5: "a failed future judgement or document read affects its panel only
+  // when the rest of the case can still be stated truthfully").
+  const lodgement = await readCaseLodgement(caseId, gate.supabase);
 
   const action = resolveNextAction(
     {
@@ -95,7 +106,7 @@ export default async function CaseOverviewPage({
 
   return (
     <div className="flex flex-col gap-6 px-5 py-10">
-      <CaseDecisionStrip />
+      <CaseDecisionStrip base={base} lodgement={lodgement} />
 
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="flex flex-col gap-4">

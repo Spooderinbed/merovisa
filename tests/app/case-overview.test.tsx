@@ -136,10 +136,13 @@ beforeEach(() => {
 });
 
 describe("the decision strip slot", () => {
-  it("occupies no space and makes no promise until the reads exist", async () => {
+  it("makes no promise about the read that has NOT shipped", async () => {
     render(await overview());
 
-    for (const absent of [/visa read/i, /lodgement/i, /coming soon/i, /not available/i]) {
+    // MV-183 ships the lodgement half; the visa read's judgement contract is still
+    // unapproved (spec §0), so it stays silently absent rather than advertising
+    // itself.
+    for (const absent of [/visa read/i, /coming soon/i]) {
       expect(screen.queryByText(absent)).not.toBeInTheDocument();
     }
   });
@@ -150,6 +153,105 @@ describe("the decision strip slot", () => {
     for (const verdict of ["Strong", "Possible", "Reach"]) {
       expect(screen.queryByText(verdict)).not.toBeInTheDocument();
     }
+  });
+});
+
+describe("the lodgement read (MV-183)", () => {
+  it("occupies the first region", async () => {
+    render(await overview());
+
+    expect(screen.getByRole("region", { name: /lodgement/i })).toBeInTheDocument();
+  });
+
+  it("names the single blocking item on a case with outstanding requests", async () => {
+    seed(
+      {},
+      {
+        case_document_requests: [
+          {
+            id: "req-late",
+            case_id: CASE,
+            title: "Bank statement",
+            status: "outstanding",
+            due_at: "2026-09-01T00:00:00.000Z",
+            created_at: "2026-08-01T00:00:00.000Z",
+          },
+          {
+            id: "req-soon",
+            case_id: CASE,
+            title: "Passport bio page",
+            status: "outstanding",
+            due_at: "2026-08-20T00:00:00.000Z",
+            created_at: "2026-08-01T00:00:00.000Z",
+          },
+        ],
+      },
+    );
+
+    render(await overview());
+
+    const panel = within(screen.getByRole("region", { name: /lodgement/i }));
+    expect(panel.getByText("Blocked")).toBeInTheDocument();
+    expect(panel.getByText(/Passport bio page/)).toBeInTheDocument();
+    // One item, never a list — and the others counted so it does not read as all.
+    expect(panel.queryByText(/Bank statement/)).not.toBeInTheDocument();
+    expect(panel.getByText(/1 other request is also outstanding/i)).toBeInTheDocument();
+  });
+
+  it("distinguishes a fully-chased case from one nothing was asked of", async () => {
+    seed(
+      {},
+      {
+        case_document_requests: [
+          {
+            id: "req-done",
+            case_id: CASE,
+            title: "Bank statement",
+            status: "resolved",
+            due_at: null,
+            created_at: "2026-08-01T00:00:00.000Z",
+          },
+        ],
+      },
+    );
+    render(await overview());
+    expect(screen.getByText("Nothing outstanding")).toBeInTheDocument();
+
+    // The case page reads the WHOLE request list, so it can tell these apart — and
+    // must, because an untouched case has not earned the chased case's word.
+    seed({}, { case_document_requests: [] });
+    render(await overview());
+    expect(screen.getByText("Nothing requested yet")).toBeInTheDocument();
+  });
+
+  it("a FAILED request read is an outage, never 'nothing outstanding'", async () => {
+    seed({}, {}, { errorOn: { case_document_requests: { message: "boom" } } });
+
+    render(await overview());
+
+    expect(
+      screen.getByText(/couldn't check this case's document requests/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Nothing outstanding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nothing requested yet")).not.toBeInTheDocument();
+  });
+
+  it("a failed request read leaves the rest of the overview standing", async () => {
+    seed({}, {}, { errorOn: { case_document_requests: { message: "boom" } } });
+
+    render(await overview());
+
+    // The lodgement column is display-only; nothing else on this page depends on it.
+    expect(screen.getAllByTestId("case-next-action")).toHaveLength(1);
+  });
+
+  it("links to the Documents route", async () => {
+    render(await overview());
+
+    const panel = within(screen.getByRole("region", { name: /lodgement/i }));
+    expect(panel.getByRole("link", { name: /documents/i }).getAttribute("href")).toBe(
+      `${BASE}/documents`,
+    );
   });
 });
 

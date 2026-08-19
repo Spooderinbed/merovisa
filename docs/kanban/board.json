@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-18",
+  "updated": "2026-08-19",
   "staleDays": 7,
   "columns": [
     {
@@ -2219,6 +2219,17 @@
       "summary": "New additive case_document_requests table (RLS + column-scoped grants, authored NOT applied), a case-scoped case.documents.request verb, a case-scoped repository, and a documents section on the case route listing outstanding/resolved with create + resolve. Touches neither documents nor document_status; no Storage work.",
       "created": "2026-08-18",
       "entered": "2026-08-18"
+    },
+    {
+      "id": "MV-183",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-183-lodgement-read.md",
+      "title": "Case lodgement read: submittability panel + queue Lodgement column (UI lane, PR 5A)",
+      "summary": "The first surface answering which case is blocked and what single item blocks it. Pure derivation over case_document_requests, a batched queue read (one query per 40 cases), the submittability panel in the decision strip, and the queue Lodgement column. Honesty-bounded copy: zero outstanding means nothing ASKED FOR is outstanding, never that the case is submittable — no percentage, no denominator, no progress bar. Spec S2/S3/S4/S5. After MV-182.",
+      "created": "2026-08-19",
+      "entered": "2026-08-19"
     }
   ]
 }

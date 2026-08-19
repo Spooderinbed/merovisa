@@ -570,6 +570,7 @@ describe("the student list grows MV-171's entry points", () => {
           updatedAt: "2026-08-01T00:00:00.000Z",
           assignment: null,
           nextStep: { state: "caught-up", item: null, openCount: 0, waitingCount: 0 },
+          lodgement: { state: "none-outstanding" },
         },
       ],
       members: [],
