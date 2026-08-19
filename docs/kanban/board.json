@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-18",
+  "updated": "2026-08-19",
   "staleDays": 7,
   "columns": [
     {
@@ -2211,14 +2211,28 @@
     },
     {
       "id": "MV-182",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-182-case-document-requests.md",
       "title": "Case document requests: the chase list (Stage 4 slice 1)",
       "summary": "New additive case_document_requests table (RLS + column-scoped grants, authored NOT applied), a case-scoped case.documents.request verb, a case-scoped repository, and a documents section on the case route listing outstanding/resolved with create + resolve. Touches neither documents nor document_status; no Storage work.",
       "created": "2026-08-18",
-      "entered": "2026-08-18"
+      "entered": "2026-08-18",
+      "badge": "Done — merged to master 2026-08-18 (PR #148, merge 4f59df7).",
+      "done": "2026-08-18"
+    },
+    {
+      "id": "MV-184",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-184-workspace-boundaries.md",
+      "title": "Workspace loading and error boundaries (UI lane slice 8a)",
+      "summary": "Split the shared (app) loading/error states into student and workspace variants (spec S6). Adds route-segment loading.tsx for the organization queue (heading, summary strip, toolbar, eight flat rows), the dynamic case segment (case header, section rail, two panels), team and settings (shell preserved, content only); plus workspace error.tsx client boundaries with Retry for the queue (\"We couldn't load this queue\", no empty-case claim), the case (\"We couldn't load this student\"), and the team (existing explicit outage language). lookup-failed stays an outage, never a denial. Existing paper pulse + global reduced-motion guard; no spinners, no per-row stagger. Spec S5 Loading/Error.",
+      "created": "2026-08-19",
+      "entered": "2026-08-19",
+      "badge": "In Review — branch mv-184-workspace-boundaries, founder-gated PR. Five workspace loading.tsx + three error.tsx boundaries; gate green (typecheck 0, lint 0, 3502 tests / 370 files). The live browser pass CORRECTED the brief: a route-segment loading.tsx renders inside its own layout, so the frame silhouette had to move from students/[caseId]/ up to students/ (built as briefed, a cold case entry rendered the queue's eight-row skeleton, and the section skeleton drew a second header under the real one). Section loading is now panels-only. No 375 screenshot — no settable viewport in this environment; mobile pinned by a grid-parity test against the shipped frame layout instead."
     }
   ]
 }
