@@ -9,11 +9,13 @@
 
 ### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-19 14:17 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-19 14:23 UTC. **Not board state** — never written to board.json.
 
 | Card | PR | | CI | Review | Touches |
 |---|---|---|---|---|---|
-| **MV-183** | [#149](https://github.com/Spooderinbed/merovisa/pull/149) | open | pending 2/4 | — | tests · lib · components · docs |
+| **MV-183** | [#149](https://github.com/Spooderinbed/merovisa/pull/149) | open | passing 4/4 | — | tests · lib · components · docs |
+
+_1 open PR matches no card: [#150](https://github.com/Spooderinbed/merovisa/pull/150)._
 
 > ⚠️ MV-182 is in "inreview" but its PR #148 is already merged — the board is behind the repo.
 
@@ -50,7 +52,7 @@ _empty_
 ## In review (WIP 3) — 2
 
 - **MV-182** · P1 · [Case document requests: the chase list (Stage 4 slice 1)](cards/MV-182-case-document-requests.md) — _New additive case_document_requests table (RLS + column-scoped grants, authored NOT applied), a case-scoped case.documents.request verb, a case-scoped repository, and a documents section on the case route listing outstanding/resolved with create + resolve. Touches neither documents nor document_status; no Storage work._ · [#148](https://github.com/Spooderinbed/merovisa/pull/148) merged, ci passing
-- **MV-183** · P1 · [Case lodgement read: submittability panel + queue Lodgement column (UI lane, PR 5A)](cards/MV-183-lodgement-read.md) — _The first surface answering which case is blocked and what single item blocks it. Pure derivation over case_document_requests, a batched queue read (one query per 40 cases), the submittability panel in the decision strip, and the queue Lodgement column. Honesty-bounded copy: zero outstanding means nothing ASKED FOR is outstanding, never that the case is submittable — no percentage, no denominator, no progress bar. Spec S2/S3/S4/S5. After MV-182._ · [#149](https://github.com/Spooderinbed/merovisa/pull/149) open, ci pending
+- **MV-183** · P1 · [Case lodgement read: submittability panel + queue Lodgement column (UI lane, PR 5A)](cards/MV-183-lodgement-read.md) — _The first surface answering which case is blocked and what single item blocks it. Pure derivation over case_document_requests, a batched queue read (one query per 40 cases), the submittability panel in the decision strip, and the queue Lodgement column. Honesty-bounded copy: zero outstanding means nothing ASKED FOR is outstanding, never that the case is submittable — no percentage, no denominator, no progress bar. Spec S2/S3/S4/S5. After MV-182._ · [#149](https://github.com/Spooderinbed/merovisa/pull/149) open, ci passing
 
 ## Blocked — 3
 
