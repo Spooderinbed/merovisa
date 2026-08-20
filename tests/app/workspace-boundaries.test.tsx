@@ -1,8 +1,12 @@
 import { readFileSync } from "node:fs";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+
+import WorkspaceLoading from "@/app/(app)/workspace/loading";
 import QueueLoading from "@/app/(app)/workspace/[organizationId]/loading";
 import QueueError from "@/app/(app)/workspace/[organizationId]/error";
 import CaseFrameLoading from "@/app/(app)/workspace/[organizationId]/students/loading";
@@ -24,7 +28,12 @@ import SettingsLoading from "@/app/(app)/workspace/[organizationId]/settings/loa
  * commit: the counts, the copy, and the absences.
  */
 
+beforeEach(() => {
+  refresh.mockClear();
+});
+
 const WORKSPACE_BOUNDARY_FILES = [
+  "app/(app)/workspace/loading.tsx",
   "app/(app)/workspace/[organizationId]/loading.tsx",
   "app/(app)/workspace/[organizationId]/error.tsx",
   "app/(app)/workspace/[organizationId]/students/loading.tsx",
@@ -36,6 +45,7 @@ const WORKSPACE_BOUNDARY_FILES = [
 ] as const;
 
 const LOADING_STATES = [
+  ["workspace", WorkspaceLoading],
   ["queue", QueueLoading],
   ["case frame", CaseFrameLoading],
   ["case section", CaseSectionLoading],
@@ -256,5 +266,81 @@ describe("an outage is never dressed up as a denial", () => {
   it.each(ERRORS)("states the failure is ours, not the reader's, in the %s boundary", (_name, Boundary) => {
     render(<Boundary error={new Error("read failed")} reset={vi.fn()} />);
     expect(screen.getByText(/on our side/i)).toBeInTheDocument();
+  });
+});
+
+describe("the workspace's own loading boundary", () => {
+  // A segment's `loading.tsx` is mounted INSIDE that segment's layout, so
+  // `[organizationId]/loading.tsx` cannot cover `[organizationId]/layout.tsx`'s own
+  // read. Without a file at the `workspace` segment the nearest fallback for that
+  // read is `app/(app)/loading.tsx` — the student dashboard's silhouette — which is
+  // the mismatch §6 asked this slice to remove.
+  it("exists at the workspace segment, above the organization layout", () => {
+    expect(() => lines("app/(app)/workspace/loading.tsx")).not.toThrow();
+  });
+
+  it("is not the student silhouette", () => {
+    const student = lines("app/(app)/loading.tsx").join("\n");
+    const workspace = lines("app/(app)/workspace/loading.tsx").join("\n");
+    // The student skeleton's tell: one heading over a `1.5fr_1fr` card grid.
+    expect(student).toMatch(/lg:grid-cols-\[1\.5fr_1fr\]/);
+    expect(workspace).not.toMatch(/lg:grid-cols-\[1\.5fr_1fr\]/);
+  });
+
+  it("draws the organization band it stands in for", () => {
+    const { container } = render(<WorkspaceLoading />);
+    expect(container.querySelector('[data-testid="workspace-band-skeleton"]')).not.toBeNull();
+  });
+
+  it("names no route, because it covers every page under /workspace", () => {
+    render(<WorkspaceLoading />);
+    for (const route of [/day view/i, /all cases/i, /^team$/i, /organization settings/i]) {
+      expect(screen.queryByText(route)).toBeNull();
+    }
+  });
+
+  it("lets the layout above it render without awaiting, or the fallback never shows", () => {
+    // A layout that awaits suspends its WHOLE subtree, and a layout's suspension is
+    // caught by the boundary ABOVE it — so an awaiting `workspace/layout.tsx` would
+    // hand every cold workspace entry back to the student skeleton, no matter what
+    // this segment defines. The auth read belongs behind its own Suspense.
+    const source = lines("app/(app)/workspace/layout.tsx").join("\n");
+    expect(source).not.toMatch(/export default async function/);
+    expect(source).toMatch(/<Suspense/);
+  });
+});
+
+describe("every Try again actually tries again", () => {
+  // `reset()` re-renders the boundary from the router cache. These boundaries all
+  // guard SERVER components, whose output IS that cache — so `reset()` alone replays
+  // the failed payload and the button does nothing for the transient outage its copy
+  // promises to recover from. `router.refresh()` is what re-runs the read.
+  const ERROR_BOUNDARY_FILES = [
+    "app/(app)/error.tsx",
+    "app/(app)/workspace/[organizationId]/error.tsx",
+    "app/(app)/workspace/[organizationId]/students/[caseId]/error.tsx",
+    "app/(app)/workspace/[organizationId]/team/error.tsx",
+  ] as const;
+
+  const RETRYABLE = [
+    ["queue", QueueError],
+    ["case", CaseError],
+    ["team", TeamError],
+  ] as const;
+
+  it.each(RETRYABLE)("refreshes the route as well as resetting the %s boundary", async (_name, Boundary) => {
+    const reset = vi.fn();
+    render(<Boundary error={new Error("read failed")} reset={reset} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /try again/i }));
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(ERROR_BOUNDARY_FILES)("wires %s through the shared retry, not bare reset", (path) => {
+    const source = lines(path).join("\n");
+    expect(source, path).not.toMatch(/onClick=\{reset\}/);
+    expect(source, path).toMatch(/useRouteRetry/);
   });
 });

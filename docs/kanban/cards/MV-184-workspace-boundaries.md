@@ -221,3 +221,58 @@ responsive behaviour is already shipped and browser-verified — and the fact th
 file in this slice declares a breakpoint at all** (verified: `md:` appears only in
 `students/loading.tsx`). A 375 visual is worth taking at the §7 PR 8 density gate, on a
 machine where a viewport can actually be set.
+
+## Post-review fixes (2026-08-20)
+
+A 14-agent adversarial review of PR #150 confirmed two defects that the green suite could
+not see. Both are fixed on this branch; both now have a guard that FAILS when the fix is
+removed (verified by reverting each and re-running — 3 tests went red, named below).
+
+### 1. The §6 split never reached the workspace segment
+
+The slice added a skeleton at `[organizationId]/loading.tsx`, but a segment's `loading.tsx`
+is mounted INSIDE that segment's own layout — so it could not cover `[organizationId]/layout.tsx`'s
+own read, and nothing covered `workspace/layout.tsx`'s. Both layouts are `async` and await
+Supabase, so the nearest fallback for both was `app/(app)/loading.tsx`: the STUDENT dashboard
+silhouette (`max-w-[1120px]`, `lg:grid-cols-[1.5fr_1fr]`). Every cold entry to a queue painted
+the student shell first — the exact mismatch this card exists to remove.
+
+Two halves, because one file could not fix it:
+
+- **`app/(app)/workspace/loading.tsx`** (new) — the workspace's own fallback: organization
+  band + neutral content, naming no route, redrawing no chrome.
+- **`app/(app)/workspace/layout.tsx`** — no longer `async`. The auth read moved behind a
+  `Suspense` whose fallback is the same bar with no user pill, so the layout returns
+  immediately and the fallback above it is never reached.
+
+Guard: *"lets the layout above it render without awaiting, or the fallback never shows"* —
+red when the layout is restored to `export default async function`.
+
+### 2. "Try again" did not try again
+
+All three new boundaries wired retry to `reset()` alone. `reset()` re-renders the subtree
+from the router cache; these boundaries guard SERVER components, whose output IS that cache,
+so the same failed payload replays and the button visibly does nothing — for exactly the
+transient outage the copy promises to recover from. Pre-existing in `app/(app)/error.tsx` too.
+
+Fixed via **`components/layout/use-route-retry.ts`**: one hook, `router.refresh()` then
+`reset()` inside a single `startTransition`. Adopted by all three workspace boundaries and by
+`app/(app)/error.tsx`. It is shared rather than copied four times because the difference
+between a retry that works and a retry that lies is one invisible line.
+
+Guards: *"refreshes the route as well as resetting the %s boundary"* (behavioural, all three),
+*"wires %s through the shared retry, not bare reset"* (source scan, all four), and
+*"re-runs the failed server read, not just the boundary"* for the student boundary.
+
+### Gate
+
+`npm run typecheck` 0 · `npm run lint` 0 · `npm test` **3518 passed / 370 files, 0 failed**.
+
+### Known, deliberately not fixed here
+
+- `app/(focused)/error.tsx` and `app/(marketing)/error.tsx` have the same bare-`reset()`
+  defect. They are outside this slice's scope; the `(focused)` one guards the anonymous
+  results surface, so it is worth its own card.
+- `[organizationId]/error.tsx` says "We couldn't load this queue" but is also the nearest
+  boundary for `settings/`, `students/new`, and case-frame layout throws — it names the wrong
+  surface on three routes. Review-confirmed, left open by scope decision.

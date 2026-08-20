@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 import AppError from "@/app/(app)/error";
 import AppLoading from "@/app/(app)/loading";
@@ -9,6 +12,10 @@ import FocusedError from "@/app/(focused)/error";
 import FocusedLoading from "@/app/(focused)/loading";
 import MarketingError from "@/app/(marketing)/error";
 import MarketingLoading from "@/app/(marketing)/loading";
+
+beforeEach(() => {
+  refresh.mockClear();
+});
 
 describe("signed-in route error boundary", () => {
   it("shows a calm, reassuring message and a working retry", async () => {
@@ -19,6 +26,16 @@ describe("signed-in route error boundary", () => {
     expect(screen.getByText(/your saved data is safe/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+
+  // This boundary guards SERVER components (the dashboard's six-way Promise.all, the
+  // matches page's four-way one). `reset()` alone re-renders them from the cached
+  // payload that already failed, so the button would do nothing for exactly the
+  // flaky-connection case the copy promises to recover from (MV-184).
+  it("re-runs the failed server read, not just the boundary", async () => {
+    render(<AppError error={new Error("supabase down")} reset={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
 

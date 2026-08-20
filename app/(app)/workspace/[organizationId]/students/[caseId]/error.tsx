@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { useRouteRetry } from "@/components/layout/use-route-retry";
 
 /**
  * Error boundary for the case segment (spec §5, "Case lookup failure"). It renders
@@ -26,6 +27,8 @@ export default function CaseError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const retry = useRouteRetry(reset);
+
   useEffect(() => {
     console.error("[workspace] case route error", error);
   }, [error]);
@@ -40,7 +43,7 @@ export default function CaseError({
         </p>
         <button
           type="button"
-          onClick={reset}
+          onClick={retry}
           className="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-control font-medium text-on-primary hover:bg-primary-ink"
         >
           Try again

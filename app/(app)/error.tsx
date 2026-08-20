@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouteRetry } from "@/components/layout/use-route-retry";
 
 /**
  * Segment error boundary for every signed-in route (dashboard, matches, plan,
@@ -18,6 +19,8 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const retry = useRouteRetry(reset);
+
   useEffect(() => {
     console.error("[app] route error", error);
   }, [error]);
@@ -34,7 +37,7 @@ export default function AppError({
       </p>
       <button
         type="button"
-        onClick={reset}
+        onClick={retry}
         className="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-control font-medium text-on-primary hover:bg-primary-ink"
       >
         Try again

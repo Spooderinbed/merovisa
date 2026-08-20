@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { useRouteRetry } from "@/components/layout/use-route-retry";
 
 /**
  * Error boundary for the team roster (spec §5, "Team failure: preserve the team
@@ -28,6 +29,8 @@ export default function TeamError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const retry = useRouteRetry(reset);
+
   useEffect(() => {
     console.error("[workspace] team route error", error);
   }, [error]);
@@ -45,7 +48,7 @@ export default function TeamError({
         </p>
         <button
           type="button"
-          onClick={reset}
+          onClick={retry}
           className="inline-flex items-center rounded-pill bg-primary px-6 py-3 text-control font-medium text-on-primary hover:bg-primary-ink"
         >
           Try again
