@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-19",
+  "updated": "2026-08-20",
   "staleDays": 7,
   "columns": [
     {
@@ -2211,25 +2211,41 @@
     },
     {
       "id": "MV-182",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-182-case-document-requests.md",
       "title": "Case document requests: the chase list (Stage 4 slice 1)",
       "summary": "New additive case_document_requests table (RLS + column-scoped grants, authored NOT applied), a case-scoped case.documents.request verb, a case-scoped repository, and a documents section on the case route listing outstanding/resolved with create + resolve. Touches neither documents nor document_status; no Storage work.",
       "created": "2026-08-18",
-      "entered": "2026-08-18"
+      "entered": "2026-08-18",
+      "badge": "Done — merged to master 2026-08-18 (PR #148, merge 4f59df7).",
+      "done": "2026-08-18"
     },
     {
       "id": "MV-183",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-183-lodgement-read.md",
       "title": "Case lodgement read: submittability panel + queue Lodgement column (UI lane, PR 5A)",
       "summary": "The first surface answering which case is blocked and what single item blocks it. Pure derivation over case_document_requests, a batched queue read (one query per 40 cases), the submittability panel in the decision strip, and the queue Lodgement column. Honesty-bounded copy: zero outstanding means nothing ASKED FOR is outstanding, never that the case is submittable — no percentage, no denominator, no progress bar. Spec S2/S3/S4/S5. After MV-182.",
       "created": "2026-08-19",
-      "entered": "2026-08-19"
+      "entered": "2026-08-19",
+      "done": "2026-08-20",
+      "badge": "Done — merged to master 2026-08-20 (PR #149, merge b58450a). Adversarial review found no shipped defect; two unfalsifiable guards were rebuilt before merge (honesty scan now covers the prose, not just the pill; the due-date guard asserts what the panel can emit)."
+    },
+    {
+      "id": "MV-184",
+      "col": "inreview",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-184-workspace-boundaries.md",
+      "title": "Workspace loading and error boundaries (UI lane slice 8a)",
+      "summary": "Split the shared (app) loading/error states into student and workspace variants (spec S6). Adds route-segment loading.tsx for the organization queue (heading, summary strip, toolbar, eight flat rows), the dynamic case segment (case header, section rail, two panels), team and settings (shell preserved, content only); plus workspace error.tsx client boundaries with Retry for the queue (\"We couldn't load this queue\", no empty-case claim), the case (\"We couldn't load this student\"), and the team (existing explicit outage language). lookup-failed stays an outage, never a denial. Existing paper pulse + global reduced-motion guard; no spinners, no per-row stagger. Spec S5 Loading/Error.",
+      "created": "2026-08-19",
+      "entered": "2026-08-19",
+      "badge": "In Review — branch mv-184-workspace-boundaries, founder-gated PR #150. Five workspace loading.tsx + three error.tsx boundaries, plus the two post-review fixes: app/(app)/workspace/loading.tsx (the segment the §6 split missed, so a cold workspace entry no longer paints the student silhouette) and components/layout/use-route-retry.ts (router.refresh() before reset(), or Try again cannot retry a server read). Gate green: typecheck 0, lint 0, 3518 tests / 370 files. Each new guard verified red with its fix reverted. No 375 screenshot — no settable viewport in this environment; mobile pinned by a grid-parity test against the shipped frame layout instead."
     }
   ]
 }
