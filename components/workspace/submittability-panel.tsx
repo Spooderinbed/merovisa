@@ -131,7 +131,13 @@ function Body({ read }: { read: LodgementRead }) {
       ) : (
         <p className="max-w-[52ch] text-body text-ink">{SETTLED_SENTENCE[read.state]}</p>
       )}
-      <p className="max-w-[52ch] text-caption text-ink-soft">{SCOPE_NOTE}</p>
+      {/* Marked so the honesty scan can exclude it: this is the ONE line where
+          "checked or approved" may appear, because there it is a denial, and a
+          substring scan cannot tell a claim from its refusal. Its own text is
+          pinned separately. */}
+      <p data-lodgement-scope className="max-w-[52ch] text-caption text-ink-soft">
+        {SCOPE_NOTE}
+      </p>
     </div>
   );
 }

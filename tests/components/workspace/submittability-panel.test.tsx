@@ -48,7 +48,11 @@ describe("SubmittabilityPanel — the label and the word", () => {
     expect(screen.getByText("Nothing requested yet")).toBeTruthy();
   });
 
-  it("never claims the case is ready, verified, approved or submittable", () => {
+  // Word boundaries, so the panel's own "Lodgement" label and heading do not trip a
+  // scan for the claim "lodge"/"lodged", and "already" does not read as "ready".
+  const CLAIM = /\bready\b|\bverified\b|\bapproved\b|\bsubmittable\b|\blodged?\b/i;
+
+  it("never claims the case is ready, verified, approved or submittable — anywhere it speaks", () => {
     for (const read of [
       blocked,
       { state: "clear" } as const,
@@ -57,13 +61,27 @@ describe("SubmittabilityPanel — the label and the word", () => {
       { state: "unavailable" } as const,
     ]) {
       const { container, unmount } = renderPanel(read);
-      // Asserted on the STATE WORD, not on the whole panel: the scope note below it
-      // contains "checked or approved" as a DENIAL, and a substring scan cannot tell
-      // a claim from its refusal.
-      const word = container.querySelector("[data-lodgement-word]")?.textContent ?? "";
-      expect(word.toLowerCase()).not.toMatch(/ready|verified|approved|submittable|lodge/);
+      // Every line the panel renders, not just the state word. The word is a
+      // constant already pinned above; the PROSE is where a claim would actually be
+      // reintroduced — the settled sentences, the "Waiting on" line, the count, and
+      // the outage copy. Scanning only the pill left all of them unguarded.
+      //
+      // The scope note is the single exclusion, because there these words appear as
+      // a DENIAL ("nothing here has been checked or approved") and a substring scan
+      // cannot tell a claim from its refusal. It is pinned verbatim below instead.
+      container.querySelector("[data-lodgement-scope]")?.remove();
+      expect(container.textContent ?? "", `state=${read.state}`).not.toMatch(CLAIM);
       unmount();
     }
+  });
+
+  it("pins the scope note verbatim — the one line the claim scan cannot check", () => {
+    renderPanel({ state: "clear" });
+    expect(
+      screen.getByText(
+        "Read from document requests only. Nothing here has been checked or approved, and the list is only as complete as the requests on it.",
+      ),
+    ).toBeTruthy();
   });
 
   it("states the limit of the read in every settled state, not only the reassuring one", () => {
@@ -150,18 +168,27 @@ describe("SubmittabilityPanel — one blocking item, never a list", () => {
     expect(screen.queryByText(/other requests?/i)).toBeNull();
   });
 
-  it("shows the due date when the request carries one", () => {
-    renderPanel(blocked);
-    expect(screen.getByText(/20 Aug 2026/)).toBeTruthy();
+  it("shows the due date when the request carries one, in a machine-readable time", () => {
+    const { container } = renderPanel(blocked);
+    const time = container.querySelector("time");
+    expect(time?.getAttribute("datetime")).toBe("2026-08-20T00:00:00.000Z");
+    expect(time?.textContent).toBe("20 Aug 2026");
+    expect(container.textContent ?? "").toMatch(/, due /);
   });
 
   it("says nothing about a due date when the request has none", () => {
-    renderPanel({
+    const { container } = renderPanel({
       state: "blocked",
       blocker: { id: "req-1", title: "Passport bio page", dueAt: null },
       otherOutstanding: 0,
     });
-    expect(screen.queryByText(/^Due /)).toBeNull();
+    // Asserted on what the panel can actually emit. The previous `/^Due /` matched
+    // no text node this component is capable of producing — the date is rendered as
+    // `, due <time>` — so it passed with and without the null guard, and the guard
+    // it was written to protect was untested. Dropping that guard renders
+    // `new Date(null)` as 1 Jan 1970, which both of these now catch.
+    expect(container.querySelector("time")).toBeNull();
+    expect(container.textContent ?? "").not.toMatch(/\bdue\b/i);
   });
 });
 

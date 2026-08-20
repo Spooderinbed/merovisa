@@ -198,3 +198,50 @@ first.**
   is missed, only at render.
 - Next slice on this surface: attention tier 4 + next-action step 6. Doing that makes the read
   ordering-bearing, so the failure rule must flip to failing the queue.
+
+## Post-review fixes (2026-08-20)
+
+A 14-agent adversarial review of PR #149 found no defect in what this panel SHIPS — the
+verified findings were two tests that could not fail. On the product's highest-trust surface
+that matters as much as a bug: the guard is the only thing standing between this panel and a
+sentence it must never say.
+
+### 1. The honesty guard scanned the pill, not the prose
+
+`never claims the case is ready, verified, approved or submittable` read only
+`[data-lodgement-word]` — a constant already pinned by three tests above it. Everything the
+panel actually SAYS was unguarded: the three `SETTLED_SENTENCE` strings, the "Waiting on …"
+line, the other-outstanding count and the outage copy. Rewriting `SETTLED_SENTENCE.clear` to
+*"This case is ready to lodge."* left the whole suite green — measured.
+
+The original scoping had a real reason: `SCOPE_NOTE` contains "checked or approved" as a
+DENIAL, and a substring scan cannot tell a claim from its refusal. So the note now carries
+`data-lodgement-scope`, the scan excludes that one element and covers every other line in all
+five states, and the note's own text is pinned verbatim in a second test. Claim words are
+matched with word boundaries so the panel's own "Lodgement" label does not trip `lodge`.
+
+This is the slice's only production change, and it is one attribute: no rendered copy moved.
+
+### 2. The due-date guard asserted something the panel cannot emit
+
+`expect(screen.queryByText(/^Due /)).toBeNull()` matched no text node this component can
+produce — a date renders as `, due <time>` — so it passed identically with and without the
+null guard, and the guard against inventing a due date on an undated request was untested.
+Both due-date tests now assert on the `<time>` element and the real `", due "` text. Deleting
+the guard renders `new Date(null)` as *1 Jan 1970*, which both now catch.
+
+### Falsification, run rather than claimed
+
+Each fix was reverted in the panel and the suite re-run: *"never claims the case is ready …
+anywhere it speaks"* and *"says nothing about a due date when the request has none"* both went
+red, and every other test stayed green — which is also the clean demonstration that the OLD
+guard could not see either change.
+
+### Gate
+
+`npm run typecheck` 0 · `npm run lint` 0 · `npm test` **3545 passed / 374 files, 0 failed**.
+
+### Still open
+
+`tests/integration/stage4-lodgement-read.itest.ts:116` has a stale comment describing an
+undated row the fixture does not seed. Comment-only, left by scope decision.
