@@ -171,6 +171,106 @@ export async function listCaseDocumentRequests(
 }
 
 /**
+ * The queue's batch size (MV-183). Matches `queue-repo.ts`'s `QUEUE_BATCH_SIZE` in
+ * value but is stated here rather than imported, because importing it would make
+ * this module depend on the module that depends on it.
+ *
+ * supabase-js sends `.in()` as a URL querystring, so a whole page of case ids in
+ * one request is a URL some proxy will refuse — the same reasoning, and the same
+ * number, `queue-repo.ts` applies to its assignment read.
+ */
+export const REQUEST_BATCH_SIZE = 40;
+
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+export type OutstandingRequestsByCaseResult =
+  | { ok: true; byCase: Map<string, CaseDocumentRequest[]> }
+  | { ok: false; reason: "lookup-failed" };
+
+/**
+ * Every OUTSTANDING request across many cases, grouped by case — the Day view's
+ * lodgement column (MV-183, spec §2).
+ *
+ * ONE QUERY PER CHUNK, never one per case. Forty rows on the queue landing page
+ * would otherwise be forty round trips; MV-182's migration created
+ * `case_document_requests_case_id_status_idx on (case_id, status)` for precisely
+ * this access shape.
+ *
+ * ## Why outstanding rows ONLY
+ *
+ * Resolved requests are never deleted — the migration is explicit that a request
+ * that was asked for is a permanent fact — so they accumulate on a case forever. A
+ * batch fetching every status would grow with a consultancy's history rather than
+ * with its open work, and at PostgREST's `max_rows` it would be SILENTLY cut,
+ * dropping outstanding rows from the cases at the tail of the chunk. Those cases
+ * would then render "Nothing outstanding" on a queue, which is the single most
+ * expensive wrong sentence this slice can print.
+ *
+ * The cost is that a caller cannot tell an all-resolved case from one nobody has
+ * asked anything of. `deriveQueueLodgement` spends that honestly by reporting the
+ * weaker `none-outstanding`; the case panel, which reads the whole list through
+ * `listCaseDocumentRequests`, keeps the distinction.
+ *
+ * A case with nothing outstanding is ABSENT from the map rather than present with
+ * an empty array — there is one representation of "no outstanding rows", so no
+ * caller can read the two differently.
+ */
+export async function listOutstandingDocumentRequestsByCase(
+  caseIds: readonly string[],
+  db?: CaseAuthorizationClient,
+): Promise<OutstandingRequestsByCaseResult> {
+  const byCase = new Map<string, CaseDocumentRequest[]>();
+  const ids = caseIds.filter(isPresent);
+  // No cases means no question. An empty `.in()` is a query that can only return
+  // nothing, and PostgREST is not the place to find that out.
+  if (ids.length === 0) return { ok: true, byCase };
+
+  try {
+    const supabase = await client(db);
+
+    for (const batch of chunk(ids, REQUEST_BATCH_SIZE)) {
+      const { data, error } = await supabase
+        .from("case_document_requests")
+        .select("id, case_id, kind, title, note, status, due_at, created_at, resolved_at")
+        // Filtered at the DATABASE, so the row ceiling below bounds outstanding work
+        // rather than a consultancy's whole request history.
+        .eq("status", "outstanding")
+        .in("case_id", batch);
+
+      // Same rule as `listCaseDocumentRequests`: a read that could not complete is
+      // an outage, NEVER an empty chase list.
+      if (error) return { ok: false, reason: "lookup-failed" };
+      const rows = data ?? [];
+      // At the ceiling the answer MAY be a prefix, and PostgREST does not say so.
+      if (rows.length >= DOCUMENT_REQUEST_ROW_CEILING) return { ok: false, reason: "lookup-failed" };
+
+      for (const row of rows) {
+        const existing = byCase.get(row.case_id) ?? [];
+        existing.push({
+          id: row.id,
+          kind: row.kind,
+          title: row.title,
+          note: row.note,
+          status: row.status,
+          dueAt: row.due_at,
+          createdAt: row.created_at,
+          resolvedAt: row.resolved_at,
+        });
+        byCase.set(row.case_id, existing);
+      }
+    }
+
+    return { ok: true, byCase };
+  } catch {
+    return { ok: false, reason: "lookup-failed" };
+  }
+}
+
+/**
  * Ask this case for one document.
  *
  * Authorization is the CALLER's — `requireCasePermission(actor, caseId,

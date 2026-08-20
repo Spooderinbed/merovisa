@@ -62,6 +62,7 @@ vi.mock("@/lib/cases/case-frame", () => ({
     openCount: 0,
     waitingCount: 0,
   }),
+  readCaseLodgement: async () => ({ state: "nothing-requested" }),
 }));
 
 /**

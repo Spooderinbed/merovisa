@@ -1,6 +1,8 @@
 import "server-only";
 import { selectNextStep, type NextStepSelection } from "@/lib/plan/select";
 import type { PlanItemRow } from "@/lib/plan/types";
+import { listCaseDocumentRequests } from "./document-requests-repo";
+import { deriveLodgement, type LodgementRead } from "./lodgement";
 import { MEMBERSHIP_ROLES, ACTIVE_MEMBERSHIP_STATUS } from "./permissions";
 import { readPrimaryCounsellor } from "./write-repo";
 import type { CaseAuthorizationClient } from "./context";
@@ -154,4 +156,28 @@ export async function readCaseNextStep(
   } catch {
     return null;
   }
+}
+
+/**
+ * One case's lodgement read (MV-183, spec §3 "Submittability read").
+ *
+ * Reuses `listCaseDocumentRequests` — the single access path to
+ * `case_document_requests` — rather than issuing its own query, so the panel and
+ * the Documents chase list can never disagree about one case's requests. The WHOLE
+ * list travels, which is what lets `deriveLodgement` tell a fully-chased case
+ * (`clear`) from one nothing has been asked of (`nothing-requested`); the queue's
+ * batched read cannot, and says the weaker thing instead.
+ *
+ * A failed read returns `unavailable` rather than `null`: the panel must SAY it
+ * could not check. Nothing here may resolve to an empty list, because "nothing is
+ * outstanding" and "we could not find out" render as different sentences and only
+ * one of them is true (spec §5).
+ */
+export async function readCaseLodgement(
+  caseId: string,
+  db: CaseAuthorizationClient,
+): Promise<LodgementRead> {
+  const requests = await listCaseDocumentRequests(caseId, db);
+  if (!requests.ok) return { state: "unavailable" };
+  return deriveLodgement(requests.data);
 }

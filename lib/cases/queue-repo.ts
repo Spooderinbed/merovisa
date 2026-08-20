@@ -4,6 +4,8 @@ import { selectNextStep } from "@/lib/plan/select";
 import type { PlanItemRow } from "@/lib/plan/types";
 import type { OrgMember } from "@/lib/org/repo";
 import type { CaseAuthorizationClient } from "./context";
+import { listOutstandingDocumentRequestsByCase } from "./document-requests-repo";
+import { deriveQueueLodgement } from "./lodgement";
 import { listOrgCases, type CaseListScope } from "./list-repo";
 import { PRIMARY_COUNSELLOR_ROLE } from "./write-repo";
 import { ACTIVE_MEMBERSHIP_STATUS } from "./permissions";
@@ -152,6 +154,12 @@ export async function listCaseQueue(
       }
     }
 
+    // The FOURTH enrichment, and the only one that is display-only (MV-183). It
+    // decides no attention tier, so a failure here marks its own column as an
+    // outage instead of blanking a queue whose every other column is true — spec
+    // §5's first option, where the three reads above take its second.
+    const requests = await listOutstandingDocumentRequestsByCase(caseIds, supabase);
+
     const rows: QueueCase[] = base.data.map((summary) => {
       const assigneeUserId = assigneeByCase.get(summary.id);
       const membership = assigneeUserId ? membershipByUser.get(assigneeUserId) : undefined;
@@ -169,6 +177,12 @@ export async function listCaseQueue(
                 active: membership?.status === ACTIVE_MEMBERSHIP_STATUS,
               },
         nextStep: selectNextStep(planByCase.get(summary.id) ?? []),
+        // A read that FAILED is `unavailable` for every row. It is never spent as
+        // an empty list, because "nothing outstanding" and "we could not find out"
+        // are different sentences and only one of them is true.
+        lodgement: requests.ok
+          ? deriveQueueLodgement(requests.byCase.get(summary.id) ?? [])
+          : { state: "unavailable" },
       };
     });
 
