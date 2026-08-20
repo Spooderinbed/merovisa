@@ -2237,7 +2237,7 @@
     },
     {
       "id": "MV-184",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-184-workspace-boundaries.md",
@@ -2245,7 +2245,30 @@
       "summary": "Split the shared (app) loading/error states into student and workspace variants (spec S6). Adds route-segment loading.tsx for the organization queue (heading, summary strip, toolbar, eight flat rows), the dynamic case segment (case header, section rail, two panels), team and settings (shell preserved, content only); plus workspace error.tsx client boundaries with Retry for the queue (\"We couldn't load this queue\", no empty-case claim), the case (\"We couldn't load this student\"), and the team (existing explicit outage language). lookup-failed stays an outage, never a denial. Existing paper pulse + global reduced-motion guard; no spinners, no per-row stagger. Spec S5 Loading/Error.",
       "created": "2026-08-19",
       "entered": "2026-08-19",
-      "badge": "In Review — branch mv-184-workspace-boundaries, founder-gated PR #150. Five workspace loading.tsx + three error.tsx boundaries, plus the two post-review fixes: app/(app)/workspace/loading.tsx (the segment the §6 split missed, so a cold workspace entry no longer paints the student silhouette) and components/layout/use-route-retry.ts (router.refresh() before reset(), or Try again cannot retry a server read). Gate green: typecheck 0, lint 0, 3518 tests / 370 files. Each new guard verified red with its fix reverted. No 375 screenshot — no settable viewport in this environment; mobile pinned by a grid-parity test against the shipped frame layout instead."
+      "badge": "Done — merged to master 2026-08-20 (PR #150, merge 1160770). Adversarial review found two defects a green suite could not see; both fixed before merge (app/(app)/workspace/loading.tsx for the segment the §6 split missed, and use-route-retry.ts so Try again re-runs the server read). Each new guard verified red with its fix reverted.",
+      "done": "2026-08-20"
+    },
+    {
+      "id": "MV-185",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-185-collaboration-schema.md",
+      "title": "Document collaboration schema: versions and reviews (Stage 4 slice 2)",
+      "summary": "case_document_versions + case_document_reviews as additive tables BESIDE the vault, with RLS, column-scoped grants and MV-182's two forbidden-grant assertions. documents keeps UNIQUE (case_id, kind) — dropping the arbiter index would break every .upsert() on documents at plan time, so the plan's \"replacing the one-per-kind model\" is superseded by the spec. Request resolution is derived from the newest version's review, never a second source of truth. No Storage, no routes, no UI. Independent of Stage 5: an unclaimed case supports the whole walk.",
+      "created": "2026-08-20",
+      "entered": "2026-08-20"
+    },
+    {
+      "id": "MV-190",
+      "col": "ready",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-190-case-storage-and-downloads.md",
+      "title": "Case-scoped Storage and signed downloads (Stage 4 slice 3)",
+      "summary": "The second half of the 5B split, sequenced after MV-185 and before MV-186 (the number is higher only because the plan reserved MV-186-189). Adds the case/<case_id>/<version_id> prefix and its storage.objects policy, a short-TTL signed-download helper authorized BEFORE the URL is minted, and makes the three document routes accept a NAMED case id. Corrects the plan: the routes are already case-scoped (MV-157 §G) — the real gap is that all three resolve the ACTOR'S OWN case, which is F-8. Existing owner-keyed vault objects are deliberately not migrated.",
+      "created": "2026-08-20",
+      "entered": "2026-08-20"
     }
   ]
 }
