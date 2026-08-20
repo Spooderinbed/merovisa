@@ -20,7 +20,7 @@
 --   (…20260802120000….sql:157). supabase-js compiles `.upsert()` to `INSERT … ON CONFLICT DO
 --   UPDATE`, and the ARBITER INDEX MUST EXIST AND BE FULL. Drop that index and `upsertDocument`
 --   and `app/api/documents/upload` stop planning — a `42501`/`42P10` at plan time, not a review
---   comment. MV-155 and MV-168 measured this failure three times between them. §7 (11) below
+--   comment. MV-155 and MV-168 measured this failure three times between them. §8 (11) below
 --   asserts the index survived THIS file.
 --
 -- The other two reasons are products, not mechanics: `documents` is the STUDENT version's vault and
@@ -67,7 +67,7 @@ create table if not exists public.case_document_versions (
   -- and has no meaning once the case is gone. (`documents` is deliberately different — it holds a
   -- Storage pointer whose object outlives the row.)
   case_id         uuid not null references public.cases(id)         on delete cascade,
-  -- NOT NULL and pinned to the case's real organization by the INSERT policy in §5. A version is a
+  -- NOT NULL and pinned to the case's real organization by the INSERT policy in §7. A version is a
   -- CONSULTANCY act on a consultancy case, so a personal case (`cases.organization_id is null`)
   -- can carry none: `case_org_id` returns NULL there and a WITH CHECK admits only TRUE.
   organization_id uuid not null references public.organizations(id) on delete cascade,
@@ -288,7 +288,7 @@ grant execute on function private.document_case_id(uuid)          to authenticat
 --     a review, and therefore no other moment at which the derivation can change.
 --
 --     SECURITY DEFINER so the invariant does not depend on the writer's grants. The insert that
---     fires it is already policy-gated to an actor who may staff the case (§5's INSERT policies),
+--     fires it is already policy-gated to an actor who may staff the case (§7's INSERT policies),
 --     so this adds no reach — it only stops the invariant from being conditional on `update
 --     (status)` still being granted to whoever happens to be reviewing.
 --
@@ -418,7 +418,7 @@ grant insert (case_id, organization_id, version_id, decision, note, reviewed_by)
 -- The absence is also what makes the derivation in §4 total. `sync_document_request_status` fires
 -- on INSERT alone; if a client could delete a version or rewrite a decision, the newest-version
 -- answer could change with nothing firing, and `case_document_requests.status` would drift from it
--- silently. §7 (5) and (6) assert both absences, because they are the kind of fact that disappears
+-- silently. §8 (5) and (6) assert both absences, because they are the kind of fact that disappears
 -- without anybody deciding to remove it.
 
 -- =====================================================================
