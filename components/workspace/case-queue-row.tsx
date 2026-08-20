@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LODGEMENT_WORD } from "@/lib/cases/lodgement";
 import { resolveNextAction, type QueueCase } from "@/lib/cases/queue";
 import { CaseStatusPill } from "./case-status-pill";
 import { CaseLinkState } from "./case-link-state";
@@ -57,6 +58,9 @@ export function CaseQueueRow({
         </span>
       </th>
       <td className="py-1 pr-4 align-middle max-md:block max-md:py-1">
+        <LodgementCell read={row.lodgement} />
+      </td>
+      <td className="py-1 pr-4 align-middle max-md:block max-md:py-1">
         {/* CSS truncation keeps the full text in the DOM for assistive tech; the
             title carries it for a pointer hover. */}
         <span className="block max-w-[36ch] truncate text-control text-ink" title={action.label}>
@@ -86,6 +90,51 @@ export function CaseQueueRow({
         </time>
       </td>
     </tr>
+  );
+}
+
+/**
+ * The Lodgement cell (MV-183, spec §2): "read word plus the single blocking item".
+ *
+ * ONLY a blocked row is coloured, and only Reach. The queue's batched read fetches
+ * OUTSTANDING rows only, so it cannot tell a fully-chased case from one nothing has
+ * been asked of — a Strong-green row would claim exactly the difference it does not
+ * know. The panel on the case page, which reads the whole request list, is where
+ * that distinction is earned. The word carries the meaning in every state; the tint
+ * only echoes it.
+ */
+function LodgementCell({ read }: { read: QueueCase["lodgement"] }) {
+  if (read.state === "unavailable") {
+    // Never "Nothing outstanding": on a queue that sentence is a counsellor's cue
+    // to move on, and it would be a guess.
+    return (
+      <span
+        className="block max-w-[28ch] truncate text-meta text-ink-soft"
+        title="We couldn't check this case's document requests."
+      >
+        Couldn&apos;t check
+      </span>
+    );
+  }
+
+  const blocked = read.state === "blocked";
+  return (
+    <span className="flex max-w-[32ch] items-center gap-2 overflow-hidden">
+      <span
+        data-lodgement-word
+        className={`shrink-0 whitespace-nowrap text-meta ${blocked ? "text-reach" : "text-ink-soft"}`}
+      >
+        {LODGEMENT_WORD[read.state]}
+      </span>
+      {read.state === "blocked" ? (
+        // One item. The full title stays in the DOM for assistive tech and rides
+        // the title attribute for a pointer hover — the same treatment the next
+        // action gets.
+        <span className="min-w-0 truncate text-meta text-ink-soft" title={read.blocker.title}>
+          · {read.blocker.title}
+        </span>
+      ) : null}
+    </span>
   );
 }
 

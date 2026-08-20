@@ -385,6 +385,9 @@ describe("/workspace/[id]/students — cell 7, the case directory (All cases)", 
       active: true,
     } as { membershipId: string; userId: string; role: string; active: boolean } | null,
     nextStep: { state: "caught-up" as const, item: null, openCount: 0, waitingCount: 0 },
+    // MV-183. The All-cases directory reads through `listCaseQueue` too, so it
+    // carries the same lodgement read as the Day view and renders the same column.
+    lodgement: { state: "none-outstanding" as const },
   };
   const UNLINKED_CASE = {
     ...LINKED_CASE,

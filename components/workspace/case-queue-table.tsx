@@ -26,6 +26,12 @@ export function CaseQueueTable({
             <th scope="col" className="py-2 pr-4 text-meta font-medium text-ink-soft">
               Student
             </th>
+            {/* Stage 4 shipped the data, so the column is available (spec §2). The
+                visa read's column stays omitted entirely until its stage ships —
+                forty rows of "Coming soon" is worse than no column. */}
+            <th scope="col" className="py-2 pr-4 text-meta font-medium text-ink-soft">
+              Lodgement
+            </th>
             <th scope="col" className="py-2 pr-4 text-meta font-medium text-ink-soft">
               Next action
             </th>

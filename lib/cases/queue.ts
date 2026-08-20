@@ -1,4 +1,5 @@
 import type { NextStepSelection } from "@/lib/plan/select";
+import type { LodgementRead } from "./lodgement";
 import { isOperationalStatus, type OperationalStatus } from "./operational-status";
 
 /**
@@ -40,6 +41,15 @@ export interface QueueCase {
   assignment: QueueAssignment | null;
   /** `selectNextStep` over the case's open plan items. */
   nextStep: NextStepSelection;
+  /**
+   * The Lodgement column (MV-183, spec §2). REQUIRED rather than optional so a
+   * surface cannot quietly forget it — `unavailable` is how a failed read travels,
+   * and there is no third meaning for "absent".
+   *
+   * It is display-only in this slice: the attention sort below does NOT read it,
+   * so its arrival reorders nothing. Tier 4's slot stays open for when it does.
+   */
+  lodgement: LodgementRead;
 }
 
 export const NEXT_ACTION_KINDS = [

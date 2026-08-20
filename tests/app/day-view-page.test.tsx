@@ -65,6 +65,9 @@ function qc(overrides: Partial<QueueCase> = {}): QueueCase {
     updatedAt: "2026-08-01T00:00:00.000Z",
     assignment: ASSIGNED,
     nextStep: { state: "caught-up", item: null, openCount: 0, waitingCount: 0 },
+    // MV-183: display-only, and the sort does not read it — the default keeps every
+    // existing assertion about ordering and next actions exactly as it was.
+    lodgement: { state: "none-outstanding" },
     ...overrides,
   };
 }
