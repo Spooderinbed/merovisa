@@ -96,3 +96,115 @@ prod ledger rather than assuming.
 - MV-182's migration header is the house style for this table family — copy its structure,
   its assertions and its fence, not just its columns.
 - Sequenced **before MV-190**, which is before MV-186 despite the number (spec §5).
+
+## Evidence — built 2026-08-21, branch `mv-185-collaboration-schema`
+
+### What shipped
+
+| File | What |
+|---|---|
+| `supabase/migrations/20260821120000_stage4_case_document_collaboration.sql` | The two tables, RLS enabled + forced, four private helpers, three triggers, column-scoped grants, four policies, and eleven apply-time assertions in the MV-159 §13 / MV-182 §6 idiom. |
+| `tests/integration/stage4-document-collaboration.itest.ts` | 38 tests. The RLS suite, every denial paired with its positive. |
+| `tests/cases/document-collaboration-fence.test.ts` | 3 tests in the **default** lane (no database): the vault-index fence, the "this migration alters nothing in `documents`" fence, and the no-upsert fence. |
+| `supabase/rehearsal/MV-185-mutation.sql` | The 13-mutant harness. Listed in `supabase/rehearsal/README.md`. |
+| `lib/supabase/types.ts` | The two generated table types. |
+| `tests/integration/case-backfill.itest.ts` | One line: the "nothing else carries a `case_id`" census gains the two new names, deliberately, as its own comment requires. |
+
+No repository module, no route, no UI, no Storage — a `lib/` module with no caller is speculative
+code and the verbs it would expose are MV-190's to shape.
+
+### Gate
+
+- `npm run typecheck` — clean.
+- `npm run lint` — clean.
+- `npm test` — **376 files, 3601 tests, all pass** (exit 0).
+- `npm run test:integration` — **900 tests pass**, 15 of 16 files green. The one failure is
+  `stage2-data-equivalence.itest.ts`, which fails to **parse** (`SyntaxError`) on its
+  `scripts/stage2/capture-read-path-snapshot.mjs` shebang import — pre-existing, unrelated to
+  schema, and untouched by this branch. `case-backfill.itest.ts` is green after the census line.
+- Migration applied to the local stack and **re-applied**: idempotent, all eleven assertions pass.
+
+### How the two headline criteria were proven
+
+**Criterion 4 — status and derivation cannot disagree.** `private.document_request_derived_status`
+returns `'resolved'` / `'outstanding'` / **NULL**, and the NULL is load-bearing: a request with no
+versions is one the derivation does not speak for, which is what keeps MV-182's manual resolve
+alive for a document received by hand. Two AFTER INSERT triggers write the derived value in the
+same statement that inserts the version or review; a BEFORE UPDATE trigger on
+`case_document_requests` **refuses** (23514) a hand-written status that contradicts the derivation
+once versions exist. Pinned by four tests, including one that recomputes the derivation **in
+TypeScript** from raw rows over every request the file touched — a derivation checked against its
+own SQL would be a tautology.
+
+**Criterion 5 — no dependency on Stage 5.** The unclaimed-case walk asserts
+`student_user_id is null` first, then does request → version → review as the assigned counsellor
+and checks the request resolved. Nothing in the migration reads `cases.student_user_id`.
+
+### Mutation evidence — 13 mutants, each killing its named test
+
+Run: apply mutant → `npx vitest run --config vitest.integration.config.ts
+tests/integration/stage4-document-collaboration.itest.ts` → restore by re-running the migration.
+
+| Mutant | Tests red | The named test |
+|---|---|---|
+| `versions_select` | 7 | "the ASSIGNED counsellor sees their case's versions and reviews" |
+| `reviews_select` | 7 | "the LINKED STUDENT may read the versions … AND the reviews of them" |
+| `versions_staff` | 1 | "the LINKED STUDENT may NOT upload a counsellor-side version on their own case" |
+| `versions_org` | 1 | "a FORGED organization_id is refused even for an actor who may staff the case" |
+| `versions_parent` | 1 | "may NOT hang a version off ANOTHER case's request" |
+| `versions_pointer` | 1 | "may name THIS case's vault row, and may NOT name another case's" |
+| `versions_prov` | 1 | "a FORGED uploaded_by is refused — one counsellor cannot file for another" |
+| `reviews_staff` | 1 | "THE LINKED STUDENT MAY NOT REVIEW THEIR OWN FILE" |
+| `reviews_org` | 1 | "a FORGED organization_id on a review is refused even for staff" |
+| `reviews_parent` | 1 | "may NOT judge ANOTHER case's version" |
+| `reviews_prov` | 1 | "a FORGED reviewed_by is refused — one counsellor cannot judge in another's name" |
+| `sync` | 5 | "accepting the newest version resolves the request, and the MV-182 trigger dates it" |
+| `guard` | 3 | "REFUSES a hand-written status that contradicts the newest version" |
+
+Two findings the run itself produced, both worth carrying forward:
+
+1. **A crashed vitest worker reports as CLEAN.** `reviews_prov`'s first run showed zero failures —
+   and the log showed `Tests (38)`, `Duration 338ms`, `Worker exited unexpectedly`: **no test
+   ran at all.** Re-run on its own, it killed exactly its named test. A mutant that kills nothing
+   is a finding, never a pass; read the count before believing it. (Same family as the
+   `rls-negative-probes-are-inert` lesson, one level up.)
+2. **Two tests were bundling three assertions each**, so three different mutants named the same
+   test. Both were split, and the second run gives each mutant a distinct name — which is what
+   "read the failing test NAMES" actually requires.
+
+The three default-lane fence guards were each verified red by **planting the violation**: a
+`drop index … documents_case_kind_idx` + `alter table public.documents add column` appended to the
+migration (guards 1 and 2 went red), and a `lib/cases/mv185-plant.ts` calling
+`.from("case_document_versions").upsert(…)` (guard 3 went red). All three plants removed; the
+suite re-verified green and the local `documents` index re-confirmed present.
+
+### The census, the fence, and what did NOT change
+
+- `%_case` census still reads **27 policies on 9 tables** — asserted at apply time *and* in the
+  itest. The four new policies are `_select_actor` / `_insert_staff`, deliberately.
+- `documents_case_kind_idx` still exists, still UNIQUE, still FULL — asserted at apply time, in
+  the itest, and by a source scan over every migration in the default lane.
+- `documents` and `document_status` gained no column, policy, grant or index. The only reference
+  is the FK `case_document_versions.document_id -> documents(id) ON DELETE SET NULL`, which spec
+  §3 specifies.
+- MV-182's table gained exactly **one** trigger (`case_document_requests_status_guard`) and no
+  grant or policy change.
+
+### One decision the spec left open, taken here
+
+Spec §3 says a request is resolved when its newest version "has an accepted review". This file
+admits **several reviews per version** (a reviewer who rejects in error must be able to say so
+without waiting for a re-upload), so the derivation reads the **newest** review of the newest
+version rather than `exists(… 'accepted')`. Where a version carries one review the two readings
+are identical; where it carries several, only the newest is honest — accept-then-reject is a
+rejection, and `exists` would call it resolved forever. Pinned by
+"rejecting re-opens it, and a re-upload after a rejection re-opens it again".
+
+### Not done here, on purpose
+
+- **Production is not applied.** Master auto-deploys; migrations do not. After merge, apply via the
+  Supabase MCP `execute_sql` (**never** `apply_migration`, which stamps its own version and drifts
+  the ledger) and hand-stamp `supabase_migrations.schema_migrations` to `20260821120000`. Then
+  verify against the prod ledger rather than assuming — MV-182 was the third "merged but never
+  applied" gap in this project.
+- Storage, signed downloads and the three named-case routes are MV-190; the UI is MV-186.

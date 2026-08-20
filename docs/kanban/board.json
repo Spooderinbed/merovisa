@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-20",
+  "updated": "2026-08-21",
   "staleDays": 7,
   "columns": [
     {
@@ -2250,14 +2250,15 @@
     },
     {
       "id": "MV-185",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-185-collaboration-schema.md",
       "title": "Document collaboration schema: versions and reviews (Stage 4 slice 2)",
       "summary": "case_document_versions + case_document_reviews as additive tables BESIDE the vault, with RLS, column-scoped grants and MV-182's two forbidden-grant assertions. documents keeps UNIQUE (case_id, kind) — dropping the arbiter index would break every .upsert() on documents at plan time, so the plan's \"replacing the one-per-kind model\" is superseded by the spec. Request resolution is derived from the newest version's review, never a second source of truth. No Storage, no routes, no UI. Independent of Stage 5: an unclaimed case supports the whole walk.",
       "created": "2026-08-20",
-      "entered": "2026-08-20"
+      "entered": "2026-08-21",
+      "badge": "In review — PR open. Two additive tables beside the vault (RLS enabled+forced, column-scoped grants, no UPDATE grant at all, eleven apply-time assertions). Request resolution derived from the newest version’s newest review, with a guard trigger that refuses a contradicting hand-written status. 13 RLS mutants each killed their named test; 3 default-lane fence guards each verified red by planting the violation. documents untouched — documents_case_kind_idx kept."
     },
     {
       "id": "MV-190",

@@ -295,6 +295,132 @@ export type Database = {
           },
         ]
       }
+      case_document_reviews: {
+        Row: {
+          case_id: string
+          created_at: string
+          decision: string
+          id: string
+          note: string | null
+          organization_id: string
+          reviewed_by: string | null
+          version_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          note?: string | null
+          organization_id: string
+          reviewed_by?: string | null
+          version_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          note?: string | null
+          organization_id?: string
+          reviewed_by?: string | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_document_reviews_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_reviews_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "case_document_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_document_versions: {
+        Row: {
+          case_id: string
+          content_type: string | null
+          created_at: string
+          document_id: string | null
+          file_size: number
+          id: string
+          organization_id: string
+          original_name: string
+          request_id: string
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          case_id: string
+          content_type?: string | null
+          created_at?: string
+          document_id?: string | null
+          file_size: number
+          id?: string
+          organization_id: string
+          original_name: string
+          request_id: string
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          case_id?: string
+          content_type?: string | null
+          created_at?: string
+          document_id?: string | null
+          file_size?: number
+          id?: string
+          organization_id?: string
+          original_name?: string
+          request_id?: string
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_document_versions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_versions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "case_document_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           archived_at: string | null
