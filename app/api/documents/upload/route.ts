@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { DOCUMENT_KINDS, type DocumentKind } from "@/lib/documents/types";
-import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
-import { checkCasePermission } from "@/lib/cases/require-permission";
+import { resolveTargetCase, targetCaseResponse } from "@/lib/cases/target-case";
+import { caseObjectPath } from "@/lib/documents/case-object-path";
 import { getDocumentByKindForCase, upsertDocument } from "@/lib/documents/repo";
 import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSectionForCase } from "@/lib/profiles/repo";
@@ -62,17 +62,39 @@ export async function POST(request: Request): Promise<Response> {
   // because `documents` grants `authenticated` no INSERT — but the case check now
   // precedes it, which is what MV-157 §G requires of every retained entry.
   //
-  // NOTE the object path below stays OWNER-keyed. Case-aware Storage paths are
-  // Stage 4 (spec §8): a `<case_id>/…` object matches the live
-  // `(storage.foldername(name))[1] = auth.uid()::text` policy for NOBODY, so
-  // moving it here would force the Stage 4 policy rewrite into Stage 2 without
-  // its authorization model.
-  const caseId = await resolvePersonalCaseId(userId, supabase);
-  if (caseId === null) {
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
-  }
-  const { decision } = await checkCasePermission(userId, caseId, "case.update", supabase);
-  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // MV-190, spec F-8: the case is the one the caller NAMES when it names one, and
+  // the signed-in student's own otherwise. MV-157 §G already case-scoped this
+  // route; what it could not do was let a counsellor act on a STUDENT's case,
+  // because `resolvePersonalCaseId` only ever answers with the actor's own.
+  // `resolveTargetCase` AUTHORIZES a supplied id and never falls back to the
+  // personal case when one is supplied — a fallback is exactly what would land a
+  // mishandled id on the counsellor's own vault quietly.
+  //
+  // Read off the raw form rather than through a schema: this is multipart, so there
+  // is no JSON body for `requestedCaseId` to read. A present-but-malformed value is
+  // MALFORMED, not absent (400), for the reason `lib/cases/target-case.ts` gives.
+  const requestedCase = formData.get("caseId");
+  const target = await resolveTargetCase(userId, requestedCase ?? undefined, "case.update", supabase);
+  if (!target.ok) return targetCaseResponse(target, "Upload failed");
+  const { caseId } = target;
+
+  // WHICH FOLDER THE OBJECT LANDS IN, and why it turns on this and nothing else.
+  //
+  // `requestedCase === null` means no case was named, which means `resolveTargetCase`
+  // resolved the actor's own personal case. So an OWNER-KEYED object is, by
+  // construction, always in the actor's own folder and always on the actor's own
+  // case — today's invariant, preserved exactly, which is what keeps the student
+  // upload/view/delete suite green without touching its assertions.
+  //
+  // A NAMED case takes the `case/` prefix instead. Without that split, a counsellor
+  // uploading to a student's case would write the object into the COUNSELLOR's uid
+  // folder, where the live `(storage.foldername(name))[1] = auth.uid()::text` policy
+  // lets them read it DIRECTLY, forever, with no case check — outliving the
+  // assignment that justified it. This slice is what makes a counsellor upload
+  // possible at all, so this slice closes the hole it would otherwise open. A
+  // `case/` object matches that policy for nobody (spec §6.1); both the student and
+  // the counsellor reach it through the signed-URL path instead.
+  const caseKeyed = requestedCase !== null;
 
   let admin;
   try {
@@ -103,7 +125,9 @@ export async function POST(request: Request): Promise<Response> {
 
   const safeOriginalName = sanitizeFilename(file.name);
   const storageName = `${crypto.randomUUID()}.${extensionFor(file.type)}`;
-  const filePath = `${userId}/${docKind}/${storageName}`;
+  const filePath = caseKeyed
+    ? caseObjectPath(caseId, storageName)
+    : `${userId}/${docKind}/${storageName}`;
 
   // Fresh UUID path, so the replacement never collides with the object it
   // supersedes — the original bytes stay readable until the row is swapped.

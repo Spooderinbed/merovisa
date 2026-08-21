@@ -199,7 +199,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Storage administration (plan line 342): deletes a private Storage object and its row. The authenticated client cannot remove Storage objects under the current bucket policy.",
     requiredCaseCheck:
-      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client, THEN a `.eq(\"case_id\", caseId)` re-read that 404s, before Storage is touched. Deferred flip: removing the Storage object needs service-role under the current bucket policy; the row delete alone could move (documents grants authenticated DELETE), but splitting the two across clients buys nothing.",
+      "MV-190 (spec F-8): resolveTargetCase(actor, ?caseId=, 'case.update', authenticatedClient) THEN a `.eq(\"case_id\", caseId)` re-read that 404s, before Storage is touched. The case is the one the caller NAMES when it names one and the actor's own otherwise — MV-157 case-scoped this route, but resolvePersonalCaseId could only ever answer with the ACTOR's case, so a counsellor could not delete on a student's. A DELETE carries no body, so the id rides the query string; a present-but-malformed value is 400 and NEVER a fallback to the actor's own case, which is how a mishandled id would delete the counsellor's own document. Deferred flip: removing the Storage object needs service-role under the current bucket policy; the row delete alone could move (documents grants authenticated DELETE), but splitting the two across clients buys nothing.",
     auditEvent: null,
   },
   {
@@ -208,7 +208,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Storage administration (plan line 342): mints a short-lived signed URL for a private object.",
     requiredCaseCheck:
-      "MV-157: checkCasePermission(actor, caseId, 'case.read') BEFORE the signed URL is minted, then a `.eq(\"case_id\", caseId)` read of the path. Stage 4 owns the remaining half — per-document metadata authorization and the at-mint audit event (plan §\"Storage authorization\"). Object paths stay owner-keyed through Stages 2-3 by decision (spec §8).",
+      "MV-190 (spec F-8, §6): resolveTargetCase(actor, ?caseId=, 'case.read', authenticatedClient) BEFORE the `.eq(\"case_id\", caseId)` read, and then mintCaseScopedDownloadUrl — which performs checkCasePermission ITSELF before it reaches Storage. That second check is the design, not a duplicate: a signed URL bypasses Storage RLS by design and is an unauthenticated bearer of the bytes the instant it exists, so 'the caller authorized first' has to hold by CONSTRUCTION. The helper takes no already-authorized flag and no pre-made URL, so there is no ordering for a later edit to get wrong; tests assert the refusal ON THE MINT CALL (createSignedUrl never reached) rather than on a fetch 404. It also bounds the PATH to this case, which the permission check cannot do — that check is about the case and the signature is about the key. TTL is SIGNED_DOWNLOAD_TTL_SECONDS = 60, asserted as a number. The at-mint AUDIT EVENT is still owed (plan §\"Storage authorization\"). Object paths stay owner-keyed for the actor's own personal case; a NAMED case writes under `case/<case_id>/…` (spec §6.1).",
     auditEvent: null,
   },
   {
@@ -217,7 +217,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Storage administration (plan line 342): uploads to the private bucket and cleans up the replaced object on the unique (case_id, kind) index. Deferred flip: `documents` grants `authenticated` no INSERT and its only INSERT policy is service_role-scoped (spec §4.5), so the row write cannot move either.",
     requiredCaseCheck:
-      "MV-157: resolvePersonalCaseId + checkCasePermission(actor, caseId, 'case.update') on the AUTHENTICATED client before any Storage call. The document ROW is case-keyed; the Storage OBJECT PATH stays owner-keyed until Stage 4 (spec §8) — a `<case_id>/…` object matches the live storage policy for nobody.",
+      "MV-190 (spec F-8, §6): resolveTargetCase(actor, form field `caseId`, 'case.update', authenticatedClient) before any Storage call. Multipart, so the id is read off the raw form rather than through requestedCaseId; a present-but-malformed value is 400 and never a fallback to the actor's own case. THE OBJECT PATH NOW FORKS, and the fork turns on whether a case was NAMED and nothing else: no case named means resolveTargetCase resolved the ACTOR's personal case, so an owner-keyed `<uid>/<kind>/<uuid>.<ext>` object is by construction always in the actor's own folder on the actor's own case (Stage 2's invariant, preserved exactly). A NAMED case writes `case/<case_id>/<uuid>.<ext>` instead — otherwise a counsellor uploading to a student's case would write into the COUNSELLOR's uid folder, where the live `(storage.foldername(name))[1] = auth.uid()::text` policy lets them read it directly and forever, outliving the assignment. A `case/` object matches that policy for nobody (spec §6.1); both parties reach it through mintCaseScopedDownloadUrl.",
     auditEvent: null,
   },
   /**

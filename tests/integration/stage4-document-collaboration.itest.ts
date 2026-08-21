@@ -258,13 +258,23 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-185 Stage 4 document collab
         where grantee = 'authenticated' and table_schema = 'public'
           and table_name = '${VERSIONS}' and privilege_type = 'INSERT' order by 1;
       `);
-      // `id` and `created_at` are absent on purpose: an id the client chose is not a key the
-      // server issued, and `created_at` is the server's account of when the file arrived.
+      // `created_at` is absent on purpose: it is the server's account of when the file arrived,
+      // not the client's claim about it.
+      //
+      // `id` WAS absent for the same family of reason — "an id the client chose is not a key the
+      // server issued" — and MV-190 granted it, for a reason about failure ordering that outweighs
+      // the default (spec §6.2). The object is `case/<case_id>/<version_id>`, so without the grant
+      // the path is unknowable until the row exists, forcing INSERT -> UPLOAD; a failed upload then
+      // strands a version row pointing at bytes that do not exist, with NO DELETE GRANT to retract
+      // it. With the grant the order inverts to UPLOAD -> INSERT, where a failed upload writes no
+      // row at all. `tests/integration/stage4-case-storage.itest.ts` pins the ten-column list and
+      // the CHECK constraint that stops a client-named path from leaving its own case.
       expect(insertV).toEqual([
         "case_id",
         "content_type",
         "document_id",
         "file_size",
+        "id",
         "organization_id",
         "original_name",
         "request_id",

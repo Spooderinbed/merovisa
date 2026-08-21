@@ -2250,7 +2250,7 @@
     },
     {
       "id": "MV-185",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-185-collaboration-schema.md",
@@ -2258,18 +2258,20 @@
       "summary": "case_document_versions + case_document_reviews as additive tables BESIDE the vault, with RLS, column-scoped grants and MV-182's two forbidden-grant assertions. documents keeps UNIQUE (case_id, kind) — dropping the arbiter index would break every .upsert() on documents at plan time, so the plan's \"replacing the one-per-kind model\" is superseded by the spec. Request resolution is derived from the newest version's review, never a second source of truth. No Storage, no routes, no UI. Independent of Stage 5: an unclaimed case supports the whole walk.",
       "created": "2026-08-20",
       "entered": "2026-08-21",
-      "badge": "In review — PR open. Two additive tables beside the vault (RLS enabled+forced, column-scoped grants, no UPDATE grant at all, eleven apply-time assertions). Request resolution derived from the newest version’s newest review, with a guard trigger that refuses a contradicting hand-written status. 13 RLS mutants each killed their named test; 3 default-lane fence guards each verified red by planting the violation. documents untouched — documents_case_kind_idx kept."
+      "badge": "Done — merged to master 2026-08-21 (PR #152, merge b57af21) and applied to production. Two additive tables beside the vault (RLS enabled+forced, column-scoped grants, no UPDATE grant at all, eleven apply-time assertions). Request resolution derived from the newest version’s newest review, with a guard trigger that refuses a contradicting hand-written status. 13 RLS mutants each killed their named test; 3 default-lane fence guards each verified red by planting the violation. documents untouched — documents_case_kind_idx kept.",
+      "done": "2026-08-21"
     },
     {
       "id": "MV-190",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-190-case-storage-and-downloads.md",
       "title": "Case-scoped Storage and signed downloads (Stage 4 slice 3)",
       "summary": "The second half of the 5B split, sequenced after MV-185 and before MV-186 (the number is higher only because the plan reserved MV-186-189). Adds the case/<case_id>/<version_id> prefix and its storage.objects policy, a short-TTL signed-download helper authorized BEFORE the URL is minted, and makes the three document routes accept a NAMED case id. Corrects the plan: the routes are already case-scoped (MV-157 §G) — the real gap is that all three resolve the ACTOR'S OWN case, which is F-8. Existing owner-keyed vault objects are deliberately not migrated.",
       "created": "2026-08-20",
-      "entered": "2026-08-20"
+      "entered": "2026-08-21",
+      "badge": "In review — PR open. Spec §6 first: measurement overturned BOTH of the card's data premises. (A) NO storage.objects policy — the bucket already denies `case/` to every client (foldername[1] is the literal `case`, no uid) and all writes are service_role, so a SELECT policy would be a second and weaker path to bytes only an authorized mint reaches; the absence is defended by a denial test WITH A CONTROL, an ADDITIVE mutant that plants the declined policy, and an apply-time guard. (B) `id` joins the versions INSERT grant — decided by write ORDERING, since without it a failed upload strands a version row with no DELETE grant to retract it — plus the CHECK on storage_path that MV-185 deferred here, a table constraint so it binds service_role too. Measured correction: MV-185 §8 (4) does NOT fail MV-190 at apply time; what DOES happen is that re-running MV-185 alone silently reverts the grant (its §6 revokes all first), so both harnesses now name a two-file restore. 6 mutants each killed distinct NAMED tests (20 collected, 0 worker crashes); 11 apply-time guards and 5 code guards each falsified. Migration NOT yet applied to production."
     }
   ]
 }
