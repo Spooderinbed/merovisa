@@ -25,6 +25,64 @@ const CASE_A = "11111111-1111-4111-8111-111111111111";
 const CASE_B = "22222222-2222-4222-8222-222222222222";
 const VERSION = "33333333-3333-4333-8333-333333333333";
 
+/**
+ * Every fixture above is lowercase, which is exactly how this defect survived review: `z.uuid()`
+ * accepts `A1B2…` as readily as `a1b2…`, and `resolveTargetCase` hands the caller's string on
+ * verbatim. A non-canonical `?caseId=` therefore reached `caseObjectPath` unaltered and got baked
+ * into a PERSISTED Storage key, while `documents.case_id` stored the same id lowercase — after
+ * which the byte-exact `isOwnCaseObjectPath` could never match it again and the only supported
+ * download path answered 500, blaming our own stored row.
+ */
+describe("a non-canonical case id is canonicalised, because the key is persisted", () => {
+  // HEX LETTERS ARE THE POINT. The fixtures above are all digits, so `.toUpperCase()` on them is a
+  // no-op and every assertion here would pass against the unfixed code — the first draft of this
+  // block did exactly that. A test for casing needs an id that can BE cased.
+  const HEX_A = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const HEX_B = "ffffffff-eeee-4ddd-8ccc-bbbbbbbbbbbb";
+
+  it("is a fixture that can actually express casing", () => {
+    expect(HEX_A.toUpperCase()).not.toBe(HEX_A);
+    expect(CASE_A.toUpperCase()).toBe(CASE_A); // why the shared fixtures cannot be used here
+  });
+
+  it("builds the same key whether the caller shouts the uuid or not", () => {
+    expect(caseObjectPath(HEX_A.toUpperCase(), "f.png")).toBe(caseObjectPath(HEX_A, "f.png"));
+    expect(caseObjectPath(HEX_A.toUpperCase(), "f.png")).toBe(
+      `${CASE_OBJECT_PREFIX}/${HEX_A}/f.png`,
+    );
+  });
+
+  it("round-trips: a key written from an UPPERCASE id is still readable via the lowercase one", () => {
+    // The write and the read arriving in different casings is the whole failure mode.
+    const written = caseObjectPath(HEX_A.toUpperCase(), "f.png");
+    expect(isOwnCaseObjectPath(HEX_A, written)).toBe(true);
+    expect(isOwnCaseObjectPath(HEX_A.toUpperCase(), written)).toBe(true);
+  });
+
+  it("admits a legacy key that was already written uppercase, rather than locking the file away", () => {
+    const legacy = `${CASE_OBJECT_PREFIX}/${HEX_A.toUpperCase()}/f.png`;
+    expect(isOwnCaseObjectPath(HEX_A, legacy)).toBe(true);
+  });
+
+  it("still refuses ANOTHER case in either casing — folding must not widen the bound", () => {
+    const foreign = caseObjectPath(HEX_B, "f.png");
+    expect(isOwnCaseObjectPath(HEX_A, foreign)).toBe(false);
+    expect(isOwnCaseObjectPath(HEX_A.toUpperCase(), foreign)).toBe(false);
+    expect(isOwnCaseObjectPath(HEX_A, `${CASE_OBJECT_PREFIX}/${HEX_B.toUpperCase()}/f.png`)).toBe(
+      false,
+    );
+    // And the bare case segment with nothing after it is still not a file.
+    expect(isOwnCaseObjectPath(HEX_A, `${CASE_OBJECT_PREFIX}/${HEX_A.toUpperCase()}/`)).toBe(false);
+  });
+
+  it("keeps the CHECK constraint satisfiable: the case segment matches case_id::text exactly", () => {
+    // Postgres renders `uuid::text` lowercase, so the DB floor
+    // (`storage_path like 'case/' || case_id::text || '/%'`) only admits a lowercase segment.
+    const key = caseObjectPath(HEX_A.toUpperCase(), "f.png");
+    expect(key.split("/")[1]).toBe(HEX_A);
+  });
+});
+
 describe("caseVersionObjectPath", () => {
   it("builds exactly `case/<case_id>/<version_id>`", () => {
     // The spec documents this string. A test that rebuilt it by template would agree with any

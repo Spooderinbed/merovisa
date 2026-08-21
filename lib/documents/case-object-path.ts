@@ -55,7 +55,14 @@ export function caseObjectPath(caseId: string, objectName: string): string {
   if (objectName.length === 0 || objectName.includes("/")) {
     throw new Error(`caseObjectPath: malformed object name ${JSON.stringify(objectName)}`);
   }
-  return `${CASE_OBJECT_PREFIX}/${caseId}/${objectName}`;
+  // CANONICAL, because this string is PERSISTED and a Storage key is compared as bytes.
+  // `isWellFormedId` is `z.uuid()`, which accepts `A1B2…` as readily as `a1b2…`, and nothing
+  // upstream normalises: `resolveTargetCase` returns the caller's string verbatim. Postgres, by
+  // contrast, stores `uuid` lowercase — so an uppercase `?caseId=` would write the bytes under
+  // `case/<UPPER>/…` while the row beside them said `<lower>`, and the two would never meet again.
+  // Lowercasing here is also what the DB floor already expects: the
+  // `case_document_versions_storage_path_case_prefix` CHECK renders `case_id::text` lowercase.
+  return `${CASE_OBJECT_PREFIX}/${caseId.toLowerCase()}/${objectName}`;
 }
 
 /**
@@ -104,6 +111,10 @@ export function isOwnCaseObjectPath(caseId: string, storagePath: string): boolea
   if (storagePath.split("/").includes("..")) return false;
   if (!isCaseScopedObjectPath(storagePath)) return true;
   // The trailing separator is the boundary: without it `case/<id>` also matches `case/<id>extra/…`.
-  const own = `${CASE_OBJECT_PREFIX}/${caseId}/`;
-  return storagePath.startsWith(own) && storagePath.length > own.length;
+  // Compared case-INSENSITIVELY on the same reasoning as `caseObjectPath`: a uuid's hex is the same
+  // id in either casing, so a key written before that normalisation existed is still THIS case's
+  // key, and refusing it would lock a file away rather than protect anything. The comparison is a
+  // prefix test only, so folding the whole probe cannot widen what counts as "inside the case".
+  const own = `${CASE_OBJECT_PREFIX}/${caseId.toLowerCase()}/`;
+  return storagePath.toLowerCase().startsWith(own) && storagePath.length > own.length;
 }
