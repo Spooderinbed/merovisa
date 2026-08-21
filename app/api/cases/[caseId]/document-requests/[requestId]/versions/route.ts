@@ -11,6 +11,7 @@ import { caseVersionObjectPath } from "@/lib/documents/case-object-path";
 import { MAX_UPLOAD_BYTES, ALLOWED_UPLOAD_TYPES } from "@/lib/documents/upload-limits";
 import { sanitizeFilename, verifyFileMagic } from "@/lib/documents/upload-validation";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
+import { writeAuditEvent } from "@/lib/audit/write-audit-event";
 
 /**
  * MV-186 — a file ARRIVES against a request. The writer MV-190 deliberately stopped short of.
@@ -84,7 +85,7 @@ export async function POST(
   // never reach its own gate. (b) The body here is an upload of up to 5MB: buffering it for
   // somebody who may not act on this case is work done on behalf of a request we are about to
   // refuse.
-  const { decision } = await checkCasePermission(
+  const { decision, context } = await checkCasePermission(
     actorUserId,
     caseId,
     "case.documents.request",
@@ -177,6 +178,37 @@ export async function POST(
   );
 
   if (result.ok) {
+    // MV-189 (spec §8.2, D12): audit after the row commits — the version genuinely exists
+    // by here, so `document.version_uploaded` records a fact. Fail-closed: a failure is a
+    // 500 rather than a 201, so no caller is told the upload landed without an audit row.
+    //
+    // The object is deliberately NOT removed on an audit failure. The compensating delete
+    // below exists for a failed ROW write, where the object would reference nothing; here
+    // the row exists and is valid, and destroying a version the student successfully
+    // uploaded because our logging failed would be the worse outcome.
+    try {
+      await writeAuditEvent(admin, {
+        actorUserId,
+        organizationId: context.organizationId ?? null,
+        caseId,
+        action: "document.version_uploaded",
+        entityType: "case_document_version",
+        entityId: versionId,
+        // D13: `sanitizeFilename(file.name)` is written to the ROW three lines above and is
+        // deliberately NOT written here. That is the whole trap — the version's
+        // `original_name` is user-supplied and routinely carries the student's own name.
+        metadata: {
+          request_id: requestId,
+          version_id: versionId,
+          mime_type: file.type,
+          byte_size: file.size,
+        },
+      });
+    } catch {
+      console.error("[case-documents] audit write failed", { versionId, caseId });
+      return NextResponse.json({ error: "Could not record the upload" }, { status: 500 });
+    }
+
     // `case_document_requests.status` is NOT written here. `private.sync_document_request_status`
     // fired inside the insert above, and `guard_document_request_status` would refuse any
     // contradicting hand-written value with a `23514`. Derived, never a second source of truth.

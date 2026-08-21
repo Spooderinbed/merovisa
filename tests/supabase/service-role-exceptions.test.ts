@@ -516,12 +516,51 @@ describe("registry hygiene", () => {
     }
   });
 
-  test("no Stage-1 entry claims to be emitting an audit event yet", () => {
-    // MV-150 shipped private.write_audit_event with EXECUTE revoked, so nothing
-    // can emit one until MV-152's grant review. A non-null value here would be a
-    // claim the database cannot honour.
+  /**
+   * MV-189 REPLACED a test here, and the replacement is a considered change rather than a
+   * failing assertion quietly deleted.
+   *
+   * It used to read "no Stage-1 entry claims to be emitting an audit event yet", and its
+   * stated reason was that `private.write_audit_event` had EXECUTE revoked "until MV-152's
+   * grant review". Both halves went stale: MV-152 shipped and deliberately granted no
+   * EXECUTE, and the premise underneath — that a GRANT was the blocker — turned out to be
+   * false. `private` is not an exposed PostgREST schema, so even with EXECUTE granted to
+   * `service_role` the function answers `404 PGRST202`. The write was always going to be a
+   * direct INSERT on the service-role client, which is the mechanism MV-152's own migration
+   * wrote down (`20260730180000:750-753`). Spec §8.1, D11.
+   *
+   * So the old test pinned "nothing is audited" as though it were a database constraint,
+   * when it was really a description of unfinished work. The three below pin what is now
+   * true, and the last keeps the fence: an entry cannot quietly start or stop claiming an
+   * audit event without a reviewer seeing the count move.
+   */
+  test("exactly the five document-access paths emit an audit event", () => {
+    const wired = SERVICE_ROLE_EXCEPTIONS.filter((entry) => entry.auditEvent !== null).map(
+      (entry) => entry.path,
+    );
+    expect([...wired].sort()).toEqual(
+      [
+        "app/api/cases/[caseId]/document-requests/[requestId]/versions/route.ts",
+        "app/api/cases/[caseId]/document-versions/[versionId]/download/route.ts",
+        "app/api/documents/[id]/route.ts",
+        "app/api/documents/[id]/view/route.ts",
+        "app/api/documents/upload/route.ts",
+      ].sort(),
+    );
+  });
+
+  test("every emitted action is dotted, past-tense and noun-first", () => {
     for (const entry of SERVICE_ROLE_EXCEPTIONS) {
-      expect(entry.auditEvent, entry.path).toBeNull();
+      if (entry.auditEvent === null) continue;
+      expect(entry.auditEvent, entry.path).toMatch(/^[a-z]+\.[a-z_]+$/);
     }
+  });
+
+  test("the remaining thirteen entries stay null — Stage 6's scope, not Stage 4's", () => {
+    // A `null` still means "this path performs no case-scoped DOCUMENT access", and still
+    // never means "auditing was skipped". If this number moves, either a path was wired
+    // (say so on the card) or one was added without being audited (a finding).
+    const unwired = SERVICE_ROLE_EXCEPTIONS.filter((entry) => entry.auditEvent === null);
+    expect(unwired).toHaveLength(13);
   });
 });

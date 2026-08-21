@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { resolveTargetCase, targetCaseResponse } from "@/lib/cases/target-case";
 import { caseDenialResponse } from "@/lib/cases/route-denial";
 import { mintCaseScopedDownloadUrl } from "@/lib/documents/signed-download";
+import { writeAuditEvent } from "@/lib/audit/write-audit-event";
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -50,7 +51,7 @@ export async function GET(
     }
     return targetCaseResponse(target, "Not found");
   }
-  const { caseId } = target;
+  const { caseId, organizationId } = target;
 
   // User-scoped client respects RLS; the case_id filter is what selects the row.
   const { data: doc } = await supabase
@@ -72,6 +73,33 @@ export async function GET(
   // path. It also bounds the PATH to this case, which the check above cannot do:
   // `checkCasePermission` answers about the case, and the signature is about the key.
   const admin = createSupabaseAdminClient();
+
+  // MV-189 (spec §8.2, D12): THE AUDIT ROW LANDS BEFORE THE MINT, and the order is the
+  // decision rather than a stylistic one. A signed URL is an unauthenticated bearer of
+  // the bytes the instant it exists, so minting first and auditing after would mean that
+  // on an audit failure the URL already exists and the bytes are already reachable —
+  // the guarantee lost in exactly the case it was written for. Auditing first makes
+  // "no unaudited URL is ever minted" true by construction.
+  //
+  // It is not caught. The plan requires that an authorized sensitive read and its audit
+  // row "cannot be separated" (line 504), so a failure here is a 500 and no URL.
+  // `writeAuditEvent` throws; the route-level handler turns that into the 500.
+  try {
+    await writeAuditEvent(admin, {
+      actorUserId,
+      organizationId,
+      caseId,
+      action: "document.viewed",
+      entityType: "document",
+      entityId: id,
+      // D13: no `original_name`, no `file_path`. `entity_id` already carries the identity.
+      metadata: { document_id: id },
+    });
+  } catch {
+    console.error("[documents/view] audit write failed; refusing to mint", { id, caseId });
+    return NextResponse.json({ error: "Could not sign URL" }, { status: 500 });
+  }
+
   const signed = await mintCaseScopedDownloadUrl({
     actorUserId,
     caseId,

@@ -114,6 +114,20 @@ vi.mock("@/lib/documents/signed-download", async () => {
 const { checkRateLimit } = vi.hoisted(() => ({ checkRateLimit: vi.fn() }));
 vi.mock("@/lib/rate-limit/upstash", () => ({ checkRateLimit }));
 
+// MV-189 — the audit write is DOUBLED here on purpose. Its own behaviour is proven in
+// tests/audit/write-audit-event.test.ts, and the routes' fail-closed wiring in
+// tests/api/document-access-audit.test.ts. This suite is about the three collaboration routes and their ORDERING, and the real
+// writer would need an admin client with a working `.from("audit_events").insert()` that
+// this fixture deliberately does not build. importActual is spread so the action union and
+// the metadata allow-list stay REAL — only the write is stubbed.
+const { writeAuditEvent } = vi.hoisted(() => ({ writeAuditEvent: vi.fn(async () => {}) }));
+vi.mock("@/lib/audit/write-audit-event", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/audit/write-audit-event")>(
+    "@/lib/audit/write-audit-event",
+  );
+  return { ...actual, writeAuditEvent };
+});
+
 import { POST as versionPost } from "@/app/api/cases/[caseId]/document-requests/[requestId]/versions/route";
 import { POST as reviewPost } from "@/app/api/cases/[caseId]/document-versions/[versionId]/reviews/route";
 import { GET as downloadGet } from "@/app/api/cases/[caseId]/document-versions/[versionId]/download/route";
