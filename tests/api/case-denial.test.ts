@@ -108,6 +108,9 @@ import { PUT as caseAssignmentPut } from "@/app/api/cases/[caseId]/assignment/ro
 import { POST as caseAssessPost } from "@/app/api/cases/[caseId]/assess/route";
 import { POST as documentRequestPost } from "@/app/api/cases/[caseId]/document-requests/route";
 import { PATCH as documentRequestPatch } from "@/app/api/cases/[caseId]/document-requests/[requestId]/route";
+import { POST as documentVersionPost } from "@/app/api/cases/[caseId]/document-requests/[requestId]/versions/route";
+import { POST as documentReviewPost } from "@/app/api/cases/[caseId]/document-versions/[versionId]/reviews/route";
+import { GET as documentDownloadGet } from "@/app/api/cases/[caseId]/document-versions/[versionId]/download/route";
 
 const ACTOR = "11111111-1111-1111-1111-111111111111";
 /** A real v4 UUID — `z.uuid()` checks the version nibble, so `2222…` 422s. */
@@ -393,6 +396,48 @@ const ROUTES: ReadonlyArray<{
           status: "resolved",
         }),
         { params: Promise.resolve({ caseId: UUID, requestId: UUID }) },
+      ),
+    denyStatus: 403,
+    noCaseStatus: null,
+  },
+  {
+    // MV-186. Multipart, but the DENIAL path never reads the body: the case check sits above
+    // `formData()` precisely so a denied caller is refused before we buffer up to 5MB on
+    // their behalf — and so this row can hand it any Request at all.
+    name: "POST /api/cases/[caseId]/document-requests/[requestId]/versions (MV-186)",
+    file: "app/api/cases/[caseId]/document-requests/[requestId]/versions/route.ts",
+    call: () =>
+      documentVersionPost(
+        json(`http://localhost/api/cases/${UUID}/document-requests/${UUID}/versions`, "POST", {}),
+        { params: Promise.resolve({ caseId: UUID, requestId: UUID }) },
+      ),
+    denyStatus: 403,
+    noCaseStatus: null,
+  },
+  {
+    name: "POST /api/cases/[caseId]/document-versions/[versionId]/reviews (MV-186)",
+    file: "app/api/cases/[caseId]/document-versions/[versionId]/reviews/route.ts",
+    call: () =>
+      documentReviewPost(
+        json(`http://localhost/api/cases/${UUID}/document-versions/${UUID}/reviews`, "POST", {
+          decision: "accepted",
+        }),
+        { params: Promise.resolve({ caseId: UUID, versionId: UUID }) },
+      ),
+    denyStatus: 403,
+    noCaseStatus: null,
+  },
+  {
+    // The READ half, gated on `case.read` rather than the write claim — deliberately, because
+    // that is what lets the linked student open the file on their own case (spec §7.2, D7).
+    // A denial must still mint NOTHING: a signed URL is an unauthenticated bearer of the bytes
+    // the instant it exists.
+    name: "GET /api/cases/[caseId]/document-versions/[versionId]/download (MV-186)",
+    file: "app/api/cases/[caseId]/document-versions/[versionId]/download/route.ts",
+    call: () =>
+      documentDownloadGet(
+        new Request(`http://localhost/api/cases/${UUID}/document-versions/${UUID}/download`),
+        { params: Promise.resolve({ caseId: UUID, versionId: UUID }) },
       ),
     denyStatus: 403,
     noCaseStatus: null,

@@ -9,9 +9,11 @@
 
 ### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-21 07:17 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-21 08:13 UTC. **Not board state** — never written to board.json.
 
 _No open PRs._
+
+> ⚠️ MV-186 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 18
@@ -39,13 +41,13 @@ _No open PRs._
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-186** · P1 · [Document collaboration UI: upload, version history, review verbs (Stage 4 slice 4, PR 5C)](cards/MV-186-collaboration-ui.md) — _Closes the Stage 4 loop: MV-182 could ask for a document, MV-185 gave a file a row, MV-190 gave it a path — nothing could still RECEIVE or JUDGE one. Ships the pure five-state derivation, two write routes (a version against a request; a review on a version), one read route (a signed download per version), and the Documents page UI. Carries the spec §7 pass: case_document_requests.status is LOSSY — three human states collapse into `outstanding` (nothing arrived / awaiting OUR review / rejected) and two into `resolved` (accepted, or marked received by hand), so a page built on the column alone points the chase at the wrong person. Status is never written by this slice; the after-insert triggers write it and a guard trigger refuses a contradicting hand-written value. NO MIGRATION — the schema is already live in production. Both tables stay append-only: no delete-a-version and no edit-a-review control. Also corrects MV-183's lodgement scope note, which claimed "nothing here has been checked or approved" — now false in one direction, and corrected without letting the panel claim it can tell an accepted file from one received by hand._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-186** · P1 · [Document collaboration UI: upload, version history, review verbs (Stage 4 slice 4, PR 5C)](cards/MV-186-collaboration-ui.md) — _Closes the Stage 4 loop: MV-182 could ask for a document, MV-185 gave a file a row, MV-190 gave it a path — nothing could still RECEIVE or JUDGE one. Ships the pure five-state derivation, two write routes (a version against a request; a review on a version), one read route (a signed download per version), and the Documents page UI. Carries the spec §7 pass: case_document_requests.status is LOSSY — three human states collapse into `outstanding` (nothing arrived / awaiting OUR review / rejected) and two into `resolved` (accepted, or marked received by hand), so a page built on the column alone points the chase at the wrong person. Status is never written by this slice; the after-insert triggers write it and a guard trigger refuses a contradicting hand-written value. NO MIGRATION — the schema is already live in production. Both tables stay append-only: no delete-a-version and no edit-a-review control. Also corrects MV-183's lodgement scope note, which claimed "nothing here has been checked or approved" — now false in one direction, and corrected without letting the panel claim it can tell an accepted file from one received by hand._
 
 ## Blocked — 3
 

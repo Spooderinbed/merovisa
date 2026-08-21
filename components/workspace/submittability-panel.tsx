@@ -10,14 +10,30 @@ import { LODGEMENT_WORD, type LodgementRead, type LodgementState } from "@/lib/c
  *
  * It reads `case_document_requests` and nothing else, so it may say only what
  * document requests know. Zero outstanding requests means nothing the consultancy
- * ASKED FOR is outstanding — it does not mean the case can be lodged. No document
- * has been verified by anyone (Stage 4 slice 1 shipped a chase list, not a review
- * model) and nothing in the schema knows which documents this case actually needs.
+ * ASKED FOR is outstanding — it does not mean the case can be lodged, because
+ * nothing in the schema knows which documents this case actually needs.
  *
- * That is why the reassuring word is "Nothing outstanding" rather than "Ready to
- * lodge", and why `SCOPE_NOTE` is rendered in every settled state rather than only
- * the good one: a reader who takes the word at face value should meet its limit in
- * the same glance. `lib/cases/lodgement.ts` carries the full reasoning.
+ * ## What MV-186 changed here, and what it deliberately did not
+ *
+ * Until MV-186 the note said "Nothing here has been checked or approved", and that was
+ * true: Stage 4 slice 1 shipped a chase list with no review model behind it. Reviews
+ * now exist, so a `resolved` request MAY be one whose file a counsellor accepted —
+ * and the old sentence became false in one direction.
+ *
+ * **The correction does not swing the other way, for a mechanical reason.** This panel
+ * reads requests and NOTHING else: `readCaseLodgement` -> `listCaseDocumentRequests`
+ * -> `deriveLodgement`, and it never loads a version or a review. So from
+ * `status = 'resolved'` alone it cannot tell an accepted file from a request a
+ * counsellor marked received BY HAND with no file at all — MV-182's manual verb is
+ * still live and `private.document_request_derived_status` deliberately abstains on
+ * it. "Every document has been checked" is therefore not a sentence this panel is
+ * entitled to, and the note now says exactly which two things `resolved` can mean and
+ * that the panel cannot tell them apart. The Documents page CAN (spec §7.1, D6), which
+ * is what the link at the foot is for.
+ *
+ * The state words do not move. A rejected file derives `outstanding`, so `clear` still
+ * means every request resolved, and the reassuring word stays "Nothing outstanding"
+ * rather than "Ready to lodge". `lib/cases/lodgement.ts` carries the full reasoning.
  *
  * ## No completion percentage, count-of-total, or progress bar
  *
@@ -51,12 +67,16 @@ const TONE: Record<LodgementState, string> = {
 };
 
 /**
- * The limit of the read, stated wherever the read is stated. Two clauses, and both
- * are load bearing: nobody has checked the documents, and nobody knows whether the
- * list is complete.
+ * The limit of the read, stated wherever the read is stated. Two clauses, and both are
+ * load bearing: a `resolved` request has two possible meanings and this panel cannot
+ * tell them apart, and nobody knows whether the list is complete.
+ *
+ * The second clause survives MV-186 unchanged in meaning, because nothing about reviews
+ * gave Stage 4 a truthful DENOMINATOR — spec §3's ban on a percentage, an "x of y" and a
+ * progress bar stands, and its three tests are untouched.
  */
 const SCOPE_NOTE =
-  "Read from document requests only. Nothing here has been checked or approved, and the list is only as complete as the requests on it.";
+  "Read from document requests only. A resolved request means a file was accepted or a counsellor marked it received by hand, and this panel does not say which; the list is only as complete as the requests on it.";
 
 export function SubmittabilityPanel({ read, base }: { read: LodgementRead; base: string }) {
   return (

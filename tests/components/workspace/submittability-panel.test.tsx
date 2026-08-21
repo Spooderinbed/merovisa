@@ -50,7 +50,15 @@ describe("SubmittabilityPanel — the label and the word", () => {
 
   // Word boundaries, so the panel's own "Lodgement" label and heading do not trip a
   // scan for the claim "lodge"/"lodged", and "already" does not read as "ready".
-  const CLAIM = /\bready\b|\bverified\b|\bapproved\b|\bsubmittable\b|\blodged?\b/i;
+  //
+  // MV-186 ADDED `checked` and `reviewed`. Reviews now exist, so those are words the
+  // panel could newly be tempted into — and it still may not use them: it reads
+  // `case_document_requests` and nothing else, so it cannot tell an accepted file from
+  // a request marked received by hand. `\bchecked\b` and not `check`, because the
+  // outage line legitimately says "We couldn't CHECK this case's document requests",
+  // which is a statement about the read failing and not a claim about a document.
+  const CLAIM =
+    /\bready\b|\bverified\b|\bapproved\b|\bsubmittable\b|\blodged?\b|\bchecked\b|\breviewed\b/i;
 
   it("never claims the case is ready, verified, approved or submittable — anywhere it speaks", () => {
     for (const read of [
@@ -76,12 +84,28 @@ describe("SubmittabilityPanel — the label and the word", () => {
   });
 
   it("pins the scope note verbatim — the one line the claim scan cannot check", () => {
+    // MV-186 REPLACED this string, deliberately and not to make anything pass. The old
+    // note said "Nothing here has been checked or approved", which became FALSE in one
+    // direction the moment reviews shipped: a resolved request may be one whose file a
+    // counsellor accepted. The replacement corrects that WITHOUT letting the panel claim
+    // more than it reads — it says which two things `resolved` can mean and that this
+    // panel cannot tell which, because it never loads a version or a review.
     renderPanel({ state: "clear" });
     expect(
       screen.getByText(
-        "Read from document requests only. Nothing here has been checked or approved, and the list is only as complete as the requests on it.",
+        "Read from document requests only. A resolved request means a file was accepted or a counsellor marked it received by hand, and this panel does not say which; the list is only as complete as the requests on it.",
       ),
     ).toBeTruthy();
+  });
+
+  it("does NOT claim it can tell an accepted file from one marked received by hand", () => {
+    // The over-claim this slice had to avoid. `readCaseLodgement` reads
+    // `case_document_requests` alone, so both meanings of `resolved` arrive here as the
+    // same value; a panel that named only the flattering one would be MV-144 again.
+    renderPanel({ state: "clear" });
+    const note = document.querySelector("[data-lodgement-scope]")?.textContent ?? "";
+    expect(note).toMatch(/received by hand/i);
+    expect(note).toMatch(/does not say which/i);
   });
 
   it("states the limit of the read in every settled state, not only the reassuring one", () => {
@@ -94,7 +118,10 @@ describe("SubmittabilityPanel — the label and the word", () => {
       { state: "none-outstanding" } as const,
     ]) {
       const { unmount } = renderPanel(read);
-      expect(screen.getByText(/nothing here has been checked or approved/i)).toBeTruthy();
+      // Both clauses, in every settled state. The first moved in MV-186 (a resolved
+      // request has two meanings and this panel cannot tell them apart); the second is
+      // MV-183's, unchanged, because reviews gave Stage 4 no truthful denominator.
+      expect(screen.getByText(/this panel does not say which/i)).toBeTruthy();
       expect(screen.getByText(/only as complete as the requests on it/i)).toBeTruthy();
       unmount();
     }

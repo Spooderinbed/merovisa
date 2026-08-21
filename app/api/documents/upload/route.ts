@@ -10,14 +10,16 @@ import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSectionForCase } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
+import { MAX_UPLOAD_BYTES, ALLOWED_UPLOAD_TYPES } from "@/lib/documents/upload-limits";
 import {
   sanitizeFilename,
   verifyFileMagic,
   extensionFor,
 } from "@/lib/documents/upload-validation";
 
-const MAX_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+// Shared with the case-collaboration uploader (MV-186) so the two cannot drift apart.
+const MAX_SIZE = MAX_UPLOAD_BYTES;
+const ALLOWED_TYPES = ALLOWED_UPLOAD_TYPES;
 
 export async function POST(request: Request): Promise<Response> {
   const supabase = await createSupabaseServerClient();

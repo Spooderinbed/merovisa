@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
+import {
+  canResolveByHand,
+  deriveRequestProgress,
+  type CaseDocumentReviewRow,
+  type CaseDocumentVersionRow,
+} from "@/lib/cases/document-collaboration";
+import { CaseDocumentVersions } from "./case-document-versions";
 import { saveErrorMessage } from "./save-error";
 
 /**
@@ -61,7 +68,18 @@ export interface CaseDocumentRequestsProps {
   caseId: string;
   requests: readonly DocumentRequestView[];
   kinds: readonly DocumentKindOption[];
+  /**
+   * ONE claim, every verb (MV-186). `case.documents.request` is `all-org` for owner/admin,
+   * `assigned` for a counsellor and `deny` for the student — which is exactly
+   * `private.can_staff_case`, the predicate behind the INSERT policy on requests, on versions
+   * AND on reviews. So asking, resolving, uploading and judging appear and disappear together,
+   * because at the database they are already the same answer.
+   */
   canRequest: boolean;
+  /** Every version on this case. Grouped per request by the pure derivation, not by the query. */
+  versions: readonly CaseDocumentVersionRow[];
+  /** Every review on this case. Same. */
+  reviews: readonly CaseDocumentReviewRow[];
 }
 
 /** "1 September 2026" — the same plain long form the rest of the workspace uses. */
@@ -93,6 +111,8 @@ export function CaseDocumentRequests({
   requests,
   kinds,
   canRequest,
+  versions,
+  reviews,
 }: CaseDocumentRequestsProps) {
   const router = useRouter();
 
@@ -109,6 +129,20 @@ export function CaseDocumentRequests({
 
   const outstanding = requests.filter((request) => request.status !== "resolved");
   const resolved = requests.filter((request) => request.status === "resolved");
+
+  /**
+   * What has actually happened to one request (MV-186, spec §7.1 D6).
+   *
+   * `status` alone cannot say: three human states collapse into `outstanding` — nothing
+   * arrived, a file is awaiting review, a file was rejected — and two into `resolved`. The
+   * middle one is the expensive loss, because a chase list built on the column alone points
+   * the chase at the counsellor's own review queue.
+   *
+   * The whole case's versions and reviews go in and the derivation filters, so no caller can
+   * pass one request's rows for another's.
+   */
+  const progressFor = (request: DocumentRequestView) =>
+    deriveRequestProgress(request, versions, reviews);
 
   /**
    * Changing the document re-fills the title, unless the person has written their
@@ -201,33 +235,50 @@ export function CaseDocumentRequests({
           <ul className="flex flex-col gap-2">
             {outstanding.map((request) => (
               <li key={request.id}>
-                <Card padding="md" className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <p className="text-body font-medium">{request.title}</p>
-                    <p className="text-caption text-ink-soft">
-                      {caption(request, { label: "Due", iso: request.dueAt })}
-                    </p>
-                    {request.note !== null ? (
-                      <p className="max-w-[60ch] text-caption text-ink-soft">{request.note}</p>
+                <Card padding="md" className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <p className="text-body font-medium">{request.title}</p>
+                      <p className="text-caption text-ink-soft">
+                        {caption(request, { label: "Due", iso: request.dueAt })}
+                      </p>
+                      {request.note !== null ? (
+                        <p className="max-w-[60ch] text-caption text-ink-soft">{request.note}</p>
+                      ) : null}
+                    </div>
+                    {/* MV-186: the manual verb survives, and is offered ONLY while the request
+                        has no versions. Once one exists, `private.guard_document_request_status`
+                        refuses any hand-written status that contradicts the derivation with a
+                        `23514` — so this control could then only ever produce a failed write,
+                        and a control that appears and then fails tells the person they were
+                        allowed. Accepting the newest version is how such a request resolves. */}
+                    {canRequest && canResolveByHand(progressFor(request)) ? (
+                      <div className="shrink-0">
+                        <Button
+                          type="button"
+                          size="sm"
+                          // `ghost`, not `primary`: a chase list of five items would be
+                          // five filled buttons competing with the one action that
+                          // creates work. Marking something received confirms what has
+                          // already happened.
+                          variant="ghost"
+                          disabled={resolvingId !== null}
+                          onClick={() => resolve(request.id)}
+                        >
+                          {resolvingId === request.id ? "Saving…" : "Mark received"}
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
-                  {canRequest ? (
-                    <div className="shrink-0">
-                      <Button
-                        type="button"
-                        size="sm"
-                        // `ghost`, not `primary`: a chase list of five items would be
-                        // five filled buttons competing with the one action that
-                        // creates work. Marking something received confirms what has
-                        // already happened.
-                        variant="ghost"
-                        disabled={resolvingId !== null}
-                        onClick={() => resolve(request.id)}
-                      >
-                        {resolvingId === request.id ? "Saving…" : "Mark received"}
-                      </Button>
-                    </div>
-                  ) : null}
+                  <CaseDocumentVersions
+                    caseId={caseId}
+                    requestId={request.id}
+                    progress={progressFor(request)}
+                    versions={versions}
+                    reviews={reviews}
+                    canUpload={canRequest}
+                    canReview={canRequest}
+                  />
                 </Card>
               </li>
             ))}
@@ -248,11 +299,25 @@ export function CaseDocumentRequests({
           <ul className="flex flex-col gap-2">
             {resolved.map((request) => (
               <li key={request.id}>
-                <Card padding="md" tone="tint" className="flex flex-col gap-1">
-                  <p className="text-body">{request.title}</p>
-                  <p className="text-caption text-ink-soft">
-                    {caption(request, { label: "Received", iso: request.resolvedAt })}
-                  </p>
+                <Card padding="md" tone="tint" className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-body">{request.title}</p>
+                    <p className="text-caption text-ink-soft">
+                      {caption(request, { label: "Received", iso: request.resolvedAt })}
+                    </p>
+                  </div>
+                  {/* Rendered on a RESOLVED request too, because "resolved" has two meanings —
+                      a file somebody accepted, and a counsellor's tick with no file behind it —
+                      and this block is the only place that difference is visible. */}
+                  <CaseDocumentVersions
+                    caseId={caseId}
+                    requestId={request.id}
+                    progress={progressFor(request)}
+                    versions={versions}
+                    reviews={reviews}
+                    canUpload={canRequest}
+                    canReview={canRequest}
+                  />
                 </Card>
               </li>
             ))}

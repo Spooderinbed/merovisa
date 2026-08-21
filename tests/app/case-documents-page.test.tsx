@@ -38,6 +38,20 @@ vi.mock("@/lib/cases/case-route", async () => {
 const { listCaseDocumentRequests } = vi.hoisted(() => ({ listCaseDocumentRequests: vi.fn() }));
 vi.mock("@/lib/cases/document-requests-repo", () => ({ listCaseDocumentRequests }));
 
+/**
+ * MV-186 — the page now makes THREE reads, not one. Requests alone cannot say what happened to
+ * a request: `status` is `outstanding | resolved` and collapses five human states into two,
+ * so the versions and the reviews are what the Documents page derives its display state from.
+ */
+const { listCaseDocumentVersions, listCaseDocumentReviews } = vi.hoisted(() => ({
+  listCaseDocumentVersions: vi.fn(),
+  listCaseDocumentReviews: vi.fn(),
+}));
+vi.mock("@/lib/cases/document-collaboration-repo", () => ({
+  listCaseDocumentVersions,
+  listCaseDocumentReviews,
+}));
+
 import CaseDocumentsPage from "@/app/(app)/workspace/[organizationId]/students/[caseId]/documents/page";
 
 const ORG = "aaaaaaaa-0000-4000-8000-00000000000a";
@@ -79,6 +93,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   openCaseRoute.mockResolvedValue(gate());
   listCaseDocumentRequests.mockResolvedValue({ ok: true, data: [row()] });
+  listCaseDocumentVersions.mockResolvedValue({ ok: true, data: [] });
+  listCaseDocumentReviews.mockResolvedValue({ ok: true, data: [] });
 });
 
 describe("the gate", () => {
@@ -158,6 +174,33 @@ describe("the chase list", () => {
     // The false sentence this branch exists to prevent: telling a counsellor a case
     // is clear when we could not find out.
     expect(screen.queryByText(/nothing is outstanding/i)).not.toBeInTheDocument();
+  });
+
+  /**
+   * MV-186 — the same rule, one table down. The versions read is what the display state is
+   * derived from, so an empty one and a FAILED one are not the same page.
+   */
+  it("a failed VERSIONS read is an outage, not an empty file history", async () => {
+    listCaseDocumentVersions.mockResolvedValue({ ok: false, reason: "lookup-failed" });
+
+    await renderPage();
+
+    expect(screen.getByText(/couldn't load/i)).toBeInTheDocument();
+    // The false sentence THIS branch exists to prevent: "nothing has arrived against this
+    // request" stated confidently about every request on the case, which sends a counsellor
+    // to chase a student for a file already waiting on their own review.
+    expect(screen.queryByText(/nothing has arrived/i)).not.toBeInTheDocument();
+  });
+
+  it("a failed REVIEWS read is an outage too — an unjudged file is not the same as an unread one", async () => {
+    listCaseDocumentReviews.mockResolvedValue({ ok: false, reason: "lookup-failed" });
+
+    await renderPage();
+
+    expect(screen.getByText(/couldn't load/i)).toBeInTheDocument();
+    // Without this branch a failed reviews read renders every arrived file as "awaiting
+    // review" — including ones already accepted or rejected.
+    expect(screen.queryByText(/has not been reviewed yet/i)).not.toBeInTheDocument();
   });
 });
 

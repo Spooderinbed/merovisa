@@ -170,6 +170,65 @@ export async function listCaseDocumentRequests(
   }
 }
 
+export type DocumentRequestLookupResult =
+  | { ok: true; data: CaseDocumentRequest | null }
+  | { ok: false; reason: "lookup-failed" };
+
+/**
+ * ONE request, resolved by id AND by case — MV-186's upload route reads it before it
+ * writes a version against it.
+ *
+ * BOTH filters, the same reason `resolveCaseDocumentRequest` gives: the caller authorized
+ * ONE case, so without the `case_id` predicate a request id from another case the actor
+ * happens to staff would resolve under this case's authorization.
+ *
+ * ## Why the route reads this at all, when the policy already bounds it
+ *
+ * `case_document_versions_insert_staff`'s THIRD conjunct is
+ * `private.document_request_case_id(request_id) = case_id`, so a version can never hang off
+ * another case's request. But a policy refusal arrives as `42501`, which the route maps to
+ * DENIED and the user reads as "you may not do this" — when the truth is "there is no such
+ * request here". Reading first is what keeps those two answers apart; the conjunct is what
+ * makes it safe if the read is ever wrong.
+ */
+export async function getCaseDocumentRequest(
+  requestId: string,
+  caseId: string,
+  db?: CaseAuthorizationClient,
+): Promise<DocumentRequestLookupResult> {
+  if (!isPresent(requestId) || !isPresent(caseId)) return { ok: false, reason: "lookup-failed" };
+
+  try {
+    const supabase = await client(db);
+    const { data, error } = await supabase
+      .from("case_document_requests")
+      .select("id, kind, title, note, status, due_at, created_at, resolved_at")
+      .eq("id", requestId)
+      .eq("case_id", caseId)
+      .maybeSingle();
+
+    // An absent request and a FAILED lookup are different sentences to the user, and only
+    // one of them says anything about the request existing.
+    if (error) return { ok: false, reason: "lookup-failed" };
+    if (!data) return { ok: true, data: null };
+    return {
+      ok: true,
+      data: {
+        id: data.id,
+        kind: data.kind,
+        title: data.title,
+        note: data.note,
+        status: data.status,
+        dueAt: data.due_at,
+        createdAt: data.created_at,
+        resolvedAt: data.resolved_at,
+      },
+    };
+  } catch {
+    return { ok: false, reason: "lookup-failed" };
+  }
+}
+
 /**
  * The queue's batch size (MV-183). Matches `queue-repo.ts`'s `QUEUE_BATCH_SIZE` in
  * value but is stated here rather than imported, because importing it would make
