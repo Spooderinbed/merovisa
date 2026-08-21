@@ -2263,7 +2263,7 @@
     },
     {
       "id": "MV-190",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-190-case-storage-and-downloads.md",
@@ -2271,7 +2271,19 @@
       "summary": "The second half of the 5B split, sequenced after MV-185 and before MV-186 (the number is higher only because the plan reserved MV-186-189). Adds the case/<case_id>/<version_id> prefix and its storage.objects policy, a short-TTL signed-download helper authorized BEFORE the URL is minted, and makes the three document routes accept a NAMED case id. Corrects the plan: the routes are already case-scoped (MV-157 §G) — the real gap is that all three resolve the ACTOR'S OWN case, which is F-8. Existing owner-keyed vault objects are deliberately not migrated.",
       "created": "2026-08-20",
       "entered": "2026-08-21",
-      "badge": "In review — PR open. Spec §6 first: measurement overturned BOTH of the card's data premises. (A) NO storage.objects policy — the bucket already denies `case/` to every client (foldername[1] is the literal `case`, no uid) and all writes are service_role, so a SELECT policy would be a second and weaker path to bytes only an authorized mint reaches; the absence is defended by a denial test WITH A CONTROL, an ADDITIVE mutant that plants the declined policy, and an apply-time guard. (B) `id` joins the versions INSERT grant — decided by write ORDERING, since without it a failed upload strands a version row with no DELETE grant to retract it — plus the CHECK on storage_path that MV-185 deferred here, a table constraint so it binds service_role too. Measured correction: MV-185 §8 (4) does NOT fail MV-190 at apply time; what DOES happen is that re-running MV-185 alone silently reverts the grant (its §6 revokes all first), so both harnesses now name a two-file restore. 6 mutants each killed distinct NAMED tests (20 collected, 0 worker crashes); 11 apply-time guards and 5 code guards each falsified. Migration NOT yet applied to production."
+      "badge": "Done — merged to master 2026-08-21 (PR #153, merge 8ab5d92) and applied to production. Spec §6 overturned BOTH of the card's data premises before a line was written. (A) NO storage.objects policy — the bucket already denies `case/` to every client (foldername[1] is the literal `case`, no uid) and all writes are service_role, so a SELECT policy would be a second and weaker path to bytes only an authorized mint reaches; defended by a denial test WITH A CONTROL, an ADDITIVE mutant that plants the declined policy, and an apply-time guard. (B) `id` joins the versions INSERT grant — decided by write ORDERING, since without it a failed upload strands a version row with no DELETE grant to retract it — plus the CHECK on storage_path, a table constraint so it binds service_role too. 6 mutants each killed distinct NAMED tests (20 collected, 0 worker crashes); 11 apply-time guards and 5 code guards each falsified. MV-186 is the writer it deliberately stopped short of.",
+      "done": "2026-08-21"
+    },
+    {
+      "id": "MV-186",
+      "col": "inprogress",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-186-collaboration-ui.md",
+      "title": "Document collaboration UI: upload, version history, review verbs (Stage 4 slice 4, PR 5C)",
+      "summary": "Closes the Stage 4 loop: MV-182 could ask for a document, MV-185 gave a file a row, MV-190 gave it a path — nothing could still RECEIVE or JUDGE one. Ships the pure five-state derivation, two write routes (a version against a request; a review on a version), one read route (a signed download per version), and the Documents page UI. Carries the spec §7 pass: case_document_requests.status is LOSSY — three human states collapse into `outstanding` (nothing arrived / awaiting OUR review / rejected) and two into `resolved` (accepted, or marked received by hand), so a page built on the column alone points the chase at the wrong person. Status is never written by this slice; the after-insert triggers write it and a guard trigger refuses a contradicting hand-written value. NO MIGRATION — the schema is already live in production. Both tables stay append-only: no delete-a-version and no edit-a-review control. Also corrects MV-183's lodgement scope note, which claimed \"nothing here has been checked or approved\" — now false in one direction, and corrected without letting the panel claim it can tell an accepted file from one received by hand.",
+      "created": "2026-08-21",
+      "entered": "2026-08-21"
     }
   ]
 }
