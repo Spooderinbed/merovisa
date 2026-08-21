@@ -17,14 +17,26 @@
 -- deliberately vulnerable. Restoring is a STEP, not a `rollback`, because the swap has to be
 -- visible to the test run's own connections. NEVER point this at the hosted project.
 --
--- Usage — three calls per mutant, in this order:
+-- Usage — four calls per mutant, in this order:
 --   $PSQL = "docker exec -i supabase_db_merovisa psql -U postgres -d postgres -v ON_ERROR_STOP=1"
 --   $PSQL -v mutant=reviews_staff -f - < supabase/rehearsal/MV-185-mutation.sql   # revert ONE clause
 --   npx vitest run --config vitest.integration.config.ts tests/integration/stage4-document-collaboration.itest.ts
---   $PSQL -f - < supabase/migrations/20260821120000_stage4_case_document_collaboration.sql  # restore
+--   $PSQL -f - < supabase/migrations/20260821120000_stage4_case_document_collaboration.sql  # restore 1
+--   $PSQL -f - < supabase/migrations/20260821150000_stage4_case_storage_paths.sql           # restore 2
 --
--- The restore is the migration itself, which is re-runnable by construction and re-asserts every
--- guard in its §8 — so a restore that did not restore refuses instead of passing quietly.
+-- The restore is the migrations themselves, which are re-runnable by construction and re-assert
+-- every guard in their §8/§3 — so a restore that did not restore refuses instead of passing quietly.
+--
+-- THE SECOND FILE IS NOT OPTIONAL, AND THE REASON WAS MEASURED RATHER THAN REASONED. §6 of the
+-- migration opens with `revoke all on public.case_document_versions from anon, authenticated;` and
+-- then re-grants ITS OWN nine columns. MV-190 granted a tenth — `id`, so a client can name the
+-- Storage object BEFORE it writes the row (spec §6.2) — so re-running the MV-185 file ALONE
+-- silently un-grants it and leaves the collaboration path unwritable again. MV-185's own §8 (4)
+-- cannot catch that: the file has just restored the exact state that assertion pins. Running
+-- MV-190's migration second re-grants and re-asserts, and
+-- `tests/integration/stage4-case-storage.itest.ts` names the grant in its first test, so a skipped
+-- restore 2 is red rather than quiet. (The MV-190 CHECK constraint survives a lone re-run of this
+-- file; nothing in it drops one.)
 --
 -- EVERY CONJUNCT BELOW IS RESTATED BYTE-FOR-BYTE FROM THE MIGRATION. A mutant differs from the
 -- shipped policy in exactly the named clause, so a red test cannot be blamed on anything else.

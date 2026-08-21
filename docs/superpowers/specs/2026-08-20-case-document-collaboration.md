@@ -300,22 +300,47 @@ Three reasons for a constraint over a conjunct:
    helper, not a restatement of it. (A uuid rendered as text contains no `%` or `_`, so the pattern
    carries no wildcard hazard.)
 
-#### MV-185's §8 (4) is amended — but not to the new list
+#### MV-185's §8 (4) is NOT amended — the predicted conflict does not exist, and the real one is worse
 
-§8 (4) pins the versions INSERT column list as an exact string, and MV-190 changes that list. The
-obvious edit is wrong in a way worth recording:
+The card predicted that MV-185's §8 (4), which pins the versions INSERT column list as an exact
+string, "will make your own migration fail at apply time". **Measured on the local stack: it does
+not.** MV-185's `do $$` block runs at MV-185's timestamp, before MV-190's grant exists, so an
+ordered replay asserts nine columns against nine and passes. MV-190 then applies cleanly with
+MV-185 untouched — verified by applying it twice, both times exit 0.
 
-- **Repointing it at the ten-column list breaks a fresh replay.** MV-185's `do $$` block runs at
-  MV-185's timestamp, before MV-190's grant exists, so `supabase db reset` would fail *at MV-185*.
-- **Leaving it alone breaks MV-185's rehearsal.** The mutation harness restores by re-running
-  MV-185's migration against the *current* schema; once MV-190 is applied that re-run sees ten
-  columns and raises.
+What the measurement *did* surface is a sharper hazard the card did not predict, found by re-running
+MV-185's migration against the post-MV-190 schema:
 
-So the assertion is widened to the only shape true at both timestamps: **exactly MV-185's nine, or
-those nine plus `id`.** It still catches what it was written to catch — a table-level
-`grant insert on … to authenticated` handing over `created_at` — while surviving the one widening a
-later slice was always going to make. MV-190's own assertion block pins the exact ten-column list at
-MV-190's timestamp, where it is unambiguous.
+```
+-- after MV-190:      …, file_size, id, organization_id, …
+-- re-run MV-185's migration alone, then read the grant again:
+--                    …, file_size, organization_id, …          <-- `id` is gone
+```
+
+MV-185's §6 opens with `revoke all on public.case_document_versions from anon, authenticated;` and
+re-grants its own nine columns. **So re-running MV-185 silently reverts MV-190's grant** — and its
+§8 (4) then passes, because MV-185 has just restored the very state it asserts. No assertion edit in
+either file can catch this; the `revoke` is the problem, not the pin. (The CHECK constraint survives
+the same re-run, because nothing in MV-185 drops it.)
+
+This matters because `supabase/rehearsal/MV-185-mutation.sql` **restores by re-running MV-185's
+migration**. Left alone, every future MV-185 rehearsal would quietly un-grant `id` and leave the
+collaboration path unwritable again. Three things follow, and none of them is editing an applied
+migration's history:
+
+1. **The restore for an MV-185 mutant is now two files, in order** — MV-185's migration, then
+   MV-190's. MV-190's file re-grants *and* re-asserts, so a restore that did not restore refuses
+   instead of passing quietly, which is the property MV-185's harness already claims for itself.
+   Both harness headers say so.
+2. **The revert is loud, not silent, because a gating test names it.**
+   `tests/integration/stage4-case-storage.itest.ts` opens with "grants `id` on the versions INSERT",
+   which goes red the moment the grant is reverted and MV-190 is not re-applied.
+3. **MV-185's file is left byte-identical to what was applied to production.** Rewriting an applied
+   migration to grant `id` at MV-185's timestamp would make the repo claim something about
+   production that is not true of it.
+
+The one MV-185 artefact that *does* change is a test, named in the next paragraph — because an
+assertion about the live schema has to track the live schema.
 
 **One MV-185 assertion is edited, and it is named here rather than buried in a diff.**
 `tests/integration/stage4-document-collaboration.itest.ts` — "grants exactly SELECT and a
