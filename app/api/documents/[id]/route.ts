@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
-import { checkCasePermission } from "@/lib/cases/require-permission";
+import { resolveTargetCase, targetCaseResponse } from "@/lib/cases/target-case";
 import { listDocumentsByKindsForCase } from "@/lib/documents/repo";
 import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSectionForCase } from "@/lib/profiles/repo";
@@ -23,12 +22,29 @@ export async function DELETE(
   const userId = userData.user.id;
 
   // Authorize the case BEFORE reading the row, then scope the read by case_id.
-  const caseId = await resolvePersonalCaseId(userId, supabase);
-  if (caseId === null) {
-    return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  //
+  // MV-190, spec F-8: the case is the one the caller NAMES when it names one, and
+  // the actor's own otherwise. A DELETE carries no body, so the id rides the query
+  // string — the same transport `[id]/view` uses, for the same reason. A
+  // present-but-malformed value is MALFORMED (400) and never a silent fallback to
+  // the actor's own case: that fallback is how a mishandled id would delete the
+  // COUNSELLOR's own document instead of refusing.
+  const requestedCase = new URL(request.url).searchParams.get("caseId");
+  const target = await resolveTargetCase(
+    userId,
+    requestedCase ?? undefined,
+    "case.update",
+    supabase,
+  );
+  if (!target.ok) {
+    // An account with no case has no document to delete — 404, exactly as before.
+    // Malformed and denied stay with the shared mapping.
+    if (target.kind === "no-personal-case") {
+      return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    }
+    return targetCaseResponse(target, "Document not found");
   }
-  const { decision } = await checkCasePermission(userId, caseId, "case.update", supabase);
-  if (!decision.allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { caseId } = target;
 
   const { data: doc } = await supabase
     .from("documents")

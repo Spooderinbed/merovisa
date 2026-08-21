@@ -223,6 +223,11 @@ beforeEach(() => {
   });
 });
 
+// MV-190 closed F-8 for three MORE routes — the `documents` upload, delete and view.
+// They are not in `ROUTES` because they take no JSON body (multipart, DELETE, GET), so
+// the table's `call({ ...body, caseId })` shape cannot express them; the sweep below
+// still holds them to being parameterized, and `tests/api/documents/named-case.test.ts`
+// holds them to the same three properties this table checks.
 describe("F-8 — the seven case-scoped write routes take an EXPLICIT case id", () => {
   /**
    * DERIVED FROM THE TREE, not from the array. The count "seven" is the finding
@@ -241,16 +246,39 @@ describe("F-8 — the seven case-scoped write routes take an EXPLICIT case id", 
      *   would show the COUNSELLOR's — a "whose case am I looking at" defect, which
      *   is MV-173's kind, not a write-safety one. Spec F-8's note carries it.
      * - `guide/chat` is not in this slice's rendered surface.
-     * - the three `documents` routes and `assess/refresh` are Stage 4 / permanent
-     *   service-role paths whose case likewise stays the actor's own.
+     * - `assess/refresh` is a permanent service-role path whose case stays the
+     *   actor's own.
+     *
+     * THE THREE `documents` ROUTES LEFT THIS SET IN MV-190. They no longer resolve
+     * the actor's own case at all, so listing them here would be a stale exemption
+     * that hides a regression: with them removed, a future edit that reaches for
+     * `resolvePersonalCaseId` inside one of them fails this test rather than quietly
+     * shipping a counsellor writing to their own vault.
      */
     const OUT_OF_SCOPE = new Set([
       "app/api/outcomes/route.ts",
       "app/api/guide/chat/route.ts",
+      "app/api/assess/refresh/route.ts",
+    ]);
+
+    /**
+     * MV-190 — parameterized, but NOT through a JSON body, so they cannot have a
+     * `ROUTES` row (every row calls `call({ ...body, caseId })`).
+     *
+     * `upload` is multipart and reads a form field; `[id]` and `[id]/view` are DELETE
+     * and GET, which carry no body at all, and read `?caseId=`. The property they owe
+     * is identical and is proven in their own suite — `tests/api/documents/named-case.test.ts`
+     * asserts each authorizes the REQUESTED case, refuses one it cannot reach, and
+     * never falls back to the actor's own.
+     *
+     * Enumerated rather than pattern-matched so the exemption stays a decision. The
+     * assertions below pin it from both sides: each of these must really be
+     * parameterized, and nothing else may claim the exemption.
+     */
+    const NON_BODY_CASE_ROUTES = new Set([
       "app/api/documents/upload/route.ts",
       "app/api/documents/[id]/route.ts",
       "app/api/documents/[id]/view/route.ts",
-      "app/api/assess/refresh/route.ts",
     ]);
 
     const files = apiRouteFiles(path.join(process.cwd(), "app", "api"));
@@ -263,10 +291,25 @@ describe("F-8 — the seven case-scoped write routes take an EXPLICIT case id", 
     const actorsOwn = calls(/\bresolvePersonalCaseId\s*\(/);
     // A bad sweep returning zero would make both checks below pass vacuously.
     expect(parameterized.length).toBeGreaterThan(5);
-    expect(actorsOwn.length).toBeGreaterThan(3);
+    // Was `> 3` until MV-190 moved the three `documents` routes off `resolvePersonalCaseId`,
+    // leaving `outcomes`, `guide/chat` and `assess/refresh`. It is a VACUITY guard — a broken
+    // sweep returning zero would make the emptiness check below pass for the wrong reason — so it
+    // tracks the real remaining count rather than being loosened to nothing.
+    expect(actorsOwn.length).toBeGreaterThan(2);
 
-    // Every parameterized route has a row, and every row is a parameterized route.
-    expect([...parameterized].sort()).toEqual([...ROUTES.map((r) => r.file)].sort());
+    // Every non-body exemption must REALLY be a parameterized route. Without this the
+    // set could name a file that never took a case id and the exemption would be a
+    // hiding place rather than a decision.
+    expect([...NON_BODY_CASE_ROUTES].sort()).toEqual(
+      parameterized.filter((file) => NON_BODY_CASE_ROUTES.has(file)).sort(),
+    );
+
+    // Every parameterized route has a row, and every row is a parameterized route —
+    // apart from the enumerated non-body three, which carry the same property in
+    // their own suite because this table's shape cannot express them.
+    expect(parameterized.filter((file) => !NON_BODY_CASE_ROUTES.has(file)).sort()).toEqual(
+      [...ROUTES.map((r) => r.file)].sort(),
+    );
 
     // AND nothing in scope still resolves the actor's own case behind the app's
     // back. This is the half that would catch an eighth route: a write surface

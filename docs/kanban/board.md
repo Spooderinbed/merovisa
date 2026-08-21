@@ -9,9 +9,11 @@
 
 ### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-21 04:41 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-21 05:27 UTC. **Not board state** — never written to board.json.
 
 _No open PRs._
+
+> ⚠️ MV-190 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 18
@@ -39,13 +41,13 @@ _No open PRs._
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-190** · P1 · [Case-scoped Storage and signed downloads (Stage 4 slice 3)](cards/MV-190-case-storage-and-downloads.md) — _The second half of the 5B split, sequenced after MV-185 and before MV-186 (the number is higher only because the plan reserved MV-186-189). Adds the case/<case_id>/<version_id> prefix and its storage.objects policy, a short-TTL signed-download helper authorized BEFORE the URL is minted, and makes the three document routes accept a NAMED case id. Corrects the plan: the routes are already case-scoped (MV-157 §G) — the real gap is that all three resolve the ACTOR'S OWN case, which is F-8. Existing owner-keyed vault objects are deliberately not migrated._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-190** · P1 · [Case-scoped Storage and signed downloads (Stage 4 slice 3)](cards/MV-190-case-storage-and-downloads.md) — _The second half of the 5B split, sequenced after MV-185 and before MV-186 (the number is higher only because the plan reserved MV-186-189). Adds the case/<case_id>/<version_id> prefix and its storage.objects policy, a short-TTL signed-download helper authorized BEFORE the URL is minted, and makes the three document routes accept a NAMED case id. Corrects the plan: the routes are already case-scoped (MV-157 §G) — the real gap is that all three resolve the ACTOR'S OWN case, which is F-8. Existing owner-keyed vault objects are deliberately not migrated._
 
 ## Blocked — 3
 
