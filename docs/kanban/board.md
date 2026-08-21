@@ -9,9 +9,11 @@
 
 ### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-21 16:37 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-21 17:15 UTC. **Not board state** — never written to board.json.
 
 _No open PRs._
+
+> ⚠️ MV-189 is in In Review with no open PR — it is waiting at a gate with nothing to gate.
 
 
 ## Backlog — 18
@@ -39,13 +41,13 @@ _No open PRs._
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-189** · P1 · [Document access audit events (Stage 4 slice 5)](cards/MV-189-document-access-audit-events.md) — _Pays the part of the service-role debt Stage 4 owns. The plan makes auditing a CONDITION of the exception list — every entry 'named, justified, preceded by an explicit case authorization check, and audited' — and lib/supabase/service-role-exceptions.ts holds 18 sanctioned entries with all 18 carrying auditEvent: null, so the fourth clause is satisfied by none of them. Today a counsellor can upload, open and download a student's passport scan and nothing anywhere records that it happened. Wires the five document-access paths (two uploads, two signed-URL mints, one delete) to public.audit_events through a single choke point. Spec §8 (D11-D15) first, committed before code._
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-189** · P1 · [Document access audit events (Stage 4 slice 5)](cards/MV-189-document-access-audit-events.md) — _Pays the part of the service-role debt Stage 4 owns. The plan makes auditing a CONDITION of the exception list — every entry 'named, justified, preceded by an explicit case authorization check, and audited' — and lib/supabase/service-role-exceptions.ts holds 18 sanctioned entries with all 18 carrying auditEvent: null, so the fourth clause is satisfied by none of them. Today a counsellor can upload, open and download a student's passport scan and nothing anywhere records that it happened. Wires the five document-access paths (two uploads, two signed-URL mints, one delete) to public.audit_events through a single choke point. Spec §8 (D11-D15) first, committed before code._
 
 ## Blocked — 3
 

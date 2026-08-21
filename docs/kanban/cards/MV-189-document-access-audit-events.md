@@ -116,4 +116,60 @@ so a run from an agent worktree collects ZERO tests and looks green. `C:\ci\mv18
 
 ## Done evidence
 
-_(filled at the gate — see the PR)_
+**Branch:** `mv-189-document-access-audit` · spec commit `7b9eeb7`, implementation `c2b8d87`.
+
+### Integration gate — green
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | exit 0 |
+| `npm run lint` | exit 0 |
+| `npm test` | **386 files, 3886 tests, 0 failures**, no worker crashes |
+| `npx vitest run --config vitest.integration.config.ts tests/integration/stage4-audit-events.itest.ts` | **19 passed**, 2.24s of test time (a crashed worker would show a tiny duration and "Worker exited") |
+
+Run from `C:\ci\mv189`, **outside `.claude/`** — both vitest configs exclude `**/.claude/**`, so
+the same commands from an agent worktree collect ZERO tests and report green. Confirmed the
+default lane collects 3785 specs there before any work started.
+
+### Mutation evidence — 14 mutants, 14 killed, each naming distinct tests
+
+Every mutant was applied to the real source, the named suites run, then the file restored;
+`git diff` was empty afterwards (no probe residue — MISTAKES.md, Tooling & agents). Test counts
+per run recorded so a crashed worker could not read as clean.
+
+| # | Mutant | Named test(s) killed |
+|---|---|---|
+| M1 | view route audits AFTER the mint | `view … AUDITS BEFORE IT MINTS — the URL must never exist without its row`; `view … NEVER MINTS when the audit write fails` |
+| M2 | view route swallows the audit failure and serves | `view … returns 500 when the audit write fails`; `view … NEVER MINTS when the audit write fails`; `D12 invariant … documents/[id]/view returns a non-2xx` |
+| M3 | download route audits AFTER the mint | `download … AUDITS BEFORE IT MINTS`; `download … NEVER MINTS when the audit write fails` |
+| M4 | upload swallows the audit failure | `upload … returns 500 when the audit write fails — no 2xx without a row`; `D12 invariant … documents/upload returns a non-2xx` |
+| M5 | upload puts `safeOriginalName` in metadata | `D13 … upload/route.ts passes no banned identifier to writeAuditEvent`; `upload … D13: carries no filename`; `upload … records the document kind and size` |
+| M6 | `resolveTargetCase` returns `organizationId: null` | `view/upload/delete … D15: records the case's organization` (3); `resolveTargetCase … carries the case's organization onto the success variant`; 2 more |
+| M7 | view route audits a constant actor id | `view … D14: records the authenticated human as the actor` |
+| M8 | writer ignores the insert `error` | `D12 … throws when the insert returns an error, because PostgREST RESOLVES a 42501`; `D12 … carries no actor, case or org identifier in the thrown message` |
+| M9 | writer drops the metadata key allow-list | `D13 … throws on a metadata key outside the allow-list`; `D13 … names the offending key`; `D13 … does NOT leak the offending VALUE` |
+| M10 | writer drops the `entity_id` uuid check | `D13 … throws when entity_id is not a uuid — a filename must never ride in as an id` |
+| M11 | one exception entry set back to `auditEvent: null` | `D13 controls … finds exactly five audited document-access paths`; `… every action the writer knows is claimed by exactly one entry`; `… leaves the other thirteen entries null`; `… wires the audited routes and no others`; `registry hygiene … exactly the five document-access paths emit an audit event` |
+| M12 | versions route stops auditing | 12 tests in the `document.version_uploaded` block plus the invariant sweep |
+| M13 | writer allows a missing actor | `D14 … refuses to write a row with no actor — an unattributed access event is not evidence` |
+| M14 | **integration**: the "org-scoped" row is seeded with a NULL org | `D15: stores the organization the case actually belongs to`; **`CONTROL: the fixture can express readability — org A's admin DOES read an org-A row`** |
+
+**M14 is the one that matters most.** It is the answer to the trap this card was warned about: the
+control genuinely goes red when the org is nulled, so it discriminates, and the eight denial tests
+in that block are licensed rather than vacuous. Without it, "an org admin reads nothing" would have
+been true against a broken fixture and true against correct code alike.
+
+M5, M6, M11 and M12 each killed a superset of one sentence. In every case the extra deaths are the
+same claim seen from another route (M6 is one shared line behind three routes; M12 removes the only
+audit call in its route), not a fixture coupling — recorded rather than glossed.
+
+### Production verification — what could NOT be done
+
+**The Supabase MCP was not reachable in this session** (interactive OAuth, non-interactive session),
+so no claim was re-measured against the live project. All seven carried-forward measurements were
+re-taken against the **local Docker stack** instead; five confirmed exactly, one (row count = 0)
+confirmed locally only, and one (**all 10 production cases have `organization_id = NULL`**) could
+not be verified at all. The slice depends on neither: §8.5 is correct whether an org exists or not.
+
+The D11 probe grant was reverted (`proacl` re-read as `postgres=X/postgres`) and the probe rows
+deleted (`count(*)` back to 0) — the local stack is in the state it started in.

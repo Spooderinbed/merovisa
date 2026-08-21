@@ -2288,7 +2288,7 @@
     },
     {
       "id": "MV-189",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-189-document-access-audit-events.md",
@@ -2296,7 +2296,7 @@
       "summary": "Pays the part of the service-role debt Stage 4 owns. The plan makes auditing a CONDITION of the exception list — every entry 'named, justified, preceded by an explicit case authorization check, and audited' — and lib/supabase/service-role-exceptions.ts holds 18 sanctioned entries with all 18 carrying auditEvent: null, so the fourth clause is satisfied by none of them. Today a counsellor can upload, open and download a student's passport scan and nothing anywhere records that it happened. Wires the five document-access paths (two uploads, two signed-URL mints, one delete) to public.audit_events through a single choke point. Spec §8 (D11-D15) first, committed before code.",
       "created": "2026-08-22",
       "entered": "2026-08-22",
-      "badge": null
+      "badge": "In review — PR open. Spec §8 first (D11-D15), committed before code, as MV-185/190/186 each did. D11: NO MIGRATION — granting EXECUTE on private.write_audit_event does NOT make it callable, because `private` is not an exposed PostgREST schema. Measured both ways: with EXECUTE granted to service_role AND authenticated the rpc still 404s (PGRST202, it searched `public`), and Content-Profile: private 406s with 'Only the following schemas are exposed'. Zero rows written; grant reverted. So the write is a direct INSERT on the client that already holds it — the mechanism MV-152's own migration wrote down. D12: FAIL-CLOSED on plan line 504 ('cannot be separated'); the two signed-URL routes audit BEFORE the mint so no unaudited bearer of the bytes can exist, the three mutations audit after their effect commits, and the invariant the tests are named for is 'no 2xx without its audit row committed'. D13: closed metadata allow-list plus a source sweep, because metadata:{kind: safeOriginalName} passes a key check; original_name is the named trap. D15: organization_id from CaseContext, which resolveTargetCase was already computing and throwing away — NULL = ANY(...) is NULL, so a null-org row is readable by nobody EVER. 14 mutants, 14 killed, each naming distinct tests. THE ONE THAT MATTERS: nulling the org in the integration fixture turns the CONTROL red, which is what licenses the eight denial tests beside it — the vacuous-fixture trap that bit MV-190 and MV-186, caught this time before it landed. Recorded not fixed: service_role holds TRUNCATE on an append-only evidence table; Stage 1's DELETE rationale is row-scoped and does not cover it. NOT VERIFIED AGAINST PRODUCTION: the Supabase MCP needs interactive OAuth and this session is non-interactive, so all DB claims were re-measured on the local Docker stack; the '10 null-org production cases' claim could not be checked and the slice depends on it nowhere."
     }
   ]
 }
