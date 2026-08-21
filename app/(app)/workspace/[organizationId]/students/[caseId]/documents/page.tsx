@@ -7,6 +7,10 @@ import {
 import { isStaffOnCase } from "@/lib/cases/case-frame";
 import { openCaseRoute } from "@/lib/cases/case-route";
 import { listCaseDocumentRequests } from "@/lib/cases/document-requests-repo";
+import {
+  listCaseDocumentReviews,
+  listCaseDocumentVersions,
+} from "@/lib/cases/document-collaboration-repo";
 import { DOCUMENT_META, GROUP_LABELS } from "@/lib/documents/types";
 
 /**
@@ -15,11 +19,21 @@ import { DOCUMENT_META, GROUP_LABELS } from "@/lib/documents/types";
  *
  * ## What this section is, and what it is not
  *
- * It is the CHASE LIST. It is not the vault: no file is uploaded, downloaded or
- * previewed here, and neither `documents` nor `document_status` is read or written.
- * Those tables hold one row per kind per case and the request/version/review model
- * that replaces them is the rest of Stage 4 — so a request lives beside a document,
- * never on it.
+ * It is the CHASE LIST **and, since MV-186, the collaboration surface**: a file arrives against
+ * a request, a counsellor accepts or rejects it, and the request resolves. What it is still NOT
+ * is the VAULT — neither `documents` nor `document_status` is read or written here, and a
+ * version's `document_id` is deliberately left NULL (spec §7.5, D10). `documents` holds one
+ * row per kind per case, so pointing a version at it would silently REPLACE the student's
+ * current file for that kind, and version history exists precisely so a file can arrive without
+ * overwriting anything.
+ *
+ * ## Three reads, and a failure in any of them is an outage
+ *
+ * Requests, versions and reviews. The page needs all three to say anything true about a request:
+ * `case_document_requests.status` is `outstanding | resolved` and collapses five human states
+ * into two (spec §7.1, D6), so an empty version list read as "nothing arrived" — when the truth
+ * is "we could not find out" — would point the chase at the student for a file already sitting
+ * in the counsellor's own review queue.
  *
  * ## This page re-authorizes for itself
  *
@@ -62,12 +76,23 @@ export default async function CaseDocumentsPage({
 
   const canRequest = isStaffOnCase(gate.grantedRoles);
 
-  const requests = await listCaseDocumentRequests(caseId, gate.supabase);
+  const [requests, versions, reviews] = await Promise.all([
+    listCaseDocumentRequests(caseId, gate.supabase),
+    listCaseDocumentVersions(caseId, gate.supabase),
+    listCaseDocumentReviews(caseId, gate.supabase),
+  ]);
   if (!requests.ok) {
     // A read that FAILED is not an empty chase list. "Nothing is outstanding" would
     // tell a counsellor this case is clear when we could not find out — and there is
     // nothing on a reassuring page to make them try again.
     return <Outage heading="We couldn't load this student's document requests" />;
+  }
+  if (!versions.ok || !reviews.ok) {
+    // The same rule, one table down. Rendering the chase list with an EMPTY version history
+    // would state "nothing has arrived against this request" about every request on the case —
+    // a specific, confident, wrong sentence, and the one that sends a counsellor to chase a
+    // student for a file that is already waiting on their own review.
+    return <Outage heading="We couldn't load this student's documents" />;
   }
 
   const view: DocumentRequestView[] = requests.data.map((request) => ({
@@ -83,8 +108,7 @@ export default async function CaseDocumentsPage({
       <header className="flex flex-col gap-2">
         <h1 className="text-headline font-medium">Documents</h1>
         <p className="max-w-[64ch] text-body text-ink-soft">
-          What this student has been asked for, and what is still outstanding. Files themselves are
-          not held here yet.
+          What this student has been asked for, what has arrived, and what still needs a decision.
         </p>
       </header>
 
@@ -96,11 +120,14 @@ export default async function CaseDocumentsPage({
         // one day become `server-only`.
         kinds={KIND_OPTIONS}
         canRequest={canRequest}
+        versions={versions.data}
+        reviews={reviews.data}
       />
 
       <p className="max-w-[64ch] text-caption text-ink-soft">
-        Uploading and reviewing the documents themselves is not built yet. A request records what
-        was asked for and when it arrived.
+        A request resolves when its newest file is accepted. Rejecting one leaves the request
+        outstanding — a new upload replaces the file rather than editing it, and every version
+        stays on the record.
       </p>
     </div>
   );

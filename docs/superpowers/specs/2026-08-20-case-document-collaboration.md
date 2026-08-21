@@ -3,6 +3,7 @@
 **Date:** 2026-08-20 · **Lane:** consultancy workspace UI ·
 **Plan:** `docs/superpowers/plans/2026-08-19-consultancy-workspace-ui-build.md` §3, PR 5B
 **Status:** spec complete; 5B carved as **MV-185** (schema) then **MV-190** (Storage + routes).
+§7 adds the **MV-186** (5C, the UI) pass — no migration, no further split.
 
 The plan required "a written spec pass" before 5B could be carved, and said it would
 "likely split again". It splits in two, and the spec pass also found **two stale premises
@@ -367,3 +368,194 @@ untouched, which is what acceptance criterion 6 asks for.
 - Nothing in `documents` or `document_status`. `documents_case_kind_idx` survives, still asserted.
 - No route that writes a version row — that is MV-186's. MV-190 makes the path *writable* and
   *readable*; it does not add the writer.
+
+---
+
+## 7  The MV-186 spec note — the UI, and the three questions the plan never asked
+
+**Date:** 2026-08-21 · **Card:** `docs/kanban/cards/MV-186-collaboration-ui.md` · **Plan:** §3, PR 5C
+
+The plan's entire 5C entry is one sentence — *"the collaboration UI. Upload, version history,
+review verbs on the Documents page."* That sentence names three controls and decides nothing
+about what the surface SAYS, which is the half this repo has twice had to rework (MV-143's
+abstain gate, MV-144's accuracy meter). §1 and §6 each paid for themselves by overturning a
+stale premise before a line was written; this pass does the same for the reads.
+
+**MV-186 carries no migration.** The schema is live locally and in production (MV-185 applied
+2026-08-21; MV-190's grant and CHECK apply with it). Everything below is routes, components and
+copy, built inside grants that already exist. There is no second decision point, so unlike 5B
+this slice does not split.
+
+### 7.1 Decision D6 — a request has FIVE display states, and `status` can only express two
+
+`case_document_requests.status` is `outstanding | resolved`, and
+`private.document_request_derived_status` writes it from the newest version's newest review.
+That column is correct and stays the one MV-183's panel reads. **It is also lossy**, and the
+loss is exactly the thing a counsellor opens this page to see:
+
+| what actually happened | derived `status` | who is it waiting on? |
+|---|---|---|
+| nothing has arrived | `outstanding` (untouched — the derivation abstains) | the student |
+| a file arrived, nobody has judged it | `outstanding` | **us** |
+| a file arrived and was REJECTED | `outstanding` | the student, again |
+| a file arrived and was ACCEPTED | `resolved` | nobody |
+| no file ever arrived; a counsellor marked it received by hand (MV-182's verb) | `resolved` | nobody |
+
+Three different sentences collapse into `outstanding`, and two into `resolved`. A chase list
+built on the column alone would tell a counsellor "outstanding" about a document sitting in
+their own review queue — the single most useless thing this page could say, because it points
+the chase at the wrong person.
+
+**Decision:** the page derives its own display state from the versions and reviews it already
+reads, in a pure module (`lib/cases/document-collaboration.ts`), in the same shape MV-183 used
+for lodgement — the repo fetches, the pure module decides, the component renders. Five states:
+
+- `awaiting-upload` — no versions. "Nothing has arrived yet."
+- `awaiting-review` — the newest version carries no review. "Waiting on your review."
+- `rejected` — the newest version's newest review is `rejected`. The note is shown; a re-upload
+  is the answer, never an edit.
+- `accepted` — the newest version's newest review is `accepted`.
+- `received-by-hand` — `status = 'resolved'` with **no versions at all**. It is NOT `accepted`
+  and must never borrow that word: nobody checked a file, because there is no file. This state
+  exists because MV-182's manual verb is still live and §5's derivation deliberately abstains
+  on it.
+
+**"Newest" is `(created_at, id)` descending, in the client too.** The database derivation says
+so for the same reason — two rows written in one statement share a timestamp — and a UI that
+sorted differently would render a state the trigger disagrees with. One comparator, restated in
+the pure module and pinned by a test against the ordering the SQL states.
+
+**The derivation is never re-implemented as a write.** Nothing in this slice writes
+`case_document_requests.status`; the two `after insert` triggers do, and
+`guard_document_request_status` refuses a contradicting hand-written value with `23514`. The
+manual "Mark received" verb MV-182 shipped stays, and is offered **only for a request with no
+versions** — once a version exists the guard would refuse it, and a control that can only 403 is
+a control that should not be rendered.
+
+### 7.2 Decision D7 — version history is PER REQUEST, and the linked student reads it
+
+**Per request, not per case.** `case_document_versions.request_id` is `not null` — §3 states
+that a version with no request is what the vault is for — so history is per-request by
+construction. A flat per-case list would be a second ordering of the same rows with the request
+context stripped, and the chase list is the spine this whole model hangs off.
+
+**What each actor sees.** This is not hypothetical: a linked student holds `case.read` at
+`linked`, so `openCaseRoute` ADMITS them to `/workspace/<org>/students/<caseId>/documents` if
+they have the URL. `grantedRoles` is empty for them (no membership row), so `isStaffOnCase` is
+false — which is the gate the page already uses for MV-182's controls.
+
+| | counsellor / admin / owner | linked student |
+|---|---|---|
+| version history, filenames, dates | yes | **yes** — `_select_actor` rides `actor_case_ids()` |
+| review decisions and the rejection **note** | yes | **yes** — §7's policy comment calls this "the half of this model that is any use to them" |
+| upload a version | yes | **no** — `can_staff_case` |
+| accept / reject | yes | **no** — `can_staff_case`, "the card's headline" |
+| download a version | yes | yes — both go through `mintCaseScopedDownloadUrl` |
+
+**Belt and braces, and both halves tested.** RLS refuses a student's insert whatever the UI
+does; the UI must also not RENDER a verb whose only possible outcome is a 403. A control that
+appears and then fails is worse than an absent one — it tells the person they were allowed.
+So the components take `canReview` / `canUpload` as props computed on the server, and a named
+test asserts that a student render contains no review verb and no upload control.
+
+### 7.3 Decision D8 — MV-183's lodgement copy, and the exact sentence that became false
+
+`components/workspace/submittability-panel.tsx` carries:
+
+> Read from document requests only. **Nothing here has been checked or approved**, and the list
+> is only as complete as the requests on it.
+
+The bolded clause was true when it was written and **is now false in one direction**: after this
+slice, a `resolved` request may be one whose file a counsellor accepted — which is precisely
+"checked". Leaving it would be under-claiming, which is a smaller sin than over-claiming but is
+still the panel saying something untrue about its own data.
+
+**The correction must not swing the other way, and the reason is mechanical.** The panel reads
+`case_document_requests` and NOTHING else — `readCaseLodgement` → `listCaseDocumentRequests` →
+`deriveLodgement`. It never loads a version or a review. So from `status = 'resolved'` alone the
+panel **cannot tell an accepted file from a request marked received by hand** (D6's last two
+rows). "Every document has been checked" is therefore not a sentence this panel is entitled to,
+and giving it one would be MV-144 again.
+
+**Decision — the note becomes:**
+
+> Read from document requests only. A resolved request means a file was accepted or a counsellor
+> marked it received by hand, and this panel does not say which; the list is only as complete as
+> the requests on it.
+
+Three properties are preserved deliberately:
+
+1. **The completeness clause survives verbatim in meaning.** There is still no denominator —
+   nothing in the schema knows which documents a case actually needs — so §3's ban on a
+   percentage, an "x of y" and a progress bar is untouched, and its three tests stand unchanged.
+2. **The state words do not move.** `clear` stays "Nothing outstanding", not "Ready to lodge":
+   a rejected file derives `outstanding`, so `clear` still means every request resolved, and the
+   settled sentence "Every document this case has been asked for has arrived" stays true of
+   both resolved kinds. Reviews raise what a request MEANS; they do not hand the panel a
+   case-level verdict it still has no data for.
+3. **The claim scan stays, and gains a clause.**
+   `tests/components/workspace/submittability-panel.test.tsx` scans every rendered line for
+   `ready|verified|approved|submittable|lodged` with `[data-lodgement-scope]` excluded, because
+   in the note those words appear as a DENIAL. The note is still the only exclusion and is still
+   pinned verbatim. **Added:** the panel's non-note prose must not claim a document was
+   *checked* or *reviewed* either — a word the new note introduces, and therefore a new way for
+   the claim to leak into the prose.
+
+This is a considered edit to a pinned test, not a green-ification. The old string is replaced
+because the sentence it pinned is no longer true; every other assertion in that file is left
+exactly as MV-183 wrote it.
+
+### 7.4 Decision D9 — a THIRD route, and why version history is useless without it
+
+The card names two write routes. A third, read-only, is required and is named here rather than
+smuggled in: **`GET …/document-versions/[versionId]/download`**.
+
+MV-190 shipped `mintCaseScopedDownloadUrl` and one caller, `app/api/documents/[id]/view`, which
+resolves a **`documents`** row by its id. It cannot serve a `case_document_versions` row — a
+different table, a different id, and a `storage_path` the vault has no column for. So without
+this route the helper MV-190 built has no path to a collaboration object at all, and the review
+verbs would ask a counsellor to accept or reject a file they cannot open. That is not a
+judgement; it is a coin toss with an audit trail.
+
+It adds no new authorization surface: it reads the version row on the AUTHENTICATED client
+filtered by `case_id` (so RLS answers first), then hands the row's `storage_path` to the helper,
+which performs `checkCasePermission` itself and bounds the path to the case. The same two gates,
+in the same order, as `[id]/view`.
+
+### 7.5 Decision D10 — `document_id` stays NULL in this slice
+
+`case_document_versions.document_id` is nullable and bounded to the case by the INSERT policy's
+fourth conjunct. It exists for the case where a version *is* the vault's current file (§2).
+
+**This slice writes `null` and never sets it.** Making a counsellor's upload also become the
+vault's current file for its kind is a second decision with its own consequences: `documents` is
+`UNIQUE (case_id, kind)`, so it would silently REPLACE whatever the student uploaded, and
+`lib/checklist/generator.ts` and the profile sections read that row. Version history exists
+precisely so a file can arrive without overwriting anything. Wiring the vault is a product
+decision about whose file is canonical, it is not needed for upload → review → resolve to work,
+and §2 already fenced this lane out of `documents`. It stays unbuilt until something asks for it.
+
+### 7.6 What MV-186 ships, restated
+
+1. `lib/cases/document-collaboration.ts` — the pure five-state derivation (D6) and its
+   comparator, plus the repo reads and writes for versions and reviews on one case.
+2. **Two write routes**: `POST …/document-requests/[requestId]/versions` (multipart; validates,
+   uploads the BYTES FIRST, then inserts the row with a client-generated `id`), and
+   `POST …/document-versions/[versionId]/reviews` (JSON; `accepted` | `rejected`, optional note).
+3. **One read route** (D9): `GET …/document-versions/[versionId]/download`.
+4. The Documents page: per-request state, version history, upload, accept / reject, download.
+5. MV-183's scope note corrected (D8), and its test edited as a considered change.
+
+### What §7 does NOT do
+
+- **No migration.** Every grant, policy, constraint and trigger it writes within is already
+  applied. If this slice appears to need schema, that is a finding to report, not a migration
+  to write.
+- **No Stage 5 invitations** (MV-187) and **no visa-risk read** (MV-188).
+- **Nothing in `documents` / `document_status`**, and `documents_case_kind_idx` untouched — the
+  same fence MV-182, MV-185 and MV-190 each held. D10 is the sharp edge of it.
+- **No delete-a-version and no edit-a-review control**, in either direction. Both tables are
+  append-only to a client and §6 grants no UPDATE and no DELETE on either; a rejected file is
+  superseded by a new upload, and a mistaken review is corrected by writing another one. A UI
+  offering either verb would be offering a `42501`.
+- **No case-activity feed, no notification, no extraction** — §3's list, unchanged.

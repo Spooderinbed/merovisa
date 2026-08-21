@@ -62,6 +62,12 @@ function renderList(props: Partial<React.ComponentProps<typeof CaseDocumentReque
       requests={[OUTSTANDING, RESOLVED]}
       kinds={KINDS}
       canRequest
+      // MV-186 made these REQUIRED rather than defaulting to []. A default would render
+      // "nothing has arrived against this request" for every request whenever a caller forgot
+      // to pass them — a specific, confident, wrong sentence. These fixtures are empty, which
+      // is the state MV-182's assertions were always written against.
+      versions={[]}
+      reviews={[]}
       {...props}
     />,
   );
@@ -222,5 +228,50 @@ describe("asking for something", () => {
     expect(screen.queryByRole("button", { name: /ask for this/i })).not.toBeInTheDocument();
     // And no resolve control either: both verbs are the same claim.
     expect(screen.queryByRole("button", { name: /mark received/i })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * MV-186 — the manual verb after the collaboration model, and acceptance criterion 8.
+ */
+describe("MV-182's manual resolve verb, now that versions exist", () => {
+  const VERSION = {
+    id: "ver-1",
+    requestId: "req-out",
+    storagePath: "case/aaaaaaaa-0000-4000-8000-000000000001/ver-1",
+    fileSize: 2048,
+    originalName: "passport.pdf",
+    contentType: "application/pdf",
+    createdAt: "2026-08-20T10:00:00.000Z",
+  };
+
+  it("is still offered on a request that has NO versions", () => {
+    // The counsellor who received a passport by hand. The derivation abstains on a
+    // request with no versions (it returns NULL), so the guard trigger lets the write
+    // through and the control does something real.
+    renderList();
+    expect(screen.getByRole("button", { name: /mark received/i })).toBeInTheDocument();
+  });
+
+  it("DISAPPEARS once a file has arrived against that request", () => {
+    renderList({ versions: [VERSION] });
+    // `private.guard_document_request_status` would refuse a hand-written status that
+    // contradicts the derivation with a 23514, so this control could then only ever
+    // produce a failed write — and a control that appears and then fails tells the
+    // person they were allowed. Accepting the newest version is how it resolves now.
+    expect(screen.queryByRole("button", { name: /mark received/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the collaboration block on every request, outstanding and resolved alike", () => {
+    const { container } = renderList();
+    // "Resolved" has two meanings — a file somebody accepted, and a tick with no file
+    // behind it — and this block is the only place that difference is visible.
+    expect(container.querySelectorAll("[data-collaboration]")).toHaveLength(2);
+  });
+
+  it("names a resolved request with no versions as received by hand, never as accepted", () => {
+    const { container } = renderList({ requests: [RESOLVED] });
+    expect(screen.getByText(/marked received by hand/i)).toBeInTheDocument();
+    expect(container.textContent ?? "").not.toMatch(/accepted/i);
   });
 });
