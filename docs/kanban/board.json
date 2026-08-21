@@ -2276,15 +2276,27 @@
     },
     {
       "id": "MV-186",
-      "col": "inreview",
+      "col": "done",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-186-collaboration-ui.md",
       "title": "Document collaboration UI: upload, version history, review verbs (Stage 4 slice 4, PR 5C)",
       "summary": "Closes the Stage 4 loop: MV-182 could ask for a document, MV-185 gave a file a row, MV-190 gave it a path — nothing could still RECEIVE or JUDGE one. Ships the pure five-state derivation, two write routes (a version against a request; a review on a version), one read route (a signed download per version), and the Documents page UI. Carries the spec §7 pass: case_document_requests.status is LOSSY — three human states collapse into `outstanding` (nothing arrived / awaiting OUR review / rejected) and two into `resolved` (accepted, or marked received by hand), so a page built on the column alone points the chase at the wrong person. Status is never written by this slice; the after-insert triggers write it and a guard trigger refuses a contradicting hand-written value. NO MIGRATION — the schema is already live in production. Both tables stay append-only: no delete-a-version and no edit-a-review control. Also corrects MV-183's lodgement scope note, which claimed \"nothing here has been checked or approved\" — now false in one direction, and corrected without letting the panel claim it can tell an accepted file from one received by hand.",
       "created": "2026-08-21",
-      "entered": "2026-08-21",
-      "badge": "In review — PR open. Spec §7 first (D6-D10), as MV-185 and MV-190 both did, and ONE PR because there is no migration and so no second decision point. D6: case_document_requests.status is LOSSY — three human states collapse into `outstanding` and two into `resolved` — so the page derives five display states and never writes status (the after-insert triggers do; the guard trigger raises 23514 on a contradicting hand-written value). D9 added a THIRD route, argued not smuggled: mintCaseScopedDownloadUrl's only caller resolves a `documents` row and cannot serve a version, so without it the review verbs judge a file nobody can open. D10: document_id stays NULL — documents is UNIQUE (case_id, kind), so wiring the vault would silently replace the student's file. 25 mutants each killed distinct NAMED tests. ONE MUTANT KILLED NOTHING and found a fixture bug: the all-digit CASE_ID made .toUpperCase() a no-op, MISTAKES.md's MV-190 trap one slice later; a second fixture was 10 bytes against verifyFileMagic's 12-byte floor. MV-183's scope note corrected — it claimed nothing had been checked, now false in one direction — WITHOUT letting the panel claim it can tell an accepted file from one received by hand, which it cannot (it reads requests only). NOT VISUALLY VERIFIED: the browser pane cannot render in a non-interactive session, so the live pass is outstanding and should gate the merge."
+      "entered": "2026-08-22",
+      "badge": "Done — merged to master 2026-08-21 (PR #154, merge 15e87c1). Closed the Stage 4 loop: the five-state derivation (D6), two write routes, one read route (D9), and the Documents page. D10 kept document_id NULL so the vault's UNIQUE (case_id, kind) could not silently replace a student's file. 25 mutants each killed distinct NAMED tests; ONE KILLED NOTHING and found two fixture bugs (an all-digit uuid made .toUpperCase() a no-op; a 10-byte PDF never reached verifyFileMagic's 12-byte floor) — both now in MISTAKES.md. NO MIGRATION, so one PR."
+    },
+    {
+      "id": "MV-189",
+      "col": "inprogress",
+      "pri": "P1",
+      "owner": "agent",
+      "file": "cards/MV-189-document-access-audit-events.md",
+      "title": "Document access audit events (Stage 4 slice 5)",
+      "summary": "Pays the part of the service-role debt Stage 4 owns. The plan makes auditing a CONDITION of the exception list — every entry 'named, justified, preceded by an explicit case authorization check, and audited' — and lib/supabase/service-role-exceptions.ts holds 18 sanctioned entries with all 18 carrying auditEvent: null, so the fourth clause is satisfied by none of them. Today a counsellor can upload, open and download a student's passport scan and nothing anywhere records that it happened. Wires the five document-access paths (two uploads, two signed-URL mints, one delete) to public.audit_events through a single choke point. Spec §8 (D11-D15) first, committed before code.",
+      "created": "2026-08-22",
+      "entered": "2026-08-22",
+      "badge": null
     }
   ]
 }
