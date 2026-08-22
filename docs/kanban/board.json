@@ -2301,7 +2301,7 @@
     },
     {
       "id": "MV-191",
-      "col": "ready",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-191-stage4-exit-gate.md",
