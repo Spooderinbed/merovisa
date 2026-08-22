@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-21",
+  "updated": "2026-08-23",
   "staleDays": 7,
   "columns": [
     {
@@ -2310,6 +2310,18 @@
       "created": "2026-08-22",
       "entered": "2026-08-22",
       "badge": "In review - PR open. Gate taken: the coverage inventory found FOUR real gaps (enumerate uncovered in all four sub-modes; anon probed for read but never write; the mint denial mock-only; existence parity unasserted) and closed them in tests/integration/stage4-exit-gate.itest.ts (50 tests). 26 test-kills across 8 widening mutants - a denial dies to permissiveness, not to a drop, so MV-185-style drop mutants would have left every denial green. THE RESULT WORTH KEEPING: the download boundary is defended independently in RLS AND TypeScript - each survives the other being widened, and only the compound mutant kills the mint denials. Three mutants survived deliberately and are recorded as findings. Also struck a deferral MV-190 had silently discharged (DEFERRED_BY_DESIGN 7 -> 6). No migration. CI green on all four checks (integration self-hosts its stack, 4m33s). Found in passing and NOT fixed here: stage2-data-equivalence.itest.ts fails to PARSE on Windows only (shebang .mjs import, pre-existing on master); CI proves it runs and passes on Linux - Test Files 20 passed (20), Tests 1014 passed (1014) - so it is a local-environment defect, not a coverage hole."
+    },
+    {
+      "id": "MV-192",
+      "col": "inreview",
+      "pri": "P2",
+      "owner": "agent",
+      "file": "cards/MV-192-mjs-shebang-import.md",
+      "title": "A shebanged scripts/*.mjs breaks its importing test file on Windows",
+      "summary": "tests/integration/stage2-data-equivalence.itest.ts fails to PARSE on Windows with `SyntaxError: Invalid or unexpected token`, because its line 79 imports `scripts/stage2/capture-read-path-snapshot.mjs`, which opens with `#!/usr/bin/env node`. Vitest's SSR transform hoists CJS interop shims above the `#!`, and a shebang is only legal at byte 0. This is the rule already in MISTAKES.md. The fix is the one that entry prescribes: move the importable logic (READ_PATHS through formatDiff — one serializer, one hash, one exclusion list) into a shebang-free sibling `scripts/stage2/read-path-snapshot.mjs` that BOTH the CLI entrypoint and the test import, leaving the shebang on the thin CLI wrapper. Ships with a platform-independent regression guard: scan every tests/** import of scripts/**/*.mjs and refuse a `#!` first byte.",
+      "created": "2026-08-23",
+      "entered": "2026-08-23",
+      "badge": "In review — gate green, awaiting founder GO. Not merged. RESULT: the local integration lane is whole for the first time in months — `Test Files 19 passed (19)` / `Tests 964 passed (964)`, 0 skipped, where before one file collected ZERO tests. The 19 tests in stage2-data-equivalence now run on Windows. ROOT CAUSE ISOLATED, and it corrected the MISTAKES entry: a three-way probe measured CRLF-terminated shebang -> SyntaxError, the SAME shebang with an LF ending -> parses, no shebang -> parses. So the trigger is the CRLF-terminated shebang, not the shebang alone (which is exactly why Linux CI never saw it), and it is neither jsdom-only nor about node-builtin imports — this failure was in the `node` lane. MV-165's dossier had named CRLF correctly; MISTAKES.md had not, and is now rewritten around the measurement. The moved logic is BYTE-IDENTICAL to HEAD on both halves (11,548 B shared + 5,470 B CLI), which is what protects MV-160 §A's one-serializer-one-hash-one-exclusion-list guarantee. All four CLI smokes pass including a real capture -> replay -> `EQUIVALENT — zero differences`. SCOPE — this is a WINDOWS-ONLY, LOCAL-ENVIRONMENT defect. It is NOT a coverage hole and master is NOT red: CI (Linux) runs this suite and passes it — PR #157's integration job reports `Test Files 20 passed (20)` / `Tests 1014 passed (1014)` with every stage2-data-equivalence test individually ticked, and those 19 tests are exactly the margin by which CI's 1014 exceeds the local Windows 995. CI's summary-shape guard is therefore SOUND; do not go hunting for a gap in it — an earlier write-up claimed the suite was dead and that CI might have a gap, and both were wrong (corrected on MV-191's dossier). The cost is precisely that a Windows developer cannot run that suite and gets a red file with no actionable message. Ruled out already, do not redo: not control bytes (36,395 bytes, ZERO control bytes, byte-scanned); not a TypeScript error (`npx tsc --noEmit` on the file alone is silent); not caused by any recent branch (both files byte-identical to origin/master). THE RISK TO PROTECT: MV-160 §A's guarantee is that the synthetic CI half and the live rehearsal half run the SAME serializer, hash and exclusion list — move that code wholesale into one shared module, never duplicate it. Two tests also pin `capture-read-path-snapshot.mjs` by source text; both anchors (`assertCaptureHostAllowed(url`, `auth.admin.listUsers`) are CLI-only and stay in the wrapper. CRLF tree: split on /\\r?\\n/, never \"\\n\", or the new guard goes vacuously green."
     }
   ]
 }
