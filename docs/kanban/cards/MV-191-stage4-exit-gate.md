@@ -180,7 +180,7 @@ issuer `supabase-demo`), from the worktree root.
 | `npx tsc --noEmit` | exit 0, no output |
 | `npx eslint` | exit 0, no output |
 | `npx vitest run` (unit) | **Test Files 386 passed (386) · Tests 3886 passed (3886)**, exit 0 |
-| `npx vitest run --config vitest.integration.config.ts` (all itests) | **Tests 995 passed (995)** at test granularity, but **Test Files 1 failed | 19 passed (20)** — one suite never parsed. Pre-existing and unrelated; see "A dead suite found in passing" below. |
+| `npx vitest run --config vitest.integration.config.ts` (all itests) | locally on Windows **Tests 995 passed (995)** with **Test Files 1 failed | 19 passed (20)**, one suite failing to parse; **on Linux CI, Test Files 20 passed (20) / Tests 1014 passed (1014)**. Pre-existing, Windows-only, unrelated — see the note below. |
 | `stage4-exit-gate.itest.ts` alone | **Tests 50 passed (50)**, 3.56s of test time |
 | `tenant-isolation.itest.ts` after the deferral edit | **Tests 429 passed (429)** |
 | `stage4-collaboration-walk.itest.ts` (the positive walk, CONFIRMED not rebuilt) | **Tests 6 passed (6)** |
@@ -301,29 +301,35 @@ denial green. A mutant that makes the suite redder is not automatically a wideni
   that deliberately does **not** `skipIf`: it fails, loudly, when the three `SUPABASE_TEST_*` variables are absent.
   CI's `integration` job independently fails closed on a skipped suite and has been gating since 2026-08-03.
 
-### A dead suite found in passing — `stage2-data-equivalence.itest.ts` (pre-existing, NOT this slice)
+### A Windows-only parse failure found in passing — `stage2-data-equivalence.itest.ts` (pre-existing, NOT this slice)
 
-Running the whole integration suite for this card's gate surfaced a suite that **has never executed**:
+Running the whole integration suite locally for this card's gate surfaced a suite that does not run **on Windows**:
 
 ```
 FAIL  tests/integration/stage2-data-equivalence.itest.ts
 SyntaxError: Invalid or unexpected token
 ```
 
-- **Cause.** Line 79 imports `../../scripts/stage2/capture-read-path-snapshot.mjs`, and that file opens with
-  `#!/usr/bin/env node`. This is the exact entry already in `MISTAKES.md`: *"Never import a `scripts/*.mjs` with a
-  shebang + node-builtin imports from the test lane — the SSR transform hoists CJS shims above `#!` and the file
-  fails to parse."* The entry was written for the jsdom lane; it bites the node/integration lane identically.
-- **Not caused by this card.** The file is byte-identical to `origin/master` (`git diff origin/master` on it is
-  empty), as is the `.mjs` it imports. Neither is touched by this slice.
-- **Not a control-byte problem.** The file was byte-scanned: 36,395 bytes, **zero** control bytes. `tsc` parses it
-  without a syntax error. The failure is at import time, not in the file's own source.
-- **Why it is worth writing down rather than shrugging at.** MV-160 §A's Stage 2 before/after data-equivalence proof
-  is 676 lines that produce no assertions at all, and the run still reports `Tests 995 passed (995)` — a summary that
-  satisfies a "did anything run" check at *test* granularity while an entire suite is dead. That is the same shape as
-  the crashed-worker trap, one level up, and it is exactly what this card's own configuration guard exists to prevent
-  for the Stage 4 gate.
-- **Scope call.** Deliberately **not fixed here.** The fix is to move the importable logic out of the shebanged
-  `.mjs` into an import-free sibling — MV-160's file, MV-160's test plan, and a refactor with its own verification
-  burden. Folding it into a Stage 4 verification slice would mix two stages' concerns in one review. Reported instead,
-  and it does not touch any Stage 4 claim: every Stage 4 suite, and this card's own gate, ran and passed.
+- **Cause.** Line 79 imports `../../scripts/stage2/capture-read-path-snapshot.mjs`, which opens with
+  `#!/usr/bin/env node`. This is the entry already in `MISTAKES.md`: *"Never import a `scripts/*.mjs` with a shebang
+  from the test lane — the SSR transform hoists CJS shims above `#!` and the file fails to parse."*
+- **Windows only — corrected after first being written up as worse than it is.** The first draft of this note called
+  the suite dead and suggested CI's guard might have a gap. **Both were wrong**, and CI settled it: the `integration`
+  job on PR #157 reports `Test Files 20 passed (20)` and `Tests 1014 passed (1014)`, with every
+  `stage2-data-equivalence.itest.ts` test individually ticked. The suite runs and passes on Linux, contributing the
+  19 tests by which CI's 1014 exceeds the local 995. CI's guard is sound and master is not red.
+- **What it actually costs.** A Windows developer cannot run that suite and sees a red file with no usable message,
+  which is a real local-environment defect and worth fixing — but it is *not* a coverage hole, and nothing in Stage 2
+  is unproven because of it.
+- **Not caused by this card.** The itest and the `.mjs` are byte-identical to `origin/master`. Ruled out and not worth
+  redoing: 36,395 bytes with **zero** control bytes, and `tsc` parses the file without a syntax error — the failure is
+  at import time.
+- **Scope call.** Deliberately **not fixed here**: it is MV-160's file and belongs in its own card rather than folded
+  into a Stage 4 verification slice. It touches no Stage 4 claim — every Stage 4 suite, and this card's own gate, ran
+  and passed on both platforms.
+
+### CI
+
+All four checks green on PR #157: `integration` **pass (4m33s)**, `validate` **pass (4m8s)**, Vercel + Vercel Preview
+Comments pass. The `integration` job self-hosts its own Supabase stack and has been gating since 2026-08-03, so this
+is real evidence rather than a skipped lane — and it is the run that corrected the note above.
