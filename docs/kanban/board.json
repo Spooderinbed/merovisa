@@ -2301,7 +2301,7 @@
     },
     {
       "id": "MV-191",
-      "col": "inprogress",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-191-stage4-exit-gate.md",
@@ -2309,7 +2309,7 @@
       "summary": "The verification half of Stage 4's exit gate: \"an unauthorized actor cannot upload, view, download, review, or enumerate a document, and the authorized request-to-approval flow works.\" Five negative verbs and one positive walk. Starts with a COVERAGE INVENTORY rather than a test, because Stage 4 already has a lot of green that does not add up to the gate: the collaboration walk itest proves only the happy path and only for an authorized actor; tests/api/case-denial.test.ts is route-level and mocked, so it proves the route refuses and not that the database would have; MV-153's real-Supabase matrix carries the case/org permission verbs but not the document ones; and `enumerate` appears to be covered by nothing at all. Extends tenant-isolation.itest.ts rather than starting a new harness. No migration expected — if a real hole needs a schema change, stop and report rather than folding a migration into a verification slice.",
       "created": "2026-08-22",
       "entered": "2026-08-22",
-      "badge": "Ready. Carved 2026-08-22 after MV-189 merged. THE TRAP THIS CARD IS MOSTLY ABOUT: a denial-only suite passes IDENTICALLY against a MISSING policy — the actor is still refused, by the absence of a grant rather than by the policy — so every policy the gate claims to cover must be MUTATED and the failing test NAMES read. Second trap: `enumerate` is a distinct verb (discovering that a document EXISTS, via a list read, a row count, a Storage listing, or the difference between a 403 and a 404), and denial suites are naturally written as \"cannot read X\" so it is the verb most likely to be quietly absent. Third: every production case carries a NULL organization_id, so a fixture copied from production shape cannot express cross-organization denial at all — build a real second org. Scope is verification ONLY; Stage 4's remaining build bullet (scanning, quarantine, backup and recovery for pilot documents) is pilot-gated and deliberately excluded, and the exit summary must say so. Note for the summary: Stage 3's own exit gate (MV-174) is still in Backlog with no dossier, so \"Stage 4 passed\" must not be read as \"Stages 1-4 all passed\"."
+      "badge": "In review - PR open. Gate taken: the coverage inventory found FOUR real gaps (enumerate uncovered in all four sub-modes; anon probed for read but never write; the mint denial mock-only; existence parity unasserted) and closed them in tests/integration/stage4-exit-gate.itest.ts (50 tests). 26 test-kills across 8 widening mutants - a denial dies to permissiveness, not to a drop, so MV-185-style drop mutants would have left every denial green. THE RESULT WORTH KEEPING: the download boundary is defended independently in RLS AND TypeScript - each survives the other being widened, and only the compound mutant kills the mint denials. Three mutants survived deliberately and are recorded as findings. Also struck a deferral MV-190 had silently discharged (DEFERRED_BY_DESIGN 7 -> 6). No migration. Found in passing and NOT fixed here: stage2-data-equivalence.itest.ts has never parsed (shebang .mjs import) - pre-existing on master, 676 lines dead behind a green Tests 995 passed (995)."
     }
   ]
 }

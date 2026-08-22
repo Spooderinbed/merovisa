@@ -149,3 +149,181 @@ through 4 all passed theirs".
   pilot-gated and is deliberately **not** in scope here. The exit summary must say that the gate was assessed against
   the boundary properties and not against those controls, so the stage is not recorded as fully exited on the strength
   of this card alone.
+- **2026-08-22 — DIVERGENCE from the test plan, as the card requires it be stated.** The gate lives in a NEW file,
+  `tests/integration/stage4-exit-gate.itest.ts`, rather than as new cells inside `tenant-isolation.itest.ts`. It still
+  *extends the harness* — same `fixtures/tenancy.ts`, same two real organizations, same per-role authenticated
+  clients, same service-role-for-seeding-only discipline — so the reason the card gave for preferring that harness is
+  honoured. What is not extended is that suite's *matrix*, because it owns Stage 1's canonical access matrix and pins
+  its own shape (`CASE_VERBS`, `TS_ONLY_CELLS`, `DEFERRED_BY_DESIGN.length`); Stage 4 verbs are not Stage 1 verbs, and
+  the four Stage 4 suites already established the per-slice-file-over-shared-fixture pattern.
+- **2026-08-22 — the fixture already satisfied the `organization_id` risk note.** The card warned that a fixture copied
+  from production shape could not express cross-organization denial, because every production case is personal and
+  carries a null org, and `NULL = ANY(...)` is NULL. `seedTenancyFixture` already builds two real organizations, so no
+  new fixture was needed — but the property is now *asserted* rather than assumed, in "seeded a real SECOND
+  organization, so cross-organization denial is expressible at all".
+- **2026-08-22 — a deferral that had been silently discharged.** `tenant-isolation.itest.ts` still listed
+  "storage: guessed-path download denial → Stage 4" as outstanding, pinned by `DEFERRED_BY_DESIGN.length === 7`.
+  MV-190 covered the download half on 2026-08-20 and nobody struck the entry. Struck here, 7 → 6, pointing at MV-190's
+  three refusals for the download half and this slice's listing tests for the enumeration half that MV-190 did not
+  cover.
+- **2026-08-22 — Stage 3's exit gate was never taken, and this card does not take it.** MV-174 is still in Backlog with
+  `file: null`. Stage 4's gate rests on a Stage 3 floor that was never formally verified. Re-running Stage 3's gate was
+  not in scope and was not done. See the exit summary.
+
+## Integration gate — evidence
+
+Run 2026-08-22 against the local Supabase Docker stack (`SUPABASE_TEST_URL=http://127.0.0.1:54321`, demo JWT secret,
+issuer `supabase-demo`), from the worktree root.
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | exit 0, no output |
+| `npx eslint` | exit 0, no output |
+| `npx vitest run` (unit) | **Test Files 386 passed (386) · Tests 3886 passed (3886)**, exit 0 |
+| `npx vitest run --config vitest.integration.config.ts` (all itests) | **Tests 995 passed (995)** at test granularity, but **Test Files 1 failed | 19 passed (20)** — one suite never parsed. Pre-existing and unrelated; see "A dead suite found in passing" below. |
+| `stage4-exit-gate.itest.ts` alone | **Tests 50 passed (50)**, 3.56s of test time |
+| `tenant-isolation.itest.ts` after the deferral edit | **Tests 429 passed (429)** |
+| `stage4-collaboration-walk.itest.ts` (the positive walk, CONFIRMED not rebuilt) | **Tests 6 passed (6)** |
+
+Counts were read at both file and test granularity on every run, and no run reported
+`Worker exited unexpectedly` — the failure mode in which a crashed worker prints a clean summary having executed
+nothing.
+
+## Mutation table — mutant to the test that died, by name
+
+Harness: `supabase/rehearsal/MV-191-mutation.sql` (SQL mutants) plus two hand-applied TypeScript mutants it documents
+but cannot reach. Every SQL mutant restores self-contained, so no migration re-run is needed — which matters here,
+because re-running MV-185's migration alone silently un-grants `id` on `case_document_versions`.
+
+**Every mutant below WIDENS.** MV-185's mutants mostly drop, which is right for a suite dominated by positive claims;
+an exit gate is dominated by negative ones, and dropping a SELECT policy makes a table deny *more*, so every denial
+assertion stays green against it. A denial dies to permissiveness.
+
+| Mutant | Kind | Tests that went red |
+|---|---|---|
+| `versions_select_org` | widen versions SELECT: admin-of-org to any member | 3 — "counsellorUnassignedA … learns NOTHING from listCaseDocumentVersions"; "… counts ZERO on case_document_versions, while the service role counts more"; "… gets the SAME answer for a real version id and a fabricated one" |
+| `requests_select_org` | same, requests | 2 — "counsellorUnassignedA … learns NOTHING from listCaseDocumentRequests"; "… counts ZERO on case_document_requests …" |
+| `reviews_select_org` | same, reviews | 2 — "counsellorUnassignedA … learns NOTHING from listCaseDocumentReviews"; "… counts ZERO on case_document_reviews …" |
+| `versions_select_true` | blunt calibration: `using (true)` | 9 — all three denied actors × {list read, row count, existence parity} on versions |
+| `storage_case_list` | **addition** — plants the `storage.objects` SELECT policy MV-190 D4 declined | 5 — "…lists NOTHING under case/<case A>" for each of the three denied actors; "the ASSIGNED counsellor also lists nothing…"; "listing the BARE case/ root discloses no case id" |
+| `anon_read_grant` | **addition** — grants anon SELECT + permissive policy on all three | 1 — "the ANONYMOUS caller learns nothing from any of the three" |
+| `anon_write_grant` | **addition** — grants anon INSERT + permissive policy on all three | 4 — "an anonymous client may NOT insert a version" / "… a review" / "… a request"; "nothing the anonymous caller attempted actually landed" |
+| `cases_select_org` **+** the TypeScript `deriveCaseGrants` widening, **together** | compound | 2 — "REFUSES counsellorUnassignedA … and the refusal is a DENIAL, not a mint failure"; "the mint answers a refused actor identically whether the object exists or not" |
+
+26 distinct test-kills across 8 killing mutants. Three further mutants **survived deliberately** and are retained as
+findings rather than deleted:
+
+| Survivor | Why it survives — and why that is the interesting part |
+|---|---|
+| `cases_select_org` alone | The row becomes visible, but `deriveCaseGrants` still refuses an unassigned counsellor. |
+| the TypeScript widening alone | TypeScript would allow, but `getCaseContext` reads `cases` through the **actor's** RLS client, so the row is invisible, `caseExists` is false, and it denies before facts are derived. |
+| `assign_tenant_counsellors` | Unreachable by construction: `case_assignments_primary_idx` is UNIQUE on `(case_id)` where `assignment_role = 'primary_counsellor'`, and the CHECK admits no other role, so a case has exactly ONE assigned counsellor and no row can be added to widen it. |
+
+**The download verb takes two mutants, and that is the most load-bearing result here.** The mint's denial is defended
+independently in RLS *and* in TypeScript; neither layer is load-bearing alone. A future author who removes one will
+see a fully green exit gate and reasonably conclude it was redundant. It is not.
+
+### Two mutants that were wrong before they were right
+
+Both are recorded because reading only the pass **count** would have recorded each as evidence that the test was sound.
+
+1. **The first `*_select_org` predicate was inert.** It widened via `case_id in (select c.id from public.cases c where
+   c.organization_id = any (private.actor_org_ids()))` and survived at 50/50. A subquery inside a policy is itself
+   subject to RLS, and `cases_select_accessor` already hides case A from the very actor the mutant existed to let in —
+   so the widening widened nothing. `private.case_org_id()` is SECURITY DEFINER and answers regardless.
+2. **The first assignment mutant was a one-shot INSERT, and mutants are applied BEFORE the run.** The suite seeds its
+   own organizations, users and cases in `beforeAll` *after* that, so there was no case for the INSERT to widen.
+   Schema mutants persist across seeding; data mutants do not and must fire during it. Rewritten as a trigger — at
+   which point it hit the unique index above and became the third survivor. Its second draft also used
+   `on conflict (id)`, which missed the real constraint `(case_id, user_id)` and raised `23505` inside the fixture's
+   own seeding: **49 skipped, 1 passed**, a shape that reads nothing like a surviving mutant.
+
+Also worth pinning: setting the grid cell `counsellor["case.read"]` to `"all-org"` is **not** a widening.
+`decideCasePermission` requires the granted scope to equal the grid cell exactly, so raising the cell makes a
+counsellor's `assigned` grant stop matching and denies *everyone* — it killed the positive control and left every
+denial green. A mutant that makes the suite redder is not automatically a widening.
+
+## Stage-exit summary
+
+### What is proven, and in which layer
+
+- **Upload** — refused for an unassigned counsellor, the linked student, organization B, a forged `organization_id`, a
+  forged `uploaded_by`, a cross-case request, and (new) the anonymous caller. **Database**, via RLS + column grants.
+- **View** — refused for an unassigned counsellor, organization B and anon; allowed for the assigned counsellor, the
+  org admin and the linked student. **Database.**
+- **Download** — the `case/` prefix is deny-by-default in Storage for every client including the assigned counsellor;
+  the only sanctioned way in, `mintCaseScopedDownloadUrl`, refuses all three unauthorized actors against **real
+  Postgres** (previously mock-only), refuses a path belonging to another case as `path-outside-case` rather than as a
+  denial, and mints a URL that really fetches the bytes for the assigned counsellor and the linked student.
+  **Storage + database + TypeScript**, the last two independently.
+- **Review** — refused for the linked student on their own file, an unassigned counsellor, organization B, a
+  cross-case version, a forged `reviewed_by`, a forged `organization_id`, and (new) the anonymous caller. **Database.**
+- **Enumerate** — proven as its own verb in four sub-modes: the three collaboration list reads, a direct row count on
+  each of the three tables, a Storage listing of both `case/<case id>` and the bare `case/` root, and existence parity
+  between a real and a fabricated version id. **Database + Storage.** Every denial is paired with a service-role
+  existence proof that throws on genuine absence, so none can pass against an empty table.
+- **The positive walk** — request → upload → reject → re-upload → accept, with the derivation agreeing with the
+  trigger at every step, plus the newest-review rule, the microsecond id tiebreak, the hand-resolved request and the
+  status guard. **Confirmed by re-run, not rebuilt.**
+
+### Not tested, and why
+
+- **Scanning, quarantine, backup and recovery for pilot documents.** Stage 4's remaining build bullet. Genuinely
+  pilot-gated and deliberately out of scope for this card. **The gate was assessed against the boundary properties and
+  not against those controls, so Stage 4 is not recorded as fully exited on the strength of this card alone.**
+- **The routes' HTTP status codes themselves.** Existence parity is asserted at the layer that decides it — the
+  repository lookup and the mint — not by mounting the Next handlers. `tests/api/case-denial.test.ts` already sweeps
+  the `app/api` tree for the denial status with zero queries; that mocked guard and this real-database one prove
+  different halves and neither replaces the other.
+- **Stage 3's exit gate.** MV-174 was never taken — still Backlog, `file: null`. **"Stage 4 passed its gate" must not
+  be read as "Stages 1 through 4 all passed theirs."** Stage 1's gate was taken (MV-153); Stage 3's was not.
+- **Production.** This slice has no production step and made none. Every measurement is against the local Docker
+  stack. No migration was written; none was needed.
+
+### Residual falsifiability limits
+
+- **The gate is only as good as the fixture's shape.** It uses two real organizations, which production does not have
+  — every production case today is personal and carries a null `organization_id`. So the cross-organization cells
+  prove the mechanism, not that it is exercised by real tenants. That is the same limit Stage 3's spec §9.3 records,
+  and it is discharged in Stage 7's pilot, not here.
+- **`anon`'s refusal is a grant refusal, not a policy refusal.** `anon` holds no grant at all on the three tables, so
+  PostgREST answers `42501` before any policy is consulted. The anon assertions are therefore evidence about the grant
+  surface. `anon_read_grant` / `anon_write_grant` plant both halves precisely because a grant without a policy would
+  still deny and would have proven nothing.
+- **The three list functions do not authorize; they delegate to RLS.** If a future caller invokes them with a
+  service-role client, they will return every row and no test here would notice. What is proven is that they leak
+  nothing *when handed an unauthorized actor's client*.
+- **Existence parity is proven for the version lookup and the mint, not for every route pair.** It holds today because
+  the routes authorize before they look anything up; that ordering is asserted in `tests/api/case-denial.test.ts` at
+  the mocked layer and here at the data layer, but a newly added route could reorder its checks and neither would
+  catch it until it too is added to one of those sweeps.
+- **A skipped gate cannot be mistaken for a passed one.** `stage4-exit-gate.itest.ts` opens with a configuration block
+  that deliberately does **not** `skipIf`: it fails, loudly, when the three `SUPABASE_TEST_*` variables are absent.
+  CI's `integration` job independently fails closed on a skipped suite and has been gating since 2026-08-03.
+
+### A dead suite found in passing — `stage2-data-equivalence.itest.ts` (pre-existing, NOT this slice)
+
+Running the whole integration suite for this card's gate surfaced a suite that **has never executed**:
+
+```
+FAIL  tests/integration/stage2-data-equivalence.itest.ts
+SyntaxError: Invalid or unexpected token
+```
+
+- **Cause.** Line 79 imports `../../scripts/stage2/capture-read-path-snapshot.mjs`, and that file opens with
+  `#!/usr/bin/env node`. This is the exact entry already in `MISTAKES.md`: *"Never import a `scripts/*.mjs` with a
+  shebang + node-builtin imports from the test lane — the SSR transform hoists CJS shims above `#!` and the file
+  fails to parse."* The entry was written for the jsdom lane; it bites the node/integration lane identically.
+- **Not caused by this card.** The file is byte-identical to `origin/master` (`git diff origin/master` on it is
+  empty), as is the `.mjs` it imports. Neither is touched by this slice.
+- **Not a control-byte problem.** The file was byte-scanned: 36,395 bytes, **zero** control bytes. `tsc` parses it
+  without a syntax error. The failure is at import time, not in the file's own source.
+- **Why it is worth writing down rather than shrugging at.** MV-160 §A's Stage 2 before/after data-equivalence proof
+  is 676 lines that produce no assertions at all, and the run still reports `Tests 995 passed (995)` — a summary that
+  satisfies a "did anything run" check at *test* granularity while an entire suite is dead. That is the same shape as
+  the crashed-worker trap, one level up, and it is exactly what this card's own configuration guard exists to prevent
+  for the Stage 4 gate.
+- **Scope call.** Deliberately **not fixed here.** The fix is to move the importable logic out of the shebanged
+  `.mjs` into an import-free sibling — MV-160's file, MV-160's test plan, and a refactor with its own verification
+  burden. Folding it into a Stage 4 verification slice would mix two stages' concerns in one review. Reported instead,
+  and it does not touch any Stage 4 claim: every Stage 4 suite, and this card's own gate, ran and passed.
