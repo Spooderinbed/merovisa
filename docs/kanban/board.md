@@ -7,11 +7,13 @@
 >
 > _Last updated: 2026-08-21 · stale threshold: 7d_
 
-### In flight — 0 open PRs
+### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-22 14:23 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-22 14:25 UTC. **Not board state** — never written to board.json.
 
-_No open PRs._
+| Card | PR | | CI | Review | Touches |
+|---|---|---|---|---|---|
+| **MV-191** | [#157](https://github.com/Spooderinbed/merovisa/pull/157) | open | pending 2/4 | — | docs · tests · supabase |
 
 > ⚠️ MV-191 is in "inreview" but its PR #156 is already merged — the board is behind the repo.
 
@@ -47,7 +49,7 @@ _empty_
 
 ## In review (WIP 3) — 1
 
-- **MV-191** · P1 · [Stage 4 exit gate: prove the document boundary holds (Stage 4 slice 6)](cards/MV-191-stage4-exit-gate.md) — _The verification half of Stage 4's exit gate: "an unauthorized actor cannot upload, view, download, review, or enumerate a document, and the authorized request-to-approval flow works." Five negative verbs and one positive walk. Starts with a COVERAGE INVENTORY rather than a test, because Stage 4 already has a lot of green that does not add up to the gate: the collaboration walk itest proves only the happy path and only for an authorized actor; tests/api/case-denial.test.ts is route-level and mocked, so it proves the route refuses and not that the database would have; MV-153's real-Supabase matrix carries the case/org permission verbs but not the document ones; and `enumerate` appears to be covered by nothing at all. Extends tenant-isolation.itest.ts rather than starting a new harness. No migration expected — if a real hole needs a schema change, stop and report rather than folding a migration into a verification slice._ · [#156](https://github.com/Spooderinbed/merovisa/pull/156) merged, ci passing
+- **MV-191** · P1 · [Stage 4 exit gate: prove the document boundary holds (Stage 4 slice 6)](cards/MV-191-stage4-exit-gate.md) — _The verification half of Stage 4's exit gate: "an unauthorized actor cannot upload, view, download, review, or enumerate a document, and the authorized request-to-approval flow works." Five negative verbs and one positive walk. Starts with a COVERAGE INVENTORY rather than a test, because Stage 4 already has a lot of green that does not add up to the gate: the collaboration walk itest proves only the happy path and only for an authorized actor; tests/api/case-denial.test.ts is route-level and mocked, so it proves the route refuses and not that the database would have; MV-153's real-Supabase matrix carries the case/org permission verbs but not the document ones; and `enumerate` appears to be covered by nothing at all. Extends tenant-isolation.itest.ts rather than starting a new harness. No migration expected — if a real hole needs a schema change, stop and report rather than folding a migration into a verification slice._ · [#157](https://github.com/Spooderinbed/merovisa/pull/157) open, ci pending · [#156](https://github.com/Spooderinbed/merovisa/pull/156) merged, ci passing
 
 ## Blocked — 3
 
