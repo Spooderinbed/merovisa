@@ -51,11 +51,32 @@
  * `user_program_state` already grants `authenticated` full CRUD, so its admin
  * client was never load-bearing. It is the only flip Stage 2 makes.
  *
- * AUDIT WIRING IS NOT YET POSSIBLE. `auditEvent` names the `audit_events.action`
- * a path must emit once it touches case-scoped data. Nothing emits one today:
- * MV-150 shipped `private.write_audit_event` with EXECUTE revoked from public, so
- * there is no callable write path until MV-152's grant review. A `null` here
- * means "this path touches no case-scoped data", never "auditing was skipped".
+ * AUDIT WIRING, LIVE SINCE MV-189 FOR THE FIVE DOCUMENT-ACCESS PATHS. `auditEvent`
+ * names the `audit_events.action` a path emits when it touches case-scoped data.
+ *
+ * This header used to read "AUDIT WIRING IS NOT YET POSSIBLE … there is no callable
+ * write path until MV-152's grant review", and both halves were wrong by the time
+ * MV-189 measured them. MV-152 shipped and granted no EXECUTE, so waiting on it was
+ * waiting on something that had already happened and declined. And the premise
+ * underneath — that a grant was the blocker — is false: `private` is not an exposed
+ * PostgREST schema, so with EXECUTE granted to BOTH `service_role` and
+ * `authenticated`, `/rest/v1/rpc/write_audit_event` still answers `404 PGRST202`
+ * (it searches `public`), and forcing `Content-Profile: private` answers `406
+ * PGRST106` — "Only the following schemas are exposed: public, graphql_public".
+ *
+ * So the write is a direct INSERT on the service-role client, which already holds
+ * INSERT on `public.audit_events` — the mechanism MV-152 itself wrote down
+ * (`20260730180000_case_aware_rls_policies.sql:750-753`, "Audit rows are written by
+ * server paths running as service_role"). It flows through one choke point,
+ * `lib/audit/write-audit-event.ts`, and it is FAIL-CLOSED: no route returns a 2xx
+ * without its audit row committed (plan line 504 — an authorized sensitive read and
+ * its audit row "cannot be separated"). Spec §8, decisions D11-D15:
+ * `docs/superpowers/specs/2026-08-20-case-document-collaboration.md`.
+ *
+ * A `null` below still means "this path touches no case-scoped data", and still
+ * never means "auditing was skipped". THIRTEEN entries remain `null`: they are not
+ * document access, and wiring them is Stage 6's "finish append-only security audit
+ * coverage" (plan line 668).
  *
  * No `server-only` import: this module is inert metadata with no secrets, and it
  * is deliberately readable by tooling and tests (the ESLint rule parses this very
@@ -90,12 +111,15 @@ export interface ServiceRoleException {
 }
 
 /**
- * AUDIT WIRING, RE-CHECKED AT MV-157/MV-158 rather than left stale: every
- * `auditEvent` below is still `null`, and it still means "no audit event is
- * emissible", not "auditing was skipped". `private.write_audit_event` has EXECUTE
- * revoked from PUBLIC (MV-150) and Stage 2 adds NO grant — grants are reviewed
- * once, with the policies, in MV-159 (spec §7.3). The two account-linking entries
- * are the ones that will want `case.student_linked` the moment that grant lands.
+ * AUDIT WIRING, RE-CHECKED AT MV-189 rather than left stale — and this time the
+ * re-check changed the answer. Five entries below now carry an `auditEvent`: the two
+ * signed-URL mints and the three paths that upload or delete document bytes. The
+ * remaining thirteen stay `null` and still mean "no case-scoped document access
+ * happens here", never "auditing was skipped".
+ *
+ * The two account-linking entries are still the ones that will want
+ * `case.student_linked` — MV-187, Stage 5. Nothing blocks them now except that they
+ * have no invitation flow to record yet.
  *
  * The allow-list. Every entry was read and classified against the file's actual
  * behaviour on 2026-07-30 (MV-151) and re-read at MV-157/MV-158; none is
@@ -200,7 +224,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
       "Storage administration (plan line 342): deletes a private Storage object and its row. The authenticated client cannot remove Storage objects under the current bucket policy.",
     requiredCaseCheck:
       "MV-190 (spec F-8): resolveTargetCase(actor, ?caseId=, 'case.update', authenticatedClient) THEN a `.eq(\"case_id\", caseId)` re-read that 404s, before Storage is touched. The case is the one the caller NAMES when it names one and the actor's own otherwise — MV-157 case-scoped this route, but resolvePersonalCaseId could only ever answer with the ACTOR's case, so a counsellor could not delete on a student's. A DELETE carries no body, so the id rides the query string; a present-but-malformed value is 400 and NEVER a fallback to the actor's own case, which is how a mishandled id would delete the counsellor's own document. Deferred flip: removing the Storage object needs service-role under the current bucket policy; the row delete alone could move (documents grants authenticated DELETE), but splitting the two across clients buys nothing.",
-    auditEvent: null,
+    auditEvent: "document.deleted",
   },
   {
     path: "app/api/documents/[id]/view/route.ts",
@@ -208,8 +232,8 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Storage administration (plan line 342): mints a short-lived signed URL for a private object.",
     requiredCaseCheck:
-      "MV-190 (spec F-8, §6): resolveTargetCase(actor, ?caseId=, 'case.read', authenticatedClient) BEFORE the `.eq(\"case_id\", caseId)` read, and then mintCaseScopedDownloadUrl — which performs checkCasePermission ITSELF before it reaches Storage. That second check is the design, not a duplicate: a signed URL bypasses Storage RLS by design and is an unauthenticated bearer of the bytes the instant it exists, so 'the caller authorized first' has to hold by CONSTRUCTION. The helper takes no already-authorized flag and no pre-made URL, so there is no ordering for a later edit to get wrong; tests assert the refusal ON THE MINT CALL (createSignedUrl never reached) rather than on a fetch 404. It also bounds the PATH to this case, which the permission check cannot do — that check is about the case and the signature is about the key. TTL is SIGNED_DOWNLOAD_TTL_SECONDS = 60, asserted as a number. The at-mint AUDIT EVENT is still owed (plan §\"Storage authorization\"). Object paths stay owner-keyed for the actor's own personal case; a NAMED case writes under `case/<case_id>/…` (spec §6.1).",
-    auditEvent: null,
+      "MV-190 (spec F-8, §6): resolveTargetCase(actor, ?caseId=, 'case.read', authenticatedClient) BEFORE the `.eq(\"case_id\", caseId)` read, and then mintCaseScopedDownloadUrl — which performs checkCasePermission ITSELF before it reaches Storage. That second check is the design, not a duplicate: a signed URL bypasses Storage RLS by design and is an unauthenticated bearer of the bytes the instant it exists, so 'the caller authorized first' has to hold by CONSTRUCTION. The helper takes no already-authorized flag and no pre-made URL, so there is no ordering for a later edit to get wrong; tests assert the refusal ON THE MINT CALL (createSignedUrl never reached) rather than on a fetch 404. It also bounds the PATH to this case, which the permission check cannot do — that check is about the case and the signature is about the key. TTL is SIGNED_DOWNLOAD_TTL_SECONDS = 60, asserted as a number. MV-189 PAID THE AT-MINT AUDIT EVENT THIS ENTRY USED TO OWE (plan §\"Storage authorization\"): `document.viewed` is written BEFORE mintCaseScopedDownloadUrl is called, not after, because a signed URL is an unauthenticated bearer of the bytes the instant it exists — auditing after the mint would mean an audit failure had already handed them over (spec §8.2, D12). Object paths stay owner-keyed for the actor's own personal case; a NAMED case writes under `case/<case_id>/…` (spec §6.1).",
+    auditEvent: "document.viewed",
   },
   {
     path: "app/api/documents/upload/route.ts",
@@ -218,7 +242,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
       "Storage administration (plan line 342): uploads to the private bucket and cleans up the replaced object on the unique (case_id, kind) index. Deferred flip: `documents` grants `authenticated` no INSERT and its only INSERT policy is service_role-scoped (spec §4.5), so the row write cannot move either.",
     requiredCaseCheck:
       "MV-190 (spec F-8, §6): resolveTargetCase(actor, form field `caseId`, 'case.update', authenticatedClient) before any Storage call. Multipart, so the id is read off the raw form rather than through requestedCaseId; a present-but-malformed value is 400 and never a fallback to the actor's own case. THE OBJECT PATH NOW FORKS, and the fork turns on whether a case was NAMED and nothing else: no case named means resolveTargetCase resolved the ACTOR's personal case, so an owner-keyed `<uid>/<kind>/<uuid>.<ext>` object is by construction always in the actor's own folder on the actor's own case (Stage 2's invariant, preserved exactly). A NAMED case writes `case/<case_id>/<uuid>.<ext>` instead — otherwise a counsellor uploading to a student's case would write into the COUNSELLOR's uid folder, where the live `(storage.foldername(name))[1] = auth.uid()::text` policy lets them read it directly and forever, outliving the assignment. A `case/` object matches that policy for nobody (spec §6.1); both parties reach it through mintCaseScopedDownloadUrl.",
-    auditEvent: null,
+    auditEvent: "document.uploaded",
   },
   {
     path: "app/api/cases/[caseId]/document-requests/[requestId]/versions/route.ts",
@@ -227,7 +251,7 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
       "Storage administration (plan line 342): uploads a case-collaboration object to the private bucket, and removes it again if the row write fails. The bucket's only INSERT policy is service_role-scoped, so the BYTES cannot move to the authenticated client. THE ROW DOES NOT USE THIS CLIENT AT ALL — createCaseDocumentVersion writes case_document_versions on the AUTHENTICATED client, through case_document_versions_insert_staff and its five conjuncts, which is the whole reason MV-185 exists. Service-role touches Storage here and no table.",
     requiredCaseCheck:
       "MV-186 (spec §7.6): checkCasePermission(actor, caseId-from-the-PATH, 'case.documents.request', authenticatedClient) BEFORE any repository or Storage call, then getCaseDocumentRequest(requestId, caseId) so a request belonging to another case is a 404 rather than a 42501 read as a denial. The claim is the WRITE half deliberately — the linked student holds case.read at 'linked' and this claim not at all, which is exactly private.can_staff_case. THE ORDER IS LOAD-BEARING (spec §6.2 D5): the bytes are uploaded BEFORE the row is inserted, under a CLIENT-GENERATED version id that names both, because the reverse order strands a version row pointing at an object that does not exist — and there is no DELETE grant on case_document_versions to retract it, so the request would sit outstanding behind a file nobody can open. A failed insert removes the object it just wrote. The object key is caseVersionObjectPath(caseId, versionId), which canonicalises the case id to lowercase, and case_document_versions_storage_path_case_prefix is the database floor under it.",
-    auditEvent: null,
+    auditEvent: "document.version_uploaded",
   },
   {
     path: "app/api/cases/[caseId]/document-versions/[versionId]/download/route.ts",
@@ -235,8 +259,8 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     justification:
       "Storage administration (plan line 342): mints a short-lived signed URL for a private case-collaboration object. A case/<case_id>/… key matches the bucket's two (storage.foldername(name))[1] = auth.uid()::text policies for NOBODY (spec §6.1), so an authenticated client cannot see the object it would be signing. Service-role touches Storage here and no table — the version row is read on the authenticated client.",
     requiredCaseCheck:
-      "MV-186 (spec §7.4 D9): checkCasePermission(actor, caseId-from-the-PATH, 'case.read', authenticatedClient), then getCaseDocumentVersion(versionId, caseId) — both filters, so a version id from another case the actor happens to staff cannot be resolved under this case's authorization. THEN mintCaseScopedDownloadUrl, which performs checkCasePermission ITSELF before it reaches Storage. That second check is the design, not a duplicate: a signed URL bypasses Storage RLS by design and is an unauthenticated bearer of the bytes the instant it exists, so 'the caller authorized first' has to hold by CONSTRUCTION. The helper also bounds the PATH to this case, which no permission check can do — that check is about the case, the signature is about the key. TTL is SIGNED_DOWNLOAD_TTL_SECONDS = 60. The gate is case.read and not the write claim ON PURPOSE: it is what lets the LINKED STUDENT open the file uploaded on their own case and read the rejection note on it (spec §7.2 D7). The at-mint AUDIT EVENT is still owed, as it is for the two MV-190 entries above.",
-    auditEvent: null,
+      "MV-186 (spec §7.4 D9): checkCasePermission(actor, caseId-from-the-PATH, 'case.read', authenticatedClient), then getCaseDocumentVersion(versionId, caseId) — both filters, so a version id from another case the actor happens to staff cannot be resolved under this case's authorization. THEN mintCaseScopedDownloadUrl, which performs checkCasePermission ITSELF before it reaches Storage. That second check is the design, not a duplicate: a signed URL bypasses Storage RLS by design and is an unauthenticated bearer of the bytes the instant it exists, so 'the caller authorized first' has to hold by CONSTRUCTION. The helper also bounds the PATH to this case, which no permission check can do — that check is about the case, the signature is about the key. TTL is SIGNED_DOWNLOAD_TTL_SECONDS = 60. The gate is case.read and not the write claim ON PURPOSE: it is what lets the LINKED STUDENT open the file uploaded on their own case and read the rejection note on it (spec §7.2 D7). MV-189 paid the at-mint AUDIT EVENT this entry used to owe, as it did for the two MV-190 entries above: `document.downloaded` is written BEFORE the mint (spec §8.2, D12), and its metadata deliberately omits `original_name` — a version's filename is user-supplied and routinely carries the student's own name (spec §8.3, D13).",
+    auditEvent: "document.downloaded",
   },
   /**
    * `app/api/plan/action/route.ts` USED TO BE HERE and RETIRED in MV-172 — Stage 3

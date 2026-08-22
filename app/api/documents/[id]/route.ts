@@ -7,6 +7,7 @@ import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSectionForCase } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import type { DocumentKind } from "@/lib/documents/types";
+import { writeAuditEvent } from "@/lib/audit/write-audit-event";
 
 export async function DELETE(
   request: Request,
@@ -44,7 +45,7 @@ export async function DELETE(
     }
     return targetCaseResponse(target, "Document not found");
   }
-  const { caseId } = target;
+  const { caseId, organizationId } = target;
 
   const { data: doc } = await supabase
     .from("documents")
@@ -75,6 +76,32 @@ export async function DELETE(
   }
 
   const docKind = doc.kind as DocumentKind;
+
+  // MV-189 (spec §8.2, D12): audit after the effect commits — the bytes and the row are
+  // both gone by here, so this records a fact rather than an intention. A deletion is the
+  // access event most worth keeping and the one least recoverable from the data itself:
+  // once the row is gone, the `documents` table can no longer say who removed it.
+  //
+  // Fail-closed: a failure is a 500, so no caller is told the delete succeeded without an
+  // audit row naming them.
+  try {
+    await writeAuditEvent(admin, {
+      actorUserId: userId,
+      organizationId,
+      caseId,
+      action: "document.deleted",
+      entityType: "document",
+      entityId: id,
+      // D13: `doc` is in scope and carries `original_name` and `file_path`. Neither is
+      // read here, and the sweep in tests/audit/audit-metadata-pii.test.ts is what keeps
+      // that true after the next edit.
+      metadata: { document_id: id, kind: docKind },
+    });
+  } catch {
+    console.error("[documents/delete] audit write failed", { id, caseId });
+    return NextResponse.json({ error: "Couldn't delete the document" }, { status: 500 });
+  }
+
   const flag = getFlagForKind(docKind);
 
   if (flag) {

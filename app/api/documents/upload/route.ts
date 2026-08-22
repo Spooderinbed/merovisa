@@ -10,6 +10,7 @@ import { getFlagForKind } from "@/lib/documents/flags";
 import { patchProfileSectionForCase } from "@/lib/profiles/repo";
 import { invalidatePlan } from "@/lib/plan/invalidate";
 import { checkRateLimit } from "@/lib/rate-limit/upstash";
+import { writeAuditEvent } from "@/lib/audit/write-audit-event";
 import { MAX_UPLOAD_BYTES, ALLOWED_UPLOAD_TYPES } from "@/lib/documents/upload-limits";
 import {
   sanitizeFilename,
@@ -78,7 +79,7 @@ export async function POST(request: Request): Promise<Response> {
   const requestedCase = formData.get("caseId");
   const target = await resolveTargetCase(userId, requestedCase ?? undefined, "case.update", supabase);
   if (!target.ok) return targetCaseResponse(target, "Upload failed");
-  const { caseId } = target;
+  const { caseId, organizationId } = target;
 
   // WHICH FOLDER THE OBJECT LANDS IN, and why it turns on this and nothing else.
   //
@@ -157,6 +158,39 @@ export async function POST(request: Request): Promise<Response> {
   if (!docId) {
     console.error("[documents/upload] upsertDocument failed", { caseId, docKind, filePath });
     await admin.storage.from("documents").remove([filePath]);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
+
+  // MV-189 (spec §8.2, D12): AUDIT AFTER THE EFFECT COMMITS, which is the opposite
+  // placement from the two signed-URL mints and for a stated reason. Recording
+  // `document.uploaded` before the upload would put an event for an upload that may still
+  // fail into an append-only evidence log, and the vocabulary is past-tense because the
+  // rows are meant to be facts. So the row is written once the document genuinely exists.
+  //
+  // Fail-closed all the same: a failure here is a 500, so the caller is never told the
+  // upload succeeded without an audit row to prove who performed it. What this placement
+  // does NOT buy — honestly — is undoing the upload; the object and row are already
+  // committed. Rollback on audit failure is Stage 6 retention work, not this card's.
+  try {
+    await writeAuditEvent(admin, {
+      actorUserId: userId,
+      organizationId,
+      caseId,
+      action: "document.uploaded",
+      entityType: "document",
+      entityId: docId,
+      // D13: `safeOriginalName` is DELIBERATELY ABSENT. It is a sanitized user filename —
+      // sanitizing strips path separators, not the student's name off a passport scan.
+      // `filePath` is withheld too; `entity_id` already identifies the row.
+      metadata: {
+        kind: docKind,
+        mime_type: file.type,
+        byte_size: file.size,
+        case_keyed: caseKeyed,
+      },
+    });
+  } catch {
+    console.error("[documents/upload] audit write failed", { caseId, docKind });
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 

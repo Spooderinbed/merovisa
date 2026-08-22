@@ -73,6 +73,20 @@ beforeEach(() => {
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
 });
 
+// MV-189 — the audit write is DOUBLED here on purpose. Its own behaviour is proven in
+// tests/audit/write-audit-event.test.ts, and the routes' fail-closed wiring in
+// tests/api/document-access-audit.test.ts. This suite is about the delete path and its flag side-effects, and the real
+// writer would need an admin client with a working `.from("audit_events").insert()` that
+// this fixture deliberately does not build. importActual is spread so the action union and
+// the metadata allow-list stay REAL — only the write is stubbed.
+const { writeAuditEvent } = vi.hoisted(() => ({ writeAuditEvent: vi.fn(async () => {}) }));
+vi.mock("@/lib/audit/write-audit-event", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/audit/write-audit-event")>(
+    "@/lib/audit/write-audit-event",
+  );
+  return { ...actual, writeAuditEvent };
+});
+
 import { DELETE } from "@/app/api/documents/[id]/route";
 
 function deleteReq(): Request {

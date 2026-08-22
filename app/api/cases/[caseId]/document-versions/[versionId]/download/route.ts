@@ -6,6 +6,7 @@ import { getCaseDocumentVersion } from "@/lib/cases/document-collaboration-repo"
 import { caseDenialResponse } from "@/lib/cases/route-denial";
 import { malformedPathId } from "@/lib/cases/path-ids";
 import { mintCaseScopedDownloadUrl } from "@/lib/documents/signed-download";
+import { writeAuditEvent } from "@/lib/audit/write-audit-event";
 
 /**
  * MV-186 — open one collaboration file (spec §7.4, D9).
@@ -58,7 +59,7 @@ export async function GET(
   if (!userData.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actorUserId = userData.user.id;
 
-  const { decision } = await checkCasePermission(actorUserId, caseId, "case.read", supabase);
+  const { decision, context } = await checkCasePermission(actorUserId, caseId, "case.read", supabase);
   if (!decision.allowed) return caseDenialResponse(decision.reason);
 
   // User-scoped client respects RLS; the `case_id` filter is what selects the row, and it is
@@ -77,6 +78,31 @@ export async function GET(
   // authenticated client cannot see the object it would be signing. Every case decision above
   // and inside the mint runs on the AUTHENTICATED client.
   const admin = createSupabaseAdminClient();
+
+  // MV-189 (spec §8.2, D12): AUDIT BEFORE THE MINT, for the reason
+  // `app/api/documents/[id]/view` gives — a signed URL is an unauthenticated bearer of the
+  // bytes from the moment it exists, so an audit failure after the mint would already have
+  // handed them over. `context.organizationId` (D15) is the case's own org, taken from the
+  // permission check above rather than re-queried; null for a personal case is correct and
+  // is written as null.
+  try {
+    await writeAuditEvent(admin, {
+      actorUserId,
+      organizationId: context.organizationId ?? null,
+      caseId,
+      action: "document.downloaded",
+      entityType: "case_document_version",
+      entityId: versionId,
+      // D13: `original_name` and `storage_path` are BOTH withheld. The first is a
+      // user-supplied filename (`Ram_Bahadur_passport_2026.pdf`); the second is safe today
+      // but has no business in an evidence log when `entity_id` already identifies the row.
+      metadata: { version_id: versionId },
+    });
+  } catch {
+    console.error("[case-documents] audit write failed; refusing to mint", { versionId, caseId });
+    return NextResponse.json({ error: "Could not sign URL" }, { status: 500 });
+  }
+
   const signed = await mintCaseScopedDownloadUrl({
     actorUserId,
     caseId,

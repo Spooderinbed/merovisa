@@ -559,3 +559,287 @@ and §2 already fenced this lane out of `documents`. It stays unbuilt until some
   superseded by a new upload, and a mistaken review is corrected by writing another one. A UI
   offering either verb would be offering a `42501`.
 - **No case-activity feed, no notification, no extraction** — §3's list, unchanged.
+
+## 8  The MV-189 spec note — document access audit events, and the clause that 18 entries satisfy between them zero times
+
+The plan does not offer auditing as a refinement. It is a **condition of the exception itself**:
+service-role is reduced to "a short, enumerated exception list … where every entry is named,
+justified, preceded by an explicit case authorization check, **and audited**" (plan line 342).
+
+`lib/supabase/service-role-exceptions.ts` holds **18 sanctioned entries and 18 `auditEvent: null`**.
+Measured, not recalled: every `auditEvent` field in the file is the literal `null`. The first three
+clauses are satisfied by all 18; the fourth is satisfied by none. Two of the entries already say so
+in their own prose — the `view` and `download` entries each close with "The at-mint AUDIT EVENT is
+still owed".
+
+The concrete consequence, stated without softening: **today a counsellor can upload, open and
+download a student's passport scan and nothing anywhere records that it happened.** Stage 4's exit
+gate is "an unauthorized actor cannot upload, view, download, review, or enumerate a document, and
+the authorized request-to-approval flow works." MV-182/185/186/190 built the flow. §8 is the
+evidence half, and it is the Stage 4 bullet "add document access audit events" (plan line 652).
+
+### 8.0 What was measured, and what could not be
+
+**The Supabase MCP was NOT reachable in this session** (it requires an interactive OAuth flow;
+this session is non-interactive). Every database claim below was therefore re-measured against the
+**local Docker stack**, which replays the same migration series that produced production. That is
+strong evidence for anything determined by the migrations, and *no* evidence for production's
+runtime data. The distinction is kept explicit rather than blurred:
+
+| # | Claim carried into this slice | Verdict | How |
+|---|---|---|---|
+| 1 | `public.audit_events` exists; columns `id, organization_id, case_id, actor_user_id, action, entity_type, entity_id, metadata jsonb, created_at`; four indexes | **CONFIRMED** | `information_schema.columns` — exact column list and types match; `20260730120000_stage1_tenancy_core.sql:182-196` |
+| 2 | Row count is 0 | **CONFIRMED locally** (0 rows). Production row count **NOT verifiable** this session | `select count(*)` on the local stack only |
+| 3 | `service_role` holds INSERT/SELECT/UPDATE/DELETE/TRUNCATE directly, and `rolbypassrls = true` | **CONFIRMED** | `role_table_grants` returns `DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE`; `pg_roles.rolbypassrls = true` |
+| 4 | `private.write_audit_event` is inert; ACL is `postgres=X/postgres` | **CONFIRMED** | `pg_proc.proacl` reads exactly `postgres=X/postgres` — neither `service_role` nor `authenticated` holds EXECUTE |
+| 5 | Append-only survives `service_role` — the BEFORE UPDATE trigger raises for every role | **CONFIRMED** | `set role service_role;` then UPDATE → `audit_events is append-only (no UPDATE permitted)` |
+| 6 | `audit_events_select_admin` is live, `USING (organization_id = ANY(private.actor_admin_org_ids()))` | **CONFIRMED** | `pg_policies` — one policy, `cmd = SELECT`, qual matches |
+| 7 | All 10 production cases have `organization_id = NULL` | **NOT VERIFIABLE** this session — carried forward as an assumption | — |
+
+Claims 2 and 7 are the two the slice must not *depend* on. It does not: §8.5 explains why the code
+is correct whether an organization exists or not, and the fixture in §8.5 builds a real one rather
+than trusting the null-org state.
+
+The probe grant used to test D11 was **reverted** (`proacl` re-read as `postgres=X/postgres`) and
+the probe rows deleted (`count(*)` back to 0). The local stack is in the state it started in.
+
+### 8.1 Decision D11 — the write is a direct INSERT on the service-role client. NO MIGRATION.
+
+The alternative had to be killed properly rather than waved away, because "grant EXECUTE on the
+function that already exists" is the obvious move and the function's own header invites it.
+
+**It does not work, and the reason is structural, not a permission.** Measured, in both directions:
+
+1. With EXECUTE revoked (today's state), `POST /rest/v1/rpc/write_audit_event` as `service_role`
+   returns **404 `PGRST202`** — *"Searched for the function **`public`.write_audit_event`** … no
+   matches were found in the schema cache."* PostgREST looked in `public`. It never considered
+   `private`.
+2. EXECUTE was then granted to **both** `service_role` and `authenticated`, and the schema cache
+   reloaded. The same call still returns **404 `PGRST202`**, identically.
+3. Forcing the schema explicitly with `Content-Profile: private` returns **406 `PGRST106`** —
+   *"Invalid schema: private. Only the following schemas are exposed: public, graphql_public."*
+4. `audit_events` rows written by attempts 1–3: **zero**.
+
+So the grant is not the blocker; **exposure** is, and `supabase/config.toml` sets
+`schemas = ["public", "graphql_public"]`. Reaching the function from supabase-js would mean either:
+
+- **exposing `private`** — which holds `actor_admin_org_ids`, `can_staff_case`,
+  `enforce_case_write_surface` and every other RLS helper. Exposing that schema hands every client
+  a direct callable into the authorization layer to satisfy a logging concern. Not a trade, a
+  regression; or
+- **adding a `public` wrapper** — a new function, a new grant, a new migration, and a second name
+  for one behaviour, all so a client that *already holds INSERT on the table* can take a longer
+  road to the same row.
+
+Both are worse than the direct insert. And the direct insert is not a workaround invented here —
+`20260730180000_case_aware_rls_policies.sql:750-753` already wrote the conclusion down:
+*"Audit rows are written by server paths running as service_role or by the definer's owner."*
+D11 executes that reviewed intent; it does not overturn it.
+
+**Therefore: this slice ships NO MIGRATION, and therefore no gated production apply — which is
+what makes it one PR, exactly like MV-186.** `private.write_audit_event` stays inert, and that is
+now a recorded decision rather than an open TODO: it is unreachable from the Data API by design,
+and Stage 6 may either expose a `public` wrapper for it or drop it.
+
+The write goes through **one module**, `lib/audit/write-audit-event.ts`, not five inline inserts —
+the plan's "single server choke point" (line 504), and the thing that makes D13's sweep possible.
+
+### 8.2 Decision D12 — fail-closed. No 2xx is ever returned without its audit row committed.
+
+This is the genuine fork, and it is decided here rather than left to fall out of whichever `await`
+got typed first.
+
+The two positions are real. *"Log loudly and still serve"* keeps document access alive through an
+audit outage, at the cost of silent gaps in the evidence log — gaps that are indistinguishable,
+later, from "no one accessed it". *"No audit, no access"* is the stronger security posture and the
+one an append-only evidence log implies.
+
+**The plan settles it, in a sentence written before this slice existed** (line 504):
+
+> Sensitive reads, including document views and downloads, exports, and audit queries themselves,
+> are recorded at the same choke point that authorizes them, **which guarantees that an authorized
+> sensitive read and its audit row cannot be separated.**
+
+"Cannot be separated" is not "should usually accompany". **Decision: fail-closed.** If the audit
+write fails, the request fails.
+
+But fail-closed only *buys* something if the audit row lands before the effect it records becomes
+irreversible, and that differs between the read paths and the write paths. The placement is
+therefore part of the decision, not an implementation detail:
+
+- **Signed-URL mints (`documents/[id]/view`, `document-versions/[versionId]/download`) — audit
+  BEFORE the mint.** A signed URL is an unauthenticated bearer of the bytes the instant it exists.
+  Mint-then-audit would mean that on an audit failure the URL already exists and the bytes are
+  already reachable — the guarantee lost in exactly the case it was written for. So: write the
+  audit row, then mint. Audit fails → 500, and `createSignedUrl` is never reached. **Here the
+  strong guarantee holds completely: no unaudited URL is ever minted.**
+- **Mutations (`documents/upload`, `documents/[id]` DELETE, `…/versions` POST) — audit AFTER the
+  effect commits.** The inverse is not available: auditing before the upload would record
+  `document.uploaded` for an upload that may still fail, which is a lie in an evidence log, and
+  the vocabulary is past-tense noun-first for a reason. Audit fails → 500.
+
+Stating honestly what that second bullet does and does not buy: the object is already in Storage
+and the row already written when the audit is attempted, and this slice does **not** add a
+rollback for that (the version route's existing compensating delete covers a failed *row* write,
+not a failed *audit* write; extending it is Stage 6's retention/tombstone work, not this card's).
+
+So the invariant that actually holds across all five routes — the one that is testable, and the one
+the tests are named for — is:
+
+> **No route returns a 2xx response without its audit row committed.**
+
+A caller who receives 200 has an audit row. A caller who receives 500 may or may not have caused an
+effect, but is never told the operation succeeded. That is the honest statement of the guarantee,
+and it is strictly stronger on the read paths, where the effect never happens at all.
+
+**Named test per path, both directions** (§8.7) — a failure-path test that asserts the 500 *and*
+asserts `createSignedUrl` was never called is the one that distinguishes D12 from a `.catch(() => {})`.
+
+### 8.3 Decision D13 — metadata is a CLOSED allow-list, swept from source. `original_name` is the trap.
+
+The plan's constraint (line 275): *"Sensitive document content, passport numbers, and raw student
+details must not be copied into audit metadata."*
+
+The specific hazard, named: `case_document_versions.original_name` and `documents.original_name`
+are **user-supplied filenames**, and in this corridor they are routinely
+`Ram_Bahadur_passport_2026.pdf`. A filename is raw student detail. It must not reach `metadata` and
+must not reach `entity_id`.
+
+Measured, the free-text columns on the four document tables are exactly:
+
+| Table | Free-text columns |
+|---|---|
+| `documents` | `original_name`, `file_path`, `kind` |
+| `case_document_versions` | `original_name`, `storage_path`, `content_type` |
+| `case_document_requests` | `title`, `note`, `kind`, `status` |
+| `case_document_reviews` | `note`, `decision` |
+
+`file_path` / `storage_path` are structurally safe — `storageName` is
+`` `${crypto.randomUUID()}.${extensionFor(file.type)}` `` (upload route line 129), so no path
+carries user text — but they are fenced from metadata anyway, because `entity_id` already carries
+the identity and a path in an evidence log invites a future author to put a *derived* name in one.
+
+**The closed allow-list of metadata keys** — anything not on this list is a test failure:
+
+`kind`, `mime_type`, `byte_size`, `case_keyed`, `version_id`, `document_id`, `request_id`, `reason`
+
+All are uuids, enum-ish tokens, booleans, or integers. `entity_id` carries a **uuid only**.
+
+**The enforcement is a source sweep, not a convention**: a test reads the audit call sites and
+fails on any of the banned field names (`original_name`, `originalName`, `safeOriginalName`,
+`file.name`, `note`, `title`, `file_path`, `storage_path`, `filePath`, `storagePath`) appearing in
+a metadata argument. The sweep splits on `/\r?\n/` — this is a CRLF tree and `split("\n")` matches
+zero lines, which would make the assertion vacuously green (MISTAKES.md, Testing).
+
+### 8.4 Decision D14 — `actor_user_id` is the authenticated human, never the service role.
+
+The whole point of the log is *who reached the bytes*. Every one of the five routes has already
+resolved `userData.user.id` from the **authenticated** client before it touches service-role — the
+audit writer takes that id as a required argument and has no default. The service-role client is
+the *transport* for the insert; it is never the subject of the row.
+
+A named test asserts `actor_user_id` equals the signed-in user's id and not any service identity.
+
+### 8.5 Decision D15 — `organization_id` is populated from the case, via `CaseContext`. Widening `TargetCase` is the change.
+
+`audit_events_select_admin` reads
+`USING (organization_id = ANY (private.actor_admin_org_ids()))`. In SQL, `NULL = ANY(…)` is `NULL`,
+not `true` — so **a row written with a null `organization_id` matches no admin and is readable by
+nobody, ever.** An audit log that is structurally unreadable is a write-only log.
+
+Today that is the *correct* outcome for a self-serve student: their case has no organization, and
+there is no org admin who should be reading their access history. The requirement is not "invent an
+org" — it is that **the row must carry whatever the case's organization actually is**, so the log
+becomes readable the moment a consultancy exists, without a backfill.
+
+**The finding that makes this cheap.** `checkCasePermission` already returns
+`{ decision, context }`, and `CaseContext.organizationId` is documented as *"The case's
+organization, or null for a personal case"* (`lib/cases/context.ts:52-53`) — resolved from
+`cases.select("id, organization_id, student_user_id")` inside `getCaseContext`. The two routes that
+call `checkCasePermission` directly (the two MV-186 routes) **already have it in hand**.
+
+The three MV-190 routes call `resolveTargetCase`, which calls `checkCasePermission` internally
+(`lib/cases/target-case.ts:89`) — and then **throws the context away**, returning
+`{ ok: true, caseId }`. So the fix is not a new query and not a new round trip: widen the success
+variant to
+
+```ts
+| { ok: true; caseId: string; organizationId: string | null }
+```
+
+and return the `organizationId` the function already computed. That is the one type change in this
+slice, and it is additive — every existing destructure of `{ caseId }` keeps compiling.
+
+**The fixture trap, named before it bites.** An integration test asserting *"an org admin can read
+the audit row"* passes **vacuously** against a null-org fixture: the row is unreadable, the admin
+reads nothing, and "no rows" is what a *correct* denial also looks like. This is the third
+appearance of the same shape (MV-190's all-digit uuid, MV-186's 10-byte PDF; MISTAKES.md, Testing).
+So the integration test **builds a real organization, a real admin membership, and an org-owned
+case**, and it **asserts the fixture can express the thing before asserting the thing** — an
+org-scoped row IS readable by its admin, and a *different* org's admin reads zero. Without that
+first assertion the second proves nothing.
+
+### 8.6 Observation, recorded not fixed — `service_role` holds TRUNCATE on the evidence table
+
+Measured: `has_table_privilege('service_role','public.audit_events','TRUNCATE')` → **true**
+(DELETE → true as well).
+
+The Stage 1 comment (`20260730120000:203-204`) leaves DELETE open **deliberately**, for the Stage 6
+retention / tombstone path, and names the `program_predictions` precedent. That reasoning covers
+DELETE. It does not mention TRUNCATE, and TRUNCATE differs in kind from the case it argues for:
+
+- it is not row-scoped, so it cannot express a retention predicate — the only justification offered;
+- it **does not fire the `BEFORE UPDATE` trigger** and is not row-by-row, so the append-only guard
+  that defeats `bypassrls` for UPDATE is simply not in the path;
+- it is held by the **same key every server route already uses**, so any injection or bug on a
+  service-role path can erase the entire evidence log in one statement, atomically.
+
+**Recommendation, not a change:** `revoke truncate on public.audit_events from service_role` in the
+Stage 6 retention migration, where DELETE's retention predicate is designed anyway. It is *not*
+done here because this slice ships no migration (D11) and because revoking a privilege on a live
+table is a production apply that deserves its own gate — the exact scope creep the card forbids.
+Recorded here so it is a decision with a home, not a thing nobody wrote down.
+
+### 8.7 What MV-189 ships
+
+1. **`lib/audit/write-audit-event.ts`** — the single choke point (D11). Takes an explicit
+   `actorUserId` (D14), an `organizationId` (D15), a `caseId`, an `action` from a closed union, an
+   `entityType`/`entityId` (uuid only), and metadata restricted to the D13 allow-list. Inserts
+   directly on the service-role client. **Throws on failure** (D12) — it does not swallow, and it
+   does not return a boolean nobody checks.
+2. **Five routes wired**, each at the position D12 assigns it:
+   - `app/api/documents/upload/route.ts` → `document.uploaded` (after commit)
+   - `app/api/documents/[id]/view/route.ts` → `document.viewed` (**before** the mint)
+   - `app/api/documents/[id]/route.ts` → `document.deleted` (after commit)
+   - `app/api/cases/[caseId]/document-requests/[requestId]/versions/route.ts` →
+     `document.version_uploaded` (after commit)
+   - `app/api/cases/[caseId]/document-versions/[versionId]/download/route.ts` →
+     `document.downloaded` (**before** the mint)
+3. **`TargetCase` widened** to carry `organizationId` (D15) — additive, one type, no new query.
+4. **The five `auditEvent: null` fields set** on their entries in
+   `lib/supabase/service-role-exceptions.ts`, and the file's "AUDIT WIRING IS NOT YET POSSIBLE"
+   header corrected — it is now false, and D11 records why.
+5. **Tests**: the D13 source sweep, the D12 fail-closed pair per route, the D14 actor assertion, and
+   an integration test that builds a real org and proves the D15 row is readable by its admin and by
+   no other admin.
+
+The vocabulary follows the four names already declared in `SANCTIONED_SERVICE_ROLE_CATEGORIES` —
+dotted, past-tense, noun-first. `document.viewed` is reused verbatim from that list; the other four
+are its siblings, not a new scheme.
+
+### What §8 does NOT do
+
+- **No migration** (D11) — every grant and policy it writes within is already applied. If this
+  slice appears to need schema, that is a finding to report, not a migration to write.
+- **The other 13 exception entries stay `null`.** Their paths are not document access; wiring them
+  is Stage 6's "finish append-only security audit coverage" (plan line 668). A `null` on those
+  entries still means what the file says it means.
+- **No case-activity feed.** The plan keeps "case activity" and "security audit" **related but
+  distinct** (line 497-500). This is the security audit. A collaborator-visible activity history is
+  a different surface with a different audience and a different policy.
+- **No audit READ surface and no UI** — Stage 6. `audit_events_select_admin` already exists; nothing
+  in this slice queries it outside a test.
+- **No scanning, quarantine, or backup** — the other Stage 4 bullet (line 653).
+- **No MV-187 invitations, no MV-188 visa read.** `invitation.accepted`, `case.student_linked` and
+  `retention.purged` stay unwired.
+- **No TRUNCATE revoke** — §8.6, recommended and deliberately out of scope.

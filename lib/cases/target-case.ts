@@ -43,8 +43,23 @@ import type { CaseDenyReason, CaseScopedPermission } from "./permissions";
  * write by another route.
  */
 
+/**
+ * MV-189 (spec §8.5, D15): the success variant carries `organizationId` — the case's own
+ * organization, or `null` for a personal case.
+ *
+ * It is ADDITIVE and costs no round trip. `checkCasePermission` below already returns
+ * `{ decision, context }`, and `CaseContext.organizationId` is resolved inside
+ * `getCaseContext` from `cases.select("id, organization_id, student_user_id")`. This
+ * function was computing the value and then throwing it away.
+ *
+ * Why an audit row needs it: `audit_events_select_admin` reads
+ * `USING (organization_id = ANY (private.actor_admin_org_ids()))`, and `NULL = ANY(…)`
+ * is `NULL` in SQL, not `true` — so a row written with a null organization is readable by
+ * nobody, ever. Every callable must therefore pass through the case's REAL organization,
+ * even while every case is personal and that value is legitimately null.
+ */
 export type TargetCase =
-  | { ok: true; caseId: string }
+  | { ok: true; caseId: string; organizationId: string | null }
   | { ok: false; kind: "malformed" }
   | { ok: false; kind: "no-personal-case" }
   | { ok: false; kind: "denied"; reason: CaseDenyReason | null };
@@ -86,10 +101,18 @@ export async function resolveTargetCase(
     caseId = requested as string;
   }
 
-  const { decision } = await checkCasePermission(actorUserId, caseId, permission, db);
+  const { decision, context } = await checkCasePermission(actorUserId, caseId, permission, db);
   if (!decision.allowed) return { ok: false, kind: "denied", reason: decision.reason };
 
-  return { ok: true, caseId };
+  // `context.organizationId` comes from the same lookup that just authorized the case
+  // (D15). Reading it here rather than re-querying is what keeps the audit wiring free of
+  // a second round trip on every document access.
+  // `?? null` normalizes rather than defends: `CaseContext.organizationId` is typed
+  // `string | null` and `getCaseContext` always sets it, but the declared shape of
+  // `TargetCase` is `string | null` and an `undefined` leaking through would be an
+  // omitted column on an audit insert rather than an explicit null — a silent difference
+  // in the one field D15 is about.
+  return { ok: true, caseId, organizationId: context.organizationId ?? null };
 }
 
 /**

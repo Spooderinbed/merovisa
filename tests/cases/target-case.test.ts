@@ -40,10 +40,24 @@ const REQUESTED = "aaaaaaaa-0000-4000-8000-000000000001";
 const PERSONAL = "bbbbbbbb-0000-4000-8000-000000000002";
 const db = { from: vi.fn() } as never;
 
-const allow = { decision: { allowed: true, requiredScope: "assigned", reason: null }, context: {} };
+/**
+ * MV-189 (spec §8.5, D15): the context carries a REAL organization id, because
+ * `resolveTargetCase` now passes `context.organizationId` through onto the success
+ * variant and an audit row written with a null organization is readable by NOBODY —
+ * `NULL = ANY(…)` is `NULL` in SQL, not `true`.
+ *
+ * A `context: {}` fixture, which is what this was, cannot tell "the org is passed
+ * through" from "the org is dropped": both produce `undefined`. So the fixture is given
+ * something to lose before anything asserts that it is not lost.
+ */
+const ORG = "cccccccc-0000-4000-8000-000000000003";
+const allow = {
+  decision: { allowed: true, requiredScope: "assigned", reason: null },
+  context: { organizationId: ORG },
+};
 const deny = (reason: string) => ({
   decision: { allowed: false, requiredScope: null, reason },
-  context: {},
+  context: { organizationId: null },
 });
 
 beforeEach(() => {
@@ -75,7 +89,7 @@ describe("resolveTargetCase — no case id requested (the personal surfaces)", (
   test("resolves the actor's own personal case and authorizes it", async () => {
     const result = await resolveTargetCase(ACTOR, undefined, "case.update", db);
 
-    expect(result).toEqual({ ok: true, caseId: PERSONAL });
+    expect(result).toEqual({ ok: true, caseId: PERSONAL, organizationId: ORG });
     expect(resolvePersonalCaseId).toHaveBeenCalledWith(ACTOR, db);
     expect(checkCasePermission).toHaveBeenCalledWith(ACTOR, PERSONAL, "case.update", db);
   });
@@ -102,8 +116,33 @@ describe("resolveTargetCase — a case id IS requested (the case route)", () => 
   test("authorizes the REQUESTED case, not the actor's own", async () => {
     const result = await resolveTargetCase(ACTOR, REQUESTED, "case.update", db);
 
-    expect(result).toEqual({ ok: true, caseId: REQUESTED });
+    expect(result).toEqual({ ok: true, caseId: REQUESTED, organizationId: ORG });
     expect(checkCasePermission).toHaveBeenCalledWith(ACTOR, REQUESTED, "case.update", db);
+  });
+
+  /**
+   * MV-189 (D15). Two separate sentences, because they fail for different reasons: the
+   * first catches "the org was dropped", the second catches "the org was defaulted to
+   * something non-null so the log looks readable when it is not".
+   */
+  test("carries the case's organization onto the success variant", async () => {
+    const result = await resolveTargetCase(ACTOR, REQUESTED, "case.update", db);
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.organizationId).toBe(ORG);
+  });
+
+  test("carries NULL — not undefined — for a personal case with no organization", async () => {
+    // A personal case genuinely has no org, and that must be written as an explicit null:
+    // `undefined` would omit the column on the audit insert rather than state the fact.
+    checkCasePermission.mockResolvedValue({
+      decision: { allowed: true, requiredScope: "owner", reason: null },
+      context: { organizationId: null },
+    });
+
+    const result = await resolveTargetCase(ACTOR, REQUESTED, "case.update", db);
+
+    expect(result).toEqual({ ok: true, caseId: REQUESTED, organizationId: null });
   });
 
   test("NEVER resolves the actor's personal case — a wrong-case write must have nowhere to land", async () => {
