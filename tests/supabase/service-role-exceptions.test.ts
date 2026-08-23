@@ -534,7 +534,7 @@ describe("registry hygiene", () => {
    * true, and the last keeps the fence: an entry cannot quietly start or stop claiming an
    * audit event without a reviewer seeing the count move.
    */
-  test("exactly the five document-access paths emit an audit event", () => {
+  test("exactly the five document-access paths and the two invitation paths emit an audit event", () => {
     const wired = SERVICE_ROLE_EXCEPTIONS.filter((entry) => entry.auditEvent !== null).map(
       (entry) => entry.path,
     );
@@ -545,6 +545,11 @@ describe("registry hygiene", () => {
         "app/api/documents/[id]/route.ts",
         "app/api/documents/[id]/view/route.ts",
         "app/api/documents/upload/route.ts",
+        // MV-193 — Stage 5 slice 1, and a DIFFERENT shape from the five above: these two
+        // reach for service-role to write `audit_events` and nothing else. The invitation
+        // row is written on the authenticated client through `invitations_insert_staff`.
+        "app/api/cases/[caseId]/invitations/route.ts",
+        "app/api/cases/[caseId]/invitations/[invitationId]/route.ts",
       ].sort(),
     );
   });

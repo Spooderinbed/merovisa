@@ -4,10 +4,7 @@ import { join } from "node:path";
 
 vi.mock("server-only", () => ({}));
 
-import {
-  AUDIT_METADATA_KEYS,
-  DOCUMENT_AUDIT_ACTIONS,
-} from "@/lib/audit/write-audit-event";
+import { AUDIT_ACTIONS, AUDIT_METADATA_KEYS } from "@/lib/audit/write-audit-event";
 import { SERVICE_ROLE_EXCEPTIONS } from "@/lib/supabase/service-role-exceptions";
 
 /**
@@ -35,7 +32,16 @@ import { SERVICE_ROLE_EXCEPTIONS } from "@/lib/supabase/service-role-exceptions"
 
 const REPO_ROOT = join(__dirname, "..", "..");
 
-/** The five document-access routes, taken from the exception list rather than retyped. */
+/**
+ * Every audited route, taken from the exception list rather than retyped — five
+ * document-access paths from MV-189 plus MV-193's two invitation paths.
+ *
+ * The sweep below is deliberately NOT narrowed to document routes now that a second
+ * concern is audited. `metadata: { reason: email }` on an invitation route would put a
+ * student's address in the evidence log exactly as `{ kind: safeOriginalName }` would
+ * put their filename there, and a guard that only looked at document routes would have
+ * nothing to say about it.
+ */
 const AUDITED_PATHS = SERVICE_ROLE_EXCEPTIONS.filter((e) => e.auditEvent !== null).map(
   (e) => e.path,
 );
@@ -92,8 +98,9 @@ function auditCallBlocks(lines: string[]): string[] {
 }
 
 describe("D13 — the sweep can see what it is sweeping (controls)", () => {
-  it("finds exactly five audited document-access paths in the exception list", () => {
-    expect(AUDITED_PATHS).toHaveLength(5);
+  it("finds exactly seven audited paths in the exception list", () => {
+    // Five document-access routes (MV-189) + two invitation routes (MV-193).
+    expect(AUDITED_PATHS).toHaveLength(7);
   });
 
   it("splits a CRLF source file into more than one line — the vacuous-green guard", () => {
@@ -165,15 +172,16 @@ describe("the exception list agrees with the writer's vocabulary", () => {
   it("every wired auditEvent is an action the writer will accept", () => {
     for (const entry of SERVICE_ROLE_EXCEPTIONS) {
       if (entry.auditEvent === null) continue;
-      expect(DOCUMENT_AUDIT_ACTIONS, `${entry.path} names an unknown action`).toContain(
-        entry.auditEvent,
-      );
+      expect(AUDIT_ACTIONS, `${entry.path} names an unknown action`).toContain(entry.auditEvent);
     }
   });
 
   it("every action the writer knows is claimed by exactly one exception entry", () => {
     const claimed = SERVICE_ROLE_EXCEPTIONS.map((e) => e.auditEvent).filter(Boolean);
-    expect([...claimed].sort()).toEqual([...DOCUMENT_AUDIT_ACTIONS].sort());
+    // Both directions, and the second is the one that bites: an action added to the
+    // writer's vocabulary with no route emitting it is a name nobody uses, and an
+    // `invitation.accepted` added here before slice 2 ships would be exactly that.
+    expect([...claimed].sort()).toEqual([...AUDIT_ACTIONS].sort());
   });
 
   it("leaves the other thirteen entries null — Stage 6's scope, not this slice's", () => {
@@ -189,6 +197,10 @@ describe("the exception list agrees with the writer's vocabulary", () => {
         "app/api/documents/[id]/route.ts",
         "app/api/documents/[id]/view/route.ts",
         "app/api/documents/upload/route.ts",
+        // MV-193 — Stage 5 slice 1. Audit-only service-role: the invitation row itself
+        // is written on the authenticated client through the policy.
+        "app/api/cases/[caseId]/invitations/route.ts",
+        "app/api/cases/[caseId]/invitations/[invitationId]/route.ts",
       ].sort(),
     );
   });

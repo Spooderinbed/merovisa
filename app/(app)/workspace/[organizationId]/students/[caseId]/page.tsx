@@ -6,7 +6,9 @@ import {
   readCaseNextStep,
 } from "@/lib/cases/case-frame";
 import { caseRouteBase, openCaseRoute } from "@/lib/cases/case-route";
+import { listCaseInvitations } from "@/lib/cases/invitations-repo";
 import { dependsOnPlan, resolveNextAction } from "@/lib/cases/queue";
+import { checkCasePermission } from "@/lib/cases/require-permission";
 import { CaseDecisionStrip } from "@/components/workspace/case-decision-strip";
 import { CaseInviteBlock } from "@/components/workspace/case-invite-block";
 import { CaseLinkState } from "@/components/workspace/case-link-state";
@@ -104,16 +106,46 @@ export default async function CaseOverviewPage({
   const invitationIsTheAction =
     !uncertain && (action.kind === "invite" || action.kind === "add-email");
 
+  /**
+   * MV-193 — the invitation panel's own two reads, taken only when it renders.
+   *
+   * A LINKED case drops the panel entirely, and neither read is worth a round trip for a
+   * case that will not show it.
+   *
+   * `case.invite_student` is asked for EXPLICITLY rather than derived from `gate.scope`.
+   * Under the current matrix everyone who can open an unlinked case also holds it, so the
+   * two agree today — but they are different questions, and inferring one from the other
+   * is how a matrix change silently offers a control the route will then refuse. What it
+   * gates is presentation; the route re-decides and `invitations_insert_staff` decides
+   * again.
+   */
+  const showInvite = !caseRow.hasLinkedStudent;
+  const invitePermission = showInvite
+    ? await checkCasePermission(gate.userId, caseId, "case.invite_student", gate.supabase)
+    : null;
+  // Its own failure and its own sentence. A failed invitation read leaves exactly the
+  // shape of the benign answer — a case nobody has invited — and that is the one wrong
+  // sentence that gets a second link minted for a student who already has one.
+  const invitations = showInvite ? await listCaseInvitations(caseId, gate.supabase) : null;
+
   return (
     <div className="flex flex-col gap-6 px-5 py-10">
       <CaseDecisionStrip base={base} lodgement={lodgement} />
 
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="flex flex-col gap-4">
-          {!caseRow.hasLinkedStudent ? (
+          {showInvite ? (
             <CaseInviteBlock
+              caseId={caseId}
               hasEmail={caseRow.email !== null && caseRow.email.trim() !== ""}
+              caseEmail={caseRow.email}
               isNextAction={invitationIsTheAction}
+              invitations={invitations?.ok ? invitations.data : []}
+              canInvite={invitePermission?.decision.allowed ?? false}
+              // A read that FAILED, not one that found nothing. `invitations === null`
+              // cannot occur while `showInvite` is true; it is spelled out rather than
+              // asserted away so the two absences stay distinguishable if that changes.
+              listFailed={invitations === null || !invitations.ok}
             />
           ) : null}
           {!invitationIsTheAction ? (

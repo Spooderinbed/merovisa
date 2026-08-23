@@ -52,6 +52,17 @@ export type CaseRouteGate =
   | {
       ok: true;
       supabase: SupabaseClient<Database>;
+      /**
+       * The signed-in actor, published so a page needing a SECOND claim can ask for it
+       * without a second `auth.getUser()` round trip. MV-193's invitation panel is the
+       * first such caller: the gate answers `case.read` and the panel needs
+       * `case.invite_student`, which is a different question the matrix may move
+       * independently.
+       *
+       * It is an identifier for asking further questions, never an answer to one — the
+       * gate above has already decided this actor may read this case.
+       */
+      userId: string;
       caseRow: OrgCaseDetail;
       /**
        * What `getCaseContext` published about HOW this actor reaches the case —
@@ -110,6 +121,7 @@ export async function openCaseRoute(
   return {
     ok: true,
     supabase,
+    userId: data.user.id,
     caseRow: result.data,
     grantedRoles: context.grantedRoles ?? [],
     scope: decision.requiredScope,

@@ -111,6 +111,8 @@ import { PATCH as documentRequestPatch } from "@/app/api/cases/[caseId]/document
 import { POST as documentVersionPost } from "@/app/api/cases/[caseId]/document-requests/[requestId]/versions/route";
 import { POST as documentReviewPost } from "@/app/api/cases/[caseId]/document-versions/[versionId]/reviews/route";
 import { GET as documentDownloadGet } from "@/app/api/cases/[caseId]/document-versions/[versionId]/download/route";
+import { POST as invitationPost } from "@/app/api/cases/[caseId]/invitations/route";
+import { PATCH as invitationPatch } from "@/app/api/cases/[caseId]/invitations/[invitationId]/route";
 
 const ACTOR = "11111111-1111-1111-1111-111111111111";
 /** A real v4 UUID — `z.uuid()` checks the version nibble, so `2222…` 422s. */
@@ -438,6 +440,34 @@ const ROUTES: ReadonlyArray<{
       documentDownloadGet(
         new Request(`http://localhost/api/cases/${UUID}/document-versions/${UUID}/download`),
         { params: Promise.resolve({ caseId: UUID, versionId: UUID }) },
+      ),
+    denyStatus: 403,
+    noCaseStatus: null,
+  },
+  {
+    // MV-193. The DENIAL is what this row asserts, and for this route it carries a second
+    // guarantee the status alone does not show: a denied caller must not reach the mint, so
+    // no token is generated and no row is written for somebody who may not invite. The
+    // "never touched the repository" half is asserted for every row below.
+    name: "POST /api/cases/[caseId]/invitations (MV-193)",
+    file: "app/api/cases/[caseId]/invitations/route.ts",
+    call: () =>
+      invitationPost(
+        json(`http://localhost/api/cases/${UUID}/invitations`, "POST", {
+          email: "student@example.test",
+        }),
+        { params: Promise.resolve({ caseId: UUID }) },
+      ),
+    denyStatus: 403,
+    noCaseStatus: null,
+  },
+  {
+    name: "PATCH /api/cases/[caseId]/invitations/[invitationId] (MV-193)",
+    file: "app/api/cases/[caseId]/invitations/[invitationId]/route.ts",
+    call: () =>
+      invitationPatch(
+        json(`http://localhost/api/cases/${UUID}/invitations/${UUID}`, "PATCH", { revoked: true }),
+        { params: Promise.resolve({ caseId: UUID, invitationId: UUID }) },
       ),
     denyStatus: 403,
     noCaseStatus: null,

@@ -64,6 +64,40 @@ export const DOCUMENT_AUDIT_ACTIONS = [
 export type DocumentAuditAction = (typeof DOCUMENT_AUDIT_ACTIONS)[number];
 
 /**
+ * MV-193 — the two invitation actions (Stage 5 slice 1).
+ *
+ * Same vocabulary, and NOT re-coined: `SANCTIONED_SERVICE_ROLE_CATEGORIES` reserved
+ * `invitation.accepted` for slice 2 back in Stage 1, so the noun is settled and these
+ * two are its siblings. The card's criterion 10 asks for "a `case-invite` audit event"
+ * and to "check what MV-189 established before inventing an event name" — what MV-189
+ * established is the dotted / past-tense / noun-first shape and the reserved noun, so
+ * these are `invitation.minted` and `invitation.revoked` rather than a new `case-invite`
+ * spelling that would sit beside `invitation.accepted` describing the same object.
+ *
+ * **A note on criterion 10's wording.** The card says the event is written "through the
+ * existing `private.write_audit_event` path". That path was MEASURED UNREACHABLE at
+ * MV-189 and the finding is recorded at length in this file's header: `private` is not a
+ * PostgREST-exposed schema, so the RPC answers `404 PGRST202` with EXECUTE granted to
+ * both roles, and forcing `Content-Profile: private` answers `406 PGRST106`. The
+ * existing audit path IS this module. Nothing about that changed for MV-193, and this
+ * slice ships no migration to change it.
+ */
+export const INVITATION_AUDIT_ACTIONS = ["invitation.minted", "invitation.revoked"] as const;
+
+export type InvitationAuditAction = (typeof INVITATION_AUDIT_ACTIONS)[number];
+
+/**
+ * Every action the writer will accept. One closed list, assembled from the per-concern
+ * lists rather than retyped, so adding a concern cannot silently forget to register it.
+ */
+export const AUDIT_ACTIONS = [
+  ...DOCUMENT_AUDIT_ACTIONS,
+  ...INVITATION_AUDIT_ACTIONS,
+] as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
+
+/**
  * THE CLOSED METADATA ALLOW-LIST (spec §8.3, D13).
  *
  * The plan's constraint is explicit: "Sensitive document content, passport numbers, and
@@ -99,7 +133,7 @@ export interface AuditEventRow {
   organization_id: string | null;
   case_id: string;
   actor_user_id: string;
-  action: DocumentAuditAction;
+  action: AuditAction;
   entity_type: string;
   entity_id: string;
   metadata: AuditMetadata;
@@ -126,7 +160,7 @@ export interface AuditEventInput {
    */
   organizationId: string | null;
   caseId: string;
-  action: DocumentAuditAction;
+  action: AuditAction;
   entityType: string;
   /** A uuid, always. A filename must never ride in here (D13). */
   entityId: string;
@@ -153,7 +187,7 @@ export class AuditWriteError extends Error {
 }
 
 const Uuid = z.uuid();
-const ACTIONS = new Set<string>(DOCUMENT_AUDIT_ACTIONS);
+const ACTIONS = new Set<string>(AUDIT_ACTIONS);
 const ALLOWED_KEYS = new Set<string>(AUDIT_METADATA_KEYS);
 
 /**
