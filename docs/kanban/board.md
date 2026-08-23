@@ -9,11 +9,11 @@
 
 ### In flight — 0 open PRs
 
-> Read from `gh` at 2026-08-23 06:40 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-23 07:47 UTC. **Not board state** — never written to board.json.
 
 _No open PRs._
 
-> ⚠️ MV-193 is in "inprogress" but its PR #159 is already merged — the board is behind the repo.
+> ⚠️ MV-193 is in "inreview" but its PR #159 is already merged — the board is behind the repo.
 
 
 ## Backlog — 18
@@ -41,13 +41,13 @@ _No open PRs._
 
 _empty_
 
-## In progress (WIP 1) — 1
-
-- **MV-193** · P1 · [Stage 5 slice 1 — mint and revoke a student invitation (the bridge's write half)](cards/MV-193-stage5-invitation-mint.md) — _The first slice of Stage 5, the bridge between the two versions of the product: a counsellor mints a single-use, hash-only invitation for a case and can revoke it. Four facts were measured before carving and remove work a reader would assume. (1) The `invitations` table is COMPLETE — MV-150 shipped it and `invitations_shape_check` already makes a malformed invitation unrepresentable, so NO MIGRATION. (2) The grant set is deliberately narrow and IS the design: `authenticated` holds select+insert and `update (revoked_at)` only — `accepted_at` is not grantable, which is what keeps acceptance server-only for slice 2; widening it to pass a test is the failure mode to refuse. (3) Email OTP sign-in already exists, so Stage 5's first bullet is a CONFIRM, not a build. (4) There is NO transactional email infrastructure at all — no vendor, no dependency, no mailer module. Hence the decision this card takes: mint a COPYABLE LINK the counsellor sends themselves, rather than adopt an email vendor for one slice. Acceptance, team invitations, and the personal-case collision are all explicitly out._ · [#159](https://github.com/Spooderinbed/merovisa/pull/159) merged, ci passing
-
-## In review (WIP 3) — 0
+## In progress (WIP 1) — 0
 
 _empty_
+
+## In review (WIP 3) — 1
+
+- **MV-193** · P1 · [Stage 5 slice 1 — mint and revoke a student invitation (the bridge's write half)](cards/MV-193-stage5-invitation-mint.md) — _The first slice of Stage 5, the bridge between the two versions of the product: a counsellor mints a single-use, hash-only invitation for a case and can revoke it. Four facts were measured before carving and remove work a reader would assume. (1) The `invitations` table is COMPLETE — MV-150 shipped it and `invitations_shape_check` already makes a malformed invitation unrepresentable, so NO MIGRATION. (2) The grant set is deliberately narrow and IS the design: `authenticated` holds select+insert and `update (revoked_at)` only — `accepted_at` is not grantable, which is what keeps acceptance server-only for slice 2; widening it to pass a test is the failure mode to refuse. (3) Email OTP sign-in already exists, so Stage 5's first bullet is a CONFIRM, not a build. (4) There is NO transactional email infrastructure at all — no vendor, no dependency, no mailer module. Hence the decision this card takes: mint a COPYABLE LINK the counsellor sends themselves, rather than adopt an email vendor for one slice. Acceptance, team invitations, and the personal-case collision are all explicitly out._ · [#159](https://github.com/Spooderinbed/merovisa/pull/159) merged, ci passing
 
 ## Blocked — 3
 
