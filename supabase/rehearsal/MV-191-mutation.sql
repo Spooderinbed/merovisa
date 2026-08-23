@@ -276,7 +276,7 @@ begin
       'download boundary is a TypeScript scope decision and not a row-visibility one.';
   end if;
 
-  -- The mutant that DOES reach it: assign every tenant counsellor to every case in their
+  -- The mutant that TRIES to reach it: assign every tenant counsellor to every case in their
   -- organization that carries a document version. That is "assigned" widened to "any counsellor in
   -- the tenant" - the same realistic bug shape as the `*_select_org` family, one layer up.
   --
@@ -287,9 +287,13 @@ begin
   -- DATA mutants do not, and must fire during it. This one hangs off the version insert, which is
   -- exactly when the fixture creates the row the gate is about.
   --
-  -- It kills more than the mint tests, and that is correct rather than sloppy: an assigned
-  -- counsellor legitimately holds the read too. What it isolates is the DIRECTION of the mint's
-  -- answer - the refusal tracks the assignment fact, and is not a mint that refuses everyone.
+  -- AND IT STILL DOES NOT BITE. This is the THIRD SURVIVOR: it kills nothing, and the results
+  -- table at the head of this file is the authority on that. `case_assignments_primary_idx` is
+  -- UNIQUE on (case_id) where assignment_role = 'primary_counsellor', and the CHECK admits no other
+  -- role, so a case has exactly ONE assigned counsellor and no row can be added to widen it - both
+  -- rows this trigger produces are blocked. The `on conflict do nothing` below is what turns the
+  -- resulting 23505 into a clean survivor instead of a harness crash inside the fixture's own
+  -- seeding, which reads as "49 skipped, 1 passed" and looks nothing like a surviving mutant.
   if m = 'assign_tenant_counsellors' then
     create or replace function private.mv191_mutant_autoassign() returns trigger
       language plpgsql security definer set search_path to '' as $fn$

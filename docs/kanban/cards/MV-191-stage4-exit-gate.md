@@ -210,8 +210,12 @@ assertion stays green against it. A denial dies to permissiveness.
 | `anon_write_grant` | **addition** — grants anon INSERT + permissive policy on all three | 4 — "an anonymous client may NOT insert a version" / "… a review" / "… a request"; "nothing the anonymous caller attempted actually landed" |
 | `cases_select_org` **+** the TypeScript `deriveCaseGrants` widening, **together** | compound | 2 — "REFUSES counsellorUnassignedA … and the refusal is a DENIAL, not a mint failure"; "the mint answers a refused actor identically whether the object exists or not" |
 
-26 distinct test-kills across 8 killing mutants. Three further mutants **survived deliberately** and are retained as
-findings rather than deleted:
+28 mutant-test pairs across 8 killing mutants, hitting 25 **distinct** tests — `versions_select_org`'s three kills are
+a strict subset of `versions_select_true`'s nine, being the same three test templates against the same actor. (An
+earlier draft of this line said "26 distinct test-kills", which is neither number: it was a running total that stopped
+at the seventh row and dropped the compound one. Every row below carries its own count and the verbatim names of the
+tests that went red, so per-mutant decay stays detectable regardless of this headline.) Three further mutants
+**survived deliberately** and are retained as findings rather than deleted:
 
 | Survivor | Why it survives — and why that is the interesting part |
 |---|---|
@@ -297,6 +301,15 @@ denial green. A mutant that makes the suite redder is not automatically a wideni
   the routes authorize before they look anything up; that ordering is asserted in `tests/api/case-denial.test.ts` at
   the mocked layer and here at the data layer, but a newly added route could reorder its checks and neither would
   catch it until it too is added to one of those sweeps.
+- **One new assertion kills no mutant, and by this card's own criterion 7 that is a finding about the test.** "An
+  anonymous client may NOT upload bytes under the `case/` prefix" has no mutant behind it: `storage_case_list` and
+  MV-190's equivalent both plant `for select` policies only, and `storage_case_list` is scoped `to authenticated`, so
+  neither can flip the anon *write*. The property is not unguarded — `20260821150000_stage4_case_storage_paths.sql`
+  raises fail-closed when any non-`service_role` `storage.objects` policy's `polqual` **or `polwithcheck`** matches the
+  `case/` prefix, and `polwithcheck` is precisely the INSERT half, on every migration replay. But guarded is not the
+  same as demonstrated-to-flip. The missing mutant is an `anon_storage_write` addition (an anon INSERT grant plus a
+  permissive `for insert` policy on the prefix), which would also want `storage_case_list` extended to `anon`; the
+  assertion itself should then check the storage status code and re-list as the service role to show nothing landed.
 - **A skipped gate cannot be mistaken for a passed one.** `stage4-exit-gate.itest.ts` opens with a configuration block
   that deliberately does **not** `skipIf`: it fails, loudly, when the three `SUPABASE_TEST_*` variables are absent.
   CI's `integration` job independently fails closed on a skipped suite and has been gating since 2026-08-03.
