@@ -59,13 +59,23 @@ Five facts. Each removes work a reasonable reader would assume, or names a hole 
    **replay** → `accepted_at is null`, **revocation** → `revoked_at is null`, **expiry** → `expires_at > now()`.
    Losing any predicate loses exactly one of the four gate words, which is what makes this testable by mutation.
 
-3. **`authenticated` has NO UPDATE grant on `public.cases`. None, in any migration.** The only grant is
-   `grant select, insert, delete on public.cases to authenticated`. **This single fact decides the shape of the
-   slice**, and there is a trap sitting right next to it: a **`cases_update_accessor` policy does exist**, so a
-   reader who greps policies will conclude a client can update a case. It cannot — a client UPDATE dies at the
-   privilege layer with `42501` before any policy is consulted. This is the mirror image of the MISTAKES.md rule
-   ("table-level grants understate the write surface"): **here the policies overstate it.** Verify both halves
-   yourself before writing a line; do not take this paragraph's word for it.
+3. **`authenticated` can update `public.cases` — but `student_user_id` is deliberately excluded from the column
+   grant.** The grants are `select, insert, delete` at table level, **plus**
+   `grant update (display_name, email, operational_status, archived_at) on public.cases`. A
+   `cases_update_accessor` policy admits the linked student, the org admin, and the assigned counsellor, but it
+   answers *"may this actor update this ROW"* and deliberately not *"which COLUMNS"* — the column grant is the
+   other half. `student_user_id` is in neither, and MV-150 says why in the migration itself: linking a case to
+   somebody else's Auth account **"is invitation acceptance (an atomic compare-and-swap, Stage 5), never a field
+   a consultancy can point at a stranger."** So the link write is service-role by design, and **this card is the
+   compare-and-swap that comment is waiting for.**
+
+   **Read the column grant, not the table grant.** This is Trap 1 in `MISTAKES.md` and it was re-hit while
+   carving this card: `information_schema.role_table_grants` — and a naive grep that expects `grant … on
+   public.cases` on one line — **understates the write surface**, because MV-161 replaced table-wide privileges
+   with column-scoped ones and the statement wraps across two lines. Capture all four before making any
+   access-model claim here: `role_column_grants`, `pg_policy` + `pg_get_expr`, `pg_trigger` +
+   `pg_get_triggerdef`, and `pg_constraint`. Three of the four alone will mislead you — there is a
+   `cases_write_surface_guard` BEFORE UPDATE trigger that refuses columns the grants appear to permit.
 
 4. **`accepted_at` is not grantable either** — `authenticated` holds `select, insert` and `update (revoked_at)`
    on `invitations`, and MV-193 verified that against the live database and refused to widen it. So **both writes
