@@ -55,8 +55,8 @@
  *
  * ## Explicitly deferred (see `DEFERRED_BY_DESIGN` at the foot — asserted as documentation)
  *
- * Storage guessed-path download denial (Stage 4); invitation expiry / replay / revocation
- * acceptance flows and repeated-invalid-token rate limiting (Stage 5); case export/download
+ * Invitation expiry / replay / revocation acceptance
+ * flows and repeated-invalid-token rate limiting (Stage 5); case export/download
  * cross-org denial (Stage 4/6); the service-role-path denial test (Stage 1 ships no runtime
  * service-role case wrapper to invoke); and the plan's cross-org CACHE-isolation test
  * (Stage 3 — Stage 1 ships no route that reads these tables, so there is no shared cache
@@ -392,7 +392,16 @@ const TS_ONLY_CELLS: Array<{ actor: ActorKey; verb: CaseScopedPermission; target
 
 /** Deferred to a later stage BY THE CARD — recorded so a cold agent does not absorb them. */
 const DEFERRED_BY_DESIGN = [
-  "storage: guessed-path download denial → Stage 4",
+  // DISCHARGED 2026-08-22 by MV-191's exit-gate inventory, which found this entry still
+  // advertising as outstanding a property MV-190 had covered since 2026-08-20. Struck rather than
+  // left standing: a deferral list nobody prunes stops being evidence of anything, and a cold
+  // agent reading it would re-do work that is already done.
+  //   - guessed-path DOWNLOAD denial: `stage4-case-storage.itest.ts` — "REFUSES a direct download
+  //     of a case/ object to the counsellor who may staff that case", "…to an outsider as well",
+  //     "REFUSES a case/ object to the anonymous client", plus the uid-keyed CONTROL.
+  //   - guessed-path ENUMERATION, which that suite did not cover and which is a distinct verb:
+  //     `stage4-exit-gate.itest.ts` — "…lists NOTHING under case/<case A>" for each denied actor,
+  //     and "listing the BARE case/ root discloses no case id".
   "invitations: expired / replayed / revoked / email-mismatch acceptance → Stage 5",
   "invitations: single acceptance under concurrency → Stage 5",
   "invitations: repeated-invalid-token rate limit + alert → Stage 5",
@@ -604,7 +613,9 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
     });
 
     it("records what is deferred, so a cold agent does not read silence as coverage", () => {
-      expect(DEFERRED_BY_DESIGN.length).toBe(7);
+      // 7 → 6: the Stage 4 storage deferral was discharged by MV-190 + MV-191. The count is
+      // asserted rather than derived so that ADDING a deferral is also a deliberate act.
+      expect(DEFERRED_BY_DESIGN.length).toBe(6);
     });
   });
 

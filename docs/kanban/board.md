@@ -9,11 +9,13 @@
 
 ### In flight — 1 open PR
 
-> Read from `gh` at 2026-08-22 01:51 UTC. **Not board state** — never written to board.json.
+> Read from `gh` at 2026-08-22 14:32 UTC. **Not board state** — never written to board.json.
 
 | Card | PR | | CI | Review | Touches |
 |---|---|---|---|---|---|
-| **MV-191** | [#156](https://github.com/Spooderinbed/merovisa/pull/156) | open | pending 1/4 | — | docs |
+| **MV-191** | [#157](https://github.com/Spooderinbed/merovisa/pull/157) | open | passing 4/4 | — | docs · tests · supabase |
+
+> ⚠️ MV-191 is in "inreview" but its PR #156 is already merged — the board is behind the repo.
 
 
 ## Backlog — 18
@@ -37,17 +39,17 @@
 - **MV-174** · P1 · Stage 3 slice 7 — service-role retreat and the stage exit gate — _CARRIES THE STAGE EXIT. Completes the service-role disposition (spec §6.2): reclassify entries 1 and 2 to 'sanctioned' (F-6 — app/(focused)/assessment/[id]/page.tsx serves an UNAUTHENTICATED visitor so no grant to authenticated can ever retire it, and app/api/account/delete/route.ts says 'DELIBERATELY still owner-keyed' in its own justification; both are permanent designs mislabelled as grandfathered, so the list currently reports two entries as awaiting a migration that will never come), narrow entries 3, 4 AND 9 (app/api/profile/section/route.ts does NOT retire — reScoreAssessment, the plan copy refresh and adoptOwnerKeyedResidue are all refused by spec §6.1, and service-role-exceptions.test.ts:280/:293 pin both horns, so a builder cannot keep the admin client and delete the entry), confirm 5-7 wait for Stage 4's Storage policies, and register the new case-scoped scoring route. Net 9 → 9 — the same count it started with, one retired and one added — and the growth is admitted rather than hidden: MV-154's framing of the list as monotonically shrinking does not survive Stage 3, and the stage is scored on scope, not on list size. THEN proves the exit gate — seven criteria E1-E7 at named layers (spec §9.1), each shipping the vacuity guard from §9.2. E4 is the direct analogue of the Stage 2 §A2 vacuity MV-165 recorded honestly: it passes trivially if the case under test has a student_user_id, or on an empty write set, so it must assert cases.student_user_id IS NULL, owner IS NULL on every row written, AND a created-row count > 0. E1 must assert the actor's JWT role is 'authenticated' (a test run as service_role bypasses every policy and proves nothing). E6 must assert per-entry disposition, never a count (the tracked set is 9 at exit). E7 pins F-8: each case-scoped write route must write the STUDENT'S case id, read back from the row — and the counsellor fixture must itself hold a personal case with a row on the same table, or a wrong-case write has nowhere to land and the test proves nothing. AND THE EXIT MUST NOT OVERCLAIM (spec §9.3): with D-B shut, production holds no consultancy org and no student-less case, so a green Stage 3 licenses 'the mechanism is built and proven under RLS as the authenticated user' and NEVER 'it works for real students' — that is earned in Stage 7's pilot._
 - **MV-178** · P2 · [Data-refresh cadence (founder-deferred, do not chase)](cards/MV-178-data-refresh-cadence.md) — _Founder call 2026-08-17: legal + keep-updating-the-data deferred to backlog. Research report S5 priced it: visa/policy layer ~80-120 h/yr is the moat; catalogue breadth ~240 h/yr is a cost trap. Card exists so the deferral is durable state._
 
-## Ready (WIP 5) — 1
+## Ready (WIP 5) — 0
 
-- **MV-191** · P1 · [Stage 4 exit gate: prove the document boundary holds (Stage 4 slice 6)](cards/MV-191-stage4-exit-gate.md) — _The verification half of Stage 4's exit gate: "an unauthorized actor cannot upload, view, download, review, or enumerate a document, and the authorized request-to-approval flow works." Five negative verbs and one positive walk. Starts with a COVERAGE INVENTORY rather than a test, because Stage 4 already has a lot of green that does not add up to the gate: the collaboration walk itest proves only the happy path and only for an authorized actor; tests/api/case-denial.test.ts is route-level and mocked, so it proves the route refuses and not that the database would have; MV-153's real-Supabase matrix carries the case/org permission verbs but not the document ones; and `enumerate` appears to be covered by nothing at all. Extends tenant-isolation.itest.ts rather than starting a new harness. No migration expected — if a real hole needs a schema change, stop and report rather than folding a migration into a verification slice._ · [#156](https://github.com/Spooderinbed/merovisa/pull/156) open, ci pending
+_empty_
 
 ## In progress (WIP 1) — 0
 
 _empty_
 
-## In review (WIP 3) — 0
+## In review (WIP 3) — 1
 
-_empty_
+- **MV-191** · P1 · [Stage 4 exit gate: prove the document boundary holds (Stage 4 slice 6)](cards/MV-191-stage4-exit-gate.md) — _The verification half of Stage 4's exit gate: "an unauthorized actor cannot upload, view, download, review, or enumerate a document, and the authorized request-to-approval flow works." Five negative verbs and one positive walk. Starts with a COVERAGE INVENTORY rather than a test, because Stage 4 already has a lot of green that does not add up to the gate: the collaboration walk itest proves only the happy path and only for an authorized actor; tests/api/case-denial.test.ts is route-level and mocked, so it proves the route refuses and not that the database would have; MV-153's real-Supabase matrix carries the case/org permission verbs but not the document ones; and `enumerate` appears to be covered by nothing at all. Extends tenant-isolation.itest.ts rather than starting a new harness. No migration expected — if a real hole needs a schema change, stop and report rather than folding a migration into a verification slice._ · [#157](https://github.com/Spooderinbed/merovisa/pull/157) open, ci passing · [#156](https://github.com/Spooderinbed/merovisa/pull/156) merged, ci passing
 
 ## Blocked — 3
 
