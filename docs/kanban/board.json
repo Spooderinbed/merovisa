@@ -2325,7 +2325,7 @@
     },
     {
       "id": "MV-193",
-      "col": "ready",
+      "col": "inreview",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-193-stage5-invitation-mint.md",

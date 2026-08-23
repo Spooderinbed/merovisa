@@ -32,7 +32,8 @@ export type CaseDbTable =
   | "plan_items"
   | "case_document_requests"
   | "case_document_versions"
-  | "case_document_reviews";
+  | "case_document_reviews"
+  | "invitations";
 
 /** Partial fixture rows — supply only the columns a test cares about. */
 export type CaseDbFixture = {
@@ -44,6 +45,7 @@ export type CaseDbFixture = {
   case_document_requests?: Array<Partial<Tables["case_document_requests"]["Row"]>>;
   case_document_versions?: Array<Partial<Tables["case_document_versions"]["Row"]>>;
   case_document_reviews?: Array<Partial<Tables["case_document_reviews"]["Row"]>>;
+  invitations?: Array<Partial<Tables["invitations"]["Row"]>>;
 };
 
 export type FakeCaseDbOptions = {
@@ -120,6 +122,17 @@ export type RecordedQuery = {
    * rather than equivalent.
    */
   limit: number | null;
+  /**
+   * Every `.select(columns)` this query chained, verbatim.
+   *
+   * MV-193 needs it and no earlier caller did. The fake answers from whole fixture
+   * rows whatever a caller selects, so a repository that asked PostgREST for
+   * `token_hash` and then merely declined to MAP it looks identical here to one
+   * that never asked — while over the wire the two differ by a credential digest.
+   * Recording the projection is what lets a test assert on the column list the
+   * query actually carried rather than on what survived the mapping.
+   */
+  select: string[];
 };
 export type RecordedInsert = { table: string; row: Record<string, unknown> };
 export type RecordedUpdate = { table: string; patch: Record<string, unknown> };
@@ -153,7 +166,7 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
 
   const from = vi.fn((table: string) => {
     const filters: Array<[string, unknown]> = [];
-    const record: RecordedQuery = { table, filters, order: [], limit: null };
+    const record: RecordedQuery = { table, filters, order: [], limit: null, select: [] };
     queries.push(record);
 
     const rowsFor = (): Row[] => {
@@ -237,7 +250,13 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
     // PostgREST builders are chainable AND awaitable; every chain method returns
     // the same builder and only a terminal (or an await) resolves.
     const builder: Record<string, unknown> = {};
-    builder.select = vi.fn(() => builder);
+    builder.select = vi.fn((columns?: unknown) => {
+      // `.select()` with no argument is PostgREST's "everything", which is what a
+      // write chains to read its own row back. Recorded as `*` so a projection
+      // assertion cannot be satisfied by the absence of an argument.
+      record.select.push(typeof columns === "string" ? columns : "*");
+      return builder;
+    });
     builder.order = vi.fn((column: string, options?: unknown) => {
       record.order.push([column, options]);
       return builder;

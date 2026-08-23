@@ -20,11 +20,14 @@ vi.mock("server-only", () => ({}));
  * - **A failed plan read does not become a confident action.** Steps 7 and 9 of
  *   the resolution read the plan, so an action resolved below them is only true
  *   if that read succeeded.
- * - **No dead invitation control.** Stage 5 owns invitations; until then the
- *   unlinked case gets words, never a button that does nothing.
+ * - **A REAL invitation control, as of MV-193.** This bullet used to read "no dead
+ *   invitation control": Stage 5 did not exist, so the unlinked case got words and
+ *   never a button that does nothing. Stage 5 slice 1 is what earned the control, so
+ *   the assertion flips — the panel now offers a form, and what it must NOT do is
+ *   claim the feature is unbuilt or imply that MeroVisa emails the link.
  */
 
-const { getUser, redirect, notFound, useSelectedLayoutSegment } = vi.hoisted(() => ({
+const { getUser, redirect, notFound, useSelectedLayoutSegment, refresh } = vi.hoisted(() => ({
   getUser: vi.fn(),
   redirect: vi.fn(() => {
     throw new Error("REDIRECT");
@@ -33,13 +36,21 @@ const { getUser, redirect, notFound, useSelectedLayoutSegment } = vi.hoisted(() 
     throw new Error("NOT_FOUND");
   }),
   useSelectedLayoutSegment: vi.fn(() => null as string | null),
+  refresh: vi.fn(),
 }));
 
 const { supabase } = vi.hoisted(() => ({ supabase: { current: null as unknown } }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => supabase.current,
 }));
-vi.mock("next/navigation", () => ({ redirect, notFound, useSelectedLayoutSegment }));
+// `useRouter` joined the mock at MV-193: `CaseInviteBlock` became a client component
+// with two mutations, and it calls `router.refresh()` rather than navigating.
+vi.mock("next/navigation", () => ({
+  redirect,
+  notFound,
+  useSelectedLayoutSegment,
+  useRouter: () => ({ refresh }),
+}));
 
 const { checkCasePermission } = vi.hoisted(() => ({ checkCasePermission: vi.fn() }));
 vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
@@ -377,26 +388,51 @@ describe("an unlinked case", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers no control that does nothing", async () => {
-    // Stage 5 owns invitations. Spec §2: "Invitation actions become links only
-    // when Stage 5 exists; before then the linkage marker remains visible without
-    // a dead control."
+  it("offers a real control, and no longer says the feature is unbuilt", async () => {
+    // MV-193 inverted this test. Until Stage 5 existed, spec §2 held: "Invitation
+    // actions become links only when Stage 5 exists; before then the linkage marker
+    // remains visible without a dead control." Stage 5 slice 1 IS that existence, so
+    // the panel now carries the control — and the sentence it used to carry must go,
+    // because a shipped feature describing itself as unbuilt is worse than either.
     seed(unlinked);
 
     render(await overview());
 
     const action = screen.getByTestId("case-next-action");
-    expect(within(action).queryByRole("button")).not.toBeInTheDocument();
-    expect(within(action).queryByRole("link", { name: /invite/i })).not.toBeInTheDocument();
+    expect(
+      within(action).getByRole("button", { name: /create invitation link/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/isn't built yet/i)).not.toBeInTheDocument();
   });
 
-  it("asks for an email address when there is none to invite to", async () => {
+  it("does not claim MeroVisa sends the invitation", async () => {
+    // The honesty this slice turns on. There is no transactional email in this
+    // product; the counsellor sends the link. A panel that implied otherwise would
+    // leave a student waiting for mail that is never coming.
+    seed(unlinked);
+
+    render(await overview());
+
+    const action = screen.getByTestId("case-next-action");
+    // The form asks for the address the STUDENT signs in with — it does not offer to
+    // mail anything, and no control is worded as sending.
+    expect(within(action).getByLabelText(/student’s email/i)).toBeInTheDocument();
+    expect(within(action).queryByRole("button", { name: /send/i })).not.toBeInTheDocument();
+  });
+
+  it("still offers the control when the case carries no email of its own", async () => {
+    // The case's email seeds the field; it never gates the control. A counsellor who
+    // knows the student's address must not be blocked because the case record is thin
+    // — the old panel refused here, which is a refusal MV-193 removes.
     seed({ ...unlinked, email: null });
 
     render(await overview());
 
-    expect(within(screen.getByTestId("case-next-action")).getByText("Add an email to invite"))
-      .toBeInTheDocument();
+    const action = screen.getByTestId("case-next-action");
+    expect(within(action).getByLabelText(/student’s email/i)).toHaveValue("");
+    expect(
+      within(action).getByText(/there is no email on this case yet/i),
+    ).toBeInTheDocument();
   });
 
   it("still leads with the invitation when something else outranks it", async () => {

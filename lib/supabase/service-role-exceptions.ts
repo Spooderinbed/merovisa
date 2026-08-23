@@ -263,6 +263,42 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     auditEvent: "document.downloaded",
   },
   /**
+   * MV-193 — the two invitation routes (Stage 5 slice 1).
+   *
+   * THESE TWO ARE A DIFFERENT SHAPE FROM THE FIVE ABOVE, and the difference is worth
+   * stating because it is the shape every future audited route should copy. The five
+   * document entries reach for service-role to touch STORAGE. These two touch no
+   * Storage, no `invitations` row and no `cases` row with the admin client — every one
+   * of those is written and read on the AUTHENTICATED client, through
+   * `invitations_insert_staff` / `_update_staff`. Service-role here has exactly one
+   * job: `INSERT` into `public.audit_events`.
+   *
+   * It is unavoidable and it is not a widening. `authenticated` holds SELECT on
+   * `audit_events` and no INSERT, there is no INSERT policy for it, and MV-152 wrote
+   * the mechanism down itself (`20260730180000_case_aware_rls_policies.sql:750-753`):
+   * "Audit rows are written by server paths running as service_role." Granting
+   * `authenticated` INSERT instead would be exactly the grant widening MV-193's
+   * criterion 8 forbids — and would let any client forge an evidence row.
+   */
+  {
+    path: "app/api/cases/[caseId]/invitations/route.ts",
+    status: "sanctioned",
+    justification:
+      "Audit only. The invitation row is inserted on the AUTHENTICATED client through invitations_insert_staff; service-role touches public.audit_events and nothing else, because `authenticated` holds SELECT on that table and no INSERT and there is no INSERT policy for it (MV-152 §9). MV-193 ships no migration and widens no grant, so this is the only client that can write the evidence row.",
+    requiredCaseCheck:
+      "MV-193: checkCasePermission(actor, caseId-from-the-PATH, 'case.invite_student', authenticatedClient) BEFORE the repository is touched. The claim is the INVITE claim and NOT case.read — they answer differently for the same person, and the linked student holds case.read at 'linked' and this one not at all, so gating on the read claim would let a student mint invitations to their own case. The case comes from the PATH (spec F-8): a route resolving the ACTOR's own case would write to the counsellor's file rather than the student's, and RLS cannot catch it because a counsellor may legitimately reach both. THE AUDIT IS WRITTEN AFTER THE ROW COMMITS, unlike the two signed-URL mints above: recording `invitation.minted` for a mint that then failed would be a lie in an evidence log. D12 still holds — a failed audit is a 500 and the token is never returned, leaving the invitation visible as outstanding for the counsellor to revoke and re-mint. THE TOKEN LEAVES IN THE RESPONSE BODY AND NOWHERE ELSE: not in the row (only its SHA-256 digest is stored), not in any read path, not in this audit event, not in a URL and not in a log.",
+    auditEvent: "invitation.minted",
+  },
+  {
+    path: "app/api/cases/[caseId]/invitations/[invitationId]/route.ts",
+    status: "sanctioned",
+    justification:
+      "Audit only, exactly as the mint above. The `revoked_at` stamp is written on the AUTHENTICATED client through invitations_update_staff and the client's one-column UPDATE grant; service-role touches public.audit_events and nothing else.",
+    requiredCaseCheck:
+      "MV-193: checkCasePermission(actor, caseId-from-the-PATH, 'case.invite_student', authenticatedClient) — the SAME claim as the mint, so the two verbs appear and disappear together, which is also how the database already answers (both policies end in private.can_staff_case for the student branch). BOTH ids are filters on the UPDATE: without the case_id predicate the invitation id alone would decide which row moves, so an id from another case the actor happens to staff would be revoked under this case's authorization (spec F-8). PATCH and never DELETE — MV-152 shipped no DELETE policy on invitations and said why: revocation is the audited path, and a deleted invitation is a deleted record of who was invited.",
+    auditEvent: "invitation.revoked",
+  },
+  /**
    * `app/api/plan/action/route.ts` USED TO BE HERE and RETIRED in MV-172 — Stage 3
    * spec §6.2 entry 8, the one path the stage retires outright. It called three
    * helpers and every write was inside the grant `authenticated` already held
