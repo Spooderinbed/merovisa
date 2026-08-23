@@ -66,6 +66,11 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+// MV-192 — the shared model, deliberately NOT the `capture-read-path-snapshot.mjs` CLI next to
+// it. That file carries `#!/usr/bin/env node`, and on a CRLF checkout the SSR transform does not
+// strip a `#!` line correctly, so importing it here parse-errors this whole suite out of
+// existence on Windows while Linux CI stays green. It is the same code either way — one
+// serializer, one hash, one exclusion list, imported by both halves of the proof.
 import {
   EXCLUDED_FIELDS,
   MIGRATED_TABLES,
@@ -76,7 +81,7 @@ import {
   hashPayload,
   isExcluded,
   rowKey,
-} from "../../scripts/stage2/capture-read-path-snapshot.mjs";
+} from "../../scripts/stage2/read-path-snapshot.mjs";
 import { assertLocalStack } from "./fixtures/tenancy";
 
 assertLocalStack("stage2-data-equivalence.itest.ts", process.env.SUPABASE_TEST_URL);
