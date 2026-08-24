@@ -38,6 +38,52 @@ export const REDACTED_SEARCH_PARAMS: readonly string[] = ["q"];
 export const REDACTION_PLACEHOLDER = "redacted";
 
 /**
+ * Route prefixes whose NEXT path segment is a secret (MV-194).
+ *
+ * `/invite/<token>` is the only URL in the product that carries a live bearer credential,
+ * and it is there by necessity: the link a counsellor pastes into a chat message IS the
+ * token. `redactSearchParams` cannot reach it — a path segment is not a query parameter —
+ * so a student clicking their invitation would hand PostHog a working invitation, which is
+ * the defect `invitations.token_hash` exists to prevent, one layer up.
+ *
+ * Cleaning the VALUE rather than switching analytics off for the route, because the cheaper
+ * fix does not actually work: `$referrer` and `$session_entry_url` carry the invite URL to
+ * every LATER page of the session, so suppressing init on `/invite` alone would ship the
+ * token from the dashboard instead.
+ */
+export const REDACTED_PATH_PREFIXES: readonly string[] = ["/invite/"];
+
+/**
+ * The same URL with each secret path segment replaced.
+ *
+ * Matched by `indexOf` on the prefix rather than by parsing, for the same reason
+ * `redactSearchParams` splits by hand: this has to work on a bare `$pathname` as well as on
+ * an absolute URL, and a `URL` round trip would rewrite parts of the string that are not
+ * ours to change. Over-matching is harmless and deliberate — a `/invite/` appearing deeper
+ * in some other path would be redacted too, and nothing downstream needs that segment.
+ */
+export function redactPathSecrets(url: string): string {
+  let redacted = url;
+  for (const prefix of REDACTED_PATH_PREFIXES) {
+    const at = redacted.indexOf(prefix);
+    if (at === -1) continue;
+    const start = at + prefix.length;
+    let end = redacted.length;
+    for (let i = start; i < redacted.length; i += 1) {
+      const char = redacted[i];
+      if (char === "/" || char === "?" || char === "#") {
+        end = i;
+        break;
+      }
+    }
+    // `/invite/` with nothing after it is the bare route, not a credential.
+    if (end === start) continue;
+    redacted = `${redacted.slice(0, start)}${REDACTION_PLACEHOLDER}${redacted.slice(end)}`;
+  }
+  return redacted;
+}
+
+/**
  * PostHog properties that carry a URL. `$referrer` matters as much as
  * `$current_url`: the pageview for the page a counsellor navigates TO carries the
  * search URL they came from.
@@ -123,7 +169,10 @@ export function sanitizeAnalyticsProperties(
 ): Record<string, unknown> {
   const sanitized: Record<string, unknown> = { ...properties };
   for (const [key, value] of Object.entries(sanitized)) {
-    if (typeof value === "string" && isUrlProperty(key)) sanitized[key] = redactSearchParams(value);
+    if (typeof value === "string" && isUrlProperty(key)) {
+      // Both redactions, composed: one URL can carry a searched name AND a credential.
+      sanitized[key] = redactPathSecrets(redactSearchParams(value));
+    }
   }
   return sanitized;
 }

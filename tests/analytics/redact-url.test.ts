@@ -1,6 +1,7 @@
 import { describe, test, expect } from "vitest";
 import {
   redactSearchParams,
+  redactPathSecrets,
   sanitizeAnalyticsProperties,
   REDACTION_PLACEHOLDER,
 } from "@/lib/analytics/redact-url";
@@ -61,7 +62,83 @@ describe("redactSearchParams", () => {
   });
 });
 
+/**
+ * MV-194 — the invitation token is a PATH SEGMENT, which `redactSearchParams` cannot see.
+ *
+ * `/invite/<token>` is the one URL in the product that carries a live bearer credential,
+ * and `capture_pageview: "history_change"` ships `$current_url` on every navigation. So a
+ * student clicking their invitation link would hand PostHog a working invitation — the
+ * exact defect hashing `token_hash` in the database exists to prevent, one layer up, and a
+ * plain violation of criterion 7 ("the plaintext token appears in NO URL other than the
+ * student's own inbound link … and in no client-side log").
+ *
+ * Redaction rather than switching analytics off for the route, and the reason is that the
+ * cheaper fix does not work: `$referrer` and `$session_entry_url` carry the invite URL to
+ * every LATER page in the session, so suppressing init on `/invite` alone would leak the
+ * token from the dashboard instead. Only cleaning the value closes it.
+ */
+const INVITE_TOKEN = "Zm9vYmFyLXRva2VuLXZhbHVlLW5vYm9keS1zZWVzLXh4";
+
+describe("redactPathSecrets — MV-194's invitation token", () => {
+  test("replaces the token segment of an absolute invite URL", () => {
+    expect(redactPathSecrets(`https://app.test/invite/${INVITE_TOKEN}`)).toBe(
+      `https://app.test/invite/${REDACTION_PLACEHOLDER}`,
+    );
+  });
+
+  test("works on a bare path, because $pathname is not an absolute URL", () => {
+    expect(redactPathSecrets(`/invite/${INVITE_TOKEN}`)).toBe(`/invite/${REDACTION_PLACEHOLDER}`);
+  });
+
+  test("keeps a trailing query and fragment, which posthog also ships", () => {
+    expect(redactPathSecrets(`https://app.test/invite/${INVITE_TOKEN}?utm_source=viber#top`)).toBe(
+      `https://app.test/invite/${REDACTION_PLACEHOLDER}?utm_source=viber#top`,
+    );
+    expect(redactPathSecrets(`https://app.test/invite/${INVITE_TOKEN}/`)).toBe(
+      `https://app.test/invite/${REDACTION_PLACEHOLDER}/`,
+    );
+  });
+
+  test("leaves the bare route alone — `/invite` with nothing after it is not a credential", () => {
+    for (const url of ["https://app.test/invite/", "/invite", "/invite/", ""]) {
+      expect(redactPathSecrets(url)).toBe(url);
+    }
+  });
+
+  test("returns a URL with nothing to redact byte for byte", () => {
+    for (const url of ["https://app.test/dashboard", "/workspace/org-1/students?q=x"]) {
+      expect(redactPathSecrets(url)).toBe(url);
+    }
+  });
+});
+
 describe("sanitizeAnalyticsProperties", () => {
+  test("MV-194 — no URL property ships the invitation token, on any page of the session", () => {
+    // $referrer and $session_entry_url are the ones that outlive the invite page: posthog
+    // pins the session's entry URL to EVERY later event, so a student who lands on their
+    // invitation link first would ship a live credential with every subsequent pageview.
+    const sanitized = sanitizeAnalyticsProperties({
+      $current_url: `https://app.test/invite/${INVITE_TOKEN}`,
+      $referrer: `https://app.test/invite/${INVITE_TOKEN}`,
+      $initial_current_url: `https://app.test/invite/${INVITE_TOKEN}`,
+      $pathname: `/invite/${INVITE_TOKEN}`,
+      $session_entry_url: `https://app.test/invite/${INVITE_TOKEN}`,
+    });
+
+    expect(JSON.stringify(sanitized)).not.toContain(INVITE_TOKEN);
+  });
+
+  test("MV-194 — a searched name and a token in one URL are BOTH cleaned", () => {
+    // The two redactions compose rather than one replacing the other.
+    const sanitized = sanitizeAnalyticsProperties({
+      $current_url: `https://app.test/invite/${INVITE_TOKEN}?q=Placeholder`,
+    });
+    expect(sanitized.$current_url).toBe(
+      `https://app.test/invite/${REDACTION_PLACEHOLDER}?q=${REDACTION_PLACEHOLDER}`,
+    );
+  });
+
+
   test("cleans every URL property, not just the current one", () => {
     // $referrer is the leak that outlives the search page: the pageview for
     // wherever the counsellor navigates NEXT carries the URL they came from.

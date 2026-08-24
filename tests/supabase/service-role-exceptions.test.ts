@@ -534,7 +534,7 @@ describe("registry hygiene", () => {
    * true, and the last keeps the fence: an entry cannot quietly start or stop claiming an
    * audit event without a reviewer seeing the count move.
    */
-  test("exactly the five document-access paths and the two invitation paths emit an audit event", () => {
+  test("exactly the five document-access paths and the three invitation paths emit an audit event", () => {
     const wired = SERVICE_ROLE_EXCEPTIONS.filter((entry) => entry.auditEvent !== null).map(
       (entry) => entry.path,
     );
@@ -550,6 +550,11 @@ describe("registry hygiene", () => {
         // row is written on the authenticated client through `invitations_insert_staff`.
         "app/api/cases/[caseId]/invitations/route.ts",
         "app/api/cases/[caseId]/invitations/[invitationId]/route.ts",
+        // MV-194 — Stage 5 slice 2, and a THIRD shape: the first entry where service-role
+        // performs the tenant-table WRITES themselves. `invitations.accepted_at` and
+        // `cases.student_user_id` are outside every `authenticated` grant by design, and
+        // the invitee can see neither row under RLS until this route links them.
+        "app/api/invitations/accept/route.ts",
       ].sort(),
     );
   });

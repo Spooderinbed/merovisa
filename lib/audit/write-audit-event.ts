@@ -82,7 +82,31 @@ export type DocumentAuditAction = (typeof DOCUMENT_AUDIT_ACTIONS)[number];
  * existing audit path IS this module. Nothing about that changed for MV-193, and this
  * slice ships no migration to change it.
  */
-export const INVITATION_AUDIT_ACTIONS = ["invitation.minted", "invitation.revoked"] as const;
+/**
+ * MV-194 adds the third — `invitation.accepted` (Stage 5 slice 2).
+ *
+ * NOT coined here either: `SANCTIONED_SERVICE_ROLE_CATEGORIES` reserved this exact string
+ * for "invitation acceptance" in Stage 1, before the invitation flow existed, and MV-193
+ * shipped its two siblings against that reservation. Adding it is redeeming the name, not
+ * inventing one.
+ *
+ * **It records that the CREDENTIAL WAS CONSUMED**, which is what the compare-and-swap
+ * decides, and it is written the moment that statement commits — before the case is linked.
+ * That ordering is the accept route's decision and is argued there: acceptance is two writes
+ * that cannot share a transaction, and auditing after the second would leave a spent token
+ * with nobody linked recorded nowhere at all.
+ *
+ * There is deliberately NO `invitation.accept_failed` sibling. Every entry in
+ * `SERVICE_ROLE_EXCEPTIONS` claims exactly one action — `tests/audit/audit-metadata-pii.test.ts`
+ * pins that as a set equality — so a second action would need a second call site to claim
+ * it, and the half-done state is already covered by this row plus a case that shows an
+ * accepted invitation and no linked student.
+ */
+export const INVITATION_AUDIT_ACTIONS = [
+  "invitation.minted",
+  "invitation.revoked",
+  "invitation.accepted",
+] as const;
 
 export type InvitationAuditAction = (typeof INVITATION_AUDIT_ACTIONS)[number];
 

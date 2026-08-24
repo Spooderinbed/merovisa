@@ -133,6 +133,20 @@ export type RecordedQuery = {
    * query actually carried rather than on what survived the mapping.
    */
   select: string[];
+  /**
+   * `.gt(column, value)` / `.lt(column, value)` predicates, in chain order.
+   *
+   * MV-194 needs them and no earlier caller did: the invitation compare-and-swap's
+   * fourth predicate is `expires_at > now()`, and it must ride IN the statement —
+   * an expiry checked in JavaScript after the update has already accepted the
+   * invitation. Kept apart from `filters` because those are equalities matched by
+   * `===`, and folding an inequality in there would make `rowsFor()` silently
+   * compare a timestamp for identity and match nothing.
+   *
+   * Values are compared as instants when both sides parse as dates, and
+   * lexically otherwise, so a fixture may write either an ISO string or a number.
+   */
+  comparisons: Array<[string, "gt" | "lt", unknown]>;
 };
 export type RecordedInsert = { table: string; row: Record<string, unknown> };
 export type RecordedUpdate = { table: string; patch: Record<string, unknown> };
@@ -166,18 +180,36 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
 
   const from = vi.fn((table: string) => {
     const filters: Array<[string, unknown]> = [];
-    const record: RecordedQuery = { table, filters, order: [], limit: null, select: [] };
+    const comparisons: Array<[string, "gt" | "lt", unknown]> = [];
+    const record: RecordedQuery = { table, filters, order: [], limit: null, select: [], comparisons };
     queries.push(record);
+
+    /** One side of a `.gt()`/`.lt()` as a comparable number, or the raw string. */
+    const comparable = (value: unknown): number | string => {
+      if (typeof value === "number") return value;
+      const parsed = Date.parse(String(value));
+      return Number.isNaN(parsed) ? String(value) : parsed;
+    };
 
     const rowsFor = (): Row[] => {
       const all = rows[table] ?? [];
       // An array-valued filter is an `.in()` predicate: the column must be one of
       // the listed values. Everything else is an equality from `.eq()`/`.is()`.
-      const matched = all.filter((row) =>
-        filters.every(([column, value]) =>
-          Array.isArray(value) ? value.includes(row[column]) : row[column] === value,
-        ),
-      );
+      const matched = all
+        .filter((row) =>
+          filters.every(([column, value]) =>
+            Array.isArray(value) ? value.includes(row[column]) : row[column] === value,
+          ),
+        )
+        .filter((row) =>
+          comparisons.every(([column, op, value]) => {
+            // A null column satisfies no inequality, which is what Postgres does.
+            if (row[column] === null || row[column] === undefined) return false;
+            const left = comparable(row[column]);
+            const right = comparable(value);
+            return op === "gt" ? left > right : left < right;
+          }),
+        );
       // `.limit()` is HONOURED, not just recorded: a caller that asks for N+1 rows
       // to detect truncation is asserting on the size of the answer, and a fake
       // that ignored the limit would make that detection untestable.
@@ -305,6 +337,12 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
       filters.push([column, values]);
       return builder;
     });
+    for (const op of ["gt", "lt"] as const) {
+      builder[op] = vi.fn((column: string, value: unknown) => {
+        comparisons.push([column, op, value]);
+        return builder;
+      });
+    }
     builder.maybeSingle = vi.fn(() => Promise.resolve(resolve("one")));
     builder.single = vi.fn(() => Promise.resolve(resolve("one")));
     builder.then = (onFulfilled: (r: unknown) => unknown) => onFulfilled(resolve("many"));

@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 vi.mock("server-only", () => ({}));
@@ -258,6 +258,11 @@ const TOKEN_HANDLING_SOURCES = [
   "app/api/cases/[caseId]/invitations/route.ts",
   "app/api/cases/[caseId]/invitations/[invitationId]/route.ts",
   "components/workspace/case-invite-block.tsx",
+  // MV-194 — the student's side of the wire, where the token is finally in a URL.
+  "lib/invitations/accept.ts",
+  "app/api/invitations/accept/route.ts",
+  "app/invite/[token]/page.tsx",
+  "components/invitations/invite-accept-panel.tsx",
 ];
 
 const readLines = (relPath: string): string[] =>
@@ -271,6 +276,36 @@ const CONSOLE_CALL = /\bconsole\.(log|info|warn|error|debug|trace)\s*\(/;
  * leaks the credential exactly as logging the token would.
  */
 const TOKEN_BEARING = ["token", "plaintext", "link", "invitationLink"];
+
+/**
+ * The only module allowed to SPELL the invite path in code (MV-194).
+ *
+ * `next.config.ts` spells `/invite/:token*` too, and legitimately — it is a header rule
+ * rather than a link — but it is outside the directories swept below, so it needs no
+ * exemption here. The App Router's own `app/invite/[token]/` directory name is structural
+ * and appears in no source line.
+ */
+const INVITE_PATH_SPELLERS = [
+  "lib/invitations/token.ts",
+  // The second legitimate speller, and it is legitimate for the opposite reason: it has to
+  // know the prefix in order to REDACT what follows it out of every analytics URL property.
+  // It constructs no link — `REDACTED_PATH_PREFIXES` is matched against, never emitted.
+  "lib/analytics/redact-url.ts",
+];
+
+/** Every first-party `.ts`/`.tsx` under the given repo-relative directories. */
+function sourceFilesUnder(dirs: readonly string[]): string[] {
+  const found: string[] = [];
+  const walk = (relDir: string): void => {
+    for (const entry of readdirSync(join(REPO_ROOT, relDir), { withFileTypes: true })) {
+      const rel = `${relDir}/${entry.name}`;
+      if (entry.isDirectory()) walk(rel);
+      else if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) found.push(rel);
+    }
+  };
+  for (const dir of dirs) walk(dir);
+  return found;
+}
 
 /** Source lines with the comments stripped — a module may DISCUSS the token at length. */
 const codeLines = (relPath: string): Array<{ line: string; number: number }> =>
@@ -354,6 +389,167 @@ describe("MV-193 — the token reaches no log, on either side of the wire", () =
     // browser history. The counsellor-side surface is a POST body and nothing else.
     expect(source).not.toContain("redirect(");
     expect(source).not.toContain("searchParams.set");
+  });
+});
+
+/**
+ * ---------------------------------------------------------------------------------------
+ * MV-194 criterion 7 — the token is now IN A URL, and this is where that stops spreading
+ * ---------------------------------------------------------------------------------------
+ *
+ * Slice 1 kept the plaintext out of every URL by handing it back in a POST body. Slice 2
+ * cannot: the link the counsellor pastes into a chat message IS the token, in a path
+ * segment. That is the design and it is a normal one, but it drags in obligations no
+ * functional test would fail without — the token lands in browser history, in the `Referer`
+ * of every outbound request the page makes, in any server access log, and in `$current_url`
+ * on its way to PostHog.
+ *
+ * Criterion 7 is the boundary: the plaintext appears in **no** URL other than the student's
+ * own inbound link, in no redirect, in no audit event, in no log, and in no error response.
+ * The sweeps below hunt each of those, and they split on `/\r?\n/` for the reason the header
+ * gives.
+ */
+const ACCEPT_ROUTE = "app/api/invitations/accept/route.ts";
+const ACCEPT_PANEL = "components/invitations/invite-accept-panel.tsx";
+const INVITE_PAGE = "app/invite/[token]/page.tsx";
+
+const codeText = (relPath: string): string =>
+  codeLines(relPath)
+    .map((c) => c.line)
+    .join("\n");
+
+describe("MV-194 criterion 7 — the token reaches no SECOND url, and no redirect", () => {
+  test("the accept route issues no redirect and builds no URL", () => {
+    const source = codeText(ACCEPT_ROUTE);
+
+    // A token in a `Location` header is a token in the browser's history and in every
+    // access log between here and the client.
+    expect(source).not.toContain("redirect(");
+    expect(source).not.toContain("NextResponse.redirect");
+    expect(source).not.toContain("searchParams");
+    expect(source).not.toContain("URLSearchParams");
+  });
+
+  test("the accept route never echoes the value Zod refused — that value IS the credential", () => {
+    // The mint route returns `parsed.error.flatten()` on a bad body and is right to: the
+    // offending value there is an email address the caller already typed. Here it is the
+    // token, so the issues are dropped and only "Validation failed" comes back.
+    expect(codeText(ACCEPT_ROUTE)).not.toContain("flatten()");
+  });
+
+  test("the accept panel POSTs to a constant path — the token is in the body, never the URL", () => {
+    const source = codeText(ACCEPT_PANEL);
+
+    expect(source).toContain('"/api/invitations/accept"');
+    // A fetch whose URL is built from the token would put the credential straight back into
+    // an access log — the one thing the POST body exists to avoid.
+    expect(source).not.toMatch(/fetch\(\s*`/);
+    expect(source).not.toContain("window.location");
+    expect(source).not.toContain("router.replace");
+    expect(source).not.toContain("router.push");
+  });
+
+  test("nothing hands the token to the auth flow as a `next` or a `claim`", () => {
+    // `safeNext` would happily accept `/invite/<token>` — it is a well-formed relative path.
+    // Host safety is a different property from not putting the credential in the redirect at
+    // all, and this is the one that keeps it out of `/api/auth/email/start`'s body, out of
+    // the `emailRedirectTo` handed to GoTrue, and out of the redirect that comes back.
+    for (const relPath of [ACCEPT_PANEL, INVITE_PAGE]) {
+      const source = codeText(relPath);
+      expect(source, `${relPath} passes a next path into sign-in`).not.toMatch(/\bnextPath\b/);
+      expect(source, `${relPath} passes a claim into sign-in`).not.toMatch(/\bclaimToken\b/);
+      expect(source, `${relPath} builds a next parameter`).not.toMatch(/\bnext=/);
+    }
+  });
+
+  test("`/invite/` is CONSTRUCTED in one module only", () => {
+    // `invitationLink()` is the single spelling both slices read. A second place that
+    // assembles the path is a second place that can get the token's encoding wrong, and a
+    // second place a future author has to remember when the route moves.
+    const offenders = sourceFilesUnder(["lib", "app", "components"])
+      .filter((relPath) => !INVITE_PATH_SPELLERS.includes(relPath))
+      .filter((relPath) => codeText(relPath).includes("/invite/"));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("the sweep for that is looking at real files — the vacuous-green control", () => {
+    const scanned = sourceFilesUnder(["lib", "app", "components"]);
+    expect(scanned.length).toBeGreaterThan(100);
+    // And it can see the one legitimate speller, so "no offenders" is not "no matches".
+    expect(scanned).toContain("lib/invitations/token.ts");
+    expect(codeText("lib/invitations/token.ts")).toContain("/invite/");
+  });
+});
+
+describe("MV-194 criterion 7 — the accept page carries nothing that would leak its own URL", () => {
+  test.each([INVITE_PAGE, ACCEPT_PANEL])("%s loads no third-party anything", (relPath) => {
+    const source = codeText(relPath);
+
+    // Every one of these would send the page's URL — and therefore the token — to a host we
+    // do not control, in a `Referer` or in a request line.
+    for (const forbidden of ["http://", "https://", "<script", "<img", "<iframe", "srcset", 'target="_blank"', "dangerouslySetInnerHTML"]) {
+      expect(source, `${relPath} carries \`${forbidden}\``).not.toContain(forbidden);
+    }
+  });
+
+  test("the page is marked noindex — an indexed invitation URL is an open invitation", () => {
+    const source = codeText(INVITE_PAGE);
+    expect(source).toContain("robots");
+    expect(source).toMatch(/index:\s*false/);
+    expect(source).toMatch(/follow:\s*false/);
+  });
+});
+
+describe("MV-194 criterion 7 — Referrer-Policy: no-referrer on the one route that needs it", () => {
+  test("`/invite/*` gets `no-referrer`, and it is applied AFTER the site-wide policy", async () => {
+    const config = (await import("@/next.config")).default;
+    expect(config.headers, "next.config exports no headers()").toBeDefined();
+    const rules = await config.headers!();
+
+    const siteWide = rules.findIndex((rule) => rule.source === "/(.*)");
+    const invite = rules.findIndex((rule) => rule.source.startsWith("/invite"));
+    expect(siteWide, "the site-wide security header rule is gone").toBeGreaterThan(-1);
+    expect(invite, "no rule matches /invite").toBeGreaterThan(-1);
+
+    // Next applies EVERY matching rule, so both Referrer-Policy values are delivered. The
+    // Referrer Policy spec parses the token list left to right and keeps the LAST valid
+    // one, so ordering is what decides which wins. Swapping these two silently loosens the
+    // page back to `strict-origin-when-cross-origin`, which still sends the full URL to
+    // same-origin requests — i.e. the token.
+    expect(siteWide).toBeLessThan(invite);
+    expect(rules[invite]!.headers).toContainEqual({ key: "Referrer-Policy", value: "no-referrer" });
+
+    // And the rest of the site's headers are not dropped on the way.
+    for (const key of ["X-Frame-Options", "X-Content-Type-Options", "Strict-Transport-Security"]) {
+      expect(
+        rules[invite]!.headers.some((header) => header.key === key),
+        `/invite lost ${key}`,
+      ).toBe(true);
+    }
+    // Exactly one Referrer-Policy on the invite rule — two would make the winner depend on
+    // which of OUR entries came last rather than on the deliberate one.
+    expect(rules[invite]!.headers.filter((h) => h.key === "Referrer-Policy")).toHaveLength(1);
+  });
+
+  test("`/invite/*` is `noindex` at the HEADER too, not only in the page metadata", async () => {
+    const rules = await (await import("@/next.config")).default.headers!();
+    const siteWide = rules.find((rule) => rule.source === "/(.*)")!;
+    const invite = rules.find((rule) => rule.source.startsWith("/invite"))!;
+    expect(invite, "no rule matches /invite").toBeDefined();
+
+    // Said to a crawler that never parses the body, alongside the page's `<meta name=robots>`.
+    // MEASURED live: this one DOES take (`x-robots-tag: noindex, nofollow` on the response).
+    expect(invite.headers).toContainEqual({ key: "X-Robots-Tag", value: "noindex, nofollow" });
+    expect(siteWide.headers.some((h) => h.key === "X-Robots-Tag")).toBe(false);
+
+    // And NO `Cache-Control` on either rule — see next.config.ts for why. A `no-store` was
+    // written, served, and observed not to take, because Next writes its own for a page
+    // route. Pinning its ABSENCE keeps a later author from re-adding a line that does
+    // nothing and believing it did something.
+    for (const rule of [siteWide, invite]) {
+      expect(rule.headers.some((h) => h.key === "Cache-Control")).toBe(false);
+    }
   });
 });
 
