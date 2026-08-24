@@ -2337,7 +2337,7 @@
     },
     {
       "id": "MV-194",
-      "col": "ready",
+      "col": "inprogress",
       "pri": "P1",
       "owner": "agent",
       "file": "cards/MV-194-stage5-invitation-accept.md",
