@@ -268,3 +268,238 @@ CRLF-vacuous-assertion trap already named above:
   card to a PR by the id in its title and cannot tell a **carve** PR from a **build** PR. Not a defect; it exits
   0.
 - Master **is** production and auto-deploys. Merges are founder-gated: open the PR and stop.
+
+## Build evidence (2026-08-24, branch `mv-194-stage5-invitation-accept-build`)
+
+Built off `origin/mv-194-stage5-invitation-accept` at `45cccf9`, because PR #161 (the carve) was
+still **open** — checked before branching. The plain name was taken by that PR, so the build
+branch carries the `-build` suffix, the precedent MV-191 and MV-193 set.
+
+### Gate
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | clean |
+| `npm run lint` | clean |
+| `npm test` | **4110 passed / 4110**, 394 files, 75.4s |
+| `npm run test:integration` | **1095 passed / 1095**, 21 files, 222.2s |
+| `stage5-invitations.itest.ts` alone | **81 passed / 81**, 4.0s (52/52 on the base) |
+
+Counts and durations are quoted because they are the check that matters. Base was 3989/390 and
+1066 integration tests (MV-193's recorded numbers on `4652ff7`), so this slice is **+4 test
+files, +121 tests, +29 integration tests** — 98 in the four new files (35 repo + 33 route + 16
+copy + 14 page), plus 14 extending `token-secrecy` and 7 extending `redact-url`.
+
+**No residue this time.** MV-193 hit three shared-stack failures and had to trace them; the full
+integration run here was clean on the first attempt.
+
+#### Correcting a claim this card and MV-193 both carry
+
+Both say the integration lane collects **zero tests** when run from `.claude/worktrees/`, because
+`vitest.integration.config.ts` excludes `**/.claude/**`. **Measured, and it is not true on this
+vitest (4.1.8).** Both configs use the same exclude, and both collect normally from a worktree:
+`npm test` ran 394 files here, and the integration lane reported `81 passed` in 4.02s against the
+real database. The exclude is matched against paths RELATIVE to `root`, and `root` is the worktree
+directory, so `.claude/` never appears in the string being tested. Every number above was produced
+from `.claude/worktrees/sleepy-lederberg-3abb73`.
+
+The underlying caution still stands and is worth keeping: an integration run **skips silently**
+without `SUPABASE_TEST_*`, and a skipped suite reads as a pass. The distinguishing signal is
+`81 skipped` versus `81 passed` plus a non-trivial duration — not the exit code.
+
+### Criterion 10 — no migration was taken
+
+- `git diff origin/master -- supabase/migrations` → **empty**
+- `git diff origin/master -- supabase/config.toml` → **empty**
+- `git diff origin/master -- supabase/` → **one file**, `supabase/rehearsal/MV-194-mutation.sql`,
+  which is explicitly not a migration (`supabase/rehearsal/README.md`).
+- Grant surface re-read live after the mutation run and byte-identical to before it:
+  `cases` UPDATE = `(archived_at, display_name, email, operational_status)`, `invitations`
+  UPDATE = `(revoked_at)`, `anon` holds nothing on either.
+
+**The atomicity gap is therefore a finding, not a fix — see Findings 1.**
+
+### The compare-and-swap, mutation-tested in CODE
+
+The four gate words live in `lib/invitations/accept.ts`, not in a policy, so a SQL harness cannot
+reach them. Six mutants, each **dropping exactly one predicate** from the swap and applied alone
+against the real database. Clean schema: 81/81.
+
+| mutant | tests that went RED |
+|---|---|
+| `drop_hash` | "MISMATCH (token): a token nothing minted is refused, and nothing is consumed" |
+| `drop_role` | "MISMATCH (token): a TEAM invitation is not redeemable on the student path" |
+| `drop_email` | "MISMATCH (address): decision A refuses, and does not burn the counsellor's typo"; "four states, four different reasons" |
+| `drop_replay` | "FOUR CONCURRENT acceptances produce exactly ONE winner"; "a second click by the SAME student does not RE-STAMP accepted_at — decision C" |
+| `drop_revocation` | "REVOCATION: revoked after minting, before acceptance, is refused"; "four states, four different reasons" |
+| `drop_expiry` | "EXPIRY: a token past expires_at is refused, and is not burned" |
+
+**Every mutant kills a set no other mutant kills**, which is what the card asked for: the four
+gate words are independently covered, not collectively.
+
+Two results are worth carrying forward.
+
+1. **`drop_role` first ran as a SURVIVOR at 81/81, and the cause was a FIXTURE BUG, not a weak
+   test.** The team-invitation row was seeded by a direct service-role insert with
+   `email: actor.email` — raw. The product case-folds on write inside
+   `normalizeInvitationEmail`, and the fixture actor addresses carry an upper-case letter
+   (`mv153-studentA-…`), so the fixture produced a row the product could never create and the
+   swap's `email` predicate refused it for the wrong reason. Traced by probing the same UPDATE
+   directly through psql and then through PostgREST, which both matched — proving the statement
+   was fine and the row was not. One `.toLowerCase()` later the mutant kills.
+2. **`drop_replay` produced an inconclusive run that looked like a result**: `Tests 9 passed (81)`
+   with `Worker exited unexpectedly` above it. A crashed vitest worker prints a clean-looking
+   summary having run almost nothing. Re-run alone it killed two named tests. Read the file
+   count and the duration, never the tick.
+
+### The RLS / grant mutation run — `supabase/rehearsal/MV-194-mutation.sql`
+
+Five mutants, all **widening** (for an ABSENCE the widening is an ADDITION — see the file's
+header). `restore` was verified **byte-identical against `pg_policies` and
+`role_column_grants` BEFORE any mutant was applied**, and again after the whole run. Full table
+in the file. Three results worth carrying:
+
+1. **`student_link_grant` is the most important mutant in the file** and kills four named tests.
+   For a counsellor or an org admin the column grant is the **only** layer: `cases_update_accessor`
+   admits them on the row, and `cases_write_surface_guard` — which looks like a second line of
+   defence — guards `archived_at` and `operational_status` and says nothing about
+   `student_user_id`.
+2. **It does NOT kill "the LINKED student cannot re-point their own case at somebody else",** and
+   that is the finding rather than a gap. With the grant planted, `cases_update_accessor`'s USING
+   admits the linked student but its WITH CHECK is evaluated against the NEW row, where
+   `student_user_id` is somebody else's — refused as a WITH CHECK violation, which is also a
+   42501. That one boundary is two-layered; the other four are not. Only reading the failing
+   **names** makes the difference visible.
+3. **`anon_case_write` took three attempts, and each attempt was a finding.** Grant + policy
+   alone: 81/81 survivor — the anon UPDATE never reaches RLS, dying as `42501 permission denied
+   for schema private` because `cases_write_surface_guard` is SECURITY INVOKER in a schema `anon`
+   cannot enter. Plus USAGE: still 81/81, now `permission denied for function is_org_admin`,
+   because Postgres does not guarantee `AND` short-circuits so the helper is reached even on an
+   UPDATE touching neither guarded column. Plus EXECUTE: red at last. **The anon write refusal on
+   `cases` is over-determined four times over** — good news about the schema, and a caveat about
+   what that single assertion can be said to prove.
+
+### Decisions taken, and where each is written down
+
+- **A — the address must match, and it rides IN the swap.** `.eq("email", address)` is a
+  predicate of the same statement, so a wrong address can neither be raced past it nor **burn the
+  token** — which is the whole point, since the failure decision A defends against is a counsellor
+  sending the link to the wrong place. Normalisation is `normalizeInvitationEmail`, reused from
+  the mint rather than re-implemented, so both ends of one comparison cannot drift: case-fold and
+  trim, and **Gmail dots and `+tags` are deliberately NOT stripped** — address canonicalisation is
+  a spoofing surface, not a convenience. Two tests pin the non-stripping.
+- **B — a signed-out visitor is told nothing.** Not whether the invitation exists, not which
+  consultancy sent it. An earlier draft read "the address your consultancy invited" and
+  `tests/app/invite-page.test.tsx` refused it. The token is also withheld from the client
+  component until a session exists.
+- **C — a second click by the same student lands them in the case,** reported as
+  `already-yours`, and the short-circuit lives **downstream of the swap**. Asked before it,
+  "is this already yours?" would stop the already-accepted state ever reaching the
+  `accepted_at is null` predicate, every mutant on it would survive, and the replay defence would
+  look identical in the source while being enforced nowhere.
+- **D — a taken case is refused, never overwritten,** and the refusal is the `is null` PREDICATE
+  on the link write rather than a check around it. An eviction is unrecoverable: nothing records
+  what the previous `student_user_id` was.
+- **Order: swap → audit → link.** Swap-first is the card's position. Auditing BETWEEN the two
+  writes is this slice's own decision: `invitation.accepted` records that the credential was
+  consumed, which is true the instant the swap commits and stays true whatever the link does — so
+  the one state the card worries about (a spent token with nobody linked) is recorded rather than
+  invisible. D12 holds both ways: a failed audit is a 500 with the link never attempted, and no
+  2xx without the audit row committed.
+- **The sign-in hand-off: IN PLACE, and no cookie.** `EmailSignIn` gained an optional
+  `onSignedIn` callback; the invite page passes it and calls `router.refresh()`, so the page never
+  navigates, the token is passed as no `next`, reaches no auth endpoint, and enters no
+  `emailRedirectTo`. **A cookie was the obvious alternative and is deliberately refused**: it
+  would create a SECOND copy of a live bearer credential, on the same device, outliving the page
+  that needed it. There is no round trip to survive. **Google sign-in is absent from this page on
+  purpose** — OAuth needs a return URL and the only honest one is `/invite/<token>`, which would
+  put the credential in a parameter handed to Google. The email path needs no return URL, and the
+  email carries no link at all (see `EmailSignIn`'s header).
+- **`invitation.accepted`, and no `invitation.accept_failed` sibling.** Every entry in
+  `SERVICE_ROLE_EXCEPTIONS` claims exactly one action — `tests/audit/audit-metadata-pii.test.ts`
+  pins that as a set equality — so a second action would need a second call site to claim it. The
+  half-done state is covered by this row plus a case surface that already shows an accepted
+  invitation and no linked student.
+
+### Live verification (dev server, headers measured rather than reasoned)
+
+The Browser pane could not display in this non-interactive session — `navigate` aborted, so there
+is **no screenshot evidence**. Headers and served HTML were read directly from the running dev
+server instead:
+
+- `/invite/<token>` → `200`, `referrer-policy: no-referrer`, `x-robots-tag: noindex, nofollow`,
+  `<meta name="robots" content="noindex, nofollow, nocache">`, **zero external subresources**.
+- `/` → `200`, `referrer-policy: strict-origin-when-cross-origin` — unchanged.
+- `POST /api/invitations/accept` unauthenticated → `401`, no `Location`, body echoes no token.
+- Signed-out page text reads exactly: *"Sign in to continue / Sign in with the email address this
+  link was sent to, and we'll take it from there."*
+
+Next **replaces** `Referrer-Policy` rather than appending, so the later, stricter rule wins
+outright — better than the spec-based reasoning the config comment originally carried, and now
+recorded as a measurement.
+
+### Findings
+
+1. **THE RESIDUAL ATOMICITY GAP, recorded as the card requires.** No migration was taken, so
+   acceptance is still two statements. Reachable failure window: the swap commits, then the link
+   fails from a genuine race or a database outage, leaving a spent token and an unlinked student.
+   It is **loud** — 409 or 500 with a message that says plainly the link has been used and not to
+   retry — and **recorded**, by the `invitation.accepted` row written between the two writes, plus
+   a case surface showing an accepted invitation with no linked student. The migration was
+   declined because it creates a deploy-order dependency whose failure mode is "the entire student
+   acceptance flow 404s in production until someone remembers to apply it", against a documented
+   history of exactly that ledger drift — and `private.*` is not PostgREST-reachable (MV-189), so
+   the function would have to live in `public` with EXECUTE granted to `service_role`. If a later
+   slice wants it: **one** `security definer` function doing both writes and returning the
+   outcome, and nothing else.
+2. **A REAL PostHog LEAK, found and closed.** `/invite/<token>` puts a live bearer credential in
+   `$current_url`, and `redactSearchParams` could not reach it — it cleans query parameters, and
+   the token is a path segment. A student clicking their link would have shipped a working
+   invitation to a third party, which is the defect `token_hash` exists to prevent, one layer up.
+   Closed by `redactPathSecrets`. Redaction rather than suppressing analytics on the route,
+   because `$referrer` and `$session_entry_url` carry the invite URL to every LATER page of the
+   session — suppressing init on `/invite` would have leaked it from the dashboard instead.
+3. **A REAL client/server boundary violation, caught by the guard.** The outcome vocabulary was
+   first declared in `accept.ts` (`server-only`) and imported as a TYPE by the client-safe message
+   module. `tests/architecture/client-server-boundary.test.ts` refused the edge — it walks the
+   import graph rather than trusting `import type` to be erased, which is right, because that
+   distinction dies to one careless edit. The direction is inverted: the names now live in
+   `accept-messages.ts` and `accept.ts` imports them.
+4. **An overclaim in this slice's own comment, corrected after measuring.** The page header said
+   withholding the token from the client component kept it out of the RSC payload. It does not:
+   the served HTML carries it twice inside Next's own router state (the path segments and the
+   `[token]` param), and no page code puts it there or can remove it. Not a disclosure — a cache
+   can only hold that document under a URL that already contains the credential — but the comment
+   now says what is true, and the withholding is justified on the ground that actually holds
+   (keeping the credential out of surfaces a future edit could widen).
+5. **`Cache-Control: no-store` was tried, served, and does not take.** Next writes its own
+   `Cache-Control` for a page route and overwrites `next.config.ts`, so `/invite/<token>` ships
+   `no-cache, must-revalidate` whatever the config says. The line was **removed rather than left
+   in place looking effective**, and a test now pins its ABSENCE so nobody re-adds it and believes
+   it did something. On inspection the weaker header is sufficient: the URL is the secret, so a
+   cache hit requires already holding it.
+6. **A rate limit was added that the card did not ask for** — `invitation-accept`, 10/min, keyed
+   per ACCOUNT and applied after the 401. Not a guessing defence (256 bits closes that
+   arithmetically); it bounds an authenticated caller hammering an endpoint that costs two
+   service-role statements per attempt.
+7. **Guard counts moved, deliberately.** `SERVICE_ROLE_EXCEPTIONS` gains one entry, so the audited
+   path count moves 7 → 8 in both guard suites. The metadata allow-list is **unchanged** —
+   `invitation.accepted` carries no metadata at all, because the invited address is raw student
+   detail and `entity_id` already names the row, the same reasoning MV-193 gave for its two
+   events. The thirteen `null` entries stay thirteen.
+8. **A new service-role SHAPE, admitted rather than hidden.** MV-193's two entries reach for
+   service-role to write `audit_events` only. This one is the first where service-role performs
+   the tenant-table writes themselves, and the registry entry says so in detail: three
+   RLS-bypassing statements, each named, plus why every one of them is structural rather than a
+   deferred grant.
+9. **A brand-new invitee ends up holding two cases immediately,** and that is the founder decision
+   working. `resolveSignInDestination` creates a personal case for every account at sign-in, so a
+   student invited by a consultancy who has never used the self-serve product signs in, gets a
+   personal case, and is then linked to the consultancy's. Nothing crosses between them. The
+   confirmation copy is written for exactly this reader.
+10. **Test-plan item not taken: `tests/integration/fixtures/tenancy.ts` was not extended.** The
+    card offered it; the harness already had every shape the slice needed (`unclaimedA` is an org
+    case with a null `student_user_id` and an assigned counsellor, `personalA` is the student's
+    own). What was added lives in the itest: a `clearLinks()` beside `clearInvitations()`, and one
+    `createStudentDataSeeder` call so "no data crosses" is asserted over real profile and document
+    rows rather than over two empty sets.
