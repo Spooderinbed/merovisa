@@ -270,6 +270,203 @@ ledger-drift risk that MV-194 declined for the same reason.
 - **Never commit** `.claude/hooks/prompt-improve.mjs` or `.claude/skills/.authoring-kit/`. Stage explicit
   paths; never `git add -A`.
 
+---
+
+# BUILD RECORD — 2026-08-28
+
+Built on `mv-195-stage5-two-case-experience-build`, cut from the CARVE branch because PR #163 was
+still open (the same shape MV-194 used). **No migration**: `git diff origin/master -- supabase/`
+touches only `supabase/rehearsal/`, so **nothing is owed to the production ledger**.
+
+## The four decisions, as taken
+
+### (A) A separate student-facing route, in the `(student)` shell — `/consultancy`
+
+Recommendation followed, and the architecture agreed from the other side.
+`tests/architecture/shell-boundary.test.ts` says the signed-in area has exactly TWO shells and
+that a route added directly under `app/(app)/` is **stranded** — no nav, no footer, no way out.
+So "not `/workspace`" forces "inside `(student)`", which is also the honest reading: this is the
+student's own app showing them a second case, not the student inside the consultancy's workspace.
+
+Two routes, mirroring `/workspace` → `/workspace/[organizationId]`:
+
+- **`/consultancy`** — the door. Auto-enters on exactly one linked case, offers a chooser on
+  several, says so plainly on none, and renders an OUTAGE (never "you have none") on a failed
+  lookup. The auto-enter is conditioned on `ok && length === 1`, so a failed lookup is never
+  resolved by guessing.
+- **`/consultancy/[caseId]`** — the case, gated by `openStudentCaseRoute`
+  (`lib/cases/student-case-route.ts`).
+
+**No organization segment in the URL, and no consultancy named on the page** — and that is
+measured, not stylistic. `organizations_select_member` rides `private.actor_org_ids()`, i.e. an
+`organization_memberships` row, and `student` is not a membership role. A student cannot read the
+`organizations` row at all, so there is no name for the surface to leak. When a student holds two
+cases the chooser distinguishes them by `cases.created_at`, which is the only discriminator they
+can actually read.
+
+The gate refuses four things with ONE answer (`notFound()`), so the route is not an enumeration
+oracle: not-linked, unknown case, revoked link, and — the two the permission check alone cannot
+see — a **personal case** under the consultancy URL, and a **staff** viewer. Both of those actors
+legitimately hold `case.read`, so `notFound()` there is a routing decision rather than a
+permission one. A dual-role actor who is staff AND this case's student still gets in.
+
+### (B) The personal case stays the default; the consultancy case is a named affordance
+
+Recommendation followed. `/dashboard` still resolves through `resolvePersonalCaseId` and every
+read on it is still scoped to the personal case — pinned by a test that fails if any dashboard
+repo is called with the consultancy case id. The door is `ConsultancyDoor`, high on the page
+because for a brand-new invited account everything below it is empty (criterion 8).
+
+**One decision inside the decision:** the door is shown when the lookup FAILED as well as when it
+succeeded. Hiding it on a failed probe would hide the only route to a case the student may well
+have, and `/consultancy` is the page that owns the outage sentence because it is the one making
+the claim. It renders nothing only when the student is *known* to have none.
+
+### (C) `case.list` stays `deny` — and the falsified comment is gone
+
+Recommendation followed. The cell is still right, but not for the reason it carried: `case.list`
+is ORG-SCOPED and `decideOrgPermission` answers it from an `organization_memberships` row, so a
+student has no organization to list cases *within*. Flipping it would not be a one-line change;
+it would be a second, roleless listing path.
+
+A source scan (`split(/\r?\n/)`, with a guard assertion so it cannot pass by matching nothing)
+pins that no comment still claims a student has exactly one case. **It found TWO lines, not one** —
+the `case.list` cell and the `CASE_ROLES` header — and the second would have been missed by a
+hand edit. It also flagged my first replacement, because that draft *quoted* the old sentence;
+the quotation was paraphrased away rather than the scan loosened.
+
+### (D) READ-ONLY — and this was decided by measuring the policies
+
+The card required this one to be settled by measurement. Captured together (`pg_policy` +
+`pg_get_expr`, `role_column_grants`, `pg_trigger` + `pg_get_triggerdef`, `pg_constraint`) from
+the migrations that are the applied source of truth, cross-read against the helper definitions.
+**The split is clean, and it runs down the middle of the same three tables:**
+
+| Table | SELECT policy | INSERT / UPDATE policy |
+|---|---|---|
+| `case_document_requests` | `_select_actor` → `actor_case_ids()` | `_insert_staff` / `_update_staff` → `can_staff_case` |
+| `case_document_versions` | `_select_actor` → `actor_case_ids()` | `_insert_staff` → `can_staff_case` |
+| `case_document_reviews` | `_select_actor` → `actor_case_ids()` | `_insert_staff` → `can_staff_case` |
+
+`private.actor_case_ids()`'s **first disjunct is `c.student_user_id = (select auth.uid())`**, so
+the linked student READS all three — MV-185's own comment says the reviews policy exists so they
+see "a rejection note, which is the half of this model that is any use to them".
+`private.can_staff_case` is `can_access_case` **minus** the student disjunct, and MV-182/MV-185
+both name that subtraction as the point. So the student WRITES nothing.
+
+Three corroborating facts, because three of the four catalogues alone would have misled:
+
+- **The column grant, not the table grant, is the real one** — and here the column grants are
+  *identical* for staff and student (`grant insert (…) … to authenticated`). There is no
+  role-specific grant to hide behind: **the predicate IS the entire boundary.**
+- **`pg_trigger`**: `case_document_requests_status_guard` refuses a hand-written status that
+  contradicts the derivation, and the two `_sync_request_status` triggers fire AFTER INSERT only.
+  None of them looks at the actor, so no trigger contributes to the student boundary.
+- **`pg_constraint`**: `decision in ('accepted','rejected')` and `status in
+  ('outstanding','resolved')` bound values, not actors.
+
+**Conclusion:** letting a student *answer* a request needs a new INSERT policy and a new column
+grant — a MIGRATION — so it is a separate slice, exactly as the card provides for. The page
+therefore ships no write control and **says so out loud** rather than shipping one that fails at
+the database after the student has done the work (`canResolveByHand`'s reasoning, one reader
+over). Downloading an arrived file already works and needed nothing: the MV-186 download route
+gates on `case.read` and its header names the linked student explicitly.
+
+## Evidence
+
+### Gate
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | clean (`tsc --noEmit`, no output) |
+| `npm run lint` | clean (`eslint`, no output) |
+| `npm test` | **4167 passed / 4167, across 398 files, 62.27s** (baseline on the carve branch: 4110 across 394 — this slice adds 4 files and 57 tests) |
+| `npm run test:integration` | **NOT RUN against a database.** The new file is COLLECTED and skips cleanly — `1 skipped (1)` / `20 skipped (20)` in 385ms — which proves the file loads, its module graph resolves and `describe.skipIf` fires, and proves **nothing else**. `20 skipped` is not `20 passed` and is not being reported as green. See the blocker below. |
+
+### The blocker, stated rather than worked around
+
+**The local Docker stack could not be started in this session.** Docker Desktop's process runs and
+the `docker-desktop` WSL distro boots on demand, but the engine never opens
+`\\.\pipe\dockerDesktopLinuxEngine` — across a `-SwitchLinuxEngine`, a full process restart, and
+several minutes of waiting. That looks like a first-run/interactive step this non-interactive
+session cannot complete. Without the stack there is no `SUPABASE_TEST_*`, so the integration lane
+**skips**, and a skip is not evidence.
+
+What this means for the two artefacts that need it:
+
+- `tests/integration/stage5-student-case.itest.ts` is written, **typechecks**, and is collected by
+  the integration config (20 tests, all skipped for want of the stack). It has not been executed
+  against a database. CI's `integration` job self-hosts its own stack and has been gating since
+  2026-08-03, so its tick on the PR is the real evidence — **read it from the raw log, not the
+  tick**, because a crashed vitest worker reports as clean (MV-194 hit exactly that).
+  A full-lane run with no stack up also HUNG rather than skipping; the new file is not the cause
+  (it skips in 385ms on its own), so some other itest blocks on a connect that never refuses.
+  Recorded because a future agent will otherwise read the hang as a defect in this branch.
+- `supabase/rehearsal/MV-195-mutation.sql` is written with five mutants and a self-contained
+  byte-for-byte `restore`. Its results table records **what each mutant must kill** and is marked
+  UNRUN rather than filled in with numbers nobody measured.
+
+**The Supabase MCP also requires re-authorization** and is unavailable in a non-interactive
+session, so nothing was measured against the hosted project either. Neither gap was worked
+around: no migration is in this slice, so nothing is owed to the production ledger.
+
+### Mutation — the CODE layer, which is the half that could be run
+
+Case authorization is enforced in RLS **and** TypeScript independently, so a single-layer mutant
+survives at full green. The SQL half is unrun; the code half was run, one mutant at a time, each
+reverted with `git checkout --` and the tree verified clean afterwards.
+
+| Mutant (one line removed) | Tests that went RED |
+|---|---|
+| `student-case-route`: drop the personal-case refusal | 1 — *"refuses the actor's OWN personal case under the consultancy URL"* |
+| `student-case-route`: drop the staff refusal | 1 — *"refuses STAFF — this door is the student's, and theirs is /workspace"* |
+| `student-case-route`: collapse `lookup-failed` into `notFound()` | 1 — *"a LOOKUP FAILURE is an outage, never a permission denial"* |
+| `student-case-route`: drop the `isWellFormedId` guard | 1 — *"a malformed id is refused BEFORE any query — it is not an outage"* |
+| `linked-consultancy-cases`: drop `.not("organization_id","is",null)` | 1 — *"asks the DATABASE for `organization_id is not null` rather than filtering after"* |
+| `personal-case`: drop `.is("organization_id", null)` | 3 — *"never returns an organization case, even for the same student"*, *"resolvePersonalCaseId answers with the PERSONAL case when the student holds both"*, *"keeps `organization_id is null` IN the predicate"* |
+
+No two mutants killed the same set, so the six refusals are **independently** covered rather than
+collectively.
+
+**And one result that is a finding rather than a pass.** Dropping the consultancy resolver's
+predicate killed only the *predicate* test — the behavioural *"NEVER returns the personal case"*
+stayed green, because the `flatMap` null-guard downstream filters the row out anyway. So that
+function is defended twice and the behavioural test cannot see the predicate go. Reading the
+failing NAMES rather than the count is the only reason this is known. The predicate test is
+load-bearing on its own and must not be deleted as redundant.
+
+## Found, and deliberately not fixed
+
+1. **A request's kind label duplicated its title.** `DOCUMENT_META` labels `passport` as
+   "Passport bio page", which is also what a counsellor's title usually says, so the student page
+   rendered the same sentence twice — reading as two requirements. Fixed in this slice (the kind
+   is shown only when it differs) because it was this slice's own markup.
+2. **There is no internal-notes table yet.** `case.notes.internal` is a permission with no
+   storage: `grep` over `supabase/migrations/` finds no notes column on any case-scoped table.
+   Criterion 6 is therefore proved STRUCTURALLY — the student page never reads the case row at
+   all, so `display_name`, `operational_status` and the assignment roster cannot reach its markup
+   — plus an assertion over the rendered output that no operational-status word, organization id,
+   actor id or storage key appears. Worth knowing before slice 4: when a notes table lands, this
+   criterion needs a new, positive test.
+3. **The `(student)` shell's `JourneyMarker` renders on `/consultancy` too**, built from the
+   PERSONAL case. It is the student's own persistent chrome and it is consistent across the
+   shell, but on a consultancy page it could be misread as that case's progress. Left alone:
+   changing it means touching the shell, which is outside this slice. Worth a look in slice 4.
+4. **`tests/app/case-denial-pages.test.tsx` needed a stub, not a weakened assertion.** The
+   dashboard's new consultancy probe is a `from()` call, and that file asserts ZERO queries when
+   the actor has no personal case. Its own header scopes that to *case-scoped* reads and it
+   already stubs the catalogue for exactly this reason, so the new module is stubbed the same way
+   with the reasoning written down — the probe is asserted for real in `dashboard-page.test.tsx`.
+5. **`tests/integration/stage5-invitations.itest.ts`'s header still says the integration lane must
+   never be run from `.claude/worktrees/`.** That caution is stale (the exclude is matched
+   relative to `root`, and `root` is the worktree). Not edited here — it is another slice's file
+   and the correction belongs with a run that can prove it.
+
+## Board
+
+`docs/kanban/board.json` moved `ready` → `inprogress` before the build (committed first), and
+→ `inreview` after the gate, each followed by `npm run board`.
+
 ## What comes after (sequence visibility, not to be built now)
 
 - **Slice 4 — student-visible versus consultancy-only fields.** Stage 5's fourth bullet, and the
