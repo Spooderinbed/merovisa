@@ -506,6 +506,22 @@ load-bearing on its own and must not be deleted as redundant.
    hosted project shares it could not be checked (the Supabase MCP needs re-authorization). Worth
    a look before the next migration-bearing slice, because that is when it will bite.
 
+7. **FOUND IN REVIEW AND FIXED — the `rejected` sentence instructed an upload the student
+   cannot perform.** `REQUEST_PROGRESS_SENTENCE.rejected` read "The newest file was rejected.
+   Uploading a new one replaces it." It is a SHARED table, so the student page rendered it
+   verbatim — a few elements above its own "You can't upload a file here yet." The module's
+   header already claimed the table was "ACTOR-NEUTRAL on purpose"; that cell had quietly
+   broken the claim, and nothing tested it. This slice refused an upload BUTTON on the
+   reasoning that it "would tell the student they were allowed" — a sentence saying so is the
+   same defect without the control. Now "The newest file was rejected. A newer file would
+   replace it.", with `tests/cases/document-collaboration.test.ts` asserting that NO state's
+   sentence matches `/\bupload\b|\buploading\b|\byou\b|\byour\b/i` — the neutrality bound is
+   tested rather than intended. The staff surface loses nothing: its upload control renders
+   directly below the line, which is what made the instruction redundant there and false here.
+   `tests/components/workspace/case-document-versions.test.tsx` pinned the old string verbatim
+   and was updated with the reasoning. Gate re-run after the fix: typecheck and lint clean,
+   `npm test` 4168/4168 across 398 files (+1, exactly the new guard).
+
 ## Board
 
 `docs/kanban/board.json` moved `ready` → `inprogress` before the build (committed first), and

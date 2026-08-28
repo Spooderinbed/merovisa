@@ -103,9 +103,13 @@ describe("the five states each say a distinct thing", () => {
     expect(screen.getByText(/the newest file was accepted/i)).toBeTruthy();
   });
 
-  it("says the newest file was rejected, and that a new upload replaces it", () => {
+  it("says the newest file was rejected, and that a newer file would replace it", () => {
     renderBlock({ versions: [version()], reviews: [review({ decision: "rejected" })] });
-    expect(screen.getByText(/rejected\. uploading a new one replaces it/i)).toBeTruthy();
+    // MV-195 made this sentence actor-neutral: the same copy table faces the LINKED
+    // STUDENT, who cannot upload at all. The counsellor loses nothing — the upload
+    // control is rendered right below this line, which is what makes the instruction
+    // redundant here and false there.
+    expect(screen.getByText(/rejected\. a newer file would replace it/i)).toBeTruthy();
   });
 
   it("says a received-by-hand request was NEVER CHECKED, and never calls it accepted", () => {
