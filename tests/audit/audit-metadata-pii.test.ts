@@ -98,9 +98,10 @@ function auditCallBlocks(lines: string[]): string[] {
 }
 
 describe("D13 — the sweep can see what it is sweeping (controls)", () => {
-  it("finds exactly seven audited paths in the exception list", () => {
-    // Five document-access routes (MV-189) + two invitation routes (MV-193).
-    expect(AUDITED_PATHS).toHaveLength(7);
+  it("finds exactly eight audited paths in the exception list", () => {
+    // Five document-access routes (MV-189) + two invitation routes (MV-193) + the
+    // acceptance route (MV-194).
+    expect(AUDITED_PATHS).toHaveLength(8);
   });
 
   it("splits a CRLF source file into more than one line — the vacuous-green guard", () => {
@@ -201,6 +202,9 @@ describe("the exception list agrees with the writer's vocabulary", () => {
         // is written on the authenticated client through the policy.
         "app/api/cases/[caseId]/invitations/route.ts",
         "app/api/cases/[caseId]/invitations/[invitationId]/route.ts",
+        // MV-194 — Stage 5 slice 2. Service-role does the tenant-table writes here, not
+        // just the audit row: `accepted_at` and `student_user_id` are in no client grant.
+        "app/api/invitations/accept/route.ts",
       ].sort(),
     );
   });

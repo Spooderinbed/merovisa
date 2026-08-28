@@ -113,13 +113,17 @@ export interface ServiceRoleException {
 /**
  * AUDIT WIRING, RE-CHECKED AT MV-189 rather than left stale — and this time the
  * re-check changed the answer. Five entries below now carry an `auditEvent`: the two
- * signed-URL mints and the three paths that upload or delete document bytes. The
- * remaining thirteen stay `null` and still mean "no case-scoped document access
- * happens here", never "auditing was skipped".
+ * signed-URL mints and the three paths that upload or delete document bytes. MV-193
+ * added two more (the invitation mint and revoke) and MV-194 an eighth (acceptance),
+ * so it is EIGHT wired now. The remaining thirteen stay `null` and still mean "no
+ * case-scoped access happens here", never "auditing was skipped".
  *
  * The two account-linking entries are still the ones that will want
- * `case.student_linked` — MV-187, Stage 5. Nothing blocks them now except that they
- * have no invitation flow to record yet.
+ * `case.student_linked` — MV-187, Stage 5. MV-194 does NOT pay that: those two bind an
+ * anonymous assessment to the account that created it and create that account's own
+ * personal case, which is a different event from a consultancy's case acquiring a
+ * student. The acceptance route emits `invitation.accepted` instead, which is the noun
+ * `SANCTIONED_SERVICE_ROLE_CATEGORIES` reserved for it.
  *
  * The allow-list. Every entry was read and classified against the file's actual
  * behaviour on 2026-07-30 (MV-151) and re-read at MV-157/MV-158; none is
@@ -297,6 +301,43 @@ export const SERVICE_ROLE_EXCEPTIONS: readonly ServiceRoleException[] = [
     requiredCaseCheck:
       "MV-193: checkCasePermission(actor, caseId-from-the-PATH, 'case.invite_student', authenticatedClient) — the SAME claim as the mint, so the two verbs appear and disappear together, which is also how the database already answers (both policies end in private.can_staff_case for the student branch). BOTH ids are filters on the UPDATE: without the case_id predicate the invitation id alone would decide which row moves, so an id from another case the actor happens to staff would be revoked under this case's authorization (spec F-8). PATCH and never DELETE — MV-152 shipped no DELETE policy on invitations and said why: revocation is the audited path, and a deleted invitation is a deleted record of who was invited.",
     auditEvent: "invitation.revoked",
+  },
+  /**
+   * MV-194 — the acceptance route (Stage 5 slice 2), and a THIRD shape again.
+   *
+   * The five document entries reach for service-role to touch STORAGE. MV-193's two touch
+   * only `audit_events` and write their `invitations` row on the authenticated client. This
+   * one is the first entry where service-role does the ACTUAL WORK on tenant tables, and it
+   * is the category Stage 1 sanctioned by name before any of it existed:
+   * `SANCTIONED_SERVICE_ROLE_CATEGORIES` → "invitation acceptance" and "account linking".
+   *
+   * It is structural, not a deferred grant. Two columns are outside every `authenticated`
+   * grant BY DESIGN, and MV-150 says why in the migration itself: linking a case to somebody
+   * else's Auth account "is invitation acceptance (an atomic compare-and-swap, Stage 5),
+   * never a field a consultancy can point at a stranger."
+   *
+   *   * `invitations.accepted_at` — `authenticated` holds `select, insert` and
+   *     `update (revoked_at)`. `accepted_at` is in no grant, which is what keeps acceptance
+   *     server-side rather than something a client can claim. MV-193 verified this against
+   *     the live database and refused to widen it; MV-193's `accepted_at_grant` mutant is
+   *     the measurement.
+   *   * `cases.student_user_id` — the column grant is
+   *     `update (display_name, email, operational_status, archived_at)`. `student_user_id`
+   *     is not in it, and `cases_update_accessor` answers "may this actor update this ROW"
+   *     rather than "which COLUMNS", so the grant is the only layer that could refuse it.
+   *
+   * And RLS could not help even if the grants allowed it: the invitee is not a member, not
+   * an assigned counsellor and not yet the linked student, so `cases_select_accessor` and
+   * `invitations_select_staff` hide from them both rows this route must read and write.
+   */
+  {
+    path: "app/api/invitations/accept/route.ts",
+    status: "sanctioned",
+    justification:
+      "Invitation acceptance and account linking (plan line 342), and the first entry where service-role performs the tenant-table WRITES rather than only the audit row. THREE statements, all RLS-bypassing and all structurally required: (1) the compare-and-swap UPDATE on public.invitations setting accepted_at — a column in NO `authenticated` grant, deliberately, because that absence is what keeps acceptance server-side; (2) a diagnostic SELECT on public.invitations and, in the already-accepted branch, on public.cases, to name which of the four refusals applies — both tables are invisible to the invitee under RLS, since they are not yet a member, an assigned counsellor or the linked student; (3) the UPDATE on public.cases setting student_user_id, which is excluded BY NAME from the column grant `update (display_name, email, operational_status, archived_at)`. It also passes the cases_write_surface_guard BEFORE UPDATE trigger, whose rolbypassrls exemption names this flow: \"Stage 2's anonymous-claim path and Stage 5's invitation acceptance run as service_role.\" Widening any of those grants instead would let a client accept an invitation it merely knows the id of, or point a case at a stranger.",
+    requiredCaseCheck:
+      "THE COMPARE-AND-SWAP IS THE AUTHORIZATION, exactly as SANCTIONED_SERVICE_ROLE_CATEGORIES specified in Stage 1: one UPDATE whose affected row count decides the winner, gated on token_hash AND role = 'student' AND email = the SESSION account's address AND accepted_at is null AND revoked_at is null AND expires_at > now(). There is no checkCasePermission call and that is the design, not an omission: the invitee holds no relationship to the case yet, so there is no case to authorize against until this route creates one. THE CASE ID IS NEVER CALLER-SUPPLIED — it comes out of the row the swap won, and the body is `.strict()` so sending one is a 422; a route that accepted a case id would let any token holder point a token at any case (spec F-8's defect class). The link write carries `student_user_id is null` as a PREDICATE rather than checking it first, so decision D — refuse, never overwrite — cannot be lost to a race; a stale token evicting a linked student is unrecoverable because nothing records what the previous value was. ORDER: swap, then audit, then link. Auditing between the two writes is what makes a spent-token-without-a-link state evidence rather than a gap nobody can see, and D12 still holds in both directions — a failed audit is a 500 with the link never attempted, and no 2xx is returned without the audit row committed. Rate-limited per ACCOUNT (invitation-accept, 10/min) after the 401.",
+    auditEvent: "invitation.accepted",
   },
   /**
    * `app/api/plan/action/route.ts` USED TO BE HERE and RETIRED in MV-172 — Stage 3

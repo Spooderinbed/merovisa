@@ -10,6 +10,21 @@ interface EmailSignInProps {
   claimToken?: string | null;
   /** Relative landing path when there is nothing to claim. */
   nextPath?: string | null;
+  /**
+   * MV-194 — sign in WITHOUT navigating, for a caller whose current URL must not be left
+   * and must not be handed to the auth flow.
+   *
+   * The invitation page is the one such caller: its URL *is* the credential
+   * (`/invite/<token>`), so passing it as `nextPath` would put a live bearer token in the
+   * body of `/api/auth/email/start`, in the `emailRedirectTo` that goes to GoTrue, and in
+   * the redirect that comes back. Given this callback, the component signs the student in
+   * and hands control back so the caller can `router.refresh()` in place — the token never
+   * moves, and there is no round trip for it to be lost in.
+   *
+   * Nothing else passes it, and when it is absent the behaviour is byte-for-byte what it
+   * was: `router.replace(redirectTo)`.
+   */
+  onSignedIn?: () => void;
 }
 
 async function postJson(path: string, body: Record<string, unknown>) {
@@ -34,7 +49,7 @@ async function postJson(path: string, body: Record<string, unknown>) {
  * on a laptop. The email carries no link at all — see supabase/templates/ for why
  * a magic link turned out to be no stronger than the code, and unmeterable.
  */
-export function EmailSignIn({ claimToken, nextPath }: EmailSignInProps) {
+export function EmailSignIn({ claimToken, nextPath, onSignedIn }: EmailSignInProps) {
   const router = useRouter();
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
@@ -81,6 +96,13 @@ export function EmailSignIn({ claimToken, nextPath }: EmailSignInProps) {
       const { ok, data } = await postJson("/api/auth/email/verify", { email, code, ...context });
       if (!ok || !data.redirectTo) {
         setError(data.error ?? "That code didn't work. Check it, or send a new one.");
+        return;
+      }
+      if (onSignedIn) {
+        // Stay where we are. `redirectTo` is deliberately DISCARDED rather than followed —
+        // see `onSignedIn`. The caller re-renders the current route, which now has a
+        // session.
+        onSignedIn();
         return;
       }
       router.replace(data.redirectTo);
