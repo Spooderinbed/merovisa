@@ -381,7 +381,7 @@ gates on `case.read` and its header names the linked student explicitly.
 | `npm run typecheck` | clean (`tsc --noEmit`, no output) |
 | `npm run lint` | clean (`eslint`, no output) |
 | `npm test` | **4167 passed / 4167, across 398 files, 62.27s** (baseline on the carve branch: 4110 across 394 — this slice adds 4 files and 57 tests) |
-| `npm run test:integration` | **NOT RUN against a database.** The new file is COLLECTED and skips cleanly — `1 skipped (1)` / `20 skipped (20)` in 385ms — which proves the file loads, its module graph resolves and `describe.skipIf` fires, and proves **nothing else**. `20 skipped` is not `20 passed` and is not being reported as green. See the blocker below. |
+| `npm run test:integration` | **NOT RUNNABLE LOCALLY** (no Docker engine — see below). Locally it only COLLECTS and skips: `1 skipped (1)` / `20 skipped (20)` in 385ms, which proves the file loads and `describe.skipIf` fires and **nothing else**. **The real evidence is CI's gating `integration` job on PR #164, read from the RAW LOG rather than the tick: 22 files / 1115 tests passed in 125.94s with 119.18s of real test time** — the carve baseline is 21 / 1095, so this slice's +1 file / +20 tests reconciles exactly, and the duration rules out a crashed worker. All 20 of this file's tests appear individually as `✓`, including the four decision-D denials, the counsellor CONTROL, the decision-A organization denial and its control, and the byte-for-byte personal-case assertion. |
 
 ### The blocker, stated rather than worked around
 
@@ -392,19 +392,25 @@ several minutes of waiting. That looks like a first-run/interactive step this no
 session cannot complete. Without the stack there is no `SUPABASE_TEST_*`, so the integration lane
 **skips**, and a skip is not evidence.
 
-What this means for the two artefacts that need it:
+What this means for the two artefacts that need it — and they end up in **different** places:
 
-- `tests/integration/stage5-student-case.itest.ts` is written, **typechecks**, and is collected by
-  the integration config (20 tests, all skipped for want of the stack). It has not been executed
-  against a database. CI's `integration` job self-hosts its own stack and has been gating since
-  2026-08-03, so its tick on the PR is the real evidence — **read it from the raw log, not the
-  tick**, because a crashed vitest worker reports as clean (MV-194 hit exactly that).
-  A full-lane run with no stack up also HUNG rather than skipping; the new file is not the cause
-  (it skips in 385ms on its own), so some other itest blocks on a connect that never refuses.
-  Recorded because a future agent will otherwise read the hang as a defect in this branch.
-- `supabase/rehearsal/MV-195-mutation.sql` is written with five mutants and a self-contained
-  byte-for-byte `restore`. Its results table records **what each mutant must kill** and is marked
-  UNRUN rather than filled in with numbers nobody measured.
+- **`tests/integration/stage5-student-case.itest.ts` DID run, in CI, and passed.** The
+  `integration` job self-hosts its own stack and has been gating since 2026-08-03. On PR #164 it
+  reports 22 files / 1115 tests / 125.94s, every one of this file's 20 tests individually ticked
+  in the raw log. So decision D is measured against a real Postgres after all; it just was not
+  measured on this machine. Read that job from the RAW LOG on every future run, not the tick — a
+  crashed vitest worker prints a clean-looking summary having run almost nothing (MV-194 hit
+  exactly that).
+- **`supabase/rehearsal/MV-195-mutation.sql` is genuinely UNRUN**, and this is the one real gap
+  in the slice. A mutation run needs a database it can *mutate and restore*, which CI's ephemeral
+  stack does not offer to a PR. Five mutants and a self-contained byte-for-byte `restore` are
+  written; the results table records **what each mutant must kill** rather than numbers nobody
+  measured. **Anyone with a working local stack should run it before this merges** — the
+  three-call recipe is in the file header, and `staff_to_access` is the one that matters.
+
+One incidental, recorded so a future agent does not read it as a defect in this branch: a
+full-lane integration run with no stack up **HUNG** rather than skipping. The new file is not the
+cause (it skips in 385ms on its own), so some other itest blocks on a connect that never refuses.
 
 **The Supabase MCP also requires re-authorization** and is unavailable in a non-interactive
 session, so nothing was measured against the hosted project either. Neither gap was worked
@@ -413,8 +419,11 @@ around: no migration is in this slice, so nothing is owed to the production ledg
 ### Mutation — the CODE layer, which is the half that could be run
 
 Case authorization is enforced in RLS **and** TypeScript independently, so a single-layer mutant
-survives at full green. The SQL half is unrun; the code half was run, one mutant at a time, each
-reverted with `git checkout --` and the tree verified clean afterwards.
+survives at full green. **The SQL half is unrun** (it needs a stack it can mutate and restore);
+the code half was run, one mutant at a time, each reverted with `git checkout --` and the tree
+verified clean afterwards. Until the SQL half runs, half the argument is written down rather than
+demonstrated — the itest passing in CI proves the policies behave as claimed TODAY, not that a
+test would notice if they stopped.
 
 | Mutant (one line removed) | Tests that went RED |
 |---|---|
