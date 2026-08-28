@@ -110,12 +110,21 @@ export const ACCEPT_CONFIRMATION = {
   separateCases:
     "Your own MeroVisa answers and documents stay in your own account — they aren't copied into the consultancy's case, and nothing has been taken away from you. Your counsellor will ask for what they need on their side.",
   /**
-   * Where the student goes next, said carefully. Their dashboard shows their PERSONAL case;
-   * what a student holding two cases sees, and how they move between them, is slice 3. Until
-   * it ships, promising the dashboard will show the consultancy's case would be a lie the
-   * student discovers one click later.
+   * Where the student goes next — rewritten by MV-195, which is the slice that earned it.
+   *
+   * MV-194 wrote this deliberately weak ("Your dashboard still shows your own MeroVisa work,
+   * and that's where to find it") because at the time the accepted case was UNREACHABLE:
+   * every consultancy-case route sat under `/workspace/[organizationId]`, whose layout gates
+   * on active memberships, and `student` is not one. Naming a second place would have been a
+   * lie the student discovered one click later.
+   *
+   * Slice 3 built that place, so the hedge became the lie instead — a student told only about
+   * their dashboard would never find the case they had just accepted. The sentence now names
+   * both, and keeps them apart in the same breath: two places, one of them theirs, neither
+   * standing in for the other.
    */
-  dashboardNote: "Your dashboard still shows your own MeroVisa work, and that's where to find it.",
+  dashboardNote:
+    "You'll find their case under Your consultancy, and your dashboard keeps showing your own MeroVisa work.",
   /** Decision C — a second click by the same student. Nothing changed, and it says so. */
   alreadyLinked: "You'd already accepted this invitation. You're still connected.",
 } as const;

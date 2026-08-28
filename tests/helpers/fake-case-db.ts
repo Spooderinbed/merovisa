@@ -147,6 +147,16 @@ export type RecordedQuery = {
    * lexically otherwise, so a fixture may write either an ISO string or a number.
    */
   comparisons: Array<[string, "gt" | "lt", unknown]>;
+  /**
+   * `.not(column, operator, value)` predicates, in chain order.
+   *
+   * MV-195 needs one and no earlier caller did: `listLinkedConsultancyCases` asks for
+   * `organization_id IS NOT NULL` — the mirror image of the `is("organization_id", null)`
+   * that keeps `resolvePersonalCaseId` off a consultancy case. It is recorded AND honoured
+   * by `rowsFor()` below, because a fake that recorded it without applying it would let a
+   * resolver missing the predicate return the personal case and still pass.
+   */
+  negations: Array<[string, string, unknown]>;
 };
 export type RecordedInsert = { table: string; row: Record<string, unknown> };
 export type RecordedUpdate = { table: string; patch: Record<string, unknown> };
@@ -181,7 +191,16 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
   const from = vi.fn((table: string) => {
     const filters: Array<[string, unknown]> = [];
     const comparisons: Array<[string, "gt" | "lt", unknown]> = [];
-    const record: RecordedQuery = { table, filters, order: [], limit: null, select: [], comparisons };
+    const negations: Array<[string, string, unknown]> = [];
+    const record: RecordedQuery = {
+      table,
+      filters,
+      order: [],
+      limit: null,
+      select: [],
+      comparisons,
+      negations,
+    };
     queries.push(record);
 
     /** One side of a `.gt()`/`.lt()` as a comparable number, or the raw string. */
@@ -200,6 +219,18 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
           filters.every(([column, value]) =>
             Array.isArray(value) ? value.includes(row[column]) : row[column] === value,
           ),
+        )
+        // `.not(column, "is", null)` — the only negation any caller issues today, and
+        // the one `listLinkedConsultancyCases` leans on. Anything else is refused loudly
+        // rather than silently matching every row, which is how a fake turns a missing
+        // predicate into a green test.
+        .filter((row) =>
+          negations.every(([column, op, value]) => {
+            if (op === "is" && value === null) {
+              return row[column] !== null && row[column] !== undefined;
+            }
+            throw new Error(`fakeCaseDb: unsupported .not(${column}, ${op}, ${String(value)})`);
+          }),
         )
         .filter((row) =>
           comparisons.every(([column, op, value]) => {
@@ -343,6 +374,10 @@ export function fakeCaseDb(fixture: CaseDbFixture = {}, options: FakeCaseDbOptio
         return builder;
       });
     }
+    builder.not = vi.fn((column: string, op: string, value: unknown) => {
+      negations.push([column, op, value]);
+      return builder;
+    });
     builder.maybeSingle = vi.fn(() => Promise.resolve(resolve("one")));
     builder.single = vi.fn(() => Promise.resolve(resolve("one")));
     builder.then = (onFulfilled: (r: unknown) => unknown) => onFulfilled(resolve("many"));

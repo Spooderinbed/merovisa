@@ -1,4 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 vi.mock("server-only", () => ({}));
 
@@ -251,6 +253,49 @@ describe("student — only the case linked to their Auth user", () => {
     const facts = studentFacts({ isOrgCase: false });
     expect(decideCasePermission("case.read", facts).allowed).toBe(true);
     expect(decideCasePermission("case.update", facts).allowed).toBe(true);
+  });
+});
+
+/**
+ * MV-195 criterion 10 (Stage 5 slice 3) — decision C, and the comment it obliged.
+ *
+ * `case.list` stayed `deny` for a student. What did NOT survive is the reason the cell
+ * carried: *"A student never lists cases: they have exactly one, reached directly."* The
+ * founder decision of 2026-08-24 falsified the second half — a student may hold a personal
+ * case AND a consultancy case — and a justification the product has outgrown is how the next
+ * author reasons from a false premise.
+ *
+ * The cell is still right, for a reason the old comment did not give: `case.list` is
+ * ORG-SCOPED (`ORG_SCOPED_PERMISSIONS`) and answered by `decideOrgPermission` from an
+ * `organization_memberships` row. A student holds none, so there is no organization for them
+ * to list cases WITHIN — flipping the cell would not be a one-line change, it would be a
+ * second, roleless listing path. `listLinkedConsultancyCases` reaches both cases by
+ * `student_user_id` instead, which is "reached directly" still holding with two.
+ */
+describe("MV-195 criterion 10 — the falsified justification is gone", () => {
+  // CRLF working tree: `split("\n")` leaves a trailing "\r" on every line and an
+  // anchored pattern stops matching, so the scan would pass VACUOUSLY (MISTAKES.md).
+  const source = readFileSync(
+    path.join(__dirname, "..", "..", "lib", "cases", "permissions.ts"),
+    "utf8",
+  );
+  const lines = source.split(/\r?\n/);
+
+  test("the scan reads a real file, so nothing below can pass by matching nothing", () => {
+    expect(lines.length).toBeGreaterThan(100);
+    expect(lines.some((line) => line.includes('"case.list": "deny"'))).toBe(true);
+  });
+
+  test("no comment still claims a student has exactly one case", () => {
+    const claims = lines.filter((line) => /they have exactly one|exactly one case/i.test(line));
+    expect(claims).toEqual([]);
+  });
+
+  test("the cell is still deny, and the module says why in terms that survive two cases", () => {
+    expect(CASE_PERMISSION_MATRIX.student["case.list"]).toBe("deny");
+    // The surviving reason has to be the org-scoping one, because that is the one the
+    // founder decision cannot falsify.
+    expect(source).toMatch(/org-scoped|organization-scoped/i);
   });
 });
 

@@ -124,11 +124,46 @@ describe("MV-194 criteria 5 and 6 — the founder decision, expressed as copy", 
     expect(ACCEPT_CONFIRMATION.separateCases).toMatch(/nothing has been taken away/i);
   });
 
-  test("promises nothing about a two-case dashboard, which is slice 3", () => {
-    // Saying the dashboard will show the consultancy's case would be a lie the student
-    // discovers one click later.
+});
+
+/**
+ * MV-195 criterion 9 — the copy debt slice 3 pays.
+ *
+ * MV-194 wrote `dashboardNote` deliberately weak — "Your dashboard still shows your own
+ * MeroVisa work, and that's where to find it" — because at the time there was nowhere else
+ * to send the student, and promising the dashboard would show the consultancy's case "would
+ * be a lie the student discovers one click later". The earlier version of this test pinned
+ * that hedge by asserting the note said NOTHING about a consultancy.
+ *
+ * Slice 3 built the door, so the hedge is now the lie: a student who accepts and is told only
+ * about their dashboard would never find the case they just accepted. The assertion is
+ * therefore inverted rather than deleted — the sentence has to keep doing a job, and the job
+ * changed.
+ */
+describe("MV-195 criterion 9 — the note now names a place that exists", () => {
+  test("it points at the consultancy case AND still says where the student's own work is", () => {
+    expect(ACCEPT_CONFIRMATION.dashboardNote).toMatch(/consultanc/i);
     expect(ACCEPT_CONFIRMATION.dashboardNote).toMatch(/your own MeroVisa work/i);
-    expect(ACCEPT_CONFIRMATION.dashboardNote).not.toMatch(/consultanc/i);
+  });
+
+  test("`separateCases` is NOT softened — it is the founder decision spoken to the student", () => {
+    // Naming a second place to go is precisely when "nothing has been taken away from you"
+    // is most load-bearing: it is the moment a student could conclude their work moved.
+    expect(ACCEPT_CONFIRMATION.separateCases).toMatch(/stay in your own account/i);
+    expect(ACCEPT_CONFIRMATION.separateCases).toMatch(/nothing has been taken away/i);
+  });
+
+  test("neither sentence implies the student's own data moved, nor that it was lost", () => {
+    // The two describe blocks above already police this across the whole confirmation;
+    // stated again here because criterion 9 names both halves explicitly, and because the
+    // note is the string most likely to be reworded by whoever ships the next surface.
+    const note = ACCEPT_CONFIRMATION.dashboardNote;
+    for (const claim of [/brought (over|across)/i, /transferr?ed/i, /\bimported\b/i, /\bsynced\b/i, /\bmerged\b/i, /moved (over|across|into)/i]) {
+      expect(note, `the note claims ${claim}`).not.toMatch(claim);
+    }
+    for (const loss of [/\blost\b/i, /\bdeleted\b/i, /\bgone\b/i, /start(ing)? (again|from scratch)/i, /\bremoved\b/i]) {
+      expect(note, `the note implies ${loss}`).not.toMatch(loss);
+    }
   });
 });
 
