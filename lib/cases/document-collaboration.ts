@@ -99,11 +99,20 @@ export const REQUEST_PROGRESS_WORD: Record<RequestProgressState, string> = {
  * `_select_actor` rides `actor_case_ids()`), so "waiting on your review" would be
  * false for half the readers. Stating what happened rather than whose turn it is
  * keeps one copy table honest for both.
+ *
+ * MV-195 made that a TESTED bound rather than an intention, because `rejected` had
+ * quietly broken it: "Uploading a new one replaces it" instructs an action the linked
+ * student cannot take — every INSERT policy on the three collaboration tables rides
+ * `private.can_staff_case` — and the student page says "You can't upload a file here
+ * yet" a few elements below the same sentence. Neutrality here is not a style
+ * preference; it is what lets ONE table face two readers with different permissions.
  */
 export const REQUEST_PROGRESS_SENTENCE: Record<RequestProgressState, string> = {
   "awaiting-upload": "Nothing has arrived against this request yet.",
   "awaiting-review": "A file has arrived and has not been reviewed yet.",
-  rejected: "The newest file was rejected. Uploading a new one replaces it.",
+  // States the mechanism without telling anybody to perform it: a counsellor has the
+  // upload control beside this line, and the student is told separately how to send.
+  rejected: "The newest file was rejected. A newer file would replace it.",
   accepted: "The newest file was accepted.",
   "received-by-hand":
     "Marked received by hand. No file was uploaded here, so nothing has been checked.",

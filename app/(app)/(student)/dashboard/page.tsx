@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/auth/safe-next";
 import { resolvePersonalCaseId } from "@/lib/cases/personal-case";
+import { listLinkedConsultancyCases } from "@/lib/cases/linked-consultancy-cases";
 import { checkCasePermission } from "@/lib/cases/require-permission";
 import { getPrimaryAssessmentForCase } from "@/lib/assessments/repo";
 import { getProfileForCase } from "@/lib/profiles/repo";
@@ -14,6 +15,7 @@ import { getOutcomesForCase } from "@/lib/outcomes/repo";
 import { listShortlistForCase } from "@/lib/matches/repo";
 import { listAllPrograms, listAllUniversities } from "@/lib/programs/repo";
 import { buildOutcomeFunnel, type OutcomeFunnelRow } from "@/lib/outcomes/funnel";
+import { ConsultancyDoor } from "@/components/dashboard/consultancy-door";
 import { Greeting } from "@/components/dashboard/greeting";
 import { SnapshotCard } from "@/components/dashboard/snapshot-card";
 import { PromptCard, type PromptState } from "@/components/dashboard/prompt-card";
@@ -71,6 +73,17 @@ export default async function DashboardPage() {
           getOutcomesForCase(supabase, caseId),
           listShortlistForCase(supabase, caseId),
         ]);
+  // MV-195, decision B: the door to a consultancy case, offered and never imposed.
+  // Deliberately NOT folded into the reads above — every one of those is scoped to
+  // the PERSONAL case and must stay that way; this asks a different question about a
+  // different case and its answer changes nothing on this page but one link.
+  //
+  // `ok === false` still shows the door: hiding it on a failed probe would hide the
+  // only route to a case the student may well have, and `/consultancy` is the page
+  // that owns the outage sentence.
+  const linkedConsultancy = await listLinkedConsultancyCases(user.id, supabase);
+  const hasConsultancyCase = !linkedConsultancy.ok || linkedConsultancy.data.length > 0;
+
   const primary = (primaryRow?.result as unknown as AssessmentPayload | undefined) ?? null;
   const profileSections = (profileRow?.sections as ProfileSections | undefined) ?? null;
   const name = profileSections?.personal?.name ?? null;
@@ -130,6 +143,8 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-5 py-10">
       <Greeting name={name} partOfDay={partOfDay()} />
+      {/* High, because for a brand-new invited account everything below it is empty. */}
+      <ConsultancyDoor show={hasConsultancyCase} />
       <JourneyRail signals={journeySignals} />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
         <SnapshotCard primary={primary} destinationLabel={primaryRow?.destination_id ? humanize(primaryRow.destination_id) : null} />

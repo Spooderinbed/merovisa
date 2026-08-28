@@ -65,6 +65,25 @@ const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.ho
 vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
 vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
 
+/**
+ * MV-195 — `/dashboard` asks one question that is NOT case-scoped: does this actor hold a
+ * consultancy case, and therefore should the door to it be shown?
+ *
+ * Stubbed here for the same reason `@/lib/programs/repo` is above — so its read does not
+ * show up as "the page queried the database" and blunt the zero-case-scoped-reads assertion
+ * this file exists for. It is a different question on a different axis: `cases` rows the
+ * actor is the `student_user_id` of, gated by `cases_select_accessor` rather than by
+ * `case.read`, and deliberately independent of whether the personal case resolved. That
+ * independence is the point — the reader most likely to have no usable personal case is the
+ * student who created an account solely to accept an invitation, and hiding the door from
+ * them is the stranding MV-195 exists to end.
+ *
+ * The read itself is asserted in `tests/app/dashboard-page.test.tsx`.
+ */
+vi.mock("@/lib/cases/linked-consultancy-cases", () => ({
+  listLinkedConsultancyCases: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+}));
+
 // The catalogue is not case-scoped; served from fixtures so its reads never show
 // up as "the page queried the database".
 vi.mock("@/lib/programs/repo", async () => {

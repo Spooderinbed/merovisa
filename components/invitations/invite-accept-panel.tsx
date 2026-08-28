@@ -102,11 +102,18 @@ export function InviteAcceptPanel({ token, email }: InviteAcceptPanelProps) {
         <p className="text-lead text-ink-soft">{ACCEPT_CONFIRMATION.body}</p>
         <p className="text-body text-ink-soft">{ACCEPT_CONFIRMATION.separateCases}</p>
         <p className="text-small text-ink-faint">{ACCEPT_CONFIRMATION.dashboardNote}</p>
+        {/*
+          MV-195: the case they just accepted, not their dashboard. MV-194 sent them to
+          `/dashboard` because the accepted case had no route — every consultancy-case
+          route sat behind an org-membership gate a student cannot pass. Slice 3 built
+          `/consultancy`, so ending here at the dashboard would now leave a student one
+          click from the thing they accepted and no way to know it.
+        */}
         <Link
-          href="/dashboard"
+          href="/consultancy"
           className="mt-1 self-start rounded-full bg-primary px-5 py-2.5 text-on-primary"
         >
-          Go to your dashboard
+          Open your consultancy case
         </Link>
       </div>
     );

@@ -27,8 +27,14 @@ import "server-only";
 /**
  * Roles the matrix reasons about. `student` is a *case-linkage* role, not a
  * membership role: `organization_memberships.role` deliberately excludes it
- * (migration line 60) because students attach to exactly one case through
- * `cases.student_user_id`.
+ * (migration line 60) because a student attaches to a case through
+ * `cases.student_user_id` rather than through a membership in its organization.
+ *
+ * MV-195: that link is PER CASE and a person may hold more than one — the founder
+ * decision of 2026-08-24 has a student holding their own personal case
+ * (`organization_id is null`) alongside a consultancy's. The role is still scoped to
+ * one case at a time, which is what `linked` means below; what is no longer true is
+ * that a student has only one case in total.
  *
  * CAUTION: `invitations.role` is a different, wider set that DOES include
  * 'student' (migration line 147). Do not conflate the two.
@@ -193,7 +199,24 @@ export const CASE_PERMISSION_MATRIX: Record<CaseRole, Record<CasePermission, Per
     "org.settings": "deny",
   },
   student: {
-    // A student never lists cases: they have exactly one, reached directly.
+    /**
+     * Still `deny`, but NOT for the reason this cell used to give. It was defended on
+     * the ground that a student holds a single case and reaches it directly, and the
+     * founder decision of 2026-08-24 falsified the first half — a student may hold a
+     * personal case AND a consultancy case (MV-195, decision C).
+     *
+     * The surviving reason is the one the founder decision cannot touch: `case.list` is
+     * ORG-SCOPED (`ORG_SCOPED_PERMISSIONS`) and `decideOrgPermission` answers it from an
+     * `organization_memberships` row. A student holds none, so there is no organization
+     * for them to list cases WITHIN — an allow here would have no question to answer.
+     * Flipping the cell would therefore not be a one-line change; it would be a second,
+     * roleless listing path, and that asymmetry is itself the argument for leaving it.
+     *
+     * "Reached directly" still holds with two cases, and is how the student surface
+     * works: `lib/cases/linked-consultancy-cases.ts` resolves them by
+     * `cases.student_user_id`, the same axis `resolvePersonalCaseId` uses for the other
+     * half — neither of them a `case.list`.
+     */
     "case.list": "deny",
     "case.read": "linked",
     // Field-level restriction ("permitted fields only") is NOT enforced here —

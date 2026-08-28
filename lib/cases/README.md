@@ -209,6 +209,25 @@ both layers so a future divergence fails CI instead of reaching a review.
 | `org-context.ts` | `getOrgContext` — resolves an actor's standing in one organization |
 | `require-permission.ts` | `requireCasePermission` / `checkCasePermission` / `AuthorizationError` / `CaseAuthorizationError` |
 | `require-org-permission.ts` | `requireOrgPermission` / `checkOrgPermission` / `OrgAuthorizationError` |
+| `personal-case.ts` | `resolvePersonalCaseId` / `ensurePersonalCase` — the actor's case where `organization_id IS NULL` |
+| `linked-consultancy-cases.ts` | `listLinkedConsultancyCases` — the actor's cases where `organization_id IS NOT NULL` (MV-195) |
+| `student-case-route.ts` | `openStudentCaseRoute` — the gate on `/consultancy/[caseId]`, the student's door (MV-195) |
+
+### The two case resolvers are a matched pair, and neither may answer for the other
+
+`resolvePersonalCaseId` carries `organization_id IS NULL` **in the predicate** and
+`listLinkedConsultancyCases` carries `IS NOT NULL`. The founder decision of
+2026-08-24 is that a student may hold both and **no data crosses between them**, so
+widening either one is not a convenience — it is the defect. Letting the personal
+resolver return both cases would silently re-point the whole `(student)` route
+family (`/dashboard`, `/profile`, `/matches`, `/plan`, `/documents`, `/checklist`) at
+a workspace the consultancy owns, because MV-157 §A makes it the only place a
+personal route turns an actor into a case id. `tests/cases/linked-consultancy-cases.test.ts`
+pins both directions.
+
+Neither resolves permission. `openStudentCaseRoute` is where the student surface
+authorizes, through `case.read` at `linked` — never through org membership, which is
+a set `student` is deliberately excluded from.
 
 Tests: `tests/cases/` (semantics, against `tests/helpers/fake-case-db.ts`) and
 `tests/supabase/service-role-exceptions.test.ts` (the fence).

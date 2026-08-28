@@ -261,4 +261,26 @@ describe("the copy each state carries", () => {
   it("says out loud that a received-by-hand request was never checked", () => {
     expect(REQUEST_PROGRESS_SENTENCE["received-by-hand"]).toMatch(/nothing has been checked/i);
   });
+
+  it("instructs NOBODY to upload — half the readers cannot", () => {
+    // This table already says of itself that it is "ACTOR-NEUTRAL on purpose", and
+    // MV-195 made that claim load-bearing rather than aspirational:
+    // `app/(app)/(student)/consultancy/[caseId]/page.tsx` renders these sentences to
+    // the LINKED STUDENT, who holds no INSERT on any of the three collaboration
+    // tables — every one of those policies rides `private.can_staff_case`, which is
+    // `can_access_case` MINUS the student disjunct.
+    //
+    // So "Uploading a new one replaces it" was an instruction half the readers cannot
+    // follow, on the one state where they most want to act — and the same page says
+    // "You can't upload a file here yet" a few elements below it. The slice refused an
+    // upload BUTTON on the reasoning that it "would tell the student they were
+    // allowed"; a sentence that says so is the same defect without the control.
+    //
+    // `\bupload\b` deliberately does NOT match "uploaded": "No file was uploaded here"
+    // reports what happened rather than asking anybody for anything.
+    const INSTRUCTS = /\bupload\b|\buploading\b|\byou\b|\byour\b/i;
+    for (const state of REQUEST_PROGRESS_STATES) {
+      expect(REQUEST_PROGRESS_SENTENCE[state], state).not.toMatch(INSTRUCTS);
+    }
+  });
 });

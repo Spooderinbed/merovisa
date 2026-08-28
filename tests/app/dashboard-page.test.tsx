@@ -54,10 +54,18 @@ const { resolvePersonalCaseId, ensurePersonalCase, checkCasePermission } = vi.ho
 }));
 vi.mock("@/lib/cases/personal-case", () => ({ resolvePersonalCaseId, ensurePersonalCase }));
 vi.mock("@/lib/cases/require-permission", () => ({ checkCasePermission }));
+
+// MV-195: the dashboard is where a student holding TWO cases is offered the second
+// one. It is an affordance and nothing more — the personal case stays what every
+// read below is scoped to (card decision B: never auto-switch).
+const { listLinkedConsultancyCases } = vi.hoisted(() => ({ listLinkedConsultancyCases: vi.fn() }));
+vi.mock("@/lib/cases/linked-consultancy-cases", () => ({ listLinkedConsultancyCases }));
+
 beforeEach(() => {
   resolvePersonalCaseId.mockResolvedValue("case-1");
   ensurePersonalCase.mockResolvedValue("case-1");
   checkCasePermission.mockResolvedValue({ decision: { allowed: true }, context: {} });
+  listLinkedConsultancyCases.mockResolvedValue({ ok: true, data: [] });
 });
 
 import DashboardPage from "@/app/(app)/(student)/dashboard/page";
@@ -218,5 +226,70 @@ describe("/dashboard page", () => {
     const ui = await DashboardPage();
     render(ui);
     expect(screen.getByTestId("greet")).toHaveTextContent("Aarav");
+  });
+});
+
+/**
+ * MV-195 — the two-case experience (Stage 5 slice 3, criteria 7 and 8).
+ *
+ * The founder decision of 2026-08-24 keeps the two cases separate, and decision B
+ * settles what that means at sign-in: **the personal case stays the default here and
+ * the consultancy case is reached by an explicit, named affordance. Never
+ * auto-switch.** Silently landing a student in a near-empty consultancy case would
+ * read as data loss, which is the precise misreading this slice exists to prevent.
+ *
+ * Criterion 8 is the sharpest case and it lands on this page: a student who created
+ * an account SOLELY to accept an invitation gets an auto-created empty personal case
+ * (`finish-sign-in.ts` calls `ensurePersonalCase` on every sign-in), accepts fine,
+ * and is redirected here. Before this slice, the case they made the account for was
+ * invisible with no route to it.
+ */
+describe("/dashboard — the door to a consultancy case", () => {
+  async function renderWith(linked: unknown) {
+    getUser.mockResolvedValue({ data: { user: { id: "u1", email: "a@b.com" } } });
+    getPrimaryAssessmentForCase.mockResolvedValue(null);
+    getProfileForCase.mockResolvedValue(null);
+    listDocumentsForCase.mockResolvedValue([]);
+    listLinkedConsultancyCases.mockResolvedValue(linked);
+    return render(await DashboardPage());
+  }
+
+  it("offers the case to a student who holds one — criterion 8's brand-new invited account", async () => {
+    // The empty personal case is exactly what this student sees, so the affordance
+    // is the only thing on the page that leads anywhere they care about.
+    await renderWith({ ok: true, data: [{ id: "case-2", organizationId: "org-1", openedAt: "2026-08-20T00:00:00.000Z" }] });
+
+    expect(screen.getByRole("link", { name: /your consultancy/i })).toHaveAttribute(
+      "href",
+      "/consultancy",
+    );
+  });
+
+  it("says nothing about a consultancy to a student who has none", async () => {
+    await renderWith({ ok: true, data: [] });
+
+    expect(screen.queryByRole("link", { name: /your consultancy/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the door VISIBLE when the lookup failed", async () => {
+    // A failed probe must not hide the only route to a case a student may well have.
+    // The door stays; `/consultancy` is the page that owns the outage sentence,
+    // because it is the one making the claim.
+    await renderWith({ ok: false, reason: "lookup-failed" });
+
+    expect(screen.getByRole("link", { name: /your consultancy/i })).toBeInTheDocument();
+  });
+
+  it("does NOT auto-switch — every read is still scoped to the PERSONAL case", async () => {
+    // Decision B, and the regression that would matter most: the dashboard must keep
+    // answering from `resolvePersonalCaseId`, never from the consultancy case it now
+    // links to.
+    await renderWith({ ok: true, data: [{ id: "case-2", organizationId: "org-1", openedAt: "2026-08-20T00:00:00.000Z" }] });
+
+    expect(getPrimaryAssessmentForCase).toHaveBeenCalledWith(expect.anything(), "case-1");
+    expect(getProfileForCase).toHaveBeenCalledWith(expect.anything(), "case-1");
+    for (const call of getPrimaryAssessmentForCase.mock.calls) {
+      expect(call).not.toContain("case-2");
+    }
   });
 });
