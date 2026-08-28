@@ -57,76 +57,89 @@
 -- project.
 --
 -- ---------------------------------------------------------------------------------------------
--- MEASURED RESULTS — see the dossier. The local Docker engine would not start in the session that
--- built this slice (Docker Desktop's WSL backend never opened its named pipe in a
--- non-interactive session), so the table below records what each mutant is BUILT to kill and is
--- marked UNRUN rather than filled in with numbers nobody measured. `81 skipped` is not
--- `81 passed`, and neither is an unrun mutant a survivor.
+-- MEASURED RESULTS — 2026-08-28, against tests/integration/stage5-student-case.itest.ts on the
+-- local Docker stack. Clean schema: 20 passed / 20 in 1.75s of real test time. Every mutant
+-- applied ALONE, run, then restored. `restore` was verified BYTE-IDENTICAL against the
+-- pre-mutation capture of `pg_policy` + `pg_get_expr`, `information_schema.column_privileges`
+-- AND the `%_case` census (27 policies on 9 tables) before the first mutant and again after
+-- every single one — five restores, five byte-identical diffs.
 -- ---------------------------------------------------------------------------------------------
--- mutant                widens                                    the tests it MUST turn red
+-- mutant                widens                                    the tests that went RED
 -- ---------------------------------------------------------------------------------------------
 -- staff_to_access       the four WRITE policies on the three      "cannot upload a version against
 --                       Stage 4 tables swap `can_staff_case`       their own case"
 --                       for `can_access_case` — i.e. the          "cannot review — a student must
 --                       student disjunct comes back                not judge their own file"
---                                                                 "cannot mint a request against
---                       THE MOST IMPORTANT MUTANT IN THIS FILE.    themselves"
---                       This is decision D, and nothing else      "cannot mark a request resolved
---                       defends it: the column grants are          by hand"
---                       identical for staff and student, so the
---                       predicate IS the boundary. If any of      MUST NOT kill the CONTROL
---                       those four stays green under this          ("the assigned counsellor CAN do
---                       mutant, decision D is untested.            all four") — `can_access_case`
---                                                                  is a superset, so a mutant that
---                                                                  killed the control would mean
---                                                                  the control was measuring the
---                                                                  wrong thing.
+--                       4 failed / 16 passed                     "cannot mint a request against
+--                                                                  themselves"
+--                       THE MOST IMPORTANT MUTANT IN THIS FILE,   "cannot mark a request resolved
+--                       and it killed exactly the four denials     by hand"
+--                       decision D rests on. This is decision D
+--                       with nothing else defending it: the       AND THE CONTROL STAYED GREEN
+--                       column grants are identical for staff      ("the assigned counsellor CAN do
+--                       and student, so the predicate IS the       all four"), which is what makes
+--                       boundary.                                  this a measurement of the
+--                                                                  STUDENT boundary rather than of
+--                                                                  "nobody may write".
+--
+--                       AND ONE MECHANISM WORTH KNOWING, because the failing ASSERTION differs
+--                       from the other three. The first three failed with `expected undefined to
+--                       be '42501'` — the policy admitted the write. The fourth failed with
+--                       `expected { code: '23514' … } to be null`: the policy admitted it too,
+--                       and MV-185's `guard_document_request_status` TRIGGER then refused the
+--                       hand-written `resolved` because the request's newest version carries a
+--                       REJECTED review, so the derivation contradicts it. So "cannot mark a
+--                       request resolved by hand" is defended in TWO layers on this fixture,
+--                       and only ONE of them is the policy. It still goes red — the test asserts
+--                       `error is null` AND zero rows — but a fixture whose request had no
+--                       version at all would make the derivation abstain, the guard pass, and
+--                       that assertion fail for a different reason again. Reading the assertion
+--                       and not just the count is what makes the difference visible.
 --
 -- request_select_open   `case_document_requests_select_actor`     "a DIFFERENT student sees none of
 --                       -> `using (true)`                          the three, though all three
---                                                                  exist"
+--                       1 failed / 19 passed                       exist"
 --                       The realistic read bug: a chase list
---                       readable by every authenticated user in
---                       the product. It must NOT kill "sees the
---                       request their consultancy made" — a
---                       widening cannot kill a positive, and if
---                       it does, that positive was passing for
---                       the wrong reason.
+--                       readable by every authenticated user in   It did NOT kill "sees the request
+--                       the product.                               their consultancy made" —
+--                                                                  correct, a widening cannot kill
+--                                                                  a positive.
 --
--- version_select_open   the same widening one table down, on      "a DIFFERENT student sees none of
---                       `case_document_versions_select_actor`      the three …"
---                       Separated from the one above because a
---                       single test covers all three tables in a
---                       loop: run them one at a time and the
---                       failing ASSERTION names the table, which
---                       is what tells you each policy is
---                       independently covered rather than
---                       collectively.
+-- version_select_open   the same widening one table down, on      the same one test
+--                       `case_document_versions_select_actor`     1 failed / 19 passed
+--                       1 failed / 19 passed
+--                       Separated from the one above BECAUSE one test covers all three tables in
+--                       a loop. Running them one at a time is what proves each policy is
+--                       independently covered rather than collectively — the failing ASSERTION
+--                       names the table, and a single combined mutant could not tell you whether
+--                       one of the three had quietly stopped filtering.
 --
--- review_select_open    the same widening on                      "a DIFFERENT student sees none of
---                       `case_document_reviews_select_actor`       the three …"
---                       This one carries the rejection NOTE, so
---                       it is the widening with the most
+-- review_select_open    the same widening on                      the same one test
+--                       `case_document_reviews_select_actor`      1 failed / 19 passed
+--                       1 failed / 19 passed
+--                       This one carries the rejection NOTE, so it is the widening with the most
 --                       personal content behind it.
 --
 -- org_select_case       `organizations_select_member` gains       "the linked student cannot read
---                       `OR (id = private.case_org_id(...))`       their consultancy's
---                       for any case the actor can reach —         `organizations` row"
---                       i.e. the helpful "let the student see
---                       who their consultancy is".               MUST NOT kill "CONTROL: a member
---                                                                  of that organization CAN read
---                       This is decision A's measurement, and      it".
---                       the reason the student surface names no
+--                       `OR id IN (the actor's own consultancy     their consultancy's
+--                       cases' organization_id)` — i.e. the        `organizations` row"
+--                       helpful "let the student see who their    1 failed / 19 passed
+--                       consultancy is".
+--                                                                 CONTROL "a member of that
+--                       This is decision A's measurement and       organization CAN read it"
+--                       the reason the student surface names no    stayed green.
 --                       consultancy: there is nothing for it to
---                       leak. The mutant is here because that
---                       absence is a fact about the schema, and
---                       a fact nobody tests is a fact that
---                       changes quietly. It is ALSO the most
---                       plausible future widening in this file —
---                       "the student should see who they are
---                       working with" is a reasonable product
---                       request, and it would be a schema change
---                       rather than a page change.
+--                       leak. It is ALSO the most plausible future widening in this file — "the
+--                       student should see who they are working with" is a reasonable product
+--                       request, and it would be a SCHEMA change rather than a page change.
+--
+--                       FIRST ATTEMPT DID NOT APPLY, and is recorded rather than quietly fixed:
+--                       the draft wrote `id = ANY ((select array(...)))` by analogy with the
+--                       shipped `= ANY ((select f())::uuid[])` form, and `array(...)` already
+--                       yields `uuid[]`, so it raised `operator does not exist: uuid = uuid[]`.
+--                       The run then reported a perfectly green 20/20 — which reads exactly like
+--                       a surviving mutant. **Read the psql exit code, not just the test count:**
+--                       an unrun mutant is not a survivor.
 --
 -- ---------------------------------------------------------------------------------------------
 -- WHAT THIS FILE DELIBERATELY DOES NOT RE-MUTATE
@@ -265,13 +278,19 @@ begin
     drop policy if exists organizations_select_member on public.organizations;
     -- "Let the student see who their consultancy is" — a reasonable product request, and a
     -- SCHEMA change rather than a page change. This is what it would look like.
+    -- `id IN (subquery)`, NOT `id = ANY ((select array(...)))`. The first draft used the
+    -- latter by analogy with the shipped `= ANY ((select f())::uuid[])` form and failed to
+    -- apply at all — `array(...)` already yields `uuid[]`, so wrapping it in `ANY(...)`
+    -- compares `uuid = uuid[]` and raises `operator does not exist`. Recorded because the
+    -- run LOOKED like a surviving mutant (20/20 green) when the mutant had never applied:
+    -- always read the psql exit code, not just the test count.
     execute format(
       'create policy organizations_select_member on public.organizations
          for select to authenticated
-         using (%s OR (id = ANY ((select array(
+         using (%s OR (id IN (
                  select c.organization_id from public.cases c
                   where c.student_user_id = (select auth.uid())
-                    and c.organization_id is not null)))))',
+                    and c.organization_id is not null)))',
       shipped_org_select);
     raise notice 'MUTANT org_select_case: a linked student may now read their consultancy''s '
       'organizations row. The student surface names no consultancy BECAUSE there is nothing to '

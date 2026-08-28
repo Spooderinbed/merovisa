@@ -381,36 +381,28 @@ gates on `case.read` and its header names the linked student explicitly.
 | `npm run typecheck` | clean (`tsc --noEmit`, no output) |
 | `npm run lint` | clean (`eslint`, no output) |
 | `npm test` | **4167 passed / 4167, across 398 files, 62.27s** (baseline on the carve branch: 4110 across 394 — this slice adds 4 files and 57 tests) |
-| `npm run test:integration` | **NOT RUNNABLE LOCALLY** (no Docker engine — see below). Locally it only COLLECTS and skips: `1 skipped (1)` / `20 skipped (20)` in 385ms, which proves the file loads and `describe.skipIf` fires and **nothing else**. **The real evidence is CI's gating `integration` job on PR #164, read from the RAW LOG rather than the tick: 22 files / 1115 tests passed in 125.94s with 119.18s of real test time** — the carve baseline is 21 / 1095, so this slice's +1 file / +20 tests reconciles exactly, and the duration rules out a crashed worker. All 20 of this file's tests appear individually as `✓`, including the four decision-D denials, the counsellor CONTROL, the decision-A organization denial and its control, and the byte-for-byte personal-case assertion. |
+| `npm run test:integration` | **Green in both places.** CI's gating `integration` job on PR #164, read from the RAW LOG rather than the tick: **22 files / 1115 tests passed in 125.94s**, 119.18s of real test time — carve baseline 21 / 1095, so this slice's +1 file / +20 reconciles exactly and the duration rules out a crashed worker; all 20 appear individually as `✓`. And **locally against the Docker stack once the founder started it: 20 passed / 20 in 1.75s of real test time**, exit code read directly rather than through a pipe (a pipe reports the last command's status, so a failing run reports `EXIT=0`). |
 
-### The blocker, stated rather than worked around
+### The Docker detour, recorded because it will recur
 
-**The local Docker stack could not be started in this session.** Docker Desktop's process runs and
-the `docker-desktop` WSL distro boots on demand, but the engine never opens
-`\\.\pipe\dockerDesktopLinuxEngine` — across a `-SwitchLinuxEngine`, a full process restart, and
-several minutes of waiting. That looks like a first-run/interactive step this non-interactive
-session cannot complete. Without the stack there is no `SUPABASE_TEST_*`, so the integration lane
-**skips**, and a skip is not evidence.
+The local engine **would not start for the agent**: Docker Desktop's process ran and
+`wsl -d docker-desktop -- echo ok` succeeded, but `\\.\pipe\dockerDesktopLinuxEngine` never
+appeared — across a `-SwitchLinuxEngine`, a full kill-and-restart, and ~15 minutes of waiting.
+It looks like an interactive/first-run step a non-interactive session cannot complete. **The
+founder started it, and everything ran immediately.** Time-box this to about two attempts and ask
+rather than chasing it.
 
-What this means for the two artefacts that need it — and they end up in **different** places:
+Two facts worth keeping from the interval when it was down:
 
-- **`tests/integration/stage5-student-case.itest.ts` DID run, in CI, and passed.** The
-  `integration` job self-hosts its own stack and has been gating since 2026-08-03. On PR #164 it
-  reports 22 files / 1115 tests / 125.94s, every one of this file's 20 tests individually ticked
-  in the raw log. So decision D is measured against a real Postgres after all; it just was not
-  measured on this machine. Read that job from the RAW LOG on every future run, not the tick — a
-  crashed vitest worker prints a clean-looking summary having run almost nothing (MV-194 hit
-  exactly that).
-- **`supabase/rehearsal/MV-195-mutation.sql` is genuinely UNRUN**, and this is the one real gap
-  in the slice. A mutation run needs a database it can *mutate and restore*, which CI's ephemeral
-  stack does not offer to a PR. Five mutants and a self-contained byte-for-byte `restore` are
-  written; the results table records **what each mutant must kill** rather than numbers nobody
-  measured. **Anyone with a working local stack should run it before this merges** — the
-  three-call recipe is in the file header, and `staff_to_access` is the one that matters.
-
-One incidental, recorded so a future agent does not read it as a defect in this branch: a
-full-lane integration run with no stack up **HUNG** rather than skipping. The new file is not the
-cause (it skips in 385ms on its own), so some other itest blocks on a connect that never refuses.
+- **CI's gating `integration` job is real evidence for the itest half.** It self-hosts its own
+  stack, and on PR #164 it reported 22 files / 1115 tests / 125.94s with every one of this file's
+  20 tests individually ticked. Read it from the RAW LOG, never the tick — a crashed vitest
+  worker prints a clean-looking summary having run almost nothing (MV-194 hit exactly that).
+- **CI cannot substitute for a MUTATION run**, which needs a database it can mutate *and restore*.
+  That half genuinely required the local stack, and it is now done (above).
+- A full-lane `npm run test:integration` with no stack up **HANGS** rather than skipping. The new
+  file is not the cause (it skips in 385ms alone), so some other itest blocks on a connect that
+  never refuses. Run a single file to see the clean `N skipped`.
 
 **The Supabase MCP also requires re-authorization** and is unavailable in a non-interactive
 session, so nothing was measured against the hosted project either. Neither gap was worked
@@ -419,11 +411,40 @@ around: no migration is in this slice, so nothing is owed to the production ledg
 ### Mutation — the CODE layer, which is the half that could be run
 
 Case authorization is enforced in RLS **and** TypeScript independently, so a single-layer mutant
-survives at full green. **The SQL half is unrun** (it needs a stack it can mutate and restore);
-the code half was run, one mutant at a time, each reverted with `git checkout --` and the tree
-verified clean afterwards. Until the SQL half runs, half the argument is written down rather than
-demonstrated — the itest passing in CI proves the policies behave as claimed TODAY, not that a
-test would notice if they stopped.
+survives at full green. **Both halves were run.**
+
+### The SQL half — `supabase/rehearsal/MV-195-mutation.sql`, run 2026-08-28
+
+The founder brought Docker up, so this is measured rather than promised. Clean schema: **20
+passed / 20** in 1.75s of real test time. Each mutant applied ALONE, run, restored. **`restore`
+verified BYTE-IDENTICAL against a pre-mutation capture of `pg_policy` + `pg_get_expr`,
+`information_schema.column_privileges` AND the `%_case` census (27 policies on 9 tables) — before
+the first mutant and again after every one of the five.**
+
+| Mutant | Result | Test that went RED |
+|---|---|---|
+| `staff_to_access` | 4 failed / 16 | all four decision-D denials: *cannot upload a version*, *cannot review*, *cannot mint a request*, *cannot mark a request resolved by hand* — **and the counsellor CONTROL stayed green** |
+| `request_select_open` | 1 failed / 19 | *a DIFFERENT student sees none of the three, though all three exist* |
+| `version_select_open` | 1 failed / 19 | the same one |
+| `review_select_open` | 1 failed / 19 | the same one |
+| `org_select_case` | 1 failed / 19 | *the linked student cannot read their consultancy's `organizations` row* — **and its CONTROL stayed green** |
+
+**Two results are findings rather than passes.**
+
+1. **`staff_to_access`'s fourth kill fires through a TRIGGER, not the policy.** Three of the four
+   failed with `expected undefined to be '42501'`; *"cannot mark a request resolved by hand"*
+   failed with `expected { code: '23514' … } to be null` — the mutated policy admitted the write
+   and MV-185's `guard_document_request_status` refused it, because the request's newest version
+   carries a rejected review. So that one boundary is defended in **two** layers on this fixture
+   and only one of them is the policy. It still goes red, but a request with no version at all
+   would make the derivation abstain and the guard pass. Reading the assertion, not the count.
+2. **`org_select_case` did not apply on the first attempt, and reported 20/20 green.** The draft
+   wrote `id = ANY ((select array(...)))`, which raises `operator does not exist: uuid = uuid[]`
+   — so the mutant never landed and the run looked exactly like a surviving mutant. **`PSQL_EXIT`
+   is part of the evidence; an unrun mutant is not a survivor.** Fixed to `id IN (subquery)` and
+   re-run, where it killed its named test.
+
+### The CODE half — six mutants, each reverted with `git checkout --`, tree verified clean after
 
 | Mutant (one line removed) | Tests that went RED |
 |---|---|
@@ -470,6 +491,20 @@ load-bearing on its own and must not be deleted as redundant.
    never be run from `.claude/worktrees/`.** That caution is stale (the exclude is matched
    relative to `root`, and `root` is the worktree). Not edited here — it is another slice's file
    and the correction belongs with a run that can prove it.
+6. **LOCAL SCHEMA DRIFT, found while capturing the mutation baseline and NOT introduced by this
+   branch.** `information_schema.column_privileges` on the local stack reports the
+   `case_document_versions` INSERT grant to `authenticated` as
+   `case_id, content_type, document_id, file_size, **id**, organization_id, original_name,
+   request_id, storage_path, uploaded_by`. MV-185 §8 (4) asserts that list **without `id`** and
+   raises if it differs — so **re-running `20260821120000_stage4_case_document_collaboration.sql`
+   against this local database would fail its own apply-time assertion.** Almost certainly a
+   table-level `grant insert on … to authenticated` typed at some point locally, which grants
+   every column. Low severity (the row id is `default gen_random_uuid()` and the INSERT policy
+   still bounds every other axis), and it changes nothing this slice measures — the mutants touch
+   policies, not grants, and `restore` was verified byte-identical against this same reading each
+   time. **Not fixed here:** it is a database-state question, not a code one, and whether the
+   hosted project shares it could not be checked (the Supabase MCP needs re-authorization). Worth
+   a look before the next migration-bearing slice, because that is when it will bite.
 
 ## Board
 
