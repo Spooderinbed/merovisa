@@ -69,6 +69,12 @@ assertLocalStack("student-data-rls.itest.ts", url);
  */
 const NEW_HELPERS: ReadonlyArray<readonly [name: string, identityArgs: string, signature: string]> = [
   ["actor_case_ids", "", "private.actor_case_ids()"],
+  // MV-196's write-side twin of `actor_case_ids` — the same set minus a linked student's
+  // ORG-OWNED cases, so a consultancy's case is readable by its student and writable only by its
+  // staff. Listed here so it inherits all three hardening assertions below rather than being a
+  // definer function nobody audited: a new `private.*` helper defaults to EXECUTE for PUBLIC
+  // (which includes `anon`), and an owner without BYPASSRLS makes it under-read in silence.
+  ["actor_writable_case_ids", "", "private.actor_writable_case_ids()"],
   ["assessment_case_id", "p_assessment_id uuid", "private.assessment_case_id(uuid)"],
   ["prediction_case_id", "p_prediction_id uuid", "private.prediction_case_id(uuid)"],
   ["attempt_case_id", "p_attempt_id uuid", "private.attempt_case_id(uuid)"],
@@ -363,10 +369,18 @@ const ownershipArms = (expr: string): string[] => {
 
   const body = unwrap(expr);
   const andParts = splitTop(body, " AND ");
-  const group = andParts.find((p) => p.includes("actor_case_ids")) ?? body;
+  // MV-196 split the case predicate in two: reads keep `actor_case_ids()`, writes moved to
+  // `actor_writable_case_ids()` (the same set minus a linked student's ORG-owned cases). Both
+  // are "the case arm" as far as this classifier is concerned — what it exists to catch is a
+  // NEW, unprobed arm, and neither of these is new. Note `actor_case_ids` is not a substring of
+  // `actor_writable_case_ids`, so the second name genuinely has to be listed.
+  const isCaseArm = (s: string): boolean =>
+    s.includes("actor_case_ids") || s.includes("actor_writable_case_ids");
+
+  const group = andParts.find(isCaseArm) ?? body;
   return splitTop(unwrap(group), " OR ").map((arm) => {
     const a = unwrap(arm);
-    if (a.includes("actor_case_ids")) return "case";
+    if (isCaseArm(a)) return "case";
     if (a.includes("auth.uid()")) return "owner";
     // Anything else is a NEW arm nobody has probed. Named so the guard's failure says what it is.
     return `unprobed-arm:${a}`;

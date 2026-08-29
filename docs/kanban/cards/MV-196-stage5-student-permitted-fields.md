@@ -1,8 +1,21 @@
 # MV-196 — Stage 5 slice 4: student-visible versus consultancy-only fields
 
+Built 2026-08-29 — evidence at the bottom of this file:
+[Built — what the measurement changed](#built--what-the-measurement-changed-2026-08-29).
+(Column state lives only in `board.json`, never here — README anti-drift rule 1.)
+
 Stage 5's fourth bullet, and the closure of the standing **"Known gap — student
 permitted fields"** footnote in `lib/cases/README.md` (the `¹` on `case.update:
 "linked"`).
+
+> **The premise did not survive its own probe, and that is the headline.** Criterion 1
+> required the gap to be MEASURED before it was fixed. It was, and fact 2 below turned
+> out to be right in kind and badly understated in degree: seven of eight write probes
+> issued by a linked student — through their own JWT, straight to PostgREST, no route
+> involved — SUCCEEDED against the consultancy's case, including deleting a document.
+> This was a live security hole, not a field-level tidiness gap. A separate card fact
+> was falsified outright (the MV-155 §H trigger does **not** redirect; see below), and a
+> probe written to that stale belief would have come back falsely green.
 
 ## What this slice is, and how the carve changed it
 
@@ -341,3 +354,140 @@ not behaviourally.
   and revocation proven, for both existing and new users.
 - Then **judgement-in-workspace** (per-case visa-risk + submittability), which is
   the wedge and the reason a consultancy buys.
+
+---
+
+## Built — what the measurement changed (2026-08-29)
+
+### Criterion 1: the red probe, and what it actually found
+
+`tests/integration/stage5-student-write-boundary.itest.ts` — 16 tests. It asserts the
+**intended** boundary, so red *is* the measurement. Every probe runs as `authenticated`
+through `actor("studentA").client`: the student's own JWT, talking straight to PostgREST
+with no route in between. That is not a contrived attack — `NEXT_PUBLIC_SUPABASE_URL` and
+the anon key ship in client JS and the access token is in the student's browser, which is
+precisely why a TypeScript-only gate was never going to be the boundary.
+
+**Seven of eight writes on the consultancy case succeeded.**
+
+| write on the org-owned case | before |
+|---|---|
+| `profiles` UPDATE | **admitted** |
+| `plan_items` UPDATE | **admitted** |
+| `documents` DELETE | **admitted** |
+| `user_program_state` INSERT | **admitted** |
+| `document_status` INSERT | **admitted** |
+| `application_attempts` INSERT | **admitted** |
+| `outcome_events` INSERT | **admitted** |
+| `program_predictions` INSERT | denied (42501) |
+
+The single refusal is **incidental, not a boundary**: `pp_insert_case` carries an extra
+`private.assessment_case_id(assessment_id) = case_id` conjunct that happened not to hold
+for the probe's payload. It is not a student check and would not survive a
+differently-shaped insert. Fact 2 on this card was therefore right in kind and badly
+understated in degree.
+
+All six controls passed both before and after, so the reds are the gap and not a broken
+harness: the counsellor resolves `case.update` on the org case; the student resolves it on
+their **personal** case; the student's PostgREST write to their own case succeeds; and
+every targeted row has a service-role existence proof.
+
+### A card fact that was falsified
+
+Fact 3 of the pre-build recon — and the plan's prose, and `tests/integration/fixtures/
+tenancy.ts`'s own doc-comment — say the MV-155 §H trigger **overwrites** `case_id` with the
+owner's personal case whenever `owner` is not null. Read off the live `pg_proc` body, it
+has not done that since MV-159 added the `new.case_id is null` qualifier:
+
+```sql
+if new.case_id is null and new.owner is not null then ... end if;
+```
+
+It derives **into the gap** and never over an existing binding. Two consequences: there is
+**no accidental trigger-level defence** (an owner-bearing row naming an org case stays on
+the org case), and a probe written to the stale belief would have seeded `owner: <student>`,
+been silently redirected home, and reported "denied" — a **false green in exactly the
+direction the probe existed to measure**. Both halves are now pinned by a test.
+
+### The fix — both layers, because the doctrine requires it
+
+`lib/cases/README.md`: *"the database allowing something this layer denies is a **security
+hole**."*
+
+**TypeScript** (`lib/cases/permissions.ts`): a new `linked-personal` scope; student
+`case.update` moves `linked` → `linked-personal`. `case.read` deliberately **stays**
+`linked` — MV-195 decision D is that the student reads the consultancy case. On a personal
+case the student now holds **two** grants (`linked` for the read claims, `linked-personal`
+for the write ones) because `decideCasePermission` matches scope EXACTLY and never by
+breadth; pushing only the narrow one would have silently revoked `case.read` on their own
+case. `CaseContext.grantedRoles` de-duplicates, so its public shape is unchanged.
+
+**Database** (`supabase/migrations/20260829120000_mv196_student_write_boundary.sql`): adds
+`private.actor_writable_case_ids()` — `actor_case_ids()` with `organization_id is null` on
+the student arm, admin and assignment arms byte-identical — and re-points **eighteen** write
+policies at it. Verified after apply: **zero** write policies still name `actor_case_ids()`,
+**twelve** read policies still do.
+
+### Two things the probe missed, both found by enumeration
+
+The probe measured eight tables. The boundary was nine, plus the case row itself.
+
+1. **`assessments_update_case`** was still on the wide predicate after the other sixteen
+   moved — caught by a `pg_policies` sweep, not by a test.
+2. **The `cases` row.** Its policy *inlines* the three arms rather than calling the helper,
+   so `case.update` at case granularity stayed open — caught by MV-153's matrix, with
+   TypeScript already denying while the database still reported "row updated".
+
+**The first attempt at (2) was wrong, and the wrongness is the lesson.** Narrowing
+`cases_update_accessor` turned MV-152's explicit `42501` refusals into **silent zero-row
+updates** — the precise failure its own test is named for ("must be rejected, not silently
+applied"). Reverted. The refusal went into `enforce_case_write_surface` instead, where the
+vocabulary already is, and the policy still admits the row **on purpose** so every refusal
+stays a raise rather than a filtered miss.
+
+### Decisions, as taken
+
+- **(A) Both** the shared gate *and* the migration — **not** the carve's recommendation.
+  The probe showed a TS-only gate is decoration against a caller who skips TS.
+- **(B) Nothing.** The linked student writes no part of a consultancy case.
+- **(C) Reconciled.** MV-195's "You can't upload a file here yet" is now true of the older
+  `documents` vault as well as `case_document_versions`.
+- **(D) Re-pinned, not deleted.** The org half is closed and now asserts *agreement*
+  between the layers. What survives is the same shape on the case the student **owns**: TS
+  allows the verb, the write-surface trigger refuses the columns.
+
+### A product call worth re-reading
+
+MV-152 deliberately let a linked student edit **profile fields** on a consultancy's case
+row. That surface was designed when "linked student" could only mean a student on a case
+they owned — nobody could accept an invitation until MV-194. It is now closed.
+
+The knock-on lands on the **dual-role rule** — *"revoking a membership never removes a
+person's rights over their own student case."* The rule is **intact in substance**: a
+revoked owner keeps exactly a student's reach and loses nothing *because of* the
+revocation, since an active member who is that case's student is denied the same write. But
+a student's reach on an org case is now **read**. Four tests were updated to say that
+explicitly rather than let it pass quietly. **One clause in the trigger reverts it** if the
+founder disagrees.
+
+### Gate — read from the raw log, not the tick
+
+A crashed vitest worker reports as clean, so these are file counts, test counts and
+durations off the log.
+
+| gate | result |
+|---|---|
+| integration | **1132 passed (1132)** across **23 files** in **223.44s**, zero skipped |
+| unit | **4167 / 4168** across 398 files |
+| typecheck | 0 errors |
+| lint | clean |
+
+The one unit failure is the **documented Windows flake**: `no-actor-equals-student.test.ts`
+times out at 5000ms under full-suite load. It passes in isolation — 163/163 alongside the
+two other affected files — and is an environment issue, not this change.
+
+### Owed on merge
+
+The migration is applied to the **local stack only**. `master` auto-deploys but migrations
+do **not** — **check the production ledger after this merges**. The Supabase MCP still needs
+re-authorization, so production policy state is unverified from here.

@@ -285,7 +285,11 @@ describe("getCaseContext — the dual-role rule, end to end against the fixture"
     expect(context.accessScope).toBe("linked");
     expect(context.hasAccess).toBe(true);
     expect(decideCasePermission("case.read", context).allowed).toBe(true);
-    expect(decideCasePermission("case.update", context).allowed).toBe(true);
+    // MV-196: `CASE_A4` is an ORG case, and a student writes none of one. The rule this test is
+    // named for is intact — revocation costs them nothing, because an ACTIVE member who is this
+    // case's student is denied the same write. What they keep is a student's reach, which is
+    // read; what they keep on a case they OWN is unchanged and asserted in permissions.test.ts.
+    expect(decideCasePermission("case.update", context).allowed).toBe(false);
   });
 
   test("…and takes away everything the membership carried", async () => {

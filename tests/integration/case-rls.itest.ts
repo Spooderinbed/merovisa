@@ -827,14 +827,28 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
   // The COLUMN half of the cases write surface (canonical matrix, divergences 2 and 4).
   // cases_update_accessor admits the linked student on the student disjunct; without the
   // section-5a guard the flat column grant then hands them the whole counsellor write surface.
+  // MV-196 narrowed that guard again: on a case a CONSULTANCY owns, a non-staff actor now writes
+  // no column at all. The policy still admits the row on purpose — that is what keeps every
+  // refusal below a 42501 rejection rather than a zero-row update nobody can tell from "absent".
   // Every refusal below is a RAISE with errcode 42501 — a hard rejection, never a silent no-op,
   // so each one is separable from "the row was not found".
   describe("the cases write surface is split by actor, not flat across authenticated", () => {
-    it("lets the linked student edit profile fields on their own case", async () => {
+    it("MV-196: refuses the linked student EVERY column of a consultancy's case", async () => {
+      // This test used to assert the opposite — that the student could edit the case's profile
+      // fields — and that surface was designed at MV-152, when "linked student" could only mean
+      // a student on a case they owned, because no student could accept an invitation until
+      // MV-194. `caseA1` belongs to org A, so under Stage 5 this actor is the case's SUBJECT and
+      // not its author (MV-195 decision D).
+      //
+      // A hard 42501 from the trigger rather than a filtered row: `cases_update_accessor` still
+      // admits the student on the student disjunct, deliberately, so that the refusals in this
+      // block stay REJECTIONS and never become silent no-ops indistinguishable from "not found".
       const renamed = `Student-edited A1 ${stamp}`;
+      const before = await caseField(caseA1, "display_name");
       const { error } = await studentA.client.from("cases").update({ display_name: renamed }).eq("id", caseA1);
-      expect(error, `the student's own profile fields must stay writable: ${error?.message}`).toBeNull();
-      expect(await caseField(caseA1, "display_name")).toBe(renamed);
+      expect(error, "a student writing a consultancy's case must be rejected, not silently applied").not.toBeNull();
+      expect(error!.code).toBe("42501");
+      expect(await caseField(caseA1, "display_name")).toBe(before);
     });
 
     it("refuses the linked student operational_status — the consultancy's own record", async () => {
@@ -893,8 +907,14 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
 
     it("leaves an unrelated edit on an ALREADY-archived case alone", async () => {
       // The reason the guard is a BEFORE UPDATE trigger and not a WITH CHECK: a WITH CHECK sees
-      // only NEW, so `archived_at is null or is_org_admin(...)` would reject this — a student
-      // renaming a case somebody else archived — even though the student changes nothing.
+      // only NEW, so `archived_at is null or is_org_admin(...)` would reject this — somebody
+      // renaming a case an admin archived — even though they change nothing.
+      //
+      // MV-196 moved the ACTOR here from `studentA` to the assigned counsellor. The property
+      // under test is about the trigger's SHAPE (BEFORE UPDATE, comparing OLD to NEW) and needs
+      // an actor who may legitimately write a profile field on this case at all; the student no
+      // longer is one on a consultancy's case, so leaving them here would have re-tested MV-196's
+      // new refusal and stopped testing the OLD-vs-NEW comparison entirely.
       const { error: archived } = await adminA.client
         .from("cases")
         .update({ archived_at: new Date().toISOString() })
@@ -902,7 +922,7 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-152 case-aware RLS against 
       expect(archived).toBeNull();
 
       const renamed = `Renamed while archived ${stamp}`;
-      const { error } = await studentA.client.from("cases").update({ display_name: renamed }).eq("id", caseA1);
+      const { error } = await counsellorA.client.from("cases").update({ display_name: renamed }).eq("id", caseA1);
       expect(error, `an untouched archived_at must not trip the guard: ${error?.message}`).toBeNull();
       expect(await caseField(caseA1, "display_name")).toBe(renamed);
 

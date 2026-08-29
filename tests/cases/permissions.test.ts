@@ -30,7 +30,10 @@ const CARD_GRID: Array<
 > = [
   ["case.list", "all-org", "all-org", "assigned", "deny"],
   ["case.read", "all-org", "all-org", "assigned", "linked"],
-  ["case.update", "all-org", "all-org", "assigned", "linked"],
+  // MV-196: the student column is `linked-personal`, not `linked` — they write the case they
+  // OWN and only read a consultancy's. `case.read` above stays `linked` and that contrast is
+  // the whole of MV-195 decision D, stated as two cells.
+  ["case.update", "all-org", "all-org", "assigned", "linked-personal"],
   ["case.create", "all-org", "all-org", "deny", "deny"],
   ["case.assign", "all-org", "all-org", "deny", "deny"],
   ["case.invite_student", "all-org", "all-org", "assigned", "deny"],
@@ -185,9 +188,17 @@ describe("counsellor — assigned cases only", () => {
 });
 
 describe("student — only the case linked to their Auth user", () => {
-  test("linked student may read and update their own case", () => {
-    expect(decideCasePermission("case.read", studentFacts()).allowed).toBe(true);
-    expect(decideCasePermission("case.update", studentFacts()).allowed).toBe(true);
+  test("linked student may read either case, but update only one they OWN", () => {
+    // MV-196: `case.update` moved from `linked` to `linked-personal`. The link means two things
+    // since MV-194 — a case the student owns, and a consultancy's case they are the subject of —
+    // and only the first carries a write (MV-195 decision D).
+    const consultancys = studentFacts();
+    expect(decideCasePermission("case.read", consultancys).allowed).toBe(true);
+    expect(decideCasePermission("case.update", consultancys).allowed).toBe(false);
+
+    const own = studentFacts({ isOrgCase: false });
+    expect(decideCasePermission("case.read", own).allowed).toBe(true);
+    expect(decideCasePermission("case.update", own).allowed).toBe(true);
   });
 
   test("an actor who is not the linked student holds no student claims", () => {
@@ -372,7 +383,17 @@ describe("the dual-role rule — membership and the student link are additive", 
     const revoked = bothFacts({ membershipStatus: "inactive" });
     expect(deriveCaseGrants(revoked).grants).toEqual([{ role: "student", scope: "linked" }]);
     expect(decideCasePermission("case.read", revoked).allowed).toBe(true);
-    expect(decideCasePermission("case.update", revoked).allowed).toBe(true);
+    // MV-196: they keep EXACTLY a student's rights, and `bothFacts()` is an ORG case — where a
+    // student now reads and writes nothing. The rule is untouched; what a student HOLDS changed.
+    expect(decideCasePermission("case.update", revoked).allowed).toBe(false);
+    // And the contrast that shows the loss is the MEMBERSHIP's and not the student link's: with
+    // the membership active the same actor still updates this case — through the `counsellor`
+    // grant at `assigned`, which is the half revocation legitimately takes away.
+    expect(decideCasePermission("case.update", bothFacts()).allowed).toBe(true);
+    // On the case they OWN, the revoked member still drives it — the half that would make the
+    // rule words only if it ever went away.
+    const ownCase = bothFacts({ membershipStatus: "inactive", isOrgCase: false });
+    expect(decideCasePermission("case.update", ownCase).allowed).toBe(true);
     // But nothing the membership used to carry survives.
     for (const permission of ["case.notes.internal", "case.export", "case.assign"] as const) {
       const decision = decideCasePermission(permission, revoked);
