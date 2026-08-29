@@ -131,13 +131,14 @@ outsider an org-enumeration oracle.
 
 Scopes: **all-org** = every case in the actor's org · **assigned** = only cases
 with a `case_assignments` row for the actor · **linked** = only the case whose
-`student_user_id` is the actor · **—** = never.
+`student_user_id` is the actor · **linked-personal** = the same, narrowed to
+cases with no `organization_id` · **—** = never.
 
 | Permission | Asked about | owner | admin | counsellor | student |
 |---|---|---|---|---|---|
 | `case.list` | **org** | all-org | all-org | assigned | — |
 | `case.read` | case | all-org | all-org | assigned | linked |
-| `case.update` | case | all-org | all-org | assigned | linked¹ |
+| `case.update` | case | all-org | all-org | assigned | linked-personal¹ |
 | `case.create` | **org** | all-org | all-org | — | — |
 | `case.assign` | case | all-org | all-org | — | — |
 | `case.invite_student` | case | all-org | all-org | assigned | — |
@@ -149,12 +150,25 @@ with a `case_assignments` row for the actor · **linked** = only the case whose
 | `org.manage` | **org** | all-org | all-org | — | — |
 | `org.settings` | **org** | all-org | — | — | — |
 
-¹ **Known gap — student permitted fields.** The card specifies "linked (permitted
-fields only)". This layer authorizes the *claim*, not the *field set*: it has no
-field allowlist and does not inspect the payload. A Stage 3 mutation that accepts
-an arbitrary case patch from a student is a defect even though `case.update`
-resolves to allow. The allowlist belongs with that mutation, and the checklist
-above is where it gets caught. Recorded rather than silently implied.
+¹ **MV-196 closed this, and the earlier note here was wrong in a way worth
+recording.** It used to say the gap was a missing *field allowlist* — that
+`case.update` at `linked` was right and only the payload needed narrowing. That
+framing was written when "linked student" could only mean a student on a case
+they owned, because nobody could accept an invitation until MV-194. Once they
+could, `linked` admitted a student to writes on the **consultancy's** case, and a
+measured probe found seven of eight such writes succeeding straight against
+PostgREST. The fix was not an allowlist: on an org-owned case the linked student
+writes **nothing**, so `case.update` requires `linked-personal` and a student on
+an org case simply does not hold it. `case.read` deliberately stays `linked` —
+the student reads the consultancy case (MV-195 decision D).
+
+Two consequences for anyone editing this grid. A student on a personal case holds
+**two** grants (`linked` and `linked-personal`), because `decideCasePermission`
+matches a grant's scope EXACTLY and never by breadth — emitting only the narrow
+one would silently revoke `case.read` on their own case. And the database is the
+real boundary, not this table: `tests/integration/stage5-student-write-boundary.itest.ts`
+pins it, because the anon key ships in client JS and a caller can skip this layer
+entirely.
 
 A personal case (no `organization_id`) satisfies no `all-org` claim at all.
 

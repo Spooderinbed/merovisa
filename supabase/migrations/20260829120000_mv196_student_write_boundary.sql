@@ -81,7 +81,7 @@ comment on function private.actor_writable_case_ids() is
   'policies must keep using actor_case_ids(): the student READS that case (MV-195 decision D).';
 
 -- ---------------------------------------------------------------------------------------
--- The seventeen write policies, re-pointed. Every extra conjunct is preserved verbatim.
+-- The eighteen write policies, re-pointed. Every extra conjunct is preserved verbatim.
 -- ---------------------------------------------------------------------------------------
 
 -- profiles ------------------------------------------------------------------------------
