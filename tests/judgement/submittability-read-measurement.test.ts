@@ -171,15 +171,21 @@ describe("MV-199 — where the rollup lives, and where it does not", () => {
       .split(/\r?\n/)
       .some((line) => re.test(line));
 
-  it("THE GAP: no server-side, case-scoped read reaches the checklist rollup", () => {
-    // `computeReadiness` is called from exactly one place — the student's checklist
-    // VIEW component. Nothing in `lib/cases/` computes it, so the workspace cannot
-    // ask "is this case submittable" without this slice existing.
+  it("THE GAP, NOW CLOSED: exactly one server-side read reaches the rollup, and it LIFTS it", () => {
+    // Measured before the slice: `computeReadiness` was called from exactly one place,
+    // the student's checklist VIEW component, and nothing in `lib/` consumed it — so no
+    // case-scoped read could answer "is this case submittable".
+    //
+    // Inverted rather than deleted, as its own header said it would be (MV-198 set the
+    // precedent). The list is still CLOSED, and that is the point: the slice was allowed
+    // to add one consumer, not a second implementation. If a third name ever appears
+    // here, read it carefully — a rollup computed in two places is two answers.
     const callers = filesUnder(join(root, "lib"), [".ts"]).filter((f) =>
       mentions(f, /computeReadiness/),
     );
     expect(callers.map((f) => f.replace(root, "").replace(/\\/g, "/"))).toEqual([
       "/lib/checklist/readiness.ts",
+      "/lib/judgement/submittability.ts",
     ]);
   });
 

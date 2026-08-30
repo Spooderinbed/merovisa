@@ -115,14 +115,94 @@ for the other**.
 criterion 3's rule cannot be a sort over an existing field, and the order items happen
 to be generated in must not become the rule by accident.
 
+## Criteria 2–3 — BUILT 2026-08-30
+
+`lib/judgement/submittability.ts` (pure) + `readCaseSubmittability` in
+`lib/cases/case-frame.ts` (I/O + staff gate). **34 new tests**, 23 model + 11 reader.
+Gate: typecheck clean, lint clean, **405 files / 4286 tests**.
+
+### The rollup is lifted, not reimplemented
+
+`computeReadiness` supplies every number. The only change to `lib/checklist/readiness.ts`
+is that its `completion` predicate is now **exported**, so the read can say *which* rows
+produced the counts without deciding countability a second time. Two tests keep that
+honest: the counts are asserted equal to `computeReadiness`'s for the same inputs, and
+`rows.length === total` per stage. The measurement's caller-list assertion is **inverted,
+not deleted** — it now pins the list at exactly two names and says why a third would be a
+second answer.
+
+### Which program the read is stated for — the question the card did not anticipate
+
+`generateChecklist` needs a program (a bachelors case needs +2 and SLC/SEE, a
+postgraduate one transcripts) and **`cases` has no program column**. The only signal is
+the shortlist, which carries `shortlisted | applied | withdrawn` and no ordering. So the
+rule is authored, and it refuses rather than guesses:
+
+1. Withdrawn entries are never candidates.
+2. `applied` outranks `shortlisted` — an application is a commitment a save is not.
+3. If every candidate produces the **same** required set, the choice cannot change the
+   answer: the read is stated, and it **names** the lowest-id program it drew its rows and
+   their provenance from, plus how many others it covers.
+4. If the sets differ, the answer would depend on the guess: `programs-differ`.
+
+### The ranking rule (criterion 3)
+
+`BLOCKER_RANK_ORDER` — 18 keys, authored, **ranked by lead time**: what takes longest to
+obtain blocks hardest, because "the single blocking item" answers *what should I chase
+today* and that is never the quickest errand. Apply-stage rows always outrank lodge-stage
+ones, since after-offer evidence cannot be obtained at all until an offer exists.
+
+Two tests carry the weight. One is the discriminator: with the passport uploaded the
+generator's next outstanding row is `national-id`, and the rule must say `english` — if
+array order ever quietly became the rule, that test fails. The other is a **coverage
+guard** across every level × funding source × field × test kind, so a future checklist row
+cannot be required, countable and unranked, sorting silently to last.
+
+### A real gap this exposed, NOT fixed here
+
+**`fin-scholarship` never enters the denominator.** It is `required`, but it carries
+`kind: null` and is not in `CHECKLIST_PLAN_LINKS`, so `completion` returns null and the
+row is uncountable. For a `scholarship-dependent` case the **financial evidence is
+therefore invisible to submittability** — the one requirement most likely to block such a
+case cannot be named as its blocker. Fixing it means giving that row a completion signal
+in `lib/checklist/generator.ts`, which changes the student's checklist too, so it is a
+separate card rather than a quiet edit inside this one.
+
+### Two divergences worth knowing
+
+- **`readCaseSubmittability` takes the whole client**, not `CaseAuthorizationClient`. It
+  calls five repositories that each take the full client; narrowing all five to buy a
+  `Pick` here would touch five modules for nothing. The route hands it `gate.supabase`
+  either way.
+- **It does NOT require a linked student**, unlike `readCaseVisaRisk`. That read scores a
+  student's profile; this one judges documents, which a consultancy-entered case has from
+  the first upload. Abstaining would blank the answer for every case in a consultancy that
+  has not started inviting students — which is all of them on day one.
+
+### Criterion 6, restated with MV-198's correction
+
+The read is **derived, not stored**: no table, no policy to widen, nothing to
+mutation-test. Its six sources are already governed by RLS and already covered by
+`tests/integration/tenant-isolation.itest.ts`. Staff-only is enforced at the read
+(`null`, never a "withheld" panel), and a test proves the withholding is not vacuous.
+
+### Still to build
+
+Criterion 4's rendering, and criteria 7–8 on the surface. **Naming note for that build:**
+`components/workspace/submittability-panel.tsx` is already taken — by the *lodgement*
+panel (its heading is "Lodgement"). The new region needs its own name.
+
 ## Acceptance criteria (firmed 2026-08-30)
 
 1. ~~Measure first.~~ **Done — see above.**
-2. A **server-side, case-scoped** submittability read that lifts `computeReadiness`
+2. ~~A **server-side, case-scoped** submittability read that lifts `computeReadiness`
    rather than reimplementing it, and reads the case's documents **and plan items**.
-   Per-row explainability: a counsellor can see exactly which rows produced the answer.
-3. A **written, tested ranking rule** for the single blocking item — authored, not
-   inherited from array order, and never an `info` row.
+   Per-row explainability: a counsellor can see exactly which rows produced the answer.~~
+   **Done.** The read carries every counted row; the *panel* will render the rollup and
+   the blocker only (criterion 8), so the explainability is in the data and one link away.
+3. ~~A **written, tested ranking rule** for the single blocking item — authored, not
+   inherited from array order, and never an `info` row.~~ **Done —
+   `BLOCKER_RANK_ORDER`.**
 4. Provenance rendered **where it exists and only there** — coverage is partial.
 5. **Not scoring-inert**: each input moves the output, including the plan-linked rows.
 6. Authorized like MV-198's read. **Note the same correction:** this read is derived,

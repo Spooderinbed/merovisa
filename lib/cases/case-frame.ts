@@ -1,10 +1,24 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { planStatesForChecklist } from "@/lib/checklist/plan-links";
+import { listDocumentsForCase } from "@/lib/documents/repo";
+import { listObtainedKinds } from "@/lib/documents/status-repo";
+import { listShortlistForCase } from "@/lib/matches/repo";
+import { listAllPlanForCase } from "@/lib/plan/repo";
 import { selectNextStep, type NextStepSelection } from "@/lib/plan/select";
 import type { PlanItemRow } from "@/lib/plan/types";
 import { getProfileForCase } from "@/lib/profiles/repo";
 import type { ProfileSections } from "@/lib/profiles/sections";
+import { getProgram } from "@/lib/programs/repo";
+import type { Program } from "@/lib/programs/types";
 import { sectionsToStudentProfile } from "@/lib/scoring/from-sections";
+import type { Database } from "@/lib/supabase/types";
 import { deriveVisaRisk, type VisaRiskRead } from "@/lib/judgement/visa-risk";
+import {
+  deriveSubmittability,
+  preferredShortlistTier,
+  type SubmittabilityRead,
+} from "@/lib/judgement/submittability";
 import { listCaseDocumentRequests } from "./document-requests-repo";
 import { deriveLodgement, type LodgementRead } from "./lodgement";
 import { MEMBERSHIP_ROLES, ACTIVE_MEMBERSHIP_STATUS } from "./permissions";
@@ -248,4 +262,79 @@ export async function readCaseVisaRisk(
     hasLinkedStudent: true,
     profile: sectionsToStudentProfile(sections),
   });
+}
+
+/**
+ * One case's submittability read (MV-199, spec §3's second answer).
+ *
+ * The judgement is pure and lives in `lib/judgement/submittability.ts`. This function
+ * owns the four things it cannot see: who may ask, which program the case is pursuing,
+ * what a failed query means, and the fact that the answer depends on `plan_items` as
+ * well as on documents.
+ *
+ * ## Staff-only, and — unlike the visa read — LINK-INDEPENDENT
+ *
+ * `null` for a non-staff viewer, for `readCaseVisaRisk`'s reason: a withheld judgement
+ * panel tells a student that a verdict about them exists and is being kept from them.
+ *
+ * But this read does **not** abstain on an unlinked case. MV-198 does, because it scores
+ * a STUDENT's profile and a consultancy-entered profile with nobody behind it is exactly
+ * the data the spec says not to judge. Submittability judges DOCUMENTS, which a
+ * consultancy-entered case has from the moment a counsellor uploads one — withholding it
+ * would blank the answer for every case in a consultancy that has not started inviting
+ * students yet, which is all of them on day one.
+ *
+ * ## Six sources, one failure
+ *
+ * Every repository below throws on a PostgREST error rather than returning empty (MV-133,
+ * on the case axis), which is what makes one `catch` correct here instead of lossy. An
+ * empty `documents` list wearing a failed read would report a fully-evidenced case as
+ * having uploaded nothing, and a counsellor would chase what the student already sent.
+ *
+ * The shortlist is read FIRST and alone: a case with nothing shortlisted has no program,
+ * and therefore no required set, so the other five round trips would buy nothing.
+ *
+ * ## Why this one takes the whole client
+ *
+ * `CaseAuthorizationClient` is `Pick<…, "from">`, and the sibling reads above satisfy it.
+ * This one calls five repositories that each take the full client; narrowing all five to
+ * gain a `Pick` here would touch five modules to buy nothing, so it asks for what it
+ * needs. The route hands it `gate.supabase`, which is the full client either way.
+ */
+export async function readCaseSubmittability(
+  caseId: string,
+  viewer: { isStaffOnCase: boolean },
+  db: SupabaseClient<Database>,
+): Promise<SubmittabilityRead | null> {
+  if (!viewer.isStaffOnCase) return null;
+
+  try {
+    const candidateIds = preferredShortlistTier(await listShortlistForCase(db, caseId));
+    if (candidateIds.length === 0) return { state: "no-program" };
+
+    const [programs, profileRow, documents, obtainedKinds, planRows] = await Promise.all([
+      Promise.all(candidateIds.map((id) => getProgram(db, id))),
+      getProfileForCase(db, caseId),
+      listDocumentsForCase(db, caseId),
+      listObtainedKinds(db, caseId),
+      listAllPlanForCase(db, caseId),
+    ]);
+
+    return deriveSubmittability({
+      // A shortlisted program that has left the catalogue is not a program this read can
+      // state anything about; if that empties the list, `deriveSubmittability` says so.
+      programs: programs.filter((p): p is Program => p !== null),
+      // `{}` rather than a refusal: an unfilled profile yields the generic financial
+      // branch, which is a thinner answer but a true one.
+      sections: (profileRow?.sections as ProfileSections | null | undefined) ?? {},
+      uploadedKinds: new Set(documents.map((d) => d.kind)),
+      obtainedKinds,
+      // The plan is the completion authority for `CHECKLIST_PLAN_LINKS` rows — the same
+      // mapping the student's checklist uses, so the two surfaces cannot disagree about
+      // whether one of those steps is done.
+      planStates: planStatesForChecklist(planRows),
+    });
+  } catch {
+    return { state: "unavailable" };
+  }
 }
