@@ -58,12 +58,78 @@ document rows (this card). Keep the seam narrow and explicit: MV-198 should cons
 a named function from this slice rather than re-deriving document state, and
 whichever card ships second owns wiring it.
 
-## Sketch of acceptance criteria — to be firmed at Ready
+## Criterion 1 — MEASURED 2026-08-30
 
-1. Measure first: what the checklist and document-status rollups already compute
-   for a case, before adding anything.
-2. A deterministic, server-side submittability rollup with per-row explainability.
-3. A written, tested ranking rule for the single blocking item.
-4. Every blocking item carries `source`/`lastVerified`.
-5. Not scoring-inert: each input moves the output.
-6. Authorized through `checkCasePermission`, denials mutation-tested at both layers.
+`tests/judgement/submittability-read-measurement.test.ts`, **11/11**. Two of my own
+assumptions were wrong and are corrected in the probe; the card's premise **holds,
+and holds harder than it claimed**.
+
+### The premise holds — and half the work is already written
+
+| Claim | Measured |
+|---|---|
+| A truthful **denominator** exists | **Yes.** `generateChecklist` returns `requirement: "required" \| "recommended"` per program |
+| Items carry completion state | **Yes.** `status: "have" \| "obtained" \| "missing" \| "info"` |
+| Items carry provenance | **Partially** — some required rows have `source`/`lastVerified`, some do not |
+| The **rollup** exists | **Yes, already built.** `computeReadiness` is an honest per-stage "X of Y required ready" |
+
+The card said "every input already exists in the database". Stronger than that: the
+*rollup itself* already exists. What does **not** exist is any way for the workspace
+to reach it.
+
+### The gap, stated precisely
+
+`computeReadiness` is called from **exactly one place** — the student's checklist
+**view** component. Nothing in `lib/cases/` computes it, so no case-scoped, server-side
+read can answer "is this case submittable". The probe pins that caller list so the
+slice cannot quietly add a second implementation instead of lifting this one.
+
+Meanwhile `lib/cases/lodgement.ts` — what the workspace *does* read — never mentions
+the checklist. **So there are two unrelated notions of "outstanding" in this codebase:**
+
+1. **what a counsellor asked for** — `case_document_requests`, no denominator. This is
+   why `submittability-panel.tsx` says in its own header that there is no "documents
+   needed" anywhere: true of its source, not of the codebase.
+2. **what the program requires** — the checklist, with a denominator and provenance.
+
+Reconciling those two is this slice's real work, and **neither may silently stand in
+for the other**.
+
+### Three findings that constrain the build
+
+1. **`readyToApplyNow` means ready to APPLY, not ready to LODGE.** It is scoped to the
+   `now` stage and deliberately ignores `after-offer` — the visa-stage documents. The
+   card is about *submittability*, so reusing this flag under a lodgement heading
+   would overclaim. Measured: with every `now` requirement met it reports `true`
+   while after-offer rows are still outstanding.
+2. **The rollup depends on PLAN state, not only documents.** Rows in
+   `CHECKLIST_PLAN_LINKS` complete only when their linked plan action is `done`, so
+   uploading every now-stage document still leaves `readyToApplyNow === false`. A
+   case-scoped version must read `plan_items` too.
+3. **A "required" row is not always a document.** Some carry `kind: null` and
+   `status: "info"` — a step or note that cannot be uploaded and has no completion
+   signal. They must not enter a denominator, and they cannot ever be the blocker.
+
+**And the thing that has to be authored:** there is **no ranking signal on a
+`ChecklistItem`** — no `rank`, `priority`, `order`, `weight` or `severity`. So
+criterion 3's rule cannot be a sort over an existing field, and the order items happen
+to be generated in must not become the rule by accident.
+
+## Acceptance criteria (firmed 2026-08-30)
+
+1. ~~Measure first.~~ **Done — see above.**
+2. A **server-side, case-scoped** submittability read that lifts `computeReadiness`
+   rather than reimplementing it, and reads the case's documents **and plan items**.
+   Per-row explainability: a counsellor can see exactly which rows produced the answer.
+3. A **written, tested ranking rule** for the single blocking item — authored, not
+   inherited from array order, and never an `info` row.
+4. Provenance rendered **where it exists and only there** — coverage is partial.
+5. **Not scoring-inert**: each input moves the output, including the plan-linked rows.
+6. Authorized like MV-198's read. **Note the same correction:** this read is derived,
+   not stored, so criterion 6's "denials mutation-tested at both layers" applies to
+   its *sources* (`documents`, `plan_items`), which RLS already governs — there is no
+   new policy to widen. Staff-only is enforced at the read.
+7. **Apply-stage and lodge-stage are stated separately.** The panel may not collapse
+   them into one word.
+8. Do not restate the checklist. The differentiated output is the rollup and the
+   single blocker.
