@@ -17,8 +17,16 @@ export interface ChecklistReadiness {
  * enter the denominator. Vault rows are done when uploaded ("have") or self-reported
  * ("obtained"); plan-mirrored rows (kind null, key in CHECKLIST_PLAN_LINKS) are done when
  * the linked plan action is "done"; pure-info reference rows have no completion signal.
+ *
+ * Exported for MV-199, which needs the same verdict PER ROW to name a blocking item.
+ * `computeReadiness` remains the counts authority — the submittability read takes its
+ * numbers from there and its rows from here, and a test asserts the two agree, so a
+ * second denominator can never quietly grow beside this one.
  */
-function completion(item: ChecklistItem, planStates: Record<string, LinkedPlanState>): boolean | null {
+export function completion(
+  item: ChecklistItem,
+  planStates: Record<string, LinkedPlanState>,
+): boolean | null {
   if (item.requirement !== "required") return null;
   if (item.kind !== null) return item.status === "have" || item.status === "obtained";
   if (item.key in CHECKLIST_PLAN_LINKS) return planStates[item.key] === "done";

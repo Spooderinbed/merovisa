@@ -67,6 +67,8 @@ vi.mock("@/lib/cases/case-frame", () => ({
   // question it asks (what the ROUTES decide) rather than pulling a judgement into
   // it; what the read SAYS is `tests/cases/case-visa-risk-read.test.ts`.
   readCaseVisaRisk: async () => null,
+  // MV-199, for the same reason and in the same shape.
+  readCaseSubmittability: async () => null,
 }));
 
 /**
