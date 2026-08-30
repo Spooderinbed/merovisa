@@ -109,6 +109,78 @@ thinner, so it reports the weaker `none-outstanding` rather than claiming `clear
 batched inputs are genuinely thinner, a queue-side derive that says *less* is the honest
 answer, not a bug.
 
+## Criteria 2–5, 7–8 — BUILT 2026-08-30
+
+`lib/cases/caseload-judgement-repo.ts` (batched), wired through `listCaseQueue` into two
+new queue columns. **23 new tests** (13 repo + 10 columns). Gate: typecheck clean, lint
+clean, **409 files / 4338 tests**.
+
+### The cost decision, realised
+
+`listCaseJudgementsByCase` answers for a whole page in queries bounded by tables: five
+chunked `.in("case_id", …)` reads plus one catalogue read. Measured on a three-case
+fixture: **6 queries, not 21.** Chunk sizes are split — 40 for the one-row-per-case reads
+(`profiles`, `user_program_state`), 10 for the unbounded ones (`documents`,
+`document_status`, `plan_items`) — and every read trips into `lookup-failed` at
+`JUDGEMENT_ROW_CEILING` rather than trusting a possibly-truncated answer, because none of
+them has a database-side filter to bound it.
+
+### One judgement, two callers (criterion 3)
+
+The visa read's emptiness rule used to live inside `readCaseVisaRisk`. It is now
+`visaRiskFromSections` in `lib/judgement/visa-risk.ts`, so the per-case reader and the
+batched one reach the same answer through the same function; `deriveSubmittability` and
+`preferredShortlistTier` were already pure and are called unchanged. **A test asserts the
+batched answers equal the per-case readers' answers row for row** — that is criterion 3
+proved rather than asserted.
+
+### Why the queue now issues TWO plan reads
+
+The judgement read carries **no status filter**, because a checklist requirement completes
+when its linked plan item is `done` and the queue's own read is `status = 'todo'`. Reading
+every status once and filtering in memory would save a round trip and **couple two
+deliberately different failure semantics**: a failed plan read fails the *whole* queue
+(it decides attention tiers, and a queue rendered without it is silently misordered),
+while a failed judgement read marks only its own two columns. Merging would promote a
+judgement outage into a blank queue — resilience traded for a round trip.
+
+This **narrowed an existing test**: `queue-repo.test.ts` used to assert "done and
+dismissed rows never leave the database", which is no longer true of the queue as a whole.
+It now defends the still-true, narrower property — the read that feeds the *next action*
+asks for open items only — with the reasoning recorded in the test.
+
+### The columns
+
+`Visa read` and `Evidence`, beside `Lodgement`. The table had **reserved this slot** with
+a rule — *"forty rows of 'Coming soon' is worse than no column"* — and that rule now
+governs how an unstateable read renders: a plain sentence, never a placeholder band. Only
+`reach` is tinted, which is the sibling Lodgement cell's restraint and holds for its
+reason: forty coloured rows is a decorated table, not a scannable one.
+
+The Evidence cell reads `2 of 6 to apply`. **"to apply" is load-bearing** — MV-199's
+criterion 7 forbids collapsing the apply and lodge stages, and a bare "2 of 6" under a
+column called Evidence reads as a statement about the whole case. The lodge count is
+deliberately absent: two fractions in one dense cell is a dashboard, and the panel states
+both.
+
+### Criterion 5, narrowed deliberately
+
+Both sorts exist and are validated (`QUEUE_SORTS`, `QUEUE_SORT_LABELS`), and the parse
+guard is now derived from that list rather than a hand-written union a new sort could
+silently fail to join. **No sort control was added** — and none exists today: all three
+pre-existing sorts (`attention`, `name`, `updated`) are URL-only. Building the product's
+first sort control is design investment the card explicitly refuses; the two new sorts are
+exactly as reachable as the three already shipped. **No new filter facets** either, for
+criterion 8's reason.
+
+### NOT VERIFIED — the layout
+
+No live browser pass; the pane cannot be displayed in a non-interactive session. Every
+class used is one the sibling cell already uses and no new CSS was written. **The specific
+thing left open:** the queue table went from five columns to seven (six for a counsellor).
+It scrolls inside `overflow-x-auto` and flattens below `md`, so nothing should break — but
+column crowding at `md`–`lg` is unconfirmed by pixels and is the first thing to look at.
+
 ## Acceptance criteria (firmed 2026-08-30)
 
 1. ~~Measure first.~~ **Done — see above.**

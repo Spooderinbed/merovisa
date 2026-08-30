@@ -252,13 +252,32 @@ describe("listCaseQueue — plan-item enrichment", () => {
     expect(rowById(result, CASE_1).nextStep.state).toBe("caught-up");
   });
 
-  test("only OPEN items are read — done and dismissed rows never leave the database", async () => {
+  test("the NEXT-ACTION plan read still asks only for open items", async () => {
+    // MV-200 NARROWED this test, and the narrowing is the finding rather than a
+    // concession. It used to say "done and dismissed rows never leave the database",
+    // and that is no longer true of the queue as a whole: the judgement enrichment
+    // reads plan items of EVERY status, because `planStatesForChecklist` completes a
+    // checklist requirement when its linked plan item is `done`, and a todo-filtered
+    // read contains no `done` row by construction.
+    //
+    // WHY THEY ARE TWO READS RATHER THAN ONE WIDER ONE. Reading every status once and
+    // filtering in memory would be a round trip cheaper — and would couple two
+    // deliberately different failure semantics. A failed PLAN read fails the whole
+    // queue, because it decides attention tiers and a queue rendered without it is
+    // silently MISORDERED. A failed JUDGEMENT read marks only its own two columns.
+    // Merging them would promote a judgement outage into a blank queue: resilience
+    // traded for a round trip.
+    //
+    // So what survives here is the narrower, still-true property: the read that feeds
+    // the next action asks the database for open items only.
     const { client, queries } = fakeCaseDb(orgFixture());
     await listCaseQueue(ACTOR, ORG_A, "all-org", client);
 
-    const planReads = queries.filter((q) => q.table === "plan_items");
-    expect(planReads.length).toBeGreaterThan(0);
-    for (const read of planReads) {
+    const openReads = queries.filter(
+      (q) => q.table === "plan_items" && q.filters.some(([column]) => column === "status"),
+    );
+    expect(openReads.length).toBeGreaterThan(0);
+    for (const read of openReads) {
       expect(read.filters).toContainEqual(["status", "todo"]);
     }
   });
@@ -314,7 +333,15 @@ describe("listCaseQueue — batching", () => {
 
     expect(queries.filter((q) => q.table === "case_assignments")).toHaveLength(1);
     expect(queries.filter((q) => q.table === "organization_memberships")).toHaveLength(1);
-    expect(queries.filter((q) => q.table === "plan_items")).toHaveLength(1);
+    // TWO plan reads since MV-200, not one per case: the next-action read (open items
+    // only) and the judgement read (every status). The property this test defends is
+    // per-TABLE, not exactly-one-query — the test below proves adding cases adds no
+    // queries, which is the half that actually bounds the cost.
+    expect(queries.filter((q) => q.table === "plan_items")).toHaveLength(2);
+    // The judgement enrichment's own five reads, each once for the whole page.
+    for (const table of ["profiles", "user_program_state", "documents", "document_status"]) {
+      expect(queries.filter((q) => q.table === table)).toHaveLength(1);
+    }
   });
 
   test("past QUEUE_BATCH_SIZE cases, the id list is chunked and every case is still enriched", async () => {

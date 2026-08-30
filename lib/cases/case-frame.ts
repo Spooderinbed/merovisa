@@ -11,9 +11,8 @@ import { getProfileForCase } from "@/lib/profiles/repo";
 import type { ProfileSections } from "@/lib/profiles/sections";
 import { getProgram } from "@/lib/programs/repo";
 import type { Program } from "@/lib/programs/types";
-import { sectionsToStudentProfile } from "@/lib/scoring/from-sections";
 import type { Database } from "@/lib/supabase/types";
-import { deriveVisaRisk, type VisaRiskRead } from "@/lib/judgement/visa-risk";
+import { visaRiskFromSections, type VisaRiskRead } from "@/lib/judgement/visa-risk";
 import {
   deriveSubmittability,
   preferredShortlistTier,
@@ -254,14 +253,10 @@ export async function readCaseVisaRisk(
     return { state: "unavailable" };
   }
 
-  if (sections === null || Object.keys(sections).length === 0) {
-    return { state: "insufficient-data" };
-  }
-
-  return deriveVisaRisk({
-    hasLinkedStudent: true,
-    profile: sectionsToStudentProfile(sections),
-  });
+  // MV-200 extracted the rest into `visaRiskFromSections`, so the caseload rollup —
+  // which reads `profiles` for a whole page in one batched query — reaches this answer
+  // through the same function instead of restating the emptiness rule beside it.
+  return visaRiskFromSections({ hasLinkedStudent: true, sections });
 }
 
 /**

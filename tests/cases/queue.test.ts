@@ -38,6 +38,11 @@ function qc(overrides: Partial<QueueCase> = {}): QueueCase {
     operationalStatus: "in_progress",
     hasLinkedStudent: true,
     archivedAt: null,
+    // MV-200's two columns default to `unavailable` here, because these tests are about
+    // the attention sort and the facets — neither of which reads a judgement. A test
+    // that cares supplies its own.
+    visaRisk: { state: "unavailable" },
+    submittability: { state: "unavailable" },
     updatedAt: "2026-08-01T00:00:00.000Z",
     assignment: ASSIGNED,
     nextStep: { state: "caught-up", item: null, openCount: 0, waitingCount: 0 },

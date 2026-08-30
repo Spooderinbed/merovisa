@@ -58,6 +58,12 @@ export function CaseQueueRow({
         </span>
       </th>
       <td className="py-1 pr-4 align-middle max-md:block max-md:py-1">
+        <VisaRiskCell read={row.visaRisk} />
+      </td>
+      <td className="py-1 pr-4 align-middle max-md:block max-md:py-1">
+        <EvidenceCell read={row.submittability} />
+      </td>
+      <td className="py-1 pr-4 align-middle max-md:block max-md:py-1">
         <LodgementCell read={row.lodgement} />
       </td>
       <td className="py-1 pr-4 align-middle max-md:block max-md:py-1">
@@ -134,6 +140,111 @@ function LodgementCell({ read }: { read: QueueCase["lodgement"] }) {
           · {read.blocker.title}
         </span>
       ) : null}
+    </span>
+  );
+}
+
+/**
+ * A cell that could not state its read (MV-200). One wording for both columns, because
+ * two would let one drift into sounding like an answer — and the table's own rule is
+ * that a read with nothing to say gets a plain sentence, never a placeholder band.
+ */
+function CouldNotSay({ testId, title }: { testId: string; title: string }) {
+  return (
+    <span
+      data-testid={testId}
+      className="block max-w-[28ch] truncate text-meta text-ink-soft"
+      title={title}
+    >
+      Couldn&apos;t check
+    </span>
+  );
+}
+
+/**
+ * A sentence that is a real answer, but not a band — no tint, no pill.
+ *
+ * The test id rides every state, not just the stateable ones, so a cell can be asserted
+ * on without the assertion having to know in advance which answer it holds.
+ */
+function PlainState({ testId, children }: { testId: string; children: React.ReactNode }) {
+  return (
+    <span data-testid={testId} className="block max-w-[28ch] truncate text-meta text-ink-soft">
+      {children}
+    </span>
+  );
+}
+
+/**
+ * The Visa read cell (MV-200) — the band word, and nothing else.
+ *
+ * ONLY `reach` is tinted, which is the sibling Lodgement cell's rule and holds here for
+ * its reason: forty coloured rows is a decorated table, not a scannable one. The WORD
+ * separates Strong from Possible on every row; the tint is reserved for the one a
+ * counsellor should stop at.
+ *
+ * No conclusion sentence and no factor rows — the panel on the case page is where the
+ * read is explained, and a queue that repeated it would be a worse version of it.
+ */
+function VisaRiskCell({ read }: { read: QueueCase["visaRisk"] }) {
+  if (read.state === "unavailable") {
+    return <CouldNotSay testId="queue-visa-risk" title="We couldn't read this case's profile." />;
+  }
+  // Neither of these is a low-risk case; both are the absence of a case to read, and
+  // the words say which absence it is.
+  if (read.state === "no-linked-student") {
+    return <PlainState testId="queue-visa-risk">No linked student</PlainState>;
+  }
+  if (read.state === "insufficient-data") {
+    return <PlainState testId="queue-visa-risk">Not enough recorded</PlainState>;
+  }
+
+  return (
+    <span
+      data-testid="queue-visa-risk"
+      className={`block whitespace-nowrap text-meta ${read.band === "reach" ? "text-reach" : "text-ink-soft"}`}
+    >
+      {VISA_BAND_WORD[read.band]}
+    </span>
+  );
+}
+
+const VISA_BAND_WORD: Record<"strong" | "possible" | "reach", string> = {
+  strong: "Strong",
+  possible: "Possible",
+  reach: "Reach",
+};
+
+/**
+ * The Evidence cell (MV-200) — the apply-stage count and the one item blocking it.
+ *
+ * "to apply" is load-bearing, not filler. MV-199's criterion 7 forbids collapsing the
+ * apply and lodge stages, and a bare "2 of 6" under a column called Evidence reads as a
+ * statement about the whole case. The lodge-stage count is deliberately absent: two
+ * fractions in one dense cell is a dashboard, and the panel states both.
+ */
+function EvidenceCell({ read }: { read: QueueCase["submittability"] }) {
+  if (read.state === "unavailable") {
+    return <CouldNotSay testId="queue-evidence" title="We couldn't check this case's requirements." />;
+  }
+  if (read.state === "no-program") return <PlainState testId="queue-evidence">No program</PlainState>;
+  if (read.state === "programs-differ") {
+    return <PlainState testId="queue-evidence">Programs differ</PlainState>;
+  }
+
+  return (
+    <span
+      data-testid="queue-evidence"
+      className="flex max-w-[32ch] items-center gap-2 overflow-hidden"
+    >
+      <span className="shrink-0 whitespace-nowrap text-meta text-ink-soft">
+        {read.apply.ready} of {read.apply.total} to apply
+      </span>
+      {read.blocker === null ? null : (
+        <span className="min-w-0 truncate text-meta text-ink-soft" title={read.blocker.label}>
+          · {read.blocker.label}
+        </span>
+      )}
     </span>
   );
 }

@@ -27,8 +27,17 @@ export function CaseQueueTable({
               Student
             </th>
             {/* Stage 4 shipped the data, so the column is available (spec §2). The
-                visa read's column stays omitted entirely until its stage ships —
-                forty rows of "Coming soon" is worse than no column. */}
+                visa read's column was held open here with the rule "forty rows of
+                'Coming soon' is worse than no column" — MV-200 ships its stage, so the
+                two judgement columns arrive with real reads and that rule now governs
+                how they render an answer they could not make: a plain sentence, never
+                a placeholder band. */}
+            <th scope="col" className="py-2 pr-4 text-meta font-medium text-ink-soft">
+              Visa read
+            </th>
+            <th scope="col" className="py-2 pr-4 text-meta font-medium text-ink-soft">
+              Evidence
+            </th>
             <th scope="col" className="py-2 pr-4 text-meta font-medium text-ink-soft">
               Lodgement
             </th>

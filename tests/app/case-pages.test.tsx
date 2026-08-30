@@ -571,6 +571,10 @@ describe("the student list grows MV-171's entry points", () => {
           assignment: null,
           nextStep: { state: "caught-up", item: null, openCount: 0, waitingCount: 0 },
           lodgement: { state: "none-outstanding" },
+          // MV-200: the row shape gained two judgement columns. This test is about the
+          // link target, so both make no claim.
+          visaRisk: { state: "unavailable" },
+          submittability: { state: "unavailable" },
         },
       ],
       members: [],

@@ -148,8 +148,11 @@ describe("MV-200 — the precedent the queue already set", () => {
     // in chunked `.in()` queries and derives per row. So the shape MV-200 needs is not
     // an invention — it is the shape three enrichments already use.
     const repo = read("lib", "cases", "queue-repo.ts");
-    expect(/readCaseAssignee|readCaseNextStep|readCaseLodgement|readCaseVisaRisk/.test(repo)).toBe(false);
-    expect(/\.in\("case_id"/.test(repo)).toBe(true);
+    // In CODE, not in prose: the repo's header now EXPLAINS why it does not re-gate per
+    // row by naming `readCaseVisaRisk`, and a raw substring scan reads that mention as
+    // a call. Same trap this file hit on the queue table, one file over.
+    expect(inCode(repo, /readCaseAssignee|readCaseNextStep|readCaseLodgement|readCaseVisaRisk/)).toBe(false);
+    expect(inCode(repo, /\.in\("case_id"/)).toBe(true);
   });
 
   it("a batched enrichment gets its OWN derive when it can say less — and says so", () => {
@@ -182,26 +185,44 @@ describe("MV-200 — the precedent the queue already set", () => {
       .filter((line) => !/^\s*\/\//.test(line))
       .some((line) => re.test(line));
 
-  it("THE GAP: no queue row carries either judgement today", () => {
-    // Expected to fail once the slice ships — replace with a positive assertion about
-    // the new columns rather than deleting it (MV-198 and MV-199 both did exactly that).
-    expect(inCode(read("lib", "cases", "queue.ts"), /VisaRisk|Submittability|visaRisk|submittability/)).toBe(false);
-    expect(inCode(read("components", "workspace", "case-queue-table.tsx"), /[Vv]isa|[Ss]ubmittab|[Ee]vidence/)).toBe(false);
+  it("THE GAP, NOW CLOSED: every queue row carries both judgements, and neither is re-derived", () => {
+    // Measured before the slice: no queue row carried either judgement, and no workspace
+    // surface named one. Inverted rather than deleted, as its own header said it would
+    // be (MV-198 and MV-199 both did exactly that).
+    //
+    // The positive half is that `QueueCase` now carries both reads. The half that still
+    // matters is an ABSENCE: the queue must consume them, never compute them. A queue
+    // module that reached for `deriveVisaRisk` or `deriveSubmittability` would be a
+    // second derivation — the exact thing criterion 3 forbids — so the rollup may only
+    // arrive through the batched repository.
+    const queue = read("lib", "cases", "queue.ts");
+    expect(inCode(queue, /visaRisk: VisaRiskRead/)).toBe(true);
+    expect(inCode(queue, /submittability: SubmittabilityRead/)).toBe(true);
+    expect(inCode(queue, /deriveVisaRisk|deriveSubmittability|generateChecklist/)).toBe(false);
+
+    const repo = read("lib", "cases", "queue-repo.ts");
+    expect(inCode(repo, /listCaseJudgementsByCase/)).toBe(true);
+    expect(inCode(repo, /deriveVisaRisk|deriveSubmittability/)).toBe(false);
+
+    expect(inCode(read("components", "workspace", "case-queue-table.tsx"), /Visa read/)).toBe(true);
   });
 
-  it("…but the table RESERVED the column, and wrote down the rule for it", () => {
-    // Found by this probe, and it changes the build: `case-queue-table.tsx` already
-    // carries a comment holding the slot open, exactly as `case-decision-strip.tsx` held
-    // MV-198's panel slot since MV-183. It also states the rule this slice inherits:
+  it("…the table had RESERVED the column, and the RULE it reserved it with survives", () => {
+    // Found by this probe before the build, and it shaped it: `case-queue-table.tsx`
+    // already held the slot open, exactly as `case-decision-strip.tsx` held MV-198's
+    // panel slot since MV-183 — and it stated the rule this slice inherits:
     //
-    //   "The visa read's column stays omitted entirely until its stage ships — forty
-    //    rows of 'Coming soon' is worse than no column."
+    //   "forty rows of 'Coming soon' is worse than no column"
     //
-    // So the column is not a free-form design decision, and the honest handling of a
-    // read that cannot be stated is already decided: omit, never placeholder.
+    // The reservation is now redeemed, so the "stays omitted until its stage ships" half
+    // is spent. The RULE is not: it is what makes a read the slice cannot state render as
+    // a plain sentence rather than a placeholder band, and it has to outlive the comment
+    // that introduced it.
     const table = read("components", "workspace", "case-queue-table.tsx");
-    expect(/visa read's column stays omitted entirely until its stage ships/.test(table)).toBe(true);
     expect(/Coming soon[\s\S]*is worse than no column/.test(table)).toBe(true);
+    // And the rule is obeyed rather than merely quoted: the words are in the comment and
+    // nowhere in what the table renders.
+    expect(inCode(table, /Coming soon/)).toBe(false);
   });
 });
 

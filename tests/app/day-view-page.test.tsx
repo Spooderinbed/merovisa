@@ -63,6 +63,10 @@ function qc(overrides: Partial<QueueCase> = {}): QueueCase {
     hasLinkedStudent: true,
     archivedAt: null,
     updatedAt: "2026-08-01T00:00:00.000Z",
+    // MV-200: `unavailable` by default — this file asks what the PAGE decides, and no
+    // decision here reads a judgement.
+    visaRisk: { state: "unavailable" },
+    submittability: { state: "unavailable" },
     assignment: ASSIGNED,
     nextStep: { state: "caught-up", item: null, openCount: 0, waitingCount: 0 },
     // MV-183: display-only, and the sort does not read it — the default keeps every
