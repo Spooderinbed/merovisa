@@ -186,11 +186,66 @@ mutation-test. Its six sources are already governed by RLS and already covered b
 `tests/integration/tenant-isolation.itest.ts`. Staff-only is enforced at the read
 (`null`, never a "withheld" panel), and a test proves the withholding is not vacuous.
 
-### Still to build
+## Criteria 4, 7–8 — BUILT 2026-08-30
 
-Criterion 4's rendering, and criteria 7–8 on the surface. **Naming note for that build:**
-`components/workspace/submittability-panel.tsx` is already taken — by the *lodgement*
-panel (its heading is "Lodgement"). The new region needs its own name.
+`components/workspace/evidence-panel.tsx`, wired into `case-decision-strip.tsx` and the
+case overview. **18 new panel tests.** Gate: typecheck clean, lint clean,
+**406 files / 4304 tests**.
+
+### The strip now holds three regions where spec §3 names two
+
+MV-199's read *is* the spec's "submittability read" in substance — what the program and
+DHA **require**, with a denominator. The panel already holding that filename reads
+`case_document_requests` — what a counsellor thought to **ask for**, which has none — and
+renders under the honest heading "Lodgement".
+
+Both are true, and neither implies the other: a case can have every requested document in
+hand and still be missing a requirement nobody thought to request. Collapsing them would
+drop one of those facts, so they sit adjacent — visa read, then the requirement rollup,
+then the chase list. The new file is `evidence-panel.tsx` (heading **"Evidence"**), a
+deliberate divergence from spec §4's component inventory, because the name it lists is
+occupied by a different answer.
+
+### The percentage spec §3 banned — and the condition it was banned under
+
+Spec §3: *"No completion percentage unless Stage 4 establishes a truthful denominator."*
+Stage 4 never did, and `submittability-panel.tsx` still renders no total. **The checklist
+always did**, and this panel renders it: `2 of 6 ready` per stage.
+
+Still no percentage, no bar, no score — and the panel **names what the total is for**,
+because a denominator is program-conditional. A fraction of a named set is a fact; a
+percentage of it invites comparison between cases whose sets differ. The lodgement
+panel's header comment claimed there was no "documents needed" *anywhere*; that was only
+ever true of its own source and is now visibly untrue, so it is corrected in place — with
+the rule it was justifying left standing, since a requirement nobody requested is still
+not an outstanding request.
+
+### The panel leads with no word at all, deliberately
+
+Both neighbours open with one word in a tinted pill. This one cannot: **any single word
+would be exactly the collapse criterion 7 forbids.** A case ready to apply is routinely
+nowhere near ready to lodge, so the two stages get one line each and the panel has no
+band. A test asserts the absence, so a future "tidy-up" that adds one has to argue with it.
+
+The blocker carries its stage with it — "Blocking the application" vs "Blocking
+lodgement" — because chase the IELTS scorecard and chase the CoE are different
+instructions and the second is impossible before an offer exists.
+
+Criterion 1's second gap assertion is **inverted, not deleted**: `components/workspace`
+still may not compute a rollup (the panel takes a `SubmittabilityRead` and never touches
+the checklist), and two positive assertions now pin that the panel and the wiring exist —
+without them the absence would pass again the day the panel were deleted.
+
+### NOT VERIFIED — the layout
+
+No live browser pass. The pane cannot be displayed in a non-interactive session, and the
+page is a server component behind consultancy auth. Every class used is one an adjacent
+shipped panel already uses, and no new CSS was written.
+
+**The one specific thing this leaves unconfirmed:** the strip is `lg:grid-cols-2` and now
+has three children, so at `lg` the third panel wraps to a second row at half width. That
+is deliberate (no grid change means no new layout risk) but it is unconfirmed by pixels,
+and a three-across or a spanning row may read better. Worth one look before pilot.
 
 ## Acceptance criteria (firmed 2026-08-30)
 
@@ -203,13 +258,19 @@ panel (its heading is "Lodgement"). The new region needs its own name.
 3. ~~A **written, tested ranking rule** for the single blocking item — authored, not
    inherited from array order, and never an `info` row.~~ **Done —
    `BLOCKER_RANK_ORDER`.**
-4. Provenance rendered **where it exists and only there** — coverage is partial.
-5. **Not scoring-inert**: each input moves the output, including the plan-linked rows.
+4. ~~Provenance rendered **where it exists and only there** — coverage is partial.~~
+   **Done.** The blocking item cites its source when the requirement carries one, and
+   makes no sourced claim when it does not.
+5. ~~**Not scoring-inert**: each input moves the output, including the plan-linked
+   rows.~~ **Done** — proved in the model and again through the I/O path.
 6. Authorized like MV-198's read. **Note the same correction:** this read is derived,
    not stored, so criterion 6's "denials mutation-tested at both layers" applies to
    its *sources* (`documents`, `plan_items`), which RLS already governs — there is no
    new policy to widen. Staff-only is enforced at the read.
-7. **Apply-stage and lodge-stage are stated separately.** The panel may not collapse
-   them into one word.
-8. Do not restate the checklist. The differentiated output is the rollup and the
-   single blocker.
+7. ~~**Apply-stage and lodge-stage are stated separately.** The panel may not collapse
+   them into one word.~~ **Done** — and the panel therefore leads with no word at all.
+8. ~~Do not restate the checklist. The differentiated output is the rollup and the
+   single blocker.~~ **Done** — the counted rows travel in the read and are not rendered.
+
+**All eight are met.** Ready for review; the one unverified thing is the strip's layout
+at `lg`, named above.

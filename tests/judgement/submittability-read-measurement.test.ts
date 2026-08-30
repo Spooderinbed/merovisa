@@ -171,6 +171,18 @@ describe("MV-199 — where the rollup lives, and where it does not", () => {
       .split(/\r?\n/)
       .some((line) => re.test(line));
 
+  /**
+   * The same scan over CODE only. These files explain themselves at length, and the
+   * invariant below is about what a workspace surface COMPUTES — a panel that names
+   * `computeReadiness` in its header to say it deliberately does not call it would
+   * otherwise fail the assertion for saying so.
+   */
+  const mentionsInCode = (file: string, re: RegExp) =>
+    readFileSync(file, "utf8")
+      .split(/\r?\n/)
+      .filter((line) => !/^\s*(\/\/|\/?\*)/.test(line))
+      .some((line) => re.test(line));
+
   it("THE GAP, NOW CLOSED: exactly one server-side read reaches the rollup, and it LIFTS it", () => {
     // Measured before the slice: `computeReadiness` was called from exactly one place,
     // the student's checklist VIEW component, and nothing in `lib/` consumed it — so no
@@ -189,18 +201,31 @@ describe("MV-199 — where the rollup lives, and where it does not", () => {
     ]);
   });
 
-  it("THE GAP: no workspace surface renders a checklist rollup or a blocker", () => {
-    // Expected to fail once the slice ships — replace with a positive assertion
-    // about the new surface rather than deleting it (MV-198 did exactly that).
+  it("THE GAP, NOW CLOSED: the workspace states the rollup, and states it in ONE place", () => {
+    // Measured before the slice: no workspace surface rendered a checklist rollup or a
+    // blocker at all. Inverted rather than deleted, as its own header said it would be.
+    //
+    // The panel takes a `SubmittabilityRead` and never touches the checklist itself, so
+    // the assertion is still an absence in `components/workspace` — a panel that reached
+    // for `generateChecklist` would be deriving the answer next to the surface, where no
+    // test of the judgement can see it.
     const offenders: string[] = [];
     for (const dir of ["components/workspace", join("app", "(app)", "workspace")]) {
       for (const file of filesUnder(join(root, dir), [".tsx", ".ts"])) {
-        if (mentions(file, /computeReadiness|generateChecklist|ChecklistItem/)) {
+        if (mentionsInCode(file, /computeReadiness|generateChecklist|ChecklistItem/)) {
           offenders.push(file.replace(root, "").replace(/\\/g, "/"));
         }
       }
     }
     expect(offenders).toEqual([]);
+
+    // And the surface exists: exactly one panel renders the read, and the overview wires
+    // it in. Without these two lines the block above would pass again the day the panel
+    // were deleted, which is the failure mode an absence-only assertion always has.
+    const panel = join(root, "components", "workspace", "evidence-panel.tsx");
+    expect(mentions(panel, /SubmittabilityRead/)).toBe(true);
+    const overview = join(root, "app", "(app)", "workspace", "[organizationId]", "students", "[caseId]", "page.tsx");
+    expect(mentions(overview, /readCaseSubmittability/)).toBe(true);
   });
 
   it("the workspace's existing lodgement read sees document REQUESTS and nothing else", () => {

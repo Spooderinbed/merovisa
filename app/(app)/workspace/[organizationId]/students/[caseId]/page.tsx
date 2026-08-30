@@ -4,6 +4,7 @@ import {
   readCaseAssignee,
   readCaseLodgement,
   readCaseNextStep,
+  readCaseSubmittability,
   readCaseVisaRisk,
 } from "@/lib/cases/case-frame";
 import { caseRouteBase, openCaseRoute } from "@/lib/cases/case-route";
@@ -21,8 +22,9 @@ import { StaffReference } from "@/components/workspace/staff-reference";
 /**
  * The case overview — spec §3's three zones, in order:
  *
- * 1. **Decision strip** — the visa read and the lodgement read. MV-183 shipped the
- *    lodgement half; MV-198 ships the visa half, and the strip is now whole.
+ * 1. **Decision strip** — the visa read, the evidence read and the lodgement read.
+ *    MV-183 shipped the chase list, MV-198 the visa half, MV-199 the requirement
+ *    rollup that gives the strip its first truthful denominator.
  * 2. **Primary work area** — the unlinked case's invitation prompt, then exactly
  *    one next action.
  * 3. **Operational rail** — status, assignment, linkage, and the way into Case
@@ -84,6 +86,15 @@ export default async function CaseOverviewPage({
     { isStaffOnCase: viewerIsStaff, hasLinkedStudent: caseRow.hasLinkedStudent },
     gate.supabase,
   );
+  // MV-199, and the same self-gating shape. Deliberately NOT conditioned on
+  // `hasLinkedStudent`: this read judges the case's documents, which a
+  // consultancy-entered case has from the first upload (`readCaseSubmittability`
+  // carries the reasoning).
+  const submittability = await readCaseSubmittability(
+    caseId,
+    { isStaffOnCase: viewerIsStaff },
+    gate.supabase,
+  );
 
   const action = resolveNextAction(
     {
@@ -140,7 +151,12 @@ export default async function CaseOverviewPage({
 
   return (
     <div className="flex flex-col gap-6 px-5 py-10">
-      <CaseDecisionStrip base={base} lodgement={lodgement} visaRisk={visaRisk} />
+      <CaseDecisionStrip
+        base={base}
+        lodgement={lodgement}
+        visaRisk={visaRisk}
+        submittability={submittability}
+      />
 
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="flex flex-col gap-4">

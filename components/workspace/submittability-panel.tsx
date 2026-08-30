@@ -38,11 +38,19 @@ import { LODGEMENT_WORD, type LodgementRead, type LodgementState } from "@/lib/c
  * ## No completion percentage, count-of-total, or progress bar
  *
  * Spec §3: "No completion percentage unless Stage 4 establishes a truthful
- * denominator." It has not — there is no "documents needed" anywhere — so there is
- * no percentage, no "3 of 8", and no bar. The one number here is how many OTHER
- * requests are outstanding, which is a fact about a fully-known set and names no
- * total. It is present because a single named item, alone, reads as the whole of
- * the work.
+ * denominator." Stage 4 did not, and this panel still has none: `case_document_requests`
+ * records what a counsellor thought to ask for, and nothing in it knows what the case
+ * actually needs. So there is no percentage, no "3 of 8", and no bar. The one number
+ * here is how many OTHER requests are outstanding, which is a fact about a fully-known
+ * set and names no total. It is present because a single named item, alone, reads as
+ * the whole of the work.
+ *
+ * MV-199 CORRECTION: this comment used to say there was no "documents needed" anywhere.
+ * That was true of this panel's source and was never true of the codebase — the checklist
+ * generator has always known the required set per program — and it is now visibly untrue,
+ * because `evidence-panel.tsx` renders exactly that denominator beside this one. Nothing
+ * about the rule above changes: THIS panel still may not borrow it, because a requirement
+ * the consultancy never requested is not an outstanding request.
  *
  * ## Colour never carries the meaning
  *
