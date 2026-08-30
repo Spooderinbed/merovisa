@@ -77,18 +77,21 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
       label: "Recent graduate",
       influence: "positive",
       detail: "No gap — strong timing signal for visa.",
+      refusalFactor: "gap-justification",
     });
   } else if (gap <= 2 && profile.gapReasons.includes("worked")) {
     factors.push({
       label: `${gap}-year gap explained by work`,
       influence: "neutral",
       detail: "Documented employment mitigates gap concerns.",
+      refusalFactor: "gap-justification",
     });
   } else if (gap > 5) {
     factors.push({
       label: `${gap}-year gap`,
       influence: "risk",
       detail: "Long gaps face extra scrutiny — strong documentation required.",
+      refusalFactor: "gap-justification",
     });
   } else if (gap > 0) {
     factors.push({
@@ -98,6 +101,7 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
           ? "neutral"
           : "risk",
       detail: "Gap requires a clear explanation in your SOP.",
+      refusalFactor: "gap-justification",
     });
   }
 
@@ -111,6 +115,7 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
         label: ielts,
         influence: "positive",
         detail: `Meets the ${threshold} threshold for ${profile.destination}.`,
+        refusalFactor: "english-floor",
       });
     } else if (ieltsScore >= visaFloor) {
       factors.push({
@@ -118,6 +123,7 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
         influence: "neutral",
         detail: `Meets the DHA visa floor (${visaFloor.toFixed(1)}); below the ${threshold} course preference.`,
         source: floorSource,
+        refusalFactor: "english-floor",
       });
     } else {
       factors.push({
@@ -125,6 +131,7 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
         influence: "risk",
         detail: `Below the DHA visa floor (${visaFloor.toFixed(1)}) for ${profile.destination}.`,
         source: floorSource,
+        refusalFactor: "english-floor",
       });
     }
   } else if (profile.englishStatus === "not-taken") {
@@ -132,6 +139,7 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
       label: "No English test taken",
       influence: "risk",
       detail: "Required for student visa — book a test to strengthen your case.",
+      refusalFactor: "english-floor",
     });
   }
 
@@ -141,6 +149,7 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
       influence: "risk",
       detail:
         "A previous refusal is a factor officers weigh — address it directly with a clear, well-documented explanation.",
+      refusalFactor: "prior-refusal",
     });
   } else if (refusals === "multiple") {
     factors.push({
@@ -148,6 +157,7 @@ export function scoreVisa(profile: StudentProfile): DimensionScore {
       influence: "risk",
       detail:
         "Repeat refusals carry real weight — a strong, well-evidenced Genuine Student case is essential to move forward.",
+      refusalFactor: "prior-refusal",
     });
   }
 

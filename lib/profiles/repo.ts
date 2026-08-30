@@ -17,8 +17,19 @@ export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
  *
  * These take an already-resolved, already-AUTHORIZED case id. They resolve no
  * case and authorize nothing.
+ *
+ * MV-198 narrows THIS function's client to `Pick<DB, "from">` — the same shape
+ * `lib/cases/context.ts` calls `CaseAuthorizationClient`, and for the same reason:
+ * a read that cannot reach `.auth` cannot learn a role and then decide something
+ * with it. Every existing caller passes a full client, which still satisfies the
+ * narrower type, so this asks for less and breaks nothing. The rename argument above
+ * is untouched: it is about the SECOND argument, where `userId` and `caseId` are both
+ * `string`, and that hazard is unchanged.
  */
-export async function getProfileForCase(db: DB, caseId: string): Promise<ProfileRow | null> {
+export async function getProfileForCase(
+  db: Pick<DB, "from">,
+  caseId: string,
+): Promise<ProfileRow | null> {
   const { data, error } = await db
     .from("profiles")
     .select("*")

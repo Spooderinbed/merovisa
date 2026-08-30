@@ -7,10 +7,12 @@ import type { DimensionScore, StudentProfile } from "@/lib/scoring/types";
 /**
  * MV-198 criterion 1 — MEASURE BEFORE CHANGING ANYTHING.
  *
- * This file asserts what the codebase does TODAY, before the visa-risk read exists.
- * It is a characterization probe, not a specification: several assertions here are
- * expected to be rewritten by the slice that follows, and each one that will be says
- * so at the point it is made. Its job is to stop the slice being built on a belief.
+ * This file asserted what the codebase did BEFORE the visa-risk read was built. It is
+ * a characterization probe, not a specification: it said which of its assertions the
+ * slice was expected to rewrite, and the slice rewrote exactly one — the workspace
+ * block at the foot, which now asserts the surface's PRESENCE and is annotated with
+ * what it used to say. Everything else stands unchanged, which is itself the finding:
+ * the engine's factor coverage did not move, only its tagging and its readers.
  *
  * The card's premise is that MV-198 is a COMPOSITION slice — that four of the six
  * refusal factors named in `docs/research/2026-08-11-program-data-wedge.md` §6 are
@@ -202,11 +204,34 @@ describe("MV-198 criterion 1 — what the consultancy workspace renders today", 
     }
   });
 
-  it("and NO surface renders a verdict, a risk read or a refusal read", () => {
+  /**
+   * REPLACED, as this file's header said it would be.
+   *
+   * Until MV-198 this asserted that NO case surface rendered a verdict, a risk read
+   * or a refusal read — and it passed, which was the measurement that justified the
+   * slice. The surface now exists, so the assertion is inverted rather than deleted:
+   * the same scan, over the same directory, now proves the overview DOES take the
+   * read, and proves the OTHER surfaces still do not.
+   *
+   * That second half is the part worth keeping. Spec §3 puts the visa read in the
+   * decision strip and nowhere else; a copy of it appearing on the profile or plan
+   * page would be a second implementation free to drift from the first, which is
+   * exactly the failure `resolveNextAction` is shared to avoid.
+   */
+  it("the case OVERVIEW now takes the visa-risk read", () => {
     // Split on /\r?\n/ — a bare "\n" split matches zero lines on a CRLF checkout and
     // makes this assertion vacuously true (MISTAKES.md, Windows CRLF).
+    const overview = join(CASE_DIR, "page.tsx");
+    const lines = readFileSync(overview, "utf8").split(/\r?\n/);
+    expect(lines.some((l) => /readCaseVisaRisk/.test(l))).toBe(true);
+    expect(lines.some((l) => /visaRisk=\{visaRisk\}/.test(l))).toBe(true);
+  });
+
+  it("and no OTHER case surface renders a verdict, a risk read or a refusal read", () => {
     const offenders: string[] = [];
     for (const file of tsxFilesUnder(CASE_DIR)) {
+      // The overview is where the read belongs; every other surface is still bare.
+      if (file === join(CASE_DIR, "page.tsx")) continue;
       const lines = readFileSync(file, "utf8").split(/\r?\n/);
       lines.forEach((line, i) => {
         // `runAssessment` / a rendered band / a refusal read would each match. The

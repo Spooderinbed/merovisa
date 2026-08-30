@@ -132,6 +132,108 @@ the six existing surfaces *are* found, so the absence assertion is not vacuous.
 That last block asserts ABSENCE and is **expected to fail when the surface ships**.
 Replace it with a positive assertion about the new surface; do not delete it.
 
+## Criteria 2–8 — BUILT 2026-08-30
+
+The spec the carve did not know about
+-------------------------------------
+
+Before writing the read model I found that **spec §3 of
+`docs/superpowers/specs/2026-08-17-consultancy-workspace-ui.md` already specifies this
+panel**, and that `case-decision-strip.tsx` has been holding its slot since MV-183:
+
+> "PR 7 adds `visa-risk-panel.tsx` beside the panel below, and does not have to
+> relitigate where the answer goes."
+
+So the surface was designed, named, placed and colour-mapped already. The build
+follows it: the label "Visa read", a three-word band, a one-sentence conclusion, a
+blocking item, and spec §3's **five** sentence rows in spec order. Nothing about the
+location or the vocabulary was reinvented.
+
+What shipped
+------------
+
+| File | What it is |
+|---|---|
+| `lib/judgement/visa-risk.ts` | the pure read model — `deriveVisaRisk` |
+| `lib/cases/case-frame.ts` | `readCaseVisaRisk` — the reading half, staff-gated |
+| `components/workspace/visa-risk-panel.tsx` | the surface |
+| `components/workspace/case-decision-strip.tsx` | now renders both halves |
+| `lib/scoring/types.ts`, `visa.ts`, `financial.ts` | the `refusalFactor` tag |
+
+**Gate green:** `typecheck` clean, `lint` clean, suite green. New tests: 26 (model)
++ 23 (panel) + 10 (reader) = **59**.
+
+The `refusalFactor` tag, and why extraction needed one
+------------------------------------------------------
+
+Criterion 1's finding was that the composition is an extraction. Extracting by
+matching factor PROSE would have broken silently the first time the copy was edited —
+and `scoreFinancial` emits the DHA capacity test right beside "Budget within typical
+range", so a prose slip files an affordability signal under a refusal heading.
+
+So `DimensionScore["factors"]` gained an optional `refusalFactor` key, tagged at the
+nine sites that emit one. It is **four** keys, not the research's six: source-of-funds
+and provider risk are absent from the engine, and a key for them would claim a signal
+that does not exist.
+
+It is score-inert, and that is proved rather than asserted. Regenerating
+`tests/scoring/__fixtures__/golden-assessments.json` produced **46 added lines, all of
+them `refusalFactor`, none removed, and zero `value` / `verdict` / `weighted` /
+version lines touched.**
+
+Three corrections to this card
+------------------------------
+
+**1. Criterion 8 is not achievable as written, and should not be forced.** It asks for
+an explicit `checkCasePermission` verb with a linked student and a foreign-org member
+denied "in RLS *and* in TypeScript", mutation-tested by widening the policy. But **this
+read is derived, not stored.** There is no judgement table, so there is no policy to
+widen and nothing to mutation-test. Its one data source is `profiles`, and RLS
+correctly *lets* a linked student read their own profile — so "denied in RLS" would be
+asserting something false.
+
+What is true, and what was built: the tenant boundary (a foreign-org member) is
+enforced where it always was, by `openCaseRoute` plus RLS on `profiles`, already
+covered by `tenant-isolation.itest.ts`. The staff-only rule is a **product decision
+about a derived presentation** (the spec's open decision 3), so it is enforced inside
+`readCaseVisaRisk` — which returns `null`, not a "withheld" panel, because a withheld
+visa read would tell a student that a judgement about their chances exists and is
+being kept from them. Enforced at the read rather than at the route, so a future
+student-facing caller has to overturn it deliberately instead of inheriting it.
+
+**2. `VerdictPill` was not reused, though spec §4 says to.** It renders
+`VERDICT_LABELS`, whose `strong` label is **"Strong match"** — an admissions claim.
+Criterion 1 measured that the engine's verdict is admissions-shaped and says nothing
+about the visa; putting "Strong match" on the visa band would restore exactly that
+confusion in the one region built to separate them. The **colours** are reused
+verbatim (same three tint/ink pairs); the **words** follow spec §3's own text, which
+says "Strong, Possible, or Reach" and never says "match". One line of vocabulary, not
+a new visual language — but it is a founder call to confirm.
+
+**3. A finding worth a founder decision: the band absorbs multiple prior refusals.**
+`scoreVisa` starts at 80, pays +8 for a recent graduate and up to +5 for
+above-threshold English. On a funded, no-gap, IELTS-7 case that is 93 points, enough
+to swallow the entire prior-refusal penalty (−35) and still clear `strongMinDimension`
+(50) at 58. So on that profile shape **multiple prior visa refusals do not move the
+band** — while `visa.ts` itself calls prior refusal "one of the strongest real-world
+DHA Subclass 500 risk factors".
+
+Not fixed here, deliberately: the penalty is a versioned scoring rule and re-weighting
+it moves every existing student verdict too. It is pinned by a test, and the surface
+does not hide it — the prior-refusal ROW still reads `risk` and it is still named as
+the blocking item, so a counsellor sees the refusal even where the band does not.
+
+Deferred from spec §3 / PR 7 (not in this card's scope)
+-------------------------------------------------------
+
+- The `/visa-read` **route** and the queue's **Visa read column**. The column is
+  cross-caseload and belongs with MV-200; the route is a second surface for the same
+  read and earns its own slice.
+- Criterion 4's ban is enforced structurally: the read carries **no value of type
+  `number` anywhere**, asserted by a recursive walk rather than a digit scan — money
+  figures survive inside the engine's authored sentences, and they are evidence, not
+  a score. Aria-labels and titles are scanned for digits separately.
+
 ## Resume notes
 
 - Spec: `docs/superpowers/specs/2026-08-29-judgement-layer.md`.

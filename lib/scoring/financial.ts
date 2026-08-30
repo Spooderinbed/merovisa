@@ -105,6 +105,7 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
         influence: "positive",
         detail: `Budget covers the ${capacityLabel} the student visa expects (AUD ${AU_DHA_LIVING_CAPACITY_AUD.toLocaleString()} living + AUD ${AU_REPRESENTATIVE_TUITION_AUD.toLocaleString()} first-year tuition${familyClause}).`,
         source,
+        refusalFactor: "financial-capacity",
       });
     } else if (budgetUsd >= capacityUsd * AU_DHA_CAPACITY_GATE.reachRatio) {
       value = Math.min(value, AU_DHA_CAPACITY_GATE.blockStrongCap);
@@ -113,6 +114,7 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
         influence: "risk",
         detail: `Short of the ${capacityLabel} the student visa expects (12-month living + first-year tuition) — show more provable funds to strengthen the case.`,
         source,
+        refusalFactor: "financial-capacity",
       });
     } else {
       value = Math.min(value, AU_DHA_CAPACITY_GATE.forceReachCap);
@@ -121,6 +123,7 @@ export function scoreFinancial(profile: StudentProfile): DimensionScore {
         influence: "risk",
         detail: `Far short of the ${capacityLabel} the student visa expects — a major risk on financial capacity.`,
         source,
+        refusalFactor: "financial-capacity",
       });
     }
   }

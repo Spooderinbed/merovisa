@@ -164,8 +164,40 @@ export interface DimensionScore {
      * source (e.g. the DHA capacity figure) — heuristic-backed factors omit it.
      */
     source?: { url: string; lastVerified?: string };
+    /**
+     * Which of the visa-REFUSAL factors named in
+     * `docs/research/2026-08-11-program-data-wedge.md` §6 this factor is, when it is
+     * one. Absent on every factor that is not a refusal signal.
+     *
+     * The judgement layer (MV-198, `lib/judgement/visa-risk.ts`) selects factors by
+     * this tag rather than by matching their prose. That matters more than it looks:
+     * both dimensions emit refusal factors *mixed in with* factors that are not
+     * refusal signals at all — `scoreFinancial` emits the DHA capacity test (a
+     * refusal factor) beside "Budget within typical range" (an affordability one) —
+     * and a reader that told them apart by label would put an affordability signal
+     * under a refusal heading the first time the copy was edited.
+     *
+     * Optional and additive: it changes no score, and a factor left untagged is
+     * simply not offered to the judgement layer.
+     */
+    refusalFactor?: RefusalFactorKey;
   }>;
 }
+
+/**
+ * The visa-refusal factors this engine actually models, tagged at the point each is
+ * emitted. FOUR, not the research's six: source-of-funds credibility and provider
+ * risk level are absent from the engine, measured in
+ * `tests/scoring/visa-risk-read-measurement.test.ts`. The asymmetry is deliberate
+ * documentation — a key here would claim a signal that does not exist.
+ */
+export const REFUSAL_FACTOR_KEYS = [
+  "financial-capacity",
+  "english-floor",
+  "gap-justification",
+  "prior-refusal",
+] as const;
+export type RefusalFactorKey = (typeof REFUSAL_FACTOR_KEYS)[number];
 
 export interface AssessmentResult {
   verdict: Verdict;

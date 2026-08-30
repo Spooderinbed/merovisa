@@ -147,20 +147,46 @@ beforeEach(() => {
 });
 
 describe("the decision strip slot", () => {
-  it("makes no promise about the read that has NOT shipped", async () => {
+  /**
+   * MV-198 flipped this block. It used to assert that the visa read was silently
+   * ABSENT, which was right while its judgement contract was unapproved (spec §0).
+   * The contract exists now, so the strip is whole — and what these tests guard is
+   * the harder property: a read that renders must still refuse to band a case it
+   * cannot judge.
+   */
+  it("gives the visa read its reserved half of the strip", async () => {
     render(await overview());
 
-    // MV-183 ships the lodgement half; the visa read's judgement contract is still
-    // unapproved (spec §0), so it stays silently absent rather than advertising
-    // itself.
-    for (const absent of [/visa read/i, /coming soon/i]) {
-      expect(screen.queryByText(absent)).not.toBeInTheDocument();
-    }
+    expect(screen.getByRole("region", { name: /visa read/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /lodgement/i })).toBeInTheDocument();
   });
 
-  it("shows no verdict band, because there is no judgement to band", async () => {
+  it("still promises nothing it has not built", async () => {
     render(await overview());
 
+    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+  });
+
+  it("shows no verdict band on a case with nothing recorded", async () => {
+    // The fixture case is LINKED but has no `profiles` row, so the read abstains.
+    // An empty profile scores badly on every dimension, and the one thing this must
+    // never do is render that as a Reach — a counsellor would read "refusal risk"
+    // off a case nobody has filled in yet.
+    render(await overview());
+
+    for (const verdict of ["Strong", "Possible", "Reach"]) {
+      expect(screen.queryByText(verdict)).not.toBeInTheDocument();
+    }
+    expect(screen.getByText(/not enough recorded on this profile/i)).toBeInTheDocument();
+  });
+
+  it("says why it cannot read an unlinked case, in the spec's words", async () => {
+    seed({ student_user_id: null });
+    render(await overview());
+
+    expect(
+      screen.getByText(/not available — no linked student profile/i),
+    ).toBeInTheDocument();
     for (const verdict of ["Strong", "Possible", "Reach"]) {
       expect(screen.queryByText(verdict)).not.toBeInTheDocument();
     }
