@@ -4,6 +4,7 @@ import {
   readCaseAssignee,
   readCaseLodgement,
   readCaseNextStep,
+  readCaseVisaRisk,
 } from "@/lib/cases/case-frame";
 import { caseRouteBase, openCaseRoute } from "@/lib/cases/case-route";
 import { listCaseInvitations } from "@/lib/cases/invitations-repo";
@@ -20,9 +21,8 @@ import { StaffReference } from "@/components/workspace/staff-reference";
 /**
  * The case overview — spec §3's three zones, in order:
  *
- * 1. **Decision strip** — the visa read and the lodgement read. MV-183 ships the
- *    lodgement half; the visa read is still absent and still says nothing about
- *    being absent (`case-decision-strip.tsx`).
+ * 1. **Decision strip** — the visa read and the lodgement read. MV-183 shipped the
+ *    lodgement half; MV-198 ships the visa half, and the strip is now whole.
  * 2. **Primary work area** — the unlinked case's invitation prompt, then exactly
  *    one next action.
  * 3. **Operational rail** — status, assignment, linkage, and the way into Case
@@ -62,10 +62,12 @@ export default async function CaseOverviewPage({
   // this gates is presentation, and `/manage` re-decides.
   const canAssign = gate.scope === "all-org";
 
+  const viewerIsStaff = isStaffOnCase(gate.grantedRoles);
+
   const assignee = await readCaseAssignee(
     caseId,
     organizationId,
-    { isStaffOnCase: isStaffOnCase(gate.grantedRoles) },
+    { isStaffOnCase: viewerIsStaff },
     gate.supabase,
   );
   const nextStep = await readCaseNextStep(caseId, gate.supabase);
@@ -74,6 +76,14 @@ export default async function CaseOverviewPage({
   // (spec §5: "a failed future judgement or document read affects its panel only
   // when the rest of the case can still be stated truthfully").
   const lodgement = await readCaseLodgement(caseId, gate.supabase);
+  // Its own failure and its own panel too (MV-198). Staff-only and self-gating: a
+  // non-staff viewer gets `null` and the region simply does not render, rather than a
+  // withheld panel announcing that a judgement about them exists.
+  const visaRisk = await readCaseVisaRisk(
+    caseId,
+    { isStaffOnCase: viewerIsStaff, hasLinkedStudent: caseRow.hasLinkedStudent },
+    gate.supabase,
+  );
 
   const action = resolveNextAction(
     {
@@ -130,7 +140,7 @@ export default async function CaseOverviewPage({
 
   return (
     <div className="flex flex-col gap-6 px-5 py-10">
-      <CaseDecisionStrip base={base} lodgement={lodgement} />
+      <CaseDecisionStrip base={base} lodgement={lodgement} visaRisk={visaRisk} />
 
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="flex flex-col gap-4">

@@ -63,6 +63,10 @@ vi.mock("@/lib/cases/case-frame", () => ({
     waitingCount: 0,
   }),
   readCaseLodgement: async () => ({ state: "nothing-requested" }),
+  // MV-198. `null` — the shape a non-staff viewer gets — keeps this file on the
+  // question it asks (what the ROUTES decide) rather than pulling a judgement into
+  // it; what the read SAYS is `tests/cases/case-visa-risk-read.test.ts`.
+  readCaseVisaRisk: async () => null,
 }));
 
 /**

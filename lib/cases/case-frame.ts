@@ -1,6 +1,10 @@
 import "server-only";
 import { selectNextStep, type NextStepSelection } from "@/lib/plan/select";
 import type { PlanItemRow } from "@/lib/plan/types";
+import { getProfileForCase } from "@/lib/profiles/repo";
+import type { ProfileSections } from "@/lib/profiles/sections";
+import { sectionsToStudentProfile } from "@/lib/scoring/from-sections";
+import { deriveVisaRisk, type VisaRiskRead } from "@/lib/judgement/visa-risk";
 import { listCaseDocumentRequests } from "./document-requests-repo";
 import { deriveLodgement, type LodgementRead } from "./lodgement";
 import { MEMBERSHIP_ROLES, ACTIVE_MEMBERSHIP_STATUS } from "./permissions";
@@ -180,4 +184,68 @@ export async function readCaseLodgement(
   const requests = await listCaseDocumentRequests(caseId, db);
   if (!requests.ok) return { state: "unavailable" };
   return deriveLodgement(requests.data);
+}
+
+/**
+ * One case's visa-risk read (MV-198, spec §3 "Visa-risk read").
+ *
+ * The judgement itself is pure and lives in `lib/judgement/visa-risk.ts`. This
+ * function owns the three things that judgement cannot see: who may ask, what a
+ * failed query means, and the difference between a case with nothing recorded and a
+ * case that scores badly.
+ *
+ * ## Staff-only, enforced here rather than at the route
+ *
+ * `null` — render no region at all — for a viewer who is not staff on the case. Not
+ * a `withheld` state like `readCaseAssignee`'s: a withheld ASSIGNEE tells the student
+ * only that staffing is internal, while a withheld VISA READ would tell them a
+ * judgement about their own chances exists and is being kept from them. That is a
+ * worse sentence than silence, so the region simply does not appear.
+ *
+ * The gate lives at the read, not on the workspace route, because the route is
+ * staff-only only by accident of URL. Spec §3's decision to keep this staff-facing
+ * is a product call (the judgement spec's open decision 3), and putting it here means
+ * a later student-facing caller has to overturn it deliberately rather than inherit
+ * it by forgetting.
+ *
+ * ## Three absences that must not collapse into one
+ *
+ * - **`no-linked-student`** — spec §3's unlinked rule. Taken BEFORE the query,
+ *   because there is nothing worth reading: a consultancy-entered profile with no
+ *   student behind it is exactly the data the spec says not to judge.
+ * - **`unavailable`** — the read FAILED. `getProfileForCase` throws rather than
+ *   returning empty precisely so this stays distinguishable (MV-133 on the case
+ *   axis), and both the PostgREST-error and the thrown-connection paths land here.
+ * - **`insufficient-data`** — the read succeeded and found nothing recorded.
+ *
+ * That last one is the trap. `sectionsToStudentProfile({})` does not fail; it returns
+ * a fully-shaped profile of DEFAULTS — grade 0, budget 0, no English test — which the
+ * engine scores as a poor case. Passing it through would tell a counsellor that a
+ * case nobody has filled in yet is a refusal risk. The emptiness is caught here,
+ * before the engine ever sees it.
+ */
+export async function readCaseVisaRisk(
+  caseId: string,
+  viewer: { isStaffOnCase: boolean; hasLinkedStudent: boolean },
+  db: CaseAuthorizationClient,
+): Promise<VisaRiskRead | null> {
+  if (!viewer.isStaffOnCase) return null;
+  if (!viewer.hasLinkedStudent) return { state: "no-linked-student" };
+
+  let sections: ProfileSections | null;
+  try {
+    const profileRow = await getProfileForCase(db, caseId);
+    sections = (profileRow?.sections as ProfileSections | null | undefined) ?? null;
+  } catch {
+    return { state: "unavailable" };
+  }
+
+  if (sections === null || Object.keys(sections).length === 0) {
+    return { state: "insufficient-data" };
+  }
+
+  return deriveVisaRisk({
+    hasLinkedStudent: true,
+    profile: sectionsToStudentProfile(sections),
+  });
 }

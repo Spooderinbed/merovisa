@@ -33,7 +33,8 @@ export type CaseDbTable =
   | "case_document_requests"
   | "case_document_versions"
   | "case_document_reviews"
-  | "invitations";
+  | "invitations"
+  | "profiles";
 
 /** Partial fixture rows — supply only the columns a test cares about. */
 export type CaseDbFixture = {
@@ -46,6 +47,7 @@ export type CaseDbFixture = {
   case_document_versions?: Array<Partial<Tables["case_document_versions"]["Row"]>>;
   case_document_reviews?: Array<Partial<Tables["case_document_reviews"]["Row"]>>;
   invitations?: Array<Partial<Tables["invitations"]["Row"]>>;
+  profiles?: Array<Partial<Tables["profiles"]["Row"]>>;
 };
 
 export type FakeCaseDbOptions = {
