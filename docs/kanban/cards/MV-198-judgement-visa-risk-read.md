@@ -86,6 +86,52 @@ A slice that reimplements `scoreVisa` has misread the card.
   *missing* policy, so **mutation-test it**: widen the policy, confirm red, restore,
   confirm byte-identical (`MISTAKES.md`, and the RLS memory notes).
 
+## Criterion 1 — MEASURED 2026-08-30
+
+`tests/scoring/visa-risk-read-measurement.test.ts`, **11/11 passed on the first
+run**. Unlike MV-196's criterion 1, the measurement **confirms** the carve rather
+than rewriting it: this really is a composition slice.
+
+Factor by factor, machine-checked rather than read:
+
+| # | Research factor | Measured state |
+|---|---|---|
+| 1 | Financial capacity | **Modelled — in the FINANCIAL dimension, not the visa one.** `has(visa, "DHA financial-capacity") === false` |
+| 2 | Source-of-funds credibility | **Absent everywhere** |
+| 3 | English visa-floor vs course threshold | **Modelled, and genuinely distinct** — neutral at the floor, risk below it, positive above the course threshold |
+| 4 | Gap justification | **Modelled** — an unexplained gap is `risk`, the same gap with `worked` is `neutral` |
+| 5 | Prior refusal | **Modelled**, and escalates one → multiple |
+| 6 | Provider risk level | **Absent everywhere** — data-blocked, per the spec |
+
+**Four modelled, two absent — exactly what the carve claimed.**
+
+Three findings that shape the build:
+
+1. **The composition is an EXTRACTION, not a merge.** `scoreFinancial` emits two
+   unrelated kinds of factor: the DHA capacity test (a refusal factor, and it
+   carries `CONFIG_PROVENANCE.AU_DHA_LIVING_CAPACITY_AUD`) and budget-vs-course-cost
+   (an affordability signal that is not a refusal signal). Only the first belongs in
+   this read. Folding the whole dimension in would put "budget above typical range"
+   under a refusal heading, which is wrong.
+2. **`fundingSource` is not source-of-funds credibility.** `"Education loan"` is a
+   *declared funding type*; DHA weighs the *credibility of the source*, and a
+   declaration is not credibility. The probe pins this so a later author cannot
+   quietly count factor 2 as done. Its evidence is Stage 4 document rows — the seam
+   with MV-199.
+3. **The engine's verdict is admissions-shaped, not refusal-shaped.** `runAssessment`
+   returns four dimensions and one overall verdict that folds academic and
+   profile-strength in with visa. Nothing in it answers "will the visa hold", which
+   is precisely the gap this card closes — `expect(result).not.toHaveProperty("refusalRisk")`.
+
+Also pinned: provenance is present on the English floor factor and absent on the
+heuristic refusal factor (criterion 5's baseline); the visa dimension exposes a raw
+0–100 `value` that must never reach a user (criterion 4's trap); and **no workspace
+surface renders a verdict, risk or refusal read** — with the adjacent test asserting
+the six existing surfaces *are* found, so the absence assertion is not vacuous.
+
+That last block asserts ABSENCE and is **expected to fail when the surface ships**.
+Replace it with a positive assertion about the new surface; do not delete it.
+
 ## Resume notes
 
 - Spec: `docs/superpowers/specs/2026-08-29-judgement-layer.md`.
