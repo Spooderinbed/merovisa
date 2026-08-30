@@ -69,6 +69,12 @@ assertLocalStack("student-data-rls.itest.ts", url);
  */
 const NEW_HELPERS: ReadonlyArray<readonly [name: string, identityArgs: string, signature: string]> = [
   ["actor_case_ids", "", "private.actor_case_ids()"],
+  // MV-196's write-side twin of `actor_case_ids` — the same set minus a linked student's
+  // ORG-OWNED cases, so a consultancy's case is readable by its student and writable only by its
+  // staff. Listed here so it inherits all three hardening assertions below rather than being a
+  // definer function nobody audited: a new `private.*` helper defaults to EXECUTE for PUBLIC
+  // (which includes `anon`), and an owner without BYPASSRLS makes it under-read in silence.
+  ["actor_writable_case_ids", "", "private.actor_writable_case_ids()"],
   ["assessment_case_id", "p_assessment_id uuid", "private.assessment_case_id(uuid)"],
   ["prediction_case_id", "p_prediction_id uuid", "private.prediction_case_id(uuid)"],
   ["attempt_case_id", "p_attempt_id uuid", "private.attempt_case_id(uuid)"],
@@ -363,10 +369,18 @@ const ownershipArms = (expr: string): string[] => {
 
   const body = unwrap(expr);
   const andParts = splitTop(body, " AND ");
-  const group = andParts.find((p) => p.includes("actor_case_ids")) ?? body;
+  // MV-196 split the case predicate in two: reads keep `actor_case_ids()`, writes moved to
+  // `actor_writable_case_ids()` (the same set minus a linked student's ORG-owned cases). Both
+  // are "the case arm" as far as this classifier is concerned — what it exists to catch is a
+  // NEW, unprobed arm, and neither of these is new. Note `actor_case_ids` is not a substring of
+  // `actor_writable_case_ids`, so the second name genuinely has to be listed.
+  const isCaseArm = (s: string): boolean =>
+    s.includes("actor_case_ids") || s.includes("actor_writable_case_ids");
+
+  const group = andParts.find(isCaseArm) ?? body;
   return splitTop(unwrap(group), " OR ").map((arm) => {
     const a = unwrap(arm);
-    if (a.includes("actor_case_ids")) return "case";
+    if (isCaseArm(a)) return "case";
     if (a.includes("auth.uid()")) return "owner";
     // Anything else is a NEW arm nobody has probed. Named so the guard's failure says what it is.
     return `unprobed-arm:${a}`;
@@ -754,6 +768,88 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-159 case-aware RLS on the n
           `private.${name}(${identityArgs}) owner must hold BYPASSRLS`,
         ).toBe("t");
       }
+    });
+  });
+
+  // ===================================================================================
+  // C2  every write policy is on the NARROW helper — the catalogue sweep, by name
+  // ===================================================================================
+  //
+  // WHY THIS EXISTS, AND WHY THE CLASSIFIER ABOVE IS NOT ENOUGH. MV-196 re-pointed eighteen
+  // write policies from `actor_case_ids()` to `actor_writable_case_ids()`, and pinned eight of
+  // them BEHAVIOURALLY in stage5-student-write-boundary.itest.ts. The other ten had nothing
+  // holding them: `arms()` deliberately treats both helpers as "the case arm" (it exists to
+  // catch a NEW, unprobed arm, and neither of these is new), so reverting, say, `ups_update_case`
+  // to the wide helper would satisfy every structural guard AND miss every behavioural probe —
+  // a silent re-opening of the hole MV-196 was written to close. An external review caught this.
+  //
+  // The expected list is spelled out by NAME on purpose. A revert flips its value to `wide`, a
+  // deletion drops the row, and a new write policy on these tables shows up as an extra — all
+  // three fail loudly, which a `count(*) = 18` would not.
+  describe("MV-196 the write/read helper split is pinned per policy, not just per predicate shape", () => {
+    const WRITE_POLICIES_ON_NARROW_HELPER = [
+      "aa_delete_case",
+      "aa_insert_case",
+      "assessments_update_case",
+      "documents_delete_case",
+      "ds_delete_case",
+      "ds_insert_case",
+      "ds_update_case",
+      "oe_delete_case",
+      "oe_insert_case",
+      "plan_items_insert_case",
+      "plan_items_update_case",
+      "pp_delete_case",
+      "pp_insert_case",
+      "profiles_insert_case",
+      "profiles_update_case",
+      "ups_delete_case",
+      "ups_insert_case",
+      "ups_update_case",
+    ] as const;
+
+    // `actor_case_ids` is NOT a substring of `actor_writable_case_ids` (…_writable_case_ids), so
+    // a LIKE on the wide name cannot accidentally match the narrow one. The whole sweep depends
+    // on that, so it is asserted rather than trusted.
+    const CASE_TABLES =
+      "'profiles','assessments','plan_items','documents','user_program_state'," +
+      "'document_status','program_predictions','application_attempts','outcome_events'";
+    const EXPR = "coalesce(qual,'') || ' ' || coalesce(with_check,'')";
+
+    it("names are distinguishable by substring at all", () => {
+      expect("actor_writable_case_ids".includes("actor_case_ids")).toBe(false);
+    });
+
+    it("every INSERT/UPDATE/DELETE policy on the case tables uses actor_writable_case_ids()", () => {
+      const rows = sqlLines(`
+        select policyname || '|' ||
+               case when ${EXPR} like '%actor_writable_case_ids%' then 'writable' else 'wide' end
+          from pg_policies
+         where schemaname = 'public'
+           and tablename in (${CASE_TABLES})
+           and cmd in ('INSERT','UPDATE','DELETE')
+           and (${EXPR} like '%actor_case_ids%' or ${EXPR} like '%actor_writable_case_ids%')
+         order by policyname;
+      `);
+      expect(rows).toEqual(WRITE_POLICIES_ON_NARROW_HELPER.map((name) => `${name}|writable`));
+    });
+
+    it("leaves the READ policies on the wide helper — MV-195 decision D", () => {
+      // The student READS their consultancy case. Moving SELECT onto the writable helper would
+      // revoke that silently, and no student-facing test would necessarily notice, so the
+      // direction is pinned both ways.
+      const wide = sqlLines(`
+        select count(*)::text from pg_policies
+         where schemaname = 'public' and tablename in (${CASE_TABLES})
+           and cmd = 'SELECT' and ${EXPR} like '%actor_case_ids%';
+      `);
+      const narrow = sqlLines(`
+        select count(*)::text from pg_policies
+         where schemaname = 'public' and tablename in (${CASE_TABLES})
+           and cmd = 'SELECT' and ${EXPR} like '%actor_writable_case_ids%';
+      `);
+      expect(Number(wide[0]), "read policies must still resolve through actor_case_ids()").toBeGreaterThan(0);
+      expect(narrow[0], "no SELECT policy may use the write-narrowed helper").toBe("0");
     });
   });
 

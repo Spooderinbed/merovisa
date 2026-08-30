@@ -177,7 +177,24 @@ const orgRow = (actor: ActorKey, target: "orgA" | "orgB", allowed: readonly OrgV
 
 const ALL_CASE_VERBS = CASE_VERBS;
 const STAFF_ON_ASSIGNED = ["case.read", "case.update", "case.invite_student"] as const;
+/**
+ * The student on a case they OWN — `organization_id is null`, nobody else's workspace.
+ * They drive it; the whole self-serve product is this row.
+ */
 const STUDENT_ON_OWN = ["case.read", "case.update"] as const;
+/**
+ * MV-196: the student on a case a CONSULTANCY owns. They are its subject, not its author.
+ *
+ * This used to be `STUDENT_ON_OWN` too, because before MV-194 there was no such thing as a
+ * student linked to a case they did not own — `student_user_id` meant one relationship and the
+ * matrix had one row for it. Stage 5 split that in two, and this is the half that reads.
+ *
+ * `case.read` stays: MV-195 decision D is that the student SEES what has been asked of them,
+ * the version that arrived and the rejection note. `case.update` goes, in both layers —
+ * `lib/cases/permissions.ts` at the `linked-personal` scope and
+ * `supabase/migrations/20260829120000_mv196_student_write_boundary.sql` at the policy.
+ */
+const STUDENT_ON_ORG_CASE = ["case.read"] as const;
 
 /**
  * THE MATRIX. Every expectation is the canonical access matrix, not either implementation —
@@ -200,10 +217,12 @@ const CASE_CELLS: CaseCell[] = [
     "counsellor: assigned cases; invites the student (divergence 3); never archives (divergence 2) or deletes",
   ),
   ...caseRow("counsellorUnassignedA", "orgAssignedA", [], "counsellor: assigned-only — membership alone is not a grant"),
-  // `case.update` here is the verb at CASE granularity — may this actor edit this row at all.
-  // Which COLUMNS the student may write is a different question with a different answer
-  // (divergence 4), asserted by the write-surface intersection block, not by this cell.
-  ...caseRow("studentA", "orgAssignedA", STUDENT_ON_OWN, "student: their linked case; never invites, archives, or deletes"),
+  // MV-196: READ ONLY on a consultancy's case. The old row here granted `case.update` and
+  // deferred "which COLUMNS" to the write-surface trigger (divergence 4) — that deferral was
+  // measured in `stage5-student-write-boundary.itest.ts` and did not hold: seven of eight write
+  // probes issued on the student's own JWT succeeded against this very case, including deleting
+  // a document. The column question is moot once the verb is denied at case granularity.
+  ...caseRow("studentA", "orgAssignedA", STUDENT_ON_ORG_CASE, "student: reads their consultancy's case, writes none of it"),
   ...caseRow("inactiveAssignedA", "orgAssignedA", [], "inactive membership grants nothing"),
   ...caseRow("dualInactiveA", "orgAssignedA", [], "revoked member, not this case's student: nothing"),
   ...caseRow("inactiveOwnerA", "orgAssignedA", [], "a REVOKED OWNER reaches no case of the organization they used to own"),
@@ -244,7 +263,7 @@ const CASE_CELLS: CaseCell[] = [
   ...caseRow(
     "dualActiveA",
     "dualOwnA",
-    STUDENT_ON_OWN,
+    STUDENT_ON_ORG_CASE,
     "dual-role, student half: their own case grants student rights only — not the staff verbs",
   ),
   ...caseRow(
@@ -259,7 +278,7 @@ const CASE_CELLS: CaseCell[] = [
   ...caseRow(
     "dualInactiveA",
     "inactiveStudentA",
-    STUDENT_ON_OWN,
+    STUDENT_ON_ORG_CASE,
     "revoking a membership never removes a person's rights over their OWN student case",
   ),
   ...caseRow("dualInactiveA", "inactiveWorkA", [], "the revoked member's org rights are gone"),
@@ -272,13 +291,13 @@ const CASE_CELLS: CaseCell[] = [
   ...caseRow(
     "inactiveOwnerA",
     "inactiveOwnerCaseA",
-    STUDENT_ON_OWN,
+    STUDENT_ON_ORG_CASE,
     "revoking an OWNER takes the organization; it does not take their rights over their own student case",
   ),
   ...caseRow(
     "inactiveAdminA",
     "inactiveAdminCaseA",
-    STUDENT_ON_OWN,
+    STUDENT_ON_ORG_CASE,
     "revoking an ADMIN takes the organization; the admin verbs go with it, on their own case too",
   ),
 
@@ -292,7 +311,7 @@ const CASE_CELLS: CaseCell[] = [
     "org B's assigned counsellor works org B's case — the mirror of the org A positive row",
   ),
   ...caseRow("counsellorAssignedB", "orgUnassignedB", [], "assigned-only holds inside org B exactly as inside org A"),
-  ...caseRow("studentB", "orgAssignedB", STUDENT_ON_OWN, "org B's student drives org B's case"),
+  ...caseRow("studentB", "orgAssignedB", STUDENT_ON_ORG_CASE, "org B's student reads org B's case"),
 
   // ---- inactive member assigned to a case they are NOT the student of: everything denied
   ...caseRow(
@@ -310,7 +329,7 @@ const CASE_CELLS: CaseCell[] = [
   ...caseRow(
     "crossTenantDual",
     "crossStudentB",
-    STUDENT_ON_OWN,
+    STUDENT_ON_ORG_CASE,
     "cross-tenant dual role: they are org B's STUDENT on this one case — student rights only, no admin verbs",
   ),
   ...caseRow(
@@ -1569,20 +1588,33 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       await fixture.admin.from("cases").update({ operational_status: "new" }).eq("id", worked);
     });
 
-    it("keeps the profile-field surface open to a REVOKED member on their own student case", async () => {
-      // Revocation takes the org; it does not take a person's rights over their own file — and
-      // it must not take the ordinary profile edit either, or the rule is words only.
+    it("gives a REVOKED member exactly a student's reach on their own case — which MV-196 made read-only", async () => {
+      // THE DUAL-ROLE RULE IS UNCHANGED; WHAT A STUDENT HOLDS IS WHAT CHANGED.
+      //
+      // "Revocation takes the org; it does not take a person's rights over their own file" still
+      // governs — this actor keeps precisely the rights any linked student has on this case, and
+      // loses nothing BECAUSE of the revocation. `inactiveStudentA` is org A's case, and MV-196
+      // made a consultancy's case read-only for its student, so "exactly a student's reach" is
+      // now zero writable columns. The rule was never "a revoked member keeps a write nobody
+      // else has".
+      //
+      // The refusal is a RAISE, not a filtered row: `cases_update_accessor` still admits them on
+      // the student disjunct, so a non-null 42501 here is itself the proof the row was REACHED —
+      // an unreachable row would come back `error: null` with nothing updated.
       const target = caseId("inactiveStudentA");
-      const renamed = `revoked member edited ${fixture.stamp}`;
+      const before = await fixture.admin.from("cases").select("display_name").eq("id", target).single();
+
       const { error } = await actor("dualInactiveA").client
         .from("cases")
-        .update({ display_name: renamed })
+        .update({ display_name: `revoked member edited ${fixture.stamp}` })
         .eq("id", target);
-      expect(error, `their own case stays editable: ${error?.message}`).toBeNull();
-      const { data } = await fixture.admin.from("cases").select("display_name").eq("id", target).single();
-      expect(data!.display_name).toBe(renamed);
+      expect(error, "the row is reachable, so this is the trigger refusing and not a USING miss").not.toBeNull();
+      expect(error!.code).toBe("42501");
 
-      // But the consultancy columns are still closed to them, as to any student.
+      const { data } = await fixture.admin.from("cases").select("display_name").eq("id", target).single();
+      expect(data!.display_name, "and nothing was written").toBe(before.data!.display_name);
+
+      // The consultancy columns are closed to them too, as they always were.
       const { error: status } = await actor("dualInactiveA")
         .client.from("cases")
         .update({ operational_status: "closed" })
@@ -1596,9 +1628,13 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       const target = caseId("crossStudentB");
       const dual = actor("crossTenantDual");
 
+      // MV-196: their student rights on this one case are real, and on a case a consultancy owns
+      // those rights are READ. A 42501 rather than a silent miss is what proves the link exists —
+      // an actor with no relationship to org B's case would get `error: null` and zero rows.
       const renamed = `student-edited ${fixture.stamp}`;
       const { error: profile } = await dual.client.from("cases").update({ display_name: renamed }).eq("id", target);
-      expect(profile, "their student rights on this one case are real").toBeNull();
+      expect(profile, "the student link reaches the row — the trigger is what refuses").not.toBeNull();
+      expect(profile!.code).toBe("42501");
 
       const { error: status } = await dual.client
         .from("cases")
@@ -1708,14 +1744,23 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
       //
       // The student link is what makes this observable: it carries them past
       // `cases_update_accessor`'s USING clause, so the write actually reaches the trigger.
-      // Without it both refusals would be silent USING misses and would prove nothing about
-      // org_role. The `display_name` edit below is the control that proves the row IS reachable
-      // — so the two 42501s are the trigger refusing, not the policy failing to find the row.
-      const renamed = `revoked ${key} edited ${fixture.stamp}`;
-      const { error: profile } = await revoked.client.from("cases").update({ display_name: renamed }).eq("id", own);
-      expect(profile, "their student rights over their own case survive the revocation").toBeNull();
+      // Without it every refusal would be a silent USING miss and would prove nothing about
+      // org_role.
+      //
+      // MV-196 changed what that control looks like, not what it proves. The `display_name` edit
+      // used to SUCCEED and demonstrate reachability by its effect; a consultancy's case is now
+      // read-only for its student, so it raises instead — and a RAISE is a strictly better
+      // reachability proof, because a policy that failed to find the row returns `error: null`
+      // and touches nothing. All three 42501s below are therefore the trigger refusing.
+      const before = await fixture.admin.from("cases").select("display_name").eq("id", own).single();
+      const { error: profile } = await revoked.client
+        .from("cases")
+        .update({ display_name: `revoked ${key} edited ${fixture.stamp}` })
+        .eq("id", own);
+      expect(profile, "the row is reachable — so this and the refusals below are the trigger's").not.toBeNull();
+      expect(profile!.code).toBe("42501");
       const { data: renamedRow } = await fixture.admin.from("cases").select("display_name").eq("id", own).single();
-      expect(renamedRow?.display_name, "the row is reachable — so the refusals below are the trigger's").toBe(renamed);
+      expect(renamedRow?.display_name, "and the revoked member wrote nothing").toBe(before.data!.display_name);
 
       const { error: archive } = await revoked.client
         .from("cases")
@@ -1796,27 +1841,52 @@ describe.skipIf(!url || !serviceKey || !anonKey)("MV-153 tenant isolation — bo
   // future change closes either gap, these tests fail and force the decision to be conscious.
   describe("known layer asymmetries, pinned", () => {
     it("TypeScript authorizes `case.update` as a whole verb while the database splits it by column", async () => {
-      // `lib/cases/README.md` §"Known gap: student permitted fields": the TS matrix has no
-      // field-level dimension, so it allows the linked student `case.update` and leaves
-      // "permitted fields only" to the caller. The database does NOT — the write-surface
-      // trigger refuses `operational_status` and `archived_at` outright.
+      // MV-196 RE-PINNED THIS, because half of it is now closed and half of it is not.
       //
-      // Consequence a Stage 3 route must respect: `requireCasePermission(actor, case,
-      // "case.update")` is NOT sufficient authorization to apply an arbitrary case patch on a
-      // student's behalf. Today the database is what stops it.
-      const { decision } = await checkCasePermission(
+      // It used to read against `orgAssignedA` and assert that TS ALLOWED the linked student
+      // `case.update` while the database refused particular columns — `lib/cases/README.md`
+      // §"Known gap: student permitted fields", offered as "narrower in TS is the safe
+      // direction". It was not safe: `stage5-student-write-boundary.itest.ts` measured seven of
+      // eight write probes SUCCEEDING on that case through the student's own JWT. So the org
+      // half is closed outright, in both layers, and asserted here as agreement rather than as
+      // an asymmetry.
+      //
+      // What genuinely survives is the same shape on the case the student OWNS: TS has no
+      // field-level dimension, so it allows `case.update` as a whole verb, and the write-surface
+      // trigger is what refuses `operational_status` and `archived_at`. That is still a real
+      // divergence and still the safe direction, so it stays pinned — and the consequence a
+      // route must respect is unchanged: `requireCasePermission(actor, case, "case.update")` is
+      // NOT sufficient authorization to apply an arbitrary case patch on a student's behalf.
+      const org = await checkCasePermission(
         actor("studentA").id,
         caseId("orgAssignedA"),
         "case.update",
         fixture.admin,
       );
-      expect(decision.allowed, "TS allows the verb at case granularity").toBe(true);
+      expect(org.decision.allowed, "MV-196: TS now denies the verb on a consultancy's case").toBe(false);
 
-      const { error } = await actor("studentA")
+      const orgWrite = await actor("studentA")
         .client.from("cases")
         .update({ operational_status: "closed" })
         .eq("id", caseId("orgAssignedA"));
-      expect(error?.code, "the database refuses the same actor at column granularity").toBe("42501");
+      expect(orgWrite.error?.code, "and so does the database — the layers agree").toBe("42501");
+
+      const own = await checkCasePermission(
+        actor("studentA").id,
+        caseId("personalA"),
+        "case.update",
+        fixture.admin,
+      );
+      expect(own.decision.allowed, "the student still drives the case they own").toBe(true);
+
+      const ownWrite = await actor("studentA")
+        .client.from("cases")
+        .update({ operational_status: "closed" })
+        .eq("id", caseId("personalA"));
+      expect(
+        ownWrite.error?.code,
+        "THE SURVIVING ASYMMETRY: verb allowed in TS, column refused by the database",
+      ).toBe("42501");
     });
 
     it("TypeScript denies a student `case.list` while the database still returns their own cases", async () => {

@@ -127,9 +127,16 @@ export type CaseScopedPermission = (typeof CASE_SCOPED_PERMISSIONS)[number];
  *              claims, the organization the case belongs to)
  * - `assigned` only cases with a `case_assignments` row for the actor
  * - `linked`   only the case whose `student_user_id` is the actor
+ * - `linked-personal`
+ *              STRICTLY NARROWER than `linked`: the case whose `student_user_id`
+ *              is the actor AND which belongs to no organization. MV-196 needed
+ *              this because the student link stopped being one relationship: from
+ *              MV-194 it spans a personal case the student OWNS and a consultancy
+ *              case the student is merely the SUBJECT of. The read claims may
+ *              follow it onto both; the write claims may not.
  * - `deny`     the card grid's "—": this role never holds this claim
  */
-export const PERMISSION_SCOPES = ["all-org", "assigned", "linked", "deny"] as const;
+export const PERMISSION_SCOPES = ["all-org", "assigned", "linked", "linked-personal", "deny"] as const;
 export type PermissionScope = (typeof PERMISSION_SCOPES)[number];
 
 /**
@@ -219,11 +226,29 @@ export const CASE_PERMISSION_MATRIX: Record<CaseRole, Record<CasePermission, Per
      */
     "case.list": "deny",
     "case.read": "linked",
-    // Field-level restriction ("permitted fields only") is NOT enforced here —
-    // see ./README.md §"Known gap: student permitted fields". A Stage 3 mutation
-    // that accepts an arbitrary case patch from a student is a defect even though
-    // this cell allows the claim.
-    "case.update": "linked",
+    /**
+     * MV-196: `linked` until Stage 5 made it dangerous, now `linked-personal`.
+     *
+     * Stage 1 wrote this cell as `linked` when the student link meant one thing —
+     * your own case — and `lib/cases/README.md` recorded the field-level gap as a
+     * FORWARD-LOOKING caution, costing nothing because no student was linked to a
+     * case they did not own. MV-194 ended that: an accepted invitation makes the
+     * student `cases.student_user_id` on an ORG-OWNED case, and `linked` is
+     * satisfied by exactly that column.
+     *
+     * The measurement is in `tests/integration/stage5-student-write-boundary.itest.ts`:
+     * before this change a linked student resolved `case.update` on their
+     * consultancy's case, and — the half that matters — SEVEN OF EIGHT write
+     * probes issued straight to PostgREST on their own JWT succeeded, including
+     * deleting a document from the case. So this cell is not the boundary on its
+     * own; `20260829_mv196_student_write_boundary.sql` narrows the policies that
+     * back it, and this cell is what keeps the two layers saying the same thing.
+     *
+     * `case.read` deliberately stays `linked`. MV-195 decision D is that the
+     * student READS the consultancy case — the request, the version, the rejection
+     * note — and writes nothing. This is that split, spelled as scopes.
+     */
+    "case.update": "linked-personal",
     "case.create": "deny",
     "case.assign": "deny",
     "case.invite_student": "deny",
@@ -410,17 +435,40 @@ export function deriveCaseGrants(facts: CaseAccessFacts): {
   // --- The student half: what the case linkage confers, on this case alone. ---
   // Deliberately not an `else`. This is the additive rule; making it conditional
   // on the staff half is the masking defect.
-  if (facts.isLinkedStudent) grants.push({ role: "student", scope: "linked" });
+  //
+  // MV-196: TWO grants on a personal case, one on a consultancy case. The student
+  // link is no longer a single relationship — on a case they OWN it carries both
+  // the read claims (`linked`) and the write claims (`linked-personal`); on a case
+  // they are merely the SUBJECT of it carries only the read half.
+  //
+  // Two grants rather than one narrower grant, because `decideCasePermission`
+  // matches a grant's scope to the grid cell EXACTLY and never by breadth. Pushing
+  // only `linked-personal` here would silently revoke every `linked` claim the
+  // student holds on their own case — `case.read` first among them.
+  if (facts.isLinkedStudent) {
+    grants.push({ role: "student", scope: "linked" });
+    if (!facts.isOrgCase) grants.push({ role: "student", scope: "linked-personal" });
+  }
 
   if (grants.length > 0) return { grants, reason: null };
   return { grants, reason: reason ?? "no-relationship" };
 }
 
-/** All-org reaches furthest, then assigned, then the actor's own single case. */
+/**
+ * All-org reaches furthest, then assigned, then the actor's own single case.
+ *
+ * `linked-personal` sits at the SAME rung as `linked` on purpose. This table is
+ * consulted only by `deriveAccessScope`, which summarises "how far does this actor
+ * reach on this case" for `CaseContext.accessScope` — and on a personal case the
+ * two student grants describe one relationship, not two of differing reach. Equal
+ * ranks with a strict `>` in the reducer keep the summary reporting `linked`
+ * exactly as it did before MV-196. Authorization never reads this table.
+ */
 const SCOPE_BREADTH: Record<Exclude<PermissionScope, "deny">, number> = {
   "all-org": 3,
   assigned: 2,
   linked: 1,
+  "linked-personal": 1,
 };
 
 /**

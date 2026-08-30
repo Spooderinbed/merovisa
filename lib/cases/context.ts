@@ -176,7 +176,11 @@ export async function getCaseContext(
       caseId,
       caseExists: true,
       organizationId,
-      grantedRoles: grants.map((grant: CaseGrant) => grant.role),
+      // DISTINCT roles. MV-196 gave the student TWO grants on a case they own — `linked` for the
+      // read claims and `linked-personal` for the write ones — and those are two scopes of one
+      // relationship, not two relationships. `grantedRoles` answers "who is this actor here",
+      // which is still "a student"; authorization reads the grants themselves, never this field.
+      grantedRoles: [...new Set(grants.map((grant: CaseGrant) => grant.role))],
       accessScope: scope,
       denyReason: reason,
       hasAccess: scope !== "deny",
