@@ -28,6 +28,12 @@ function qc(id: string, lodgement: LodgementRead, over: Partial<QueueCase> = {})
     assignment: { membershipId: "m-1", userId: "u-1", role: "counsellor", active: true },
     nextStep: { state: "caught-up", item: null, openCount: 0, waitingCount: 0 },
     lodgement,
+    // MV-200's columns are a different file's subject. Deliberately NOT `unavailable`:
+    // all three columns share one "Couldn't check" wording, so an unavailable neighbour
+    // would make this file's outage assertion ambiguous about which column it found.
+    // These two states are real answers and collide with nothing here.
+    visaRisk: { state: "no-linked-student" },
+    submittability: { state: "no-program" },
     ...over,
   };
 }

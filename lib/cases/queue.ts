@@ -1,4 +1,6 @@
 import type { NextStepSelection } from "@/lib/plan/select";
+import type { SubmittabilityRead } from "@/lib/judgement/submittability";
+import type { VisaRiskRead } from "@/lib/judgement/visa-risk";
 import type { LodgementRead } from "./lodgement";
 import { isOperationalStatus, type OperationalStatus } from "./operational-status";
 
@@ -50,6 +52,18 @@ export interface QueueCase {
    * so its arrival reorders nothing. Tier 4's slot stays open for when it does.
    */
   lodgement: LodgementRead;
+  /**
+   * The two judgement columns (MV-200). REQUIRED for the same reason `lodgement` is:
+   * `unavailable` is how a failed read travels, and there is no third meaning for
+   * "absent".
+   *
+   * Both are display-and-sort only. `attentionTier` deliberately does NOT read them —
+   * attention is about what a counsellor must DO next, and a Reach band is not an
+   * action. Letting a judgement reorder the default queue would also mean a failed
+   * judgement read silently misorders it.
+   */
+  visaRisk: VisaRiskRead;
+  submittability: SubmittabilityRead;
 }
 
 export const NEXT_ACTION_KINDS = [
@@ -163,10 +177,32 @@ export function needsAction(row: QueueCase): boolean {
   return attentionTier(row) <= 6;
 }
 
-export type QueueSort = "attention" | "name" | "updated";
+export type QueueSort = "attention" | "name" | "updated" | "visa-risk" | "submittability";
 
 function byNameThenId(a: QueueCase, b: QueueCase): number {
   return a.displayName.localeCompare(b.displayName) || a.id.localeCompare(b.id);
+}
+
+/**
+ * Riskiest first, and every state that is NOT a band sorts after every state that is
+ * (MV-200). An unlinked case and a failed read are not "low risk" — they are no answer
+ * at all, and floating them to the top of a risk sort would be a claim, while sinking
+ * them below `strong` keeps the sort a statement about cases we could actually read.
+ */
+const VISA_RISK_ORDER: Record<string, number> = { reach: 0, possible: 1, strong: 2 };
+
+function visaRiskRank(read: VisaRiskRead): number {
+  return read.state === "read" ? VISA_RISK_ORDER[read.band]! : 3;
+}
+
+/**
+ * Furthest from submittable first — by how many apply-stage requirements are still
+ * outstanding, since that is the number a counsellor is actually working through.
+ * Again, a case with no answer sorts last rather than pretending to be a good one.
+ */
+function submittabilityRank(read: SubmittabilityRead): number {
+  if (read.state !== "read") return Number.POSITIVE_INFINITY;
+  return -(read.apply.total - read.apply.ready);
 }
 
 const COMPARATORS: Record<QueueSort, (a: QueueCase, b: QueueCase) => number> = {
@@ -177,6 +213,10 @@ const COMPARATORS: Record<QueueSort, (a: QueueCase, b: QueueCase) => number> = {
     byNameThenId(a, b),
   name: byNameThenId,
   updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt) || byNameThenId(a, b),
+  "visa-risk": (a, b) => visaRiskRank(a.visaRisk) - visaRiskRank(b.visaRisk) || byNameThenId(a, b),
+  submittability: (a, b) =>
+    submittabilityRank(a.submittability) - submittabilityRank(b.submittability) ||
+    byNameThenId(a, b),
 };
 
 export function sortQueue(rows: QueueCase[], sort: QueueSort): QueueCase[] {
@@ -340,8 +380,30 @@ function isQueueView(value: unknown): value is QueueView {
   return typeof value === "string" && (QUEUE_VIEWS as readonly string[]).includes(value);
 }
 
+/**
+ * Every sort, in the order a control should offer them. MV-200 added the two judgement
+ * sorts here rather than beside a hand-written union, because the guard below used to be
+ * a list of literals that a new sort could be added to `QueueSort` without ever joining
+ * — an unreachable sort that typechecks.
+ */
+export const QUEUE_SORTS = [
+  "attention",
+  "name",
+  "updated",
+  "visa-risk",
+  "submittability",
+] as const satisfies readonly QueueSort[];
+
+export const QUEUE_SORT_LABELS: Record<QueueSort, string> = {
+  attention: "Attention",
+  name: "Name",
+  updated: "Last updated",
+  "visa-risk": "Visa risk",
+  submittability: "Closest to submittable",
+};
+
 function isQueueSort(value: unknown): value is QueueSort {
-  return value === "attention" || value === "name" || value === "updated";
+  return typeof value === "string" && (QUEUE_SORTS as readonly string[]).includes(value);
 }
 
 /**

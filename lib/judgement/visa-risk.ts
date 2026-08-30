@@ -4,6 +4,8 @@ import { scoreFinancial } from "@/lib/scoring/financial";
 import { RULE_VERSION } from "@/lib/scoring/engine";
 import { CONFIG_VERSION, VERDICT_CUTOFFS } from "@/lib/data/scoring-config";
 import type { DimensionScore, RefusalFactorKey, StudentProfile } from "@/lib/scoring/types";
+import { sectionsToStudentProfile } from "@/lib/scoring/from-sections";
+import type { ProfileSections } from "@/lib/profiles/sections";
 
 /**
  * The per-case visa-risk read (MV-198) — the first slice of the judgement layer,
@@ -232,6 +234,38 @@ function conclusionFor(band: VisaRiskBand, blocker: VisaRiskFactor | null): stri
  * function cannot see: a failed query (`unavailable`) and a case whose profile has
  * no sections at all (`profile: null` → `insufficient-data`).
  */
+/**
+ * One case's visa read from its stored profile sections — the whole judgement a caller
+ * can make once a `profiles` row is in hand, absences included.
+ *
+ * Extracted for MV-200. The caseload rollup reads `profiles` for a whole page in one
+ * batched query rather than one case at a time, so without this it would have had to
+ * restate the emptiness rule below — and a second copy of that rule is exactly the
+ * "parallel re-derivation" the card forbids. `readCaseVisaRisk` and the batched
+ * caseload read now reach the same answer through the same function; only the I/O
+ * differs.
+ *
+ * The trap this rule closes is worth restating where it lives:
+ * `sectionsToStudentProfile({})` does not fail. It returns a fully-shaped profile of
+ * DEFAULTS — grade 0, budget 0, no English test — which the engine scores as a poor
+ * case. Handing that to a surface would tell a counsellor that a case nobody has
+ * filled in yet is a refusal risk, so the emptiness is caught before the engine sees
+ * it.
+ */
+export function visaRiskFromSections(input: {
+  hasLinkedStudent: boolean;
+  sections: ProfileSections | null;
+}): VisaRiskRead {
+  if (!input.hasLinkedStudent) return { state: "no-linked-student" };
+  if (input.sections === null || Object.keys(input.sections).length === 0) {
+    return { state: "insufficient-data" };
+  }
+  return deriveVisaRisk({
+    hasLinkedStudent: true,
+    profile: sectionsToStudentProfile(input.sections),
+  });
+}
+
 export function deriveVisaRisk(input: {
   hasLinkedStudent: boolean;
   profile: StudentProfile | null;

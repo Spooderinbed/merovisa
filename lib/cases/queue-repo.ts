@@ -4,6 +4,7 @@ import { selectNextStep } from "@/lib/plan/select";
 import type { PlanItemRow } from "@/lib/plan/types";
 import type { OrgMember } from "@/lib/org/repo";
 import type { CaseAuthorizationClient } from "./context";
+import { listCaseJudgementsByCase } from "./caseload-judgement-repo";
 import { listOutstandingDocumentRequestsByCase } from "./document-requests-repo";
 import { deriveQueueLodgement } from "./lodgement";
 import { listOrgCases, type CaseListScope } from "./list-repo";
@@ -160,6 +161,25 @@ export async function listCaseQueue(
     // §5's first option, where the three reads above take its second.
     const requests = await listOutstandingDocumentRequestsByCase(caseIds, supabase);
 
+    /**
+     * The FIFTH (MV-200), display-and-sort only, and it takes the fourth's option for
+     * the fourth's reason: it decides no attention tier, so a failure marks its own two
+     * columns rather than blanking a queue whose every other column is true.
+     *
+     * A failed read leaves every row `unavailable`, which is also what makes sorting by
+     * a judgement column safe when it fails: every row compares equal, so a stable sort
+     * leaves the previous order alone rather than inventing one.
+     *
+     * NOT re-gated per row. `readCaseVisaRisk` returns `null` for a viewer who is not
+     * staff on the case, but this queue is staff-only by construction — reaching it at
+     * all requires `case.list`, which requires an organization membership role, and a
+     * linked student has none. The gate is the route, one level up.
+     */
+    const judgements = await listCaseJudgementsByCase(
+      base.data.map((row) => ({ id: row.id, hasLinkedStudent: row.hasLinkedStudent })),
+      supabase,
+    );
+
     const rows: QueueCase[] = base.data.map((summary) => {
       const assigneeUserId = assigneeByCase.get(summary.id);
       const membership = assigneeUserId ? membershipByUser.get(assigneeUserId) : undefined;
@@ -182,6 +202,14 @@ export async function listCaseQueue(
         // are different sentences and only one of them is true.
         lodgement: requests.ok
           ? deriveQueueLodgement(requests.byCase.get(summary.id) ?? [])
+          : { state: "unavailable" },
+        // Same rule, and the same reason it is not an empty answer: "we could not find
+        // out" is a different sentence from any judgement, and only one of them is true.
+        visaRisk: judgements.ok
+          ? (judgements.byCase.get(summary.id)?.visaRisk ?? { state: "unavailable" })
+          : { state: "unavailable" },
+        submittability: judgements.ok
+          ? (judgements.byCase.get(summary.id)?.submittability ?? { state: "unavailable" })
           : { state: "unavailable" },
       };
     });

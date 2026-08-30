@@ -388,6 +388,11 @@ describe("/workspace/[id]/students — cell 7, the case directory (All cases)", 
     // MV-183. The All-cases directory reads through `listCaseQueue` too, so it
     // carries the same lodgement read as the Day view and renders the same column.
     lodgement: { state: "none-outstanding" as const },
+    // MV-200's two columns, on the same footing: this file asks what the PAGE decides,
+    // and none of its decisions read a judgement, so both default to the read that
+    // makes no claim.
+    visaRisk: { state: "unavailable" as const },
+    submittability: { state: "unavailable" as const },
   };
   const UNLINKED_CASE = {
     ...LINKED_CASE,
